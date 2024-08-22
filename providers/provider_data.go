@@ -44,6 +44,7 @@ type ProviderData struct {
 	EmailClaim               string
 	GroupsClaim              string
 	Verifier                 internaloidc.IDTokenVerifier
+	NeedsVerifier            bool
 	SkipClaimsFromProfileURL bool
 
 	// Universal Group authorization data structure

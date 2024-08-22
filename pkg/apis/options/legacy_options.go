@@ -80,7 +80,7 @@ func legacyProviderDefaults() LegacyProvider {
 		ValidateURL:                        "",
 		Scope:                              "",
 		Prompt:                             "",
-		ApprovalPrompt:                     "force",
+		ApprovalPrompt:                     "",
 		UserIDClaim:                        OIDCEmailClaim,
 		AllowedGroups:                      nil,
 		AcrValues:                          "",
@@ -133,10 +133,6 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		urlParams = append(urlParams, LoginURLParameter{Name: "prompt", Default: []string{l.Prompt}})
 	case l.ApprovalPrompt != "":
 		urlParams = append(urlParams, LoginURLParameter{Name: "approval_prompt", Default: []string{l.ApprovalPrompt}})
-	default:
-		// match legacy behaviour by default - if neither prompt nor approval_prompt
-		// specified, use approval_prompt=force
-		urlParams = append(urlParams, LoginURLParameter{Name: "approval_prompt", Default: []string{"force"}})
 	}
 
 	provider.LoginURLParameters = urlParams

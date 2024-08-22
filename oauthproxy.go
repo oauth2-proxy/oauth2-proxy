@@ -196,6 +196,7 @@ func buildSessionChain(opts *options.Options, provider providers.Provider, sessi
 	})
 	chain = chain.Append(loadSession)
 	provider.Data().StoredSession = ss
+	provider.Data().StoredSession.NeedsVerifier = provider.Data().NeedsVerifier
 	return chain
 }
 
@@ -385,8 +386,12 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 				util.SendError("Invalid authentication via OAuth2: unauthorized", rw, http.StatusForbidden)
 			}
 		}
-		if _, err := (*p.provider.Data().Verifier.GetKeySet()).VerifySignature(req.Context(), session.IDToken); err != nil {
-			(*p.provider.Data().Verifier.GetKeySet()).UpdateKeys(p.client, p.provider.Data().VerifierTimeout, updateKeysCallback)
+		if p.provider.Data().NeedsVerifier {
+			if _, err := (*p.provider.Data().Verifier.GetKeySet()).VerifySignature(req.Context(), session.IDToken); err != nil {
+				(*p.provider.Data().Verifier.GetKeySet()).UpdateKeys(p.client, p.provider.Data().VerifierTimeout, updateKeysCallback)
+			} else {
+				updateKeysCallback()
+			}
 		} else {
 			updateKeysCallback()
 		}
@@ -407,13 +412,12 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 	case err == nil:
 		rw.WriteHeader(http.StatusOK)
 		if p.passAuthorization {
-			proxywasm.AddHttpRequestHeader("Authorization", fmt.Sprintf("%s %s", providers.TokenTypeBearer, session.IDToken))
+			proxywasm.AddHttpRequestHeader("Authorization", fmt.Sprintf("%s %s", providers.TokenTypeBearer, session.AccessToken))
 		}
 		if cookies, ok := rw.Header()[SetCookieHeader]; ok && len(cookies) > 0 {
 			newCookieValue := strings.Join(cookies, ",")
 			if p.ctx != nil {
 				p.ctx.SetContext(SetCookieHeader, newCookieValue)
-				modifyRequestCookie(req, p.CookieOptions.Name, newCookieValue)
 				util.Logger.Info("Authentication and session refresh successfully .")
 			} else {
 				util.Logger.Error("Set Cookie failed cause HttpContext is nil.")
@@ -493,7 +497,7 @@ func (p *OAuthProxy) IsAllowedRequest(req *http.Request) bool {
 }
 
 func (p *OAuthProxy) ValidateVerifier() error {
-	if p.provider.Data().Verifier == nil {
+	if p.provider.Data().Verifier == nil && p.provider.Data().NeedsVerifier {
 		return errors.New("Failed to obtain OpenID configuration, current OIDC plugin is not working properly.")
 	}
 	return nil
@@ -504,7 +508,7 @@ func (p *OAuthProxy) SetContext(ctx wrapper.HttpContext) {
 }
 
 func (p *OAuthProxy) SetVerifier(opts *options.Options) {
-	if p.provider.Data().Verifier == nil {
+	if p.provider.Data().Verifier == nil && p.provider.Data().NeedsVerifier {
 		providers.NewVerifierFromConfig(opts.Providers[0], p.provider.Data(), p.client)
 	}
 }
@@ -630,22 +634,4 @@ func redirectToLocation(rw http.ResponseWriter, location string) {
 		}
 	}
 	proxywasm.SendHttpResponse(http.StatusFound, headersMap, nil, -1)
-}
-
-func modifyRequestCookie(req *http.Request, cookieName, newValue string) {
-	var cookies []string
-	found := false
-	for _, cookie := range req.Cookies() {
-		// find specify cookie name
-		if cookie.Name == cookieName {
-			found = true
-			cookies = append(cookies, fmt.Sprintf("%s=%s", cookie.Name, newValue))
-		} else {
-			cookies = append(cookies, fmt.Sprintf("%s=%s", cookie.Name, cookie.Value))
-		}
-	}
-	if !found {
-		cookies = append(cookies, fmt.Sprintf("%s=%s", cookieName, newValue))
-	}
-	proxywasm.ReplaceHttpRequestHeader("Cookie", strings.Join(cookies, "; "))
 }

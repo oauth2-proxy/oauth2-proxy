@@ -43,18 +43,15 @@ func NewProvider(providerConfig options.Provider) (Provider, error) {
 	switch providerConfig.Type {
 	case options.OIDCProvider:
 		return NewOIDCProvider(providerData, providerConfig.OIDCConfig), nil
+	case options.AliyunProvider:
+		return NewAliyunProvider(providerData), nil
 	default:
 		return nil, fmt.Errorf("unknown provider type %q", providerConfig.Type)
 	}
 }
 
 func NewVerifierFromConfig(providerConfig options.Provider, p *ProviderData, client wrapper.HttpClient) error {
-
-	needsVerifier, err := providerRequiresOIDCProviderVerifier(providerConfig.Type)
-	if err != nil {
-		return err
-	}
-	if needsVerifier {
+	if p.NeedsVerifier {
 		verifierOptions := internaloidc.ProviderVerifierOptions{
 			AudienceClaims:         providerConfig.OIDCConfig.AudienceClaims,
 			ClientID:               providerConfig.ClientID,
@@ -103,6 +100,12 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 		RedeemTimeout:   providerConfig.RedeemTimeout,
 		VerifierTimeout: providerConfig.OIDCConfig.VerifierRequestTimeout,
 	}
+
+	needsVerifier, err := providerRequiresOIDCProviderVerifier(providerConfig.Type)
+	if err != nil {
+		return nil, err
+	}
+	p.NeedsVerifier = needsVerifier
 
 	errs := providerConfigInfoCheck(providerConfig, p)
 	// handle LoginURLParameters
@@ -155,6 +158,8 @@ func providerRequiresOIDCProviderVerifier(providerType options.ProviderType) (bo
 	switch providerType {
 	case options.OIDCProvider:
 		return true, nil
+	case options.AliyunProvider:
+		return false, nil
 	default:
 		return false, fmt.Errorf("unknown provider type: %s", providerType)
 	}

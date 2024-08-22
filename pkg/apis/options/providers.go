@@ -68,6 +68,8 @@ type ProviderType string
 const (
 	// OIDCProvider is the provider type for OIDC
 	OIDCProvider ProviderType = "oidc"
+
+	AliyunProvider ProviderType = "aliyun"
 )
 
 type OIDCOptions struct {

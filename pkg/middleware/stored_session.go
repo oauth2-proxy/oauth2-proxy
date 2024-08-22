@@ -69,6 +69,7 @@ type StoredSessionLoader struct {
 	refreshClient         wrapper.HttpClient
 	refreshRequestTimeout uint32
 	RemoteKeySet          *oidc.KeySet
+	NeedsVerifier         bool
 }
 
 // loadSession attempts to load a session as identified by the request cookies.
@@ -100,7 +101,7 @@ func (s *StoredSessionLoader) loadSession(next http.Handler) http.Handler {
 					}
 				}
 			}
-			keysNeedsUpdate := (session != nil)
+			keysNeedsUpdate := (session != nil) && (s.NeedsVerifier)
 			if keysNeedsUpdate {
 				if _, err := (*s.RemoteKeySet).VerifySignature(req.Context(), session.IDToken); err == nil {
 					keysNeedsUpdate = false
