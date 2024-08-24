@@ -225,6 +225,24 @@ func TestEncodeAndDecodeSessionState(t *testing.T) {
 			Nonce:             []byte("abcdef1234567890abcdef1234567890"),
 			Groups:            []string{"group-a", "group-b"},
 		},
+		"With additional claims": {
+			Email:             "username@example.com",
+			User:              "username",
+			PreferredUsername: "preferred.username",
+			AccessToken:       "AccessToken.12349871293847fdsaihf9238h4f91h8fr.1349f831y98fd7",
+			IDToken:           "IDToken.12349871293847fdsaihf9238h4f91h8fr.1349f831y98fd7",
+			CreatedAt:         &created,
+			ExpiresOn:         &expires,
+			RefreshToken:      "RefreshToken.12349871293847fdsaihf9238h4f91h8fr.1349f831y98fd7",
+			Nonce:             []byte("abcdef1234567890abcdef1234567890"),
+			Groups:            []string{"group-a", "group-b"},
+			AdditionalClaims: map[string]interface{}{
+				"custom_claim_1": "value1",
+				"custom_claim_2": true,
+				"custom_claim_3": int8(1),
+				"custom_claim_4": []interface{}{"item1", "item2"},
+			},
+		},
 	}
 
 	for _, secretSize := range []int{16, 24, 32} {
@@ -291,4 +309,53 @@ func compareSessionStates(t *testing.T, expected *SessionState, actual *SessionS
 	act.CreatedAt = nil
 	act.ExpiresOn = nil
 	assert.Equal(t, exp, act)
+}
+
+func TestGetClaim(t *testing.T) {
+	createdAt := time.Now()
+	expiresOn := createdAt.Add(1 * time.Hour)
+
+	ss := &SessionState{
+		CreatedAt:         &createdAt,
+		ExpiresOn:         &expiresOn,
+		AccessToken:       "AccessToken.12349871293847fdsaihf9238h4f91h8fr.1349f831y98fd7",
+		IDToken:           "IDToken.12349871293847fdsaihf9238h4f91h8fr.1349f831y98fd7",
+		RefreshToken:      "RefreshToken.12349871293847fdsaihf9238h4f91h8fr.1349f831y98fd7",
+		Email:             "user@example.com",
+		User:              "user123",
+		Groups:            []string{"group1", "group2"},
+		PreferredUsername: "preferred_user",
+		AdditionalClaims: map[string]interface{}{
+			"custom_claim_1": "value1",
+			"custom_claim_2": true,
+			"custom_claim_3": 1,
+			"custom_claim_4": []string{"item1", "item2"},
+		},
+	}
+
+	tests := []struct {
+		claim string
+		want  []string
+	}{
+		{"access_token", []string{"AccessToken.12349871293847fdsaihf9238h4f91h8fr.1349f831y98fd7"}},
+		{"id_token", []string{"IDToken.12349871293847fdsaihf9238h4f91h8fr.1349f831y98fd7"}},
+		{"refresh_token", []string{"RefreshToken.12349871293847fdsaihf9238h4f91h8fr.1349f831y98fd7"}},
+		{"created_at", []string{createdAt.String()}},
+		{"expires_on", []string{expiresOn.String()}},
+		{"email", []string{"user@example.com"}},
+		{"user", []string{"user123"}},
+		{"groups", []string{"group1", "group2"}},
+		{"preferred_username", []string{"preferred_user"}},
+		{"custom_claim_1", []string{"value1"}},
+		{"custom_claim_2", []string{"true"}},
+		{"custom_claim_3", []string{"1"}},
+		{"custom_claim_4", []string{"item1", "item2"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.claim, func(t *testing.T) {
+			gs := NewWithT(t)
+			gs.Expect(ss.GetClaim(tt.claim)).To(Equal(tt.want))
+		})
+	}
 }
