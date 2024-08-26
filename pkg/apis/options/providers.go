@@ -321,6 +321,8 @@ type OIDCOptions struct {
 	// ExtraAudiences is a list of additional audiences that are allowed
 	// to pass verification in addition to the client id.
 	ExtraAudiences []string `yaml:"extraAudiences,omitempty"`
+	// EnabledSigningAlgs is a list of allowed JWT signing algorithms
+	EnabledSigningAlgs []string `json:"enabledSigningAlgs"`
 }
 
 type LoginGovOptions struct {
