@@ -13,6 +13,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
 )
 
@@ -33,7 +34,7 @@ func Validate(o *options.Options) error {
 		insecureTransport := &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // #nosec G402 -- InsecureSkipVerify is a configurable option we allow
 		}
-		http.DefaultClient = &http.Client{Transport: insecureTransport}
+		requests.DefaultHTTPClient.Transport = insecureTransport
 	} else if len(o.Providers[0].CAFiles) > 0 {
 		pool, err := util.GetCertPool(o.Providers[0].CAFiles, o.Providers[0].UseSystemTrustStore)
 		if err == nil {
@@ -43,7 +44,7 @@ func Validate(o *options.Options) error {
 				MinVersion: tls.VersionTLS12,
 			}
 
-			http.DefaultClient = &http.Client{Transport: transport}
+			requests.DefaultHTTPClient.Transport = transport
 		} else {
 			msgs = append(msgs, fmt.Sprintf("unable to load provider CA file(s): %v", err))
 		}
