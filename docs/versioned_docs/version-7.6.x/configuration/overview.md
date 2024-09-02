@@ -279,8 +279,15 @@ environment variable should be plural (trailing `S`).
 This is particularly useful for storing secrets outside a configuration file
 or the command line.
 
-For example, the `--cookie-secret` flag becomes `OAUTH2_PROXY_COOKIE_SECRET`,
-and the `--email-domain` flag becomes `OAUTH2_PROXY_EMAIL_DOMAINS`.
+For example, the `--cookie-secret` flag becomes `OAUTH2_PROXY_COOKIE_SECRET`.
+If a flag has the type `string | list` like the `--email-domain` flag it is
+available as an environment variable in plural form e.g. `OAUTH2_PROXY_EMAIL_DOMAINS`
+
+Values for type `string | list` usually have a plural environment variable name
+and need to be seperated by `,` e.g.
+`OAUTH2_PROXY_SKIP_AUTH_ROUTES="GET=^/api/status,POST=^/api/saved_objects/_import"`
+
+Please check the type for each [config option](#config-options) first.
 
 ## Logging Configuration
 
