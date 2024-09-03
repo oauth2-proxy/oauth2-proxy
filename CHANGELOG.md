@@ -15,6 +15,7 @@
 - [#2459](https://github.com/oauth2-proxy/oauth2-proxy/pull/2459) chore(deps): Updated to ginkgo v2 (@kvanzuijlen, @tuunit)
 - [#2112](https://github.com/oauth2-proxy/oauth2-proxy/pull/2112) docs: update list of providers which support refresh tokens (@mikefab-msf)
 - [#2734](https://github.com/oauth2-proxy/oauth2-proxy/pull/2734) Added s390x architecture option support (@priby05)
+- [#2589](https://github.com/oauth2-proxy/oauth2-proxy/pull/2589) Added support for regex path matching and rewriting when using a static `file:` upstream (@ianroberts)
 
 # V7.6.0
 
