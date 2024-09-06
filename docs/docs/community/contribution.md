@@ -44,7 +44,7 @@ For starting oauth2-proxy locally open the debugging tab and create the `launch.
             "program": "${workspaceFolder}",
             "args": [
                 "--config",
-                // The following configuration contains settings for a locally deployed 
+                // The following configuration contains settings for a locally deployed
                 // upstream and dex as an idetity provider
                 "contrib/local-environment/oauth2-proxy.cfg"
             ]
@@ -57,7 +57,7 @@ For starting oauth2-proxy locally open the debugging tab and create the `launch.
             "program": "${workspaceFolder}",
             "args": [
                 "--config",
-                // The following configuration contains settings for a locally deployed 
+                // The following configuration contains settings for a locally deployed
                 // upstream and keycloak as an idetity provider
                 "contrib/local-environment/oauth2-proxy-keycloak.cfg"
             ]
