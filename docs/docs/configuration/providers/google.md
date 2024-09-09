@@ -3,6 +3,18 @@ id: google
 title: Google (default)
 ---
 
+## Config Options
+
+| Flag                                           | Toml Field                                   | Type   | Description                                                                                      | Default                                            |
+| ---------------------------------------------- | -------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------ | -------------------------------------------------- |
+| `--google-admin-email`                         | `google_admin_email`                         | string | the google admin to impersonate for api calls                                                    |                                                    |
+| `--google-group`                               | `google_groups`                              | string | restrict logins to members of this google group (may be given multiple times).                   |                                                    |
+| `--google-service-account-json`                | `google_service_account_json`                | string | the path to the service account json credentials                                                 |                                                    |
+| `--google-use-application-default-credentials` | `google_use_application_default_credentials` | bool   | use application default credentials instead of service account json (i.e. GKE Workload Identity) |                                                    |
+| `--google-target-principal`                    | `google_target_principal`                    | bool   | the target principal to impersonate when using ADC                                               | defaults to the service account configured for ADC |
+
+## Usage
+
 For Google, the registration steps are:
 
 1.  Create a new project: https://console.developers.google.com/project
