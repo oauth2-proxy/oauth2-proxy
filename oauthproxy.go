@@ -202,22 +202,26 @@ func buildSessionChain(opts *options.Options, provider providers.Provider, sessi
 
 // SignOut sends a response to clear the authentication cookie
 func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
+	util.Logger.Debug("Starting sign out process")
 	redirect, err := p.appDirector.GetRedirect(req)
 	if err != nil {
 		util.Logger.Errorf("Error obtaining redirect: %v", err)
 		return
 	}
+	util.Logger.Debugf("Redirect URL obtained: %s", redirect)
 	err = p.ClearSessionCookie(rw, req)
 	if err != nil {
 		util.Logger.Errorf("Error clearing session cookie: %v", err)
 		return
 	}
+	util.Logger.Debug("Session cookie cleared successfully")
 	// odic hint_token_hint used to logout without promotion.
 	session, err := p.getAuthenticatedSession(rw, req)
 
 	values := url.Values{}
 	if session != nil {
 		values.Add("id_token_hint", session.IDToken)
+		util.Logger.Debug("Authenticated session found, add id_token_hint")
 	}
 
 	if len(values) > 0 {
@@ -226,6 +230,7 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 			util.Logger.Errorf("Error parsing redirect: %v", err)
 			return
 		}
+		util.Logger.Debugf("Redirect URL parsed: %+v", redirectURL)
 		query := redirectURL.Query()
 		if len(query) > 0 || redirectURL.Fragment != "" {
 			// If there are existing query parameters or a fragment, use "&"
@@ -234,6 +239,7 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 			// If there are no query parameters or fragment, use "?"
 			redirect = redirect + "?" + values.Encode()
 		}
+		util.Logger.Debugf("Updated redirect URL with query parameters: %s", redirect)
 	}
 
 	redirectToLocation(rw, redirect)
@@ -246,7 +252,9 @@ func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 }
 
 func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, overrides url.Values) {
+	util.Logger.Debug("Starting OAuth authentication process")
 	extraParams := p.provider.Data().LoginURLParams(overrides)
+	util.Logger.Debugf("Extra params for login URL: %+v", extraParams)
 	prepareNoCache(rw)
 
 	var (
@@ -276,13 +284,16 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 		util.SendError(fmt.Sprintf("Error creating CSRF nonce: %v", err), rw, http.StatusInternalServerError)
 		return
 	}
+	util.Logger.Debugf("CSRF token created: %s", csrf)
 
 	appRedirect, err := p.appDirector.GetRedirect(req)
 	if err != nil {
 		util.SendError(fmt.Sprintf("Error obtaining application redirect: %v", err), rw, http.StatusBadRequest)
 		return
 	}
+	util.Logger.Debugf("Application redirect URL: %s", appRedirect)
 	callbackRedirect := p.getOAuthRedirectURI(req)
+	util.Logger.Debugf("OAuth callback redirect URL: %s", callbackRedirect)
 
 	loginURL := p.provider.GetLoginURL(
 		callbackRedirect,
@@ -295,6 +306,7 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 		util.SendError(fmt.Sprintf("Error setting CSRF cookie: %v", err), rw, http.StatusInternalServerError)
 		return
 	}
+	util.Logger.Debug("CSRF cookie set successfully")
 	redirectToLocation(rw, loginURL)
 }
 
@@ -329,16 +341,19 @@ func (p *OAuthProxy) getOAuthRedirectURI(req *http.Request) string {
 // OAuth2 authentication flow
 func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	// finish the oauth cycle
+	util.Logger.Debug("Starting OAuth2 callback process")
 	err := req.ParseForm()
 	if err != nil {
 		util.SendError(fmt.Sprintf("Error while parsing OAuth2 callback: %v", err), rw, http.StatusInternalServerError)
 		return
 	}
+	util.Logger.Debug("OAuth2 callback form parsed successfully")
 	errorString := req.Form.Get("error")
 	if errorString != "" {
 		util.SendError(fmt.Sprintf("Error while parsing OAuth2 callback: %s", errorString), rw, http.StatusForbidden)
 		return
 	}
+	util.Logger.Debug("No error in OAuth2 callback request")
 
 	csrf, err := cookies.LoadCSRFCookie(req, p.CookieOptions)
 	if err != nil {
@@ -346,19 +361,23 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	util.Logger.Debug("CSRF cookie loaded successfully")
 	callback := func(args ...interface{}) {
 		session := args[0].(*sessionsapi.SessionState)
 		csrf.ClearCookie(rw, req)
+		util.Logger.Debug("CSRF cookie cleared")
 		nonce, appRedirect, err := decodeState(req.Form.Get("state"), p.encodeState)
 		if err != nil {
 			util.SendError(fmt.Sprintf("Error while parsing OAuth2 state: %v", err), rw, http.StatusInternalServerError)
 			return
 		}
+		util.Logger.Debugf("OAuth2 state decoded: nonce=%s, appRedirect=%s", nonce, appRedirect)
 
 		if !csrf.CheckOAuthState(nonce) {
 			util.SendError("Invalid authentication via OAuth2: CSRF token mismatch, potential attack", rw, http.StatusForbidden)
 			return
 		}
+		util.Logger.Debug("CSRF token validated successfully")
 		csrf.SetSessionNonce(session)
 
 		updateKeysCallback := func(args ...interface{}) {
@@ -366,8 +385,10 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 				util.SendError(fmt.Sprintf("Session validation failed: %s", session), rw, http.StatusForbidden)
 				return
 			}
+			util.Logger.Debug("Session validated successfully")
 			if !p.redirectValidator.IsValidRedirect(appRedirect) {
 				appRedirect = "/"
+				util.Logger.Debugf("Invalid redirect, defaulting to root: %s", appRedirect)
 			}
 			// set cookie, or deny
 			authorized, err := p.provider.Authorize(req.Context(), session)
@@ -388,14 +409,18 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		}
 		if p.provider.Data().NeedsVerifier {
 			if _, err := (*p.provider.Data().Verifier.GetKeySet()).VerifySignature(req.Context(), session.IDToken); err != nil {
+				util.Logger.Debug("Updating keys due to signature verification failure")
 				(*p.provider.Data().Verifier.GetKeySet()).UpdateKeys(p.client, p.provider.Data().VerifierTimeout, updateKeysCallback)
 			} else {
+				util.Logger.Debug("Signature verification successful, proceeding without key update")
 				updateKeysCallback()
 			}
 		} else {
+			util.Logger.Debug("No verifier needed, proceeding with updateKeysCallback")
 			updateKeysCallback()
 		}
 	}
+	util.Logger.Debug("Starting OAuth redeem code process")
 
 	err = p.redeemCode(req, csrf.GetCodeVerifier(), p.client, callback)
 	if err != nil {
@@ -407,12 +432,14 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 // Proxy proxies the user request if the user is authenticated else it prompts
 // them to authenticate
 func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
+	util.Logger.Debug("Starting proxy request")
 	session, err := p.getAuthenticatedSession(rw, req)
 	switch {
 	case err == nil:
 		rw.WriteHeader(http.StatusOK)
 		if p.passAuthorization {
 			proxywasm.AddHttpRequestHeader("Authorization", fmt.Sprintf("%s %s", providers.TokenTypeBearer, session.AccessToken))
+			util.Logger.Debug("Authorization header add access token")
 		}
 		if cookies, ok := rw.Header()[SetCookieHeader]; ok && len(cookies) > 0 {
 			newCookieValue := strings.Join(cookies, ",")
@@ -437,6 +464,7 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 		// the user did not explicitly start the login flow
 		p.doOAuthStart(rw, req, nil)
 	case errors.Is(err, ErrAccessDenied):
+		util.Logger.Debug("Access denied due to authorization checks")
 		if cookies, ok := rw.Header()[SetCookieHeader]; ok && len(cookies) > 0 {
 			newCookieValue := strings.Join(cookies, ",")
 			errorMsg := "The session failed authorization checks. clear the cookie"
@@ -456,14 +484,17 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 // - `nil, ErrAccessDenied` if the authenticated user is not authorized
 // Set-Cookie headers may be set on the response as a side effect of calling this method.
 func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.Request) (*sessionsapi.SessionState, error) {
+	util.Logger.Debug("Getting authenticated session")
 	session := middlewareapi.GetRequestScope(req).Session
 
 	// Check this after loading the session so that if a valid session exists, we can add headers from it
 	if p.IsAllowedRequest(req) {
+		util.Logger.Debug("Request is allowed, returning session")
 		return session, nil
 	}
 
 	if session == nil {
+		util.Logger.Debug("Session is nil, user needs to login")
 		return nil, ErrNeedsLogin
 	}
 
@@ -472,6 +503,7 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 	if err != nil {
 		util.Logger.Errorf("Error with authorization: %v", err)
 	}
+	util.Logger.Debugf("Authorization result: %t", authorized)
 	if invalidEmail || !authorized {
 		cause := "unauthorized"
 		if invalidEmail {
@@ -486,6 +518,7 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 		}
 		return nil, ErrAccessDenied
 	}
+	util.Logger.Debug("Session is valid and authorized, returning session")
 
 	return session, nil
 }
@@ -623,15 +656,19 @@ func isAjax(req *http.Request) bool {
 
 // redirect to the specified location through proxywasm
 func redirectToLocation(rw http.ResponseWriter, location string) {
+	util.Logger.Debugf("Redirecting to location: %s", location)
 	headersMap := [][2]string{{"Location", location}}
 	for key, value := range rw.Header() {
 		if strings.EqualFold(key, SetCookieHeader) {
 			for _, value := range value {
 				headersMap = append(headersMap, [2]string{SetCookieHeader, value})
+				util.Logger.Debugf("Adding Set-Cookie header: %s", value)
 			}
 		} else {
 			headersMap = append(headersMap, [2]string{key, strings.Join(value, ",")})
+			util.Logger.Debugf("Adding header: %s with value: %s", key, strings.Join(value, ","))
 		}
 	}
+	util.Logger.Debug("Sending HTTP Redirect response")
 	proxywasm.SendHttpResponse(http.StatusFound, headersMap, nil, -1)
 }
