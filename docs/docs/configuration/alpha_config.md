@@ -86,6 +86,9 @@ More information and available patterns can be found [here](https://github.com/a
 The following flags/options and their respective environment variables are no
 longer available when using alpha configuration:
 
+<!-- Legacy Server FlagSet -->
+- `http-address`/`http_address`
+
 <!-- Legacy Upstream FlagSet -->
 - `flush-interval`/`flush_interval`
 - `pass-host-header`/`pass_host_header`
