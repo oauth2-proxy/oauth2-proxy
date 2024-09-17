@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -87,7 +88,9 @@ func newLoginGovProvider() (*LoginGovProvider, *MyKeyData, error) {
 			RedeemURL:    &url.URL{},
 			ProfileURL:   &url.URL{},
 			ValidateURL:  &url.URL{},
-			Scope:        ""},
+			Scope:        "",
+			Client:       requests.DefaultHTTPClient,
+		},
 		options.LoginGovOptions{
 			JWTKey: string(privKey),
 		},
@@ -103,7 +106,7 @@ func TestNewLoginGovProvider(t *testing.T) {
 	g.Expect(err).ToNot(HaveOccurred())
 
 	// Test that defaults are set when calling for a new provider with nothing set
-	provider, err := NewLoginGovProvider(&ProviderData{}, options.LoginGovOptions{
+	provider, err := NewLoginGovProvider(&ProviderData{Client: requests.DefaultHTTPClient}, options.LoginGovOptions{
 		JWTKey: string(privKey),
 	})
 	g.Expect(err).ToNot(HaveOccurred())
@@ -135,7 +138,9 @@ func TestLoginGovProviderOverrides(t *testing.T) {
 				Scheme: "https",
 				Host:   "example.com",
 				Path:   "/oauth/profile"},
-			Scope: "profile"},
+			Scope:  "profile",
+			Client: requests.DefaultHTTPClient,
+		},
 		options.LoginGovOptions{
 			JWTKey: string(privKey),
 		})

@@ -63,7 +63,7 @@ func (r *builder) WithMethod(method string) Builder {
 
 // WithHeaders replaces the request header map with the given header map.
 func (r *builder) WithHeaders(header http.Header) Builder {
-	r.header = header
+	r.header = header.Clone()
 	return r
 }
 

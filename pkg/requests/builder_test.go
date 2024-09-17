@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/version"
+
 	"github.com/bitly/go-simplejson"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -19,12 +21,12 @@ var _ = Describe("Builder suite", func() {
 
 	baseHeaders := http.Header{
 		"Accept-Encoding": []string{"gzip"},
-		"User-Agent":      []string{"Go-http-client/1.1"},
+		"User-Agent":      []string{"oauth2-proxy/" + version.VERSION},
 	}
 
 	BeforeEach(func() {
 		// Most tests will request the server address
-		b = New(serverAddr + "/json/path")
+		b = New(serverAddr + "/json/path").WithClient(DefaultHTTPClient)
 	})
 
 	Context("with a basic request", func() {
@@ -232,7 +234,7 @@ var _ = Describe("Builder suite", func() {
 
 	Context("when the requested page is not found", func() {
 		BeforeEach(func() {
-			b = New(serverAddr + "/not-found")
+			b = New(serverAddr + "/not-found").WithClient(DefaultHTTPClient)
 		})
 
 		assertJSONError(getBuilder, "404 page not found")
@@ -240,7 +242,7 @@ var _ = Describe("Builder suite", func() {
 
 	Context("when the requested page is not valid JSON", func() {
 		BeforeEach(func() {
-			b = New(serverAddr + "/string/path")
+			b = New(serverAddr + "/string/path").WithClient(DefaultHTTPClient)
 		})
 
 		assertJSONError(getBuilder, "invalid character 'O' looking for beginning of value")

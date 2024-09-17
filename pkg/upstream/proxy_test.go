@@ -10,8 +10,7 @@ import (
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/app/pagewriter"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -51,6 +50,12 @@ var _ = Describe("Proxy Suite", func() {
 							ID:   "file-backend",
 							Path: "/files/",
 							URI:  fmt.Sprintf("file:///%s", filesDir),
+						},
+						{
+							ID:            "rewrite-file-backend",
+							Path:          "^/rewrite-files/.*/(.*)$",
+							RewriteTarget: "/$1",
+							URI:           fmt.Sprintf("file:///%s", filesDir),
 						},
 						{
 							ID:         "static-backend",
@@ -174,6 +179,17 @@ var _ = Describe("Proxy Suite", func() {
 					raw: "foo",
 				},
 				upstream: "file-backend",
+			}),
+			Entry("with a request to the File backend with rewrite", &proxyTableInput{
+				target: "http://example.localhost/rewrite-files/anything-at-all/foo",
+				response: testHTTPResponse{
+					code: 200,
+					header: map[string][]string{
+						contentType: {textPlainUTF8},
+					},
+					raw: "foo",
+				},
+				upstream: "rewrite-file-backend",
 			}),
 			Entry("with a request to the Static backend", &proxyTableInput{
 				target: "http://example.localhost/static/bar",

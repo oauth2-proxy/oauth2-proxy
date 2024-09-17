@@ -2,12 +2,13 @@ package oidc
 
 import (
 	"context"
+	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/oauth2-proxy/mockoidc"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -40,7 +41,8 @@ var _ = Describe("ProviderVerifier", func() {
 			in.modifyOpts(&opts)
 		}
 
-		pv, err := NewProviderVerifier(context.Background(), opts)
+		ctx := oidc.ClientContext(context.Background(), requests.DefaultHTTPClient)
+		pv, err := NewProviderVerifier(ctx, opts)
 		if in.expectedError != "" {
 			Expect(err).To(MatchError(HavePrefix(in.expectedError)))
 			return
@@ -105,7 +107,8 @@ var _ = Describe("ProviderVerifier", func() {
 			in.modifyOpts(&opts)
 		}
 
-		pv, err := NewProviderVerifier(context.Background(), opts)
+		ctx := oidc.ClientContext(context.Background(), requests.DefaultHTTPClient)
+		pv, err := NewProviderVerifier(ctx, opts)
 		Expect(err).ToNot(HaveOccurred())
 
 		now := time.Now()

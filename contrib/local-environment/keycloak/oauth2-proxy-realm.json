@@ -1,6 +1,6 @@
 {
-  "id": "master",
-  "realm": "master",
+  "id": "oauth2-proxy",
+  "realm": "oauth2-proxy",
   "displayName": "Keycloak",
   "displayNameHtml": "<div class=\"kc-logo-text\"><span>Keycloak</span></div>",
   "notBefore": 0,
@@ -48,7 +48,7 @@
         "description": "${role_offline-access}",
         "composite": false,
         "clientRole": false,
-        "containerId": "master",
+        "containerId": "oauth2-proxy",
         "attributes": {}
       },
       {
@@ -61,7 +61,7 @@
             "create-realm"
           ],
           "client": {
-            "master-realm": [
+            "oauth2-proxy-realm": [
               "query-groups",
               "create-client",
               "query-realms",
@@ -84,7 +84,7 @@
           }
         },
         "clientRole": false,
-        "containerId": "master",
+        "containerId": "oauth2-proxy",
         "attributes": {}
       },
       {
@@ -93,7 +93,7 @@
         "description": "${role_uma_authorization}",
         "composite": false,
         "clientRole": false,
-        "containerId": "master",
+        "containerId": "oauth2-proxy",
         "attributes": {}
       },
       {
@@ -102,7 +102,7 @@
         "description": "${role_create-realm}",
         "composite": false,
         "clientRole": false,
-        "containerId": "master",
+        "containerId": "oauth2-proxy",
         "attributes": {}
       }
     ],
@@ -122,7 +122,7 @@
           "attributes": {}
         }
       ],
-      "master-realm": [
+      "oauth2-proxy-realm": [
         {
           "id": "a8271c2c-6437-4ca5-ae83-49ea5fe1318d",
           "name": "query-groups",
@@ -229,7 +229,7 @@
           "composite": true,
           "composites": {
             "client": {
-              "master-realm": [
+              "oauth2-proxy-realm": [
                 "query-groups",
                 "query-users"
               ]
@@ -273,7 +273,7 @@
           "composite": true,
           "composites": {
             "client": {
-              "master-realm": [
+              "oauth2-proxy-realm": [
                 "query-clients"
               ]
             }
@@ -439,7 +439,7 @@
       "clientId": "account",
       "name": "${client_account}",
       "rootUrl": "${authBaseUrl}",
-      "baseUrl": "/realms/master/account/",
+      "baseUrl": "/realms/oauth2-proxy/account/",
       "surrogateAuthRequired": false,
       "enabled": true,
       "alwaysDisplayInConsole": false,
@@ -450,7 +450,7 @@
         "manage-account"
       ],
       "redirectUris": [
-        "/realms/master/account/*"
+        "/realms/oauth2-proxy/account/*"
       ],
       "webOrigins": [],
       "notBefore": 0,
@@ -486,14 +486,14 @@
       "clientId": "account-console",
       "name": "${client_account-console}",
       "rootUrl": "${authBaseUrl}",
-      "baseUrl": "/realms/master/account/",
+      "baseUrl": "/realms/oauth2-proxy/account/",
       "surrogateAuthRequired": false,
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
       "secret": "91f85142-ee18-4e30-9949-e5acb701bdee",
       "redirectUris": [
-        "/realms/master/account/*"
+        "/realms/oauth2-proxy/account/*"
       ],
       "webOrigins": [],
       "notBefore": 0,
@@ -616,8 +616,8 @@
     },
     {
       "id": "7174c175-1887-4e57-b95b-969fe040deff",
-      "clientId": "master-realm",
-      "name": "master Realm",
+      "clientId": "oauth2-proxy-realm",
+      "name": "oauth2-proxy Realm",
       "surrogateAuthRequired": false,
       "enabled": true,
       "alwaysDisplayInConsole": false,
@@ -711,14 +711,14 @@
       "clientId": "security-admin-console",
       "name": "${client_security-admin-console}",
       "rootUrl": "${authAdminUrl}",
-      "baseUrl": "/admin/master/console/",
+      "baseUrl": "/admin/oauth2-proxy/console/",
       "surrogateAuthRequired": false,
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
       "secret": "b234b7aa-8417-410f-b3fd-c57434d3aa4a",
       "redirectUris": [
-        "/admin/master/console/*"
+        "/admin/oauth2-proxy/console/*"
       ],
       "webOrigins": [
         "+"

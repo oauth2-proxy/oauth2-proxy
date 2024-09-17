@@ -22,13 +22,25 @@
 version: '3.0'
 services:
   oauth2-proxy:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
     ports: []
     hostname: oauth2-proxy
+    container_name: oauth2-proxy
+    command: --config /oauth2-proxy.cfg
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
     volumes:
       - "./oauth2-proxy-nginx.cfg:/oauth2-proxy.cfg"
     networks:
       oauth2-proxy: {}
+      dex: {}
+      etcd: {}
+      httpbin: {}
+    depends_on:
+      - dex
+      - httpbin
   nginx:
+    depends_on:
+      - oauth2-proxy
     container_name: nginx
     image: nginx:1.27
     restart: unless-stopped
@@ -39,6 +51,46 @@ services:
       - "./nginx.conf:/etc/nginx/conf.d/default.conf"
     networks:
       oauth2-proxy: {}
+      dex: {}
+      etcd: {}
       httpbin: {}
+  dex:
+    container_name: dex
+    image: ghcr.io/dexidp/dex:v2.39.0
+    command: dex serve /dex.yaml
+    hostname: dex
+    volumes:
+      - "./dex.yaml:/dex.yaml"
+    restart: unless-stopped
+    ports:
+      - 4190:4190/tcp
+    networks:
+      dex:
+        aliases:
+          - dex.localtest.me
+      etcd: {}
+    depends_on:
+      - etcd
+  httpbin:
+    container_name: httpbin
+    image: kennethreitz/httpbin
+    ports:
+      - 8080:80/tcp
+    networks:
+      httpbin:
+        aliases:
+          - httpbin.localtest.me
+  etcd:
+    container_name: etcd
+    image: gcr.io/etcd-development/etcd:v3.5.13
+    entrypoint: /usr/local/bin/etcd
+    command:
+      - --listen-client-urls=http://0.0.0.0:2379
+      - --advertise-client-urls=http://etcd:2379
+    networks:
+      etcd: {}
 networks:
+  dex: {}
+  etcd: {}
+  httpbin: {}
   oauth2-proxy: {}

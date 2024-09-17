@@ -3,12 +3,14 @@ package oidc
 import (
 	"context"
 	"encoding/json"
+	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
+	"golang.org/x/oauth2"
 	"net"
 	"net/http"
 
 	"github.com/oauth2-proxy/mockoidc"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -38,7 +40,8 @@ var _ = Describe("Provider", func() {
 			Expect(m.Shutdown()).To(Succeed())
 		}()
 
-		provider, err := NewProvider(context.Background(), m.Issuer(), in.skipIssuerVerification)
+		ctxWithClient := context.WithValue(context.TODO(), oauth2.HTTPClient, requests.DefaultHTTPClient)
+		provider, err := NewProvider(ctxWithClient, m.Issuer(), in.skipIssuerVerification)
 		if in.expectedError != "" {
 			Expect(err).To(MatchError(HavePrefix(in.expectedError)))
 			return
@@ -98,7 +101,8 @@ var _ = Describe("Provider", func() {
 			Expect(m.Shutdown()).To(Succeed())
 		}()
 
-		provider, err := NewProvider(context.Background(), m.Issuer(), false)
+		ctx := oidc.ClientContext(context.Background(), requests.DefaultHTTPClient)
+		provider, err := NewProvider(ctx, m.Issuer(), false)
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(provider.PKCE().CodeChallengeAlgs).To(ConsistOf("S256", "plain"))
@@ -117,7 +121,8 @@ var _ = Describe("Provider", func() {
 			Expect(m.Shutdown()).To(Succeed())
 		}()
 
-		provider, err := NewProvider(context.Background(), m.Issuer(), false)
+		ctx := oidc.ClientContext(context.Background(), requests.DefaultHTTPClient)
+		provider, err := NewProvider(ctx, m.Issuer(), false)
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(provider.SupportedSigningAlgs()).To(ConsistOf("RS256", "HS256"))
