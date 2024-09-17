@@ -15,8 +15,8 @@ var _ = Describe("Persistence Manager Tests", func() {
 		ms = tests.NewMockStore()
 	})
 	tests.RunSessionStoreTests(
-		func(_ *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
-			return NewManager(ms, cookieOpts), nil
+		func(sessionOptions *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
+			return NewManager(ms, cookieOpts, sessionOptions.Redis.EnforceSingleSession), nil
 		},
 		func(d time.Duration) error {
 			ms.FastForward(d)

@@ -11,6 +11,7 @@ import (
 // Client is wrapper interface for redis.Client and redis.ClusterClient.
 type Client interface {
 	Get(ctx context.Context, key string) ([]byte, error)
+	GetSet(ctx context.Context, key string, value []byte) ([]byte, error)
 	Lock(key string) sessions.Lock
 	Set(ctx context.Context, key string, value []byte, expiration time.Duration) error
 	Del(ctx context.Context, key string) error
@@ -31,6 +32,11 @@ func newClient(c *redis.Client) Client {
 
 func (c *client) Get(ctx context.Context, key string) ([]byte, error) {
 	return c.Client.Get(ctx, key).Bytes()
+}
+
+func (c *client) GetSet(ctx context.Context, key string, value []byte) ([]byte, error) {
+	cmd := c.Client.GetSet(ctx, key, value)
+	return cmd.Bytes()
 }
 
 func (c *client) Set(ctx context.Context, key string, value []byte, expiration time.Duration) error {
@@ -63,6 +69,10 @@ func newClusterClient(c *redis.ClusterClient) Client {
 
 func (c *clusterClient) Get(ctx context.Context, key string) ([]byte, error) {
 	return c.ClusterClient.Get(ctx, key).Bytes()
+}
+
+func (c *clusterClient) GetSet(ctx context.Context, key string, value []byte) ([]byte, error) {
+	return c.ClusterClient.GetSet(ctx, key, value).Bytes()
 }
 
 func (c *clusterClient) Set(ctx context.Context, key string, value []byte, expiration time.Duration) error {

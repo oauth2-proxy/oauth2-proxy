@@ -13,6 +13,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/persistence"
 	"github.com/redis/go-redis/v9"
+	//"github.com/redis/go-redis/v9"
 )
 
 // SessionStore is an implementation of the persistence.Store
@@ -32,7 +33,7 @@ func NewRedisSessionStore(opts *options.SessionOptions, cookieOpts *options.Cook
 	rs := &SessionStore{
 		Client: client,
 	}
-	return persistence.NewManager(rs, cookieOpts), nil
+	return persistence.NewManager(rs, cookieOpts, opts.Redis.EnforceSingleSession), nil
 }
 
 // Save takes a sessions.SessionState and stores the information from it
@@ -41,6 +42,27 @@ func (store *SessionStore) Save(ctx context.Context, key string, value []byte, e
 	err := store.Client.Set(ctx, key, value, exp)
 	if err != nil {
 		return fmt.Errorf("error saving redis session: %v", err)
+	}
+	return nil
+}
+
+// SaveAndEvict takes a sessions.SessionState and stores the information from it
+// to redis, invalidating any existing sessions for this user, and adds a new persistence
+// cookie on the HTTP response writer
+func (store *SessionStore) SaveAndEvict(ctx context.Context, key string, value []byte, email string, exp time.Duration) error {
+	err := store.Client.Set(ctx, key, value, exp)
+	if err != nil {
+		return fmt.Errorf("error saving redis session: %v", err)
+	}
+	lastSession, err := store.Client.GetSet(ctx, email, []byte(key))
+	if err != nil && err != redis.Nil {
+		return fmt.Errorf("error saving redis user to session mapping: %v", err)
+	}
+	if len(lastSession) > 0 {
+		err = store.Client.Del(ctx, string(lastSession))
+		if err != nil {
+			return fmt.Errorf("error evicting previous redis session: %v", err)
+		}
 	}
 	return nil
 }

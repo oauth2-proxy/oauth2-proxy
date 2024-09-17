@@ -17,17 +17,19 @@ type entry struct {
 // MockStore is a generic in-memory implementation of persistence.Store
 // for mocking in tests
 type MockStore struct {
-	cache     map[string]entry
-	lockCache map[string]*MockLock
-	elapsed   time.Duration
+	cache              map[string]entry
+	lockCache          map[string]*MockLock
+	userSessionMapping map[string]string
+	elapsed            time.Duration
 }
 
 // NewMockStore creates a MockStore
 func NewMockStore() *MockStore {
 	return &MockStore{
-		cache:     map[string]entry{},
-		lockCache: map[string]*MockLock{},
-		elapsed:   0 * time.Second,
+		cache:              map[string]entry{},
+		userSessionMapping: map[string]string{},
+		lockCache:          map[string]*MockLock{},
+		elapsed:            0 * time.Second,
 	}
 }
 
@@ -37,6 +39,20 @@ func (s *MockStore) Save(_ context.Context, key string, value []byte, exp time.D
 		data:       value,
 		expiration: exp,
 	}
+	return nil
+}
+
+// SaveAndEvict sets a key to the data to the memory cache, maps the user string to this key and deletes any previous
+// key the user string mapped to
+func (s *MockStore) SaveAndEvict(_ context.Context, key string, value []byte, user string, exp time.Duration) error {
+	s.cache[key] = entry{
+		data:       value,
+		expiration: exp,
+	}
+	if old, ok := s.userSessionMapping[user]; ok {
+		delete(s.cache, old)
+	}
+	s.userSessionMapping[user] = key
 	return nil
 }
 

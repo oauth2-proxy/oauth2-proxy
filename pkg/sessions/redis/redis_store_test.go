@@ -242,4 +242,32 @@ var _ = Describe("Redis SessionStore Tests", func() {
 			)
 		})
 	})
+	Context("with single session", func() {
+		tests.RunEnforceSingleSessionStoreTests(
+			func(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
+				// Set the connection URL
+				opts.Type = options.RedisSessionStoreType
+				opts.Redis.ConnectionURL = redisProtocol + mr.Addr()
+
+				// Set enforce single session
+				opts.Redis.EnforceSingleSession = true
+
+				// Capture the session store so that we can close the client
+				var err error
+				ss, err = NewRedisSessionStore(opts, cookieOpts)
+				return ss, err
+			},
+			func(d time.Duration) error {
+				mr.FastForward(d)
+				return nil
+			},
+			func(userEmail string) (redisSessionKey string) {
+				redisSessionKey, _ = mr.Get(userEmail)
+				return
+			},
+			func(sessionId string) bool {
+				return mr.Exists(sessionId)
+			},
+		)
+	})
 })

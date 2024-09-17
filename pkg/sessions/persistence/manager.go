@@ -13,16 +13,18 @@ import (
 // Manager wraps a Store and handles the implementation details of the
 // sessions.SessionStore with its use of session tickets
 type Manager struct {
-	Store   Store
-	Options *options.Cookie
+	Store                Store
+	Options              *options.Cookie
+	EnforceSingleSession bool
 }
 
 // NewManager creates a Manager that can wrap a Store and manage the
 // sessions.SessionStore implementation details
-func NewManager(store Store, cookieOpts *options.Cookie) *Manager {
+func NewManager(store Store, cookieOpts *options.Cookie, enforceSingleSession bool) *Manager {
 	return &Manager{
-		Store:   store,
-		Options: cookieOpts,
+		Store:                store,
+		Options:              cookieOpts,
+		EnforceSingleSession: enforceSingleSession,
 	}
 }
 
@@ -43,7 +45,11 @@ func (m *Manager) Save(rw http.ResponseWriter, req *http.Request, s *sessions.Se
 	}
 
 	err = tckt.saveSession(s, func(key string, val []byte, exp time.Duration) error {
-		return m.Store.Save(req.Context(), key, val, exp)
+		if m.EnforceSingleSession {
+			return m.Store.SaveAndEvict(req.Context(), key, val, s.Email, exp)
+		} else {
+			return m.Store.Save(req.Context(), key, val, exp)
+		}
 	})
 	if err != nil {
 		return err

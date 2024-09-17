@@ -3,7 +3,10 @@ id: overview
 title: Overview
 ---
 
-`oauth2-proxy` can be configured via [command line options](#command-line-options), [environment variables](#environment-variables) or [config file](#config-file) (in decreasing order of precedence, i.e. command line options will overwrite environment variables and environment variables will overwrite configuration file settings).
+`oauth2-proxy` can be configured
+via [command line options](#command-line-options), [environment variables](#environment-variables)
+or [config file](#config-file) (in decreasing order of precedence, i.e. command line options will overwrite environment
+variables and environment variables will overwrite configuration file settings).
 
 ## Generating a Cookie Secret
 
@@ -18,14 +21,14 @@ import TabItem from '@theme/TabItem';
   ```shell
   python -c 'import os,base64; print(base64.urlsafe_b64encode(os.urandom(32)).decode())'
   ```
-  
+
   </TabItem>
   <TabItem value="bash" label="Bash">
 
   ```shell
   dd if=/dev/urandom bs=32 count=1 2>/dev/null | base64 | tr -d -- '\n' | tr -- '+/' '-_' ; echo
   ```
-  
+
   </TabItem>
   <TabItem value="openssl" label="OpenSSL">
 
@@ -58,16 +61,18 @@ import TabItem from '@theme/TabItem';
 
 ## Config File
 
-Every command line argument can be specified in a config file by replacing hyphens (-) with underscores (\_). If the argument can be specified multiple times, the config option should be plural (trailing s).
+Every command line argument can be specified in a config file by replacing hyphens (-) with underscores (\_). If the
+argument can be specified multiple times, the config option should be plural (trailing s).
 
-An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/master/contrib/oauth2-proxy.cfg.example) config file is in the contrib directory. It can be used by specifying `--config=/etc/oauth2-proxy.cfg`
+An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/master/contrib/oauth2-proxy.cfg.example)
+config file is in the contrib directory. It can be used by specifying `--config=/etc/oauth2-proxy.cfg`
 
 ## Config Options
 
 ### Command Line Options
 
 | Flag        | Description          |
-| ----------- | -------------------- |
+|-------------|----------------------|
 | `--config`  | path to config file  |
 | `--version` | print version string |
 
@@ -76,7 +81,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 Provider specific options can be found on their respective subpages.
 
 | Flag / Config Field                                                                                 | Type           | Description                                                                                                                                                                               | Default               |
-| --------------------------------------------------------------------------------------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
+|-----------------------------------------------------------------------------------------------------|----------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------|
 | flag: `--acr-values`<br/>toml: `acr_values`                                                         | string         | optional, see [docs](https://openid.net/specs/openid-connect-eap-acr-values-1_0.html#acrValues)                                                                                           | `""`                  |
 | flag: `--allowed-group`<br/>toml: `allowed_groups`                                                  | string \| list | restrict logins to members of this group (may be given multiple times)                                                                                                                    |                       |
 | flag: `--approval-prompt`<br/>toml: `approval_prompt`                                               | string         | OAuth approval_prompt                                                                                                                                                                     | `"force"`             |
@@ -113,7 +118,7 @@ Provider specific options can be found on their respective subpages.
 ### Cookie Options
 
 | Flag / Config Field                                                  | Type           | Description                                                                                                                                                                                                                        | Default           |
-| -------------------------------------------------------------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+|----------------------------------------------------------------------|----------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------|
 | flag: `--cookie-csrf-expire`<br/>toml: `cookie_csrf_expire`          | duration       | expire timeframe for CSRF cookie                                                                                                                                                                                                   | 15m               |
 | flag: `--cookie-csrf-per-request`<br/>toml:`cookie_csrf_per_request` | bool           | Enable having different CSRF cookies per request, making it possible to have parallel requests.                                                                                                                                    | false             |
 | flag: `--cookie-domain`<br/>toml: `cookie_domains`                   | string \| list | Optional cookie domains to force cookies to (e.g. `.yourcompany.com`). The longest domain matching the request's host will be used (or the shortest cookie domain if there is no match).                                           |                   |
@@ -126,12 +131,14 @@ Provider specific options can be found on their respective subpages.
 | flag: `--cookie-secret`<br/>toml: `cookie_secret`                    | string         | the seed string for secure cookies (optionally base64 encoded)                                                                                                                                                                     |                   |
 | flag: `--cookie-secure`<br/>toml: `cookie_secure`                    | bool           | set [secure (HTTPS only) cookie flag](https://owasp.org/www-community/controls/SecureFlag)                                                                                                                                         | true              |
 
-[^1]: The following providers support `--cookie-refresh`: ADFS, Azure, GitLab, Google, Keycloak and all other Identity Providers which support the full [OIDC specification](https://openid.net/specs/openid-connect-core-1_0.html#RefreshTokens)
+[^1]: The following providers support `--cookie-refresh`: ADFS, Azure, GitLab, Google, Keycloak and all other Identity
+Providers which support the
+full [OIDC specification](https://openid.net/specs/openid-connect-core-1_0.html#RefreshTokens)
 
 ### Header Options
 
 | Flag / Config Field                                                       | Type   | Description                                                                                                                                                                                                                                                      | Default |
-| ------------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+|---------------------------------------------------------------------------|--------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|
 | flag: `--basic-auth-password`<br/>toml: `basic_auth_password`             | string | the password to set when passing the HTTP Basic Auth header                                                                                                                                                                                                      |         |
 | flag: `--set-xauthrequest`<br/>toml: `set_xauthrequest`                   | bool   | set X-Auth-Request-User, X-Auth-Request-Groups, X-Auth-Request-Email and X-Auth-Request-Preferred-Username response headers (useful in Nginx auth_request mode). When used with `--pass-access-token`, X-Auth-Request-Access-Token is added to response headers. | false   |
 | flag: `--set-authorization-header`<br/>toml: `set_authorization_header`   | bool   | set Authorization Bearer response header (useful in Nginx auth_request mode)                                                                                                                                                                                     | false   |
@@ -146,7 +153,7 @@ Provider specific options can be found on their respective subpages.
 ### Logging Options
 
 | Flag / Config Field                                                   | Type   | Description                                                                  | Default                                             |
-| --------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------- | --------------------------------------------------- |
+|-----------------------------------------------------------------------|--------|------------------------------------------------------------------------------|-----------------------------------------------------|
 | flag: `--auth-logging-format`<br/>toml: `auth_logging_format`         | string | Template for authentication log lines                                        | see [Logging Configuration](#logging-configuration) |
 | flag: `--auth-logging`<br/>toml: `auth_logging`                       | bool   | Log authentication attempts                                                  | true                                                |
 | flag: `--errors-to-info-log`<br/>toml: `errors_to_info_log`           | bool   | redirects error-level logging to default log channel instead of stderr       | false                                               |
@@ -167,7 +174,7 @@ Provider specific options can be found on their respective subpages.
 ### Page Template Options
 
 | Flag / Config Field                                               | Type   | Description                                                                                                                 | Default |
-| ----------------------------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------- | ------- |
+|-------------------------------------------------------------------|--------|-----------------------------------------------------------------------------------------------------------------------------|---------|
 | flag: `--banner`<br/>toml: `banner`                               | string | custom (html) banner string. Use `"-"` to disable default banner.                                                           |         |
 | flag: `--custom-sign-in-logo`<br/>toml: `custom_sign_in_logo`     | string | path or a URL to an custom image for the sign_in page logo. Use `"-"` to disable default logo.                              |
 | flag: `--custom-templates-dir`<br/>toml: `custom_templates_dir`   | string | path to custom html templates                                                                                               |         |
@@ -178,7 +185,7 @@ Provider specific options can be found on their respective subpages.
 ### Probe Options
 
 | Flag / Config Field                                     | Type   | Description                                                | Default                       |
-| ------------------------------------------------------- | ------ | ---------------------------------------------------------- | ----------------------------- |
+|---------------------------------------------------------|--------|------------------------------------------------------------|-------------------------------|
 | flag: `--ping-path`<br/>toml: `ping_path`               | string | the ping endpoint that can be used for basic health checks | `"/ping"`                     |
 | flag: `--ping-user-agent`<br/>toml: `ping_user_agent`   | string | a User-Agent that can be used for basic health checks      | `""` (don't check user agent) |
 | flag: `--ready-path`<br/>toml: `ready_path`             | string | the ready endpoint that can be used for deep health checks | `"/ready"`                    |
@@ -187,7 +194,7 @@ Provider specific options can be found on their respective subpages.
 ### Proxy Options
 
 | Flag / Config Field                                                       | Type           | Description                                                                                                                                                                                                                   | Default     |
-| ------------------------------------------------------------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+|---------------------------------------------------------------------------|----------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------|
 | flag: `--allow-query-semicolons`<br/>toml: `allow_query_semicolons`       | bool           | allow the use of semicolons in query args ([required for some legacy applications](https://github.com/golang/go/issues/25192))                                                                                                | `false`     |
 | flag: `--api-route`<br/>toml: `api_routes`                                | string \| list | return HTTP 401 instead of redirecting to authentication server if token is not valid. Format: path_regex                                                                                                                     |             |
 | flag: `--authenticated-emails-file`<br/>toml: `authenticated_emails_file` | string         | authenticate against emails via file (one per line)                                                                                                                                                                           |             |
@@ -213,12 +220,15 @@ Provider specific options can be found on their respective subpages.
 | flag: `--trusted-ip`<br/>toml: `trusted_ips`                              | bool           | encode the state parameter as UrlEncodedBase64                                                                                                                                                                                | false       |
 | flag: `--whitelist-domain`<br/>toml: `whitelist_domains`                  | string \| list | allowed domains for redirection after authentication. Prefix domain with a `.` or a `*.` to allow subdomains (e.g. `.example.com`, `*.example.com`)&nbsp;[^2]                                                                 |             |
 
-[^2]: When using the `whitelist-domain` option, any domain prefixed with a `.` or a `*.` will allow any subdomain of the specified domain as a valid redirect URL. By default, only empty ports are allowed. This translates to allowing the default port of the URL's protocol (80 for HTTP, 443 for HTTPS, etc.) since browsers omit them. To allow only a specific port, add it to the whitelisted domain: `example.com:8080`. To allow any port, use `*`: `example.com:*`.
+[^2]: When using the `whitelist-domain` option, any domain prefixed with a `.` or a `*.` will allow any subdomain of the
+specified domain as a valid redirect URL. By default, only empty ports are allowed. This translates to allowing the
+default port of the URL's protocol (80 for HTTP, 443 for HTTPS, etc.) since browsers omit them. To allow only a specific
+port, add it to the whitelisted domain: `example.com:8080`. To allow any port, use `*`: `example.com:*`.
 
 ### Server Options
 
 | Flag / Config Field                                                 | Type           | Description                                                                                                                                                                                                                                                                                                   | Default            |
-| ------------------------------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
+|---------------------------------------------------------------------|----------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------|
 | flag: `--http-address`<br/>toml: `http_address`                     | string         | `[http://]<addr>:<port>` or `unix://<path>` to listen on for HTTP clients. Square brackets are required for ipv6 address, e.g. `http://[::1]:4180`                                                                                                                                                            | `"127.0.0.1:4180"` |
 | flag: `--https-address`<br/>toml: `https_address`                   | string         | `[https://]<addr>:<port>` to listen on for HTTPS clients. Square brackets are required for ipv6 address, e.g. `https://[::1]:443`                                                                                                                                                                             | `":443"`           |
 | flag: `--metrics-address`<br/>toml: `metrics_address`               | string         | the address prometheus metrics will be scraped from                                                                                                                                                                                                                                                           | `""`               |
@@ -231,8 +241,9 @@ Provider specific options can be found on their respective subpages.
 | flag: `--tls-min-version`<br/>toml: `tls_min_version`               | string         | minimum TLS version that is acceptable, either `"TLS1.2"` or `"TLS1.3"`                                                                                                                                                                                                                                       | `"TLS1.2"`         |
 
 ### Session Options
+
 | Flag / Config Field                                                                 | Type           | Description                                                                                                                                                                                                                                                                                                                                                                                                   | Default |
-| ----------------------------------------------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+|-------------------------------------------------------------------------------------|----------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|
 | flag: `--session-cookie-minimal`<br/>toml: `session_cookie_minimal`                 | bool           | strip OAuth tokens from cookie session stores if they aren't needed (cookie session store only)                                                                                                                                                                                                                                                                                                               | false   |
 | flag: `--session-store-type`<br/>toml: `session_store_type`                         | string         | [Session data storage backend](sessions.md); redis or cookie                                                                                                                                                                                                                                                                                                                                                  | cookie  |
 | flag: `--redis-cluster-connection-urls`<br/>toml: `redis_cluster_connection_urls`   | string \| list | List of Redis cluster connection URLs (e.g. `redis://HOST[:PORT]`). Used in conjunction with `--redis-use-cluster`                                                                                                                                                                                                                                                                                            |         |
@@ -245,11 +256,12 @@ Provider specific options can be found on their respective subpages.
 | flag: `--redis-use-cluster`<br/>toml: `redis_use_cluster`                           | bool           | Connect to redis cluster. Must set `--redis-cluster-connection-urls` to use this feature                                                                                                                                                                                                                                                                                                                      | false   |
 | flag: `--redis-use-sentinel`<br/>toml: `redis_use_sentinel`                         | bool           | Connect to redis via sentinels. Must set `--redis-sentinel-master-name` and `--redis-sentinel-connection-urls` to use this feature                                                                                                                                                                                                                                                                            | false   |
 | flag: `--redis-connection-idle-timeout`<br/>toml: `redis_connection_idle_timeout`   | int            | Redis connection idle timeout seconds. If Redis [timeout](https://redis.io/docs/reference/clients/#client-timeouts) option is set to non-zero, the `--redis-connection-idle-timeout` must be less than Redis timeout option. Example: if either redis.conf includes `timeout 15` or using `CONFIG SET timeout 15` the `--redis-connection-idle-timeout` must be at least `--redis-connection-idle-timeout=14` | 0       |
+| flag: `--redis-enforce-single-session`<br/>toml: `redis_enforce_single_session`     | bool           | Evict previous sessions when a new session for a user is created.                                                                                                                                                                                                                                                                                                                                             | false   |
 
 ### Upstream Options
 
 | Flag / Config Field                                                                       | Type           | Description                                                                                                                                            | Default |
-| ----------------------------------------------------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- |
+|-------------------------------------------------------------------------------------------|----------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|---------|
 | flag: `--flush-interval`<br/>toml: `flush_interval`                                       | duration       | period between flushing response buffers when streaming responses                                                                                      | `"1s"`  |
 | flag: `--pass-host-header`<br/>toml: `pass_host_header`                                   | bool           | pass the request Host Header to upstream                                                                                                               | true    |
 | flag: `--proxy-websockets`<br/>toml: `proxy_websockets`                                   | bool           | enables WebSocket proxying                                                                                                                             | true    |
@@ -259,15 +271,25 @@ Provider specific options can be found on their respective subpages.
 
 ## Upstreams Configuration
 
-`oauth2-proxy` supports having multiple upstreams, and has the option to pass requests on to HTTP(S) servers, unix socket or serve static files from the file system.
+`oauth2-proxy` supports having multiple upstreams, and has the option to pass requests on to HTTP(S) servers, unix
+socket or serve static files from the file system.
 
-HTTP and HTTPS upstreams are configured by providing a URL such as `http://127.0.0.1:8080/` for the upstream parameter. . This will forward all authenticated requests to the upstream server. If you instead provide `http://127.0.0.1:8080/some/path/` then it will only be requests that start with `/some/path/` which are forwarded to the upstream.
+HTTP and HTTPS upstreams are configured by providing a URL such as `http://127.0.0.1:8080/` for the upstream
+parameter. . This will forward all authenticated requests to the upstream server. If you instead provide
+`http://127.0.0.1:8080/some/path/` then it will only be requests that start with `/some/path/` which are forwarded to
+the upstream.
 
 Unix socket upstreams are configured as `unix:///path/to/unix.sock`.
 
-Static file paths are configured as a file:// URL. `file:///var/www/static/` will serve the files from that directory at `http://[oauth2-proxy url]/var/www/static/`, which may not be what you want. You can provide the path to where the files should be available by adding a fragment to the configured URL. The value of the fragment will then be used to specify which path the files are available at, e.g. `file:///var/www/static/#/static/` will make `/var/www/static/` available at `http://[oauth2-proxy url]/static/`.
+Static file paths are configured as a file:// URL. `file:///var/www/static/` will serve the files from that directory at
+`http://[oauth2-proxy url]/var/www/static/`, which may not be what you want. You can provide the path to where the files
+should be available by adding a fragment to the configured URL. The value of the fragment will then be used to specify
+which path the files are available at, e.g. `file:///var/www/static/#/static/` will make `/var/www/static/` available at
+`http://[oauth2-proxy url]/static/`.
 
-Multiple upstreams can either be configured by supplying a comma separated list to the `--upstream` parameter, supplying the parameter multiple times or providing a list in the [config file](#config-file). When multiple upstreams are used routing to them will be based on the path they are set up with.
+Multiple upstreams can either be configured by supplying a comma separated list to the `--upstream` parameter, supplying
+the parameter multiple times or providing a list in the [config file](#config-file). When multiple upstreams are used
+routing to them will be based on the path they are set up with.
 
 ## Environment variables
 
@@ -291,18 +313,25 @@ Please check the type for each [config option](#config-options) first.
 
 ## Logging Configuration
 
-By default, OAuth2 Proxy logs all output to stdout. Logging can be configured to output to a rotating log file using the `--logging-filename` command.
+By default, OAuth2 Proxy logs all output to stdout. Logging can be configured to output to a rotating log file using the
+`--logging-filename` command.
 
-If logging to a file you can also configure the maximum file size (`--logging-max-size`), age (`--logging-max-age`), max backup logs (`--logging-max-backups`), and if backup logs should be compressed (`--logging-compress`).
+If logging to a file you can also configure the maximum file size (`--logging-max-size`), age (`--logging-max-age`), max
+backup logs (`--logging-max-backups`), and if backup logs should be compressed (`--logging-compress`).
 
-There are three different types of logging: standard, authentication, and HTTP requests. These can each be enabled or disabled with `--standard-logging`, `--auth-logging`, and `--request-logging`.
+There are three different types of logging: standard, authentication, and HTTP requests. These can each be enabled or
+disabled with `--standard-logging`, `--auth-logging`, and `--request-logging`.
 
-Each type of logging has its own configurable format and variables. By default, these formats are similar to the Apache Combined Log.
+Each type of logging has its own configurable format and variables. By default, these formats are similar to the Apache
+Combined Log.
 
-Logging of requests to the `/ping` endpoint (or using `--ping-user-agent`) and the `/ready` endpoint can be disabled with `--silence-ping-logging` reducing log volume.
+Logging of requests to the `/ping` endpoint (or using `--ping-user-agent`) and the `/ready` endpoint can be disabled
+with `--silence-ping-logging` reducing log volume.
 
 ## Auth Log Format
-Authentication logs are logs which are guaranteed to contain a username or email address of a user attempting to authenticate. These logs are output by default in the below format:
+
+Authentication logs are logs which are guaranteed to contain a username or email address of a user attempting to
+authenticate. These logs are output by default in the below format:
 
 ```
 <REMOTE_ADDRESS> - <REQUEST ID> - <user@domain.com> [2015/03/19 17:20:19] [<STATUS>] <MESSAGE>
@@ -324,7 +353,7 @@ The default format is configured as follows:
 Available variables for auth logging:
 
 | Variable      | Example                              | Description                                                                                              |
-| ------------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------- |
+|---------------|--------------------------------------|----------------------------------------------------------------------------------------------------------|
 | Client        | 74.125.224.72                        | The client/remote IP address. Will use the X-Real-IP header it if exists & reverse-proxy is set to true. |
 | Host          | domain.com                           | The value of the Host header.                                                                            |
 | Message       | Authenticated via OAuth2             | The details of the auth attempt.                                                                         |
@@ -337,6 +366,7 @@ Available variables for auth logging:
 | Status        | AuthSuccess                          | The status of the auth request. See above for details.                                                   |
 
 ## Request Log Format
+
 HTTP request logs will output by default in the below format:
 
 ```
@@ -353,7 +383,7 @@ The default format is configured as follows:
 Available variables for request logging:
 
 | Variable        | Example                              | Description                                                                                              |
-| --------------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------- |
+|-----------------|--------------------------------------|----------------------------------------------------------------------------------------------------------|
 | Client          | 74.125.224.72                        | The client/remote IP address. Will use the X-Real-IP header it if exists & reverse-proxy is set to true. |
 | Host            | domain.com                           | The value of the Host header.                                                                            |
 | Protocol        | HTTP/1.0                             | The request protocol.                                                                                    |
@@ -369,13 +399,17 @@ Available variables for request logging:
 | Username        | username@email.com                   | The email or username of the auth request.                                                               |
 
 ## Standard Log Format
-All other logging that is not covered by the above two types of logging will be output in this standard logging format. This includes configuration information at startup and errors that occur outside of a session. The default format is below:
+
+All other logging that is not covered by the above two types of logging will be output in this standard logging format.
+This includes configuration information at startup and errors that occur outside of a session. The default format is
+below:
 
 ```
 [2015/03/19 17:20:19] [main.go:40] <MESSAGE>
 ```
 
-If you require a different format than that, you can configure it with the `--standard-logging-format` flag. The default format is configured as follows:
+If you require a different format than that, you can configure it with the `--standard-logging-format` flag. The default
+format is configured as follows:
 
 ```
 [{{.Timestamp}}] [{{.File}}] {{.Message}}
@@ -384,7 +418,7 @@ If you require a different format than that, you can configure it with the `--st
 Available variables for standard logging:
 
 | Variable  | Example                           | Description                                        |
-| --------- | --------------------------------- | -------------------------------------------------- |
+|-----------|-----------------------------------|----------------------------------------------------|
 | Timestamp | 2015/03/19 17:20:19               | The date and time of the logging event.            |
 | File      | main.go:40                        | The file and line number of the logging statement. |
 | Message   | HTTP: listening on 127.0.0.1:4180 | The details of the log statement.                  |

@@ -2,6 +2,7 @@ package tests
 
 import (
 	"crypto/rand"
+	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -27,6 +28,8 @@ type testInput struct {
 	request               *http.Request
 	response              *httptest.ResponseRecorder
 	persistentFastForward PersistentStoreFastForwardFunc
+	lookUpMapping         LookUpMappingFunc
+	checkStore            CheckStoreFunc
 }
 
 // sessionStoreFunc is used in testInput to wrap the SessionStore interface.
@@ -35,6 +38,12 @@ type sessionStoreFunc func() sessionsapi.SessionStore
 // PersistentStoreFastForwardFunc is used to adjust the time of the persistent
 // store to fast forward expiry of sessions.
 type PersistentStoreFastForwardFunc func(time.Duration) error
+
+// LookUpMappingFunc is used to check the current mapping from user email to stored session
+type LookUpMappingFunc func(string) string
+
+// CheckStoreFunc is used to check for a session key in the session store
+type CheckStoreFunc func(string) bool
 
 // NewSessionStoreFunc allows any session store implementation to configure their
 // own session store before each test.
@@ -493,6 +502,75 @@ func SessionStoreInterfaceTests(in *testInput) {
 	})
 }
 
+func EnforcedSingleSessionStoreInterfaceTests(in *testInput) {
+	Context("when Save is called", func() {
+		Context("with no existing session", func() {
+			BeforeEach(func() {
+				err := in.ss().Save(in.response, in.request, in.session)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("sets a `set-cookie` header in the response", func() {
+				Expect(in.response.Header().Get("set-cookie")).ToNot(BeEmpty())
+			})
+
+			It("Ensures the session CreatedAt is not zero", func() {
+				Expect(in.session.CreatedAt.IsZero()).To(BeFalse())
+			})
+
+			CheckCookieOptions(in)
+		})
+
+		// Maybe the actual ticket decoding functions should be public on ticket or this should be invoked from
+		// persistence with a passed in cookie to ticketId function.
+		var getSessionKey = func(rw http.ResponseWriter) string {
+			cookie := (&http.Response{Header: rw.Header()}).Cookies()[0]
+			decodedOnce, _ := base64.RawURLEncoding.DecodeString(strings.Split(cookie.Value, "|")[0])
+			decodedTwice, _ := base64.RawURLEncoding.DecodeString(strings.Split(string(decodedOnce), ".")[1])
+			return string(decodedTwice)
+		}
+
+		Context("evicting an existing session", func() {
+			It("cannot load first session after second login", func() {
+
+				saveRequest1 := *(in.request)
+				saveResponse1 := *(in.response)
+				session := *(in.session)
+
+				Expect(in.lookUpMapping(session.Email)).To(Equal(""))
+
+				// Save initially
+				err := in.ss().Save(&saveResponse1, &saveRequest1, &session)
+				Expect(err).ToNot(HaveOccurred())
+
+				// Ensure mapping points to loaded sessionId
+				firstSessionKey := in.lookUpMapping(session.Email)
+				Expect(firstSessionKey).To(Equal(getSessionKey(&saveResponse1)))
+				Expect(in.checkStore(firstSessionKey)).To(Equal(true))
+
+				// Save again
+				saveResponse2 := httptest.NewRecorder()
+				err = in.ss().Save(saveResponse2, &saveRequest1, &session)
+				Expect(err).ToNot(HaveOccurred())
+
+				// Ensure mapping now points to the new session
+				secondSessionKey := getSessionKey(saveResponse2)
+				Expect(in.lookUpMapping(session.Email)).To(Equal(secondSessionKey))
+
+				// New session should exist
+				Expect(in.checkStore(secondSessionKey)).To(Equal(true))
+
+				// Old session should not
+				Expect(in.checkStore(firstSessionKey)).To(Equal(false))
+
+			})
+
+			CheckCookieOptions(in)
+		})
+
+	})
+}
+
 func LoadSessionTests(in *testInput) {
 	var loadedSession *sessionsapi.SessionState
 	BeforeEach(func() {
@@ -517,5 +595,99 @@ func LoadSessionTests(in *testInput) {
 		Expect(loadedSession.CreatedAt.Equal(*in.session.CreatedAt)).To(BeTrue())
 		Expect(loadedSession.ExpiresOn.Equal(*in.session.ExpiresOn)).To(BeTrue())
 
+	})
+}
+
+func RunEnforceSingleSessionStoreTests(newSS NewSessionStoreFunc, persistentFastForward PersistentStoreFastForwardFunc, lookUpMapping LookUpMappingFunc, checkStore CheckStoreFunc) {
+	Describe("Exclusive Session Store Suite", func() {
+		var opts *options.SessionOptions
+		var ss sessionsapi.SessionStore
+		var input testInput
+		var cookieSecret []byte
+
+		getSessionStore := func() sessionsapi.SessionStore {
+			return ss
+		}
+
+		BeforeEach(func() {
+			ss = nil
+			opts = &options.SessionOptions{}
+
+			// A secret is required to create a Cipher, validation ensures it is the correct
+			// length before a session store is initialised.
+			cookieSecret = make([]byte, 32)
+			_, err := rand.Read(cookieSecret)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Set default options in CookieOptions
+			cookieOpts := &options.Cookie{
+				Name:     "_oauth2_proxy",
+				Path:     "/",
+				Expire:   time.Duration(168) * time.Hour,
+				Refresh:  time.Duration(1) * time.Hour,
+				Secure:   true,
+				HTTPOnly: true,
+				SameSite: "",
+				Secret:   string(cookieSecret),
+			}
+
+			expires := time.Now().Add(1 * time.Hour)
+			session := &sessionsapi.SessionState{
+				AccessToken:  "AccessToken",
+				IDToken:      "IDToken",
+				ExpiresOn:    &expires,
+				RefreshToken: "RefreshToken",
+				Email:        "john.doe@example.com",
+				User:         "john.doe",
+			}
+
+			request := httptest.NewRequest("GET", "http://example.com/", nil)
+			response := httptest.NewRecorder()
+
+			input = testInput{
+				cookieOpts:            cookieOpts,
+				ss:                    getSessionStore,
+				session:               session,
+				request:               request,
+				response:              response,
+				persistentFastForward: persistentFastForward,
+				lookUpMapping:         lookUpMapping,
+				checkStore:            checkStore,
+			}
+
+		})
+
+		Context("with default options", func() {
+			BeforeEach(func() {
+				var err error
+				ss, err = newSS(opts, input.cookieOpts)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			EnforcedSingleSessionStoreInterfaceTests(&input)
+		})
+
+		Context("with non-default options", func() {
+			BeforeEach(func() {
+				input.cookieOpts = &options.Cookie{
+					Name:     "_cookie_name",
+					Path:     "/path",
+					Expire:   time.Duration(72) * time.Hour,
+					Refresh:  time.Duration(2) * time.Hour,
+					Secure:   false,
+					HTTPOnly: false,
+					Domains:  []string{"example.com"},
+					SameSite: "strict",
+					Secret:   string(cookieSecret),
+				}
+
+				var err error
+				ss, err = newSS(opts, input.cookieOpts)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			EnforcedSingleSessionStoreInterfaceTests(&input)
+
+		})
 	})
 }
