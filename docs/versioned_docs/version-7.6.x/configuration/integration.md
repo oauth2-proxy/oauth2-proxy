@@ -267,9 +267,9 @@ http:
 
 ## Configuring for use with the caddy v2 `forward_auth` directive
 
-The [Caddy `forward_auth` directive](https://caddyserver.com/docs/caddyfile/directives/forward_auth) allowes Caddy to authenticate requests via the oauth2-proxy's `/auth`.
+The [Caddy `forward_auth` directive](https://caddyserver.com/docs/caddyfile/directives/forward_auth) allows Caddy to authenticate requests via the `oauth2-proxy`'s `/auth`.
 
-This example is for a simple reverse proxy setup where the `/oauth2/` path is kept under the same domain and failed auth `(status:401)` request will be catched and redirect to the `sign_in` endpoint.
+This example is for a simple reverse proxy setup where the `/oauth2/` path is kept under the same domain and failed auth requests (401 status returned) will be caught and redirected to the `sign_in` endpoint.
 
 **Following options need to be set on `oauth2-proxy`:**
 - `--reverse-proxy=true`: Enables the use of `X-Forwarded-*` headers to determine redirects correctly
