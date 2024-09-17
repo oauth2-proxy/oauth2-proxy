@@ -72,7 +72,7 @@ func NewProvider(providerConfig options.Provider) (Provider, error) {
 	}
 }
 
-func configureVerifier(ctx context.Context, providerConfig options.Provider, p *ProviderData) error {
+func configureVerifier(ctx context.Context, providerConfig *options.Provider, p *ProviderData) error {
 	needsVerifier, err := providerRequiresOIDCProviderVerifier(providerConfig.Type)
 	if err != nil {
 		return err
@@ -122,8 +122,8 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 	}
 
 	p.Client = client
-	ctx := context.WithValue(context.TODO(), oauth2.HTTPClient, client)
-	if err := configureVerifier(ctx, providerConfig, p); err != nil {
+	ctx := oidc.ClientContext(context.Background(), client)
+	if err := configureVerifier(ctx, &providerConfig, p); err != nil {
 		return nil, fmt.Errorf("unable to configure token verifier for provider: %w", err)
 	}
 
