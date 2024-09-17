@@ -47,9 +47,8 @@ func (m *Manager) Save(rw http.ResponseWriter, req *http.Request, s *sessions.Se
 	err = tckt.saveSession(s, func(key string, val []byte, exp time.Duration) error {
 		if m.EnforceSingleSession {
 			return m.Store.SaveAndEvict(req.Context(), key, val, s.Email, exp)
-		} else {
-			return m.Store.Save(req.Context(), key, val, exp)
 		}
+		return m.Store.Save(req.Context(), key, val, exp)
 	})
 	if err != nil {
 		return err
