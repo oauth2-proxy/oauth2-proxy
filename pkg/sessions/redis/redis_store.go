@@ -46,8 +46,8 @@ func (store *SessionStore) Save(ctx context.Context, key string, value []byte, e
 }
 
 // SaveAndEvict takes a sessions.SessionState and stores the information from it
-// to redis, invalidating any existing sessions for this user, and adds a new persistence
-// cookie on the HTTP response writer
+// to redis, invalidating any existing session for this user, maintains a bookkeeping map of email to session key, and
+// adds a new persistence cookie on the HTTP response writer
 func (store *SessionStore) SaveAndEvict(ctx context.Context, key string, value []byte, email string, exp time.Duration) error {
 	err := store.Client.Set(ctx, key, value, exp)
 	if err != nil {
@@ -60,7 +60,7 @@ func (store *SessionStore) SaveAndEvict(ctx context.Context, key string, value [
 	if len(lastSession) > 0 {
 		err = store.Client.Del(ctx, string(lastSession))
 		if err != nil {
-			// A deleting a missing key will result in a zero count so this an actual error
+			// Deleting a missing key will result in a zero count so this an actual error
 			return fmt.Errorf("error evicting previous redis session: %v", err)
 		}
 	}
