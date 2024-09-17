@@ -60,6 +60,7 @@ func (store *SessionStore) SaveAndEvict(ctx context.Context, key string, value [
 	if len(lastSession) > 0 {
 		err = store.Client.Del(ctx, string(lastSession))
 		if err != nil {
+			// A deleting a missing key will result in a zero count so this an actual error
 			return fmt.Errorf("error evicting previous redis session: %v", err)
 		}
 	}

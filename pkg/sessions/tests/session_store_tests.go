@@ -521,8 +521,9 @@ func EnforcedSingleSessionStoreInterfaceTests(in *testInput) {
 			CheckCookieOptions(in)
 		})
 
-		// Maybe the actual ticket decoding functions should be public on ticket or this should be invoked from
-		// persistence with a passed in cookie to ticketId function.
+		// TODO: This should be calling the actual ticket decoding logic but when I tried to move these tests to
+		// manager_test.go, it creating a cyclic dependency. The options seem to be make decodeTicketFromRequest
+		// (and ticket) public, or replicate the logic
 		var getSessionKey = func(rw http.ResponseWriter) string {
 			cookie := (&http.Response{Header: rw.Header()}).Cookies()[0]
 			decodedOnce, _ := base64.RawURLEncoding.DecodeString(strings.Split(cookie.Value, "|")[0])
@@ -544,9 +545,10 @@ func EnforcedSingleSessionStoreInterfaceTests(in *testInput) {
 				Expect(err).ToNot(HaveOccurred())
 
 				// Ensure mapping points to loaded sessionId
-				firstSessionKey := in.lookUpMapping(session.Email)
-				Expect(firstSessionKey).To(Equal(getSessionKey(&saveResponse1)))
-				Expect(in.checkStore(firstSessionKey)).To(Equal(true))
+				firstMappedSessionKey := in.lookUpMapping(session.Email)
+				firstSessionId := getSessionKey(&saveResponse1)
+				Expect(firstMappedSessionKey).To(Equal(firstSessionId))
+				Expect(in.checkStore(firstMappedSessionKey)).To(Equal(true))
 
 				// Save again
 				saveResponse2 := httptest.NewRecorder()
@@ -554,14 +556,15 @@ func EnforcedSingleSessionStoreInterfaceTests(in *testInput) {
 				Expect(err).ToNot(HaveOccurred())
 
 				// Ensure mapping now points to the new session
-				secondSessionKey := getSessionKey(saveResponse2)
-				Expect(in.lookUpMapping(session.Email)).To(Equal(secondSessionKey))
+				secondMappedSessionKey := in.lookUpMapping(session.Email)
+				secondSessionId := getSessionKey(saveResponse2)
+				Expect(secondMappedSessionKey).To(Equal(secondSessionId))
 
 				// New session should exist
-				Expect(in.checkStore(secondSessionKey)).To(Equal(true))
+				Expect(in.checkStore(secondMappedSessionKey)).To(Equal(true))
 
 				// Old session should not
-				Expect(in.checkStore(firstSessionKey)).To(Equal(false))
+				Expect(in.checkStore(firstMappedSessionKey)).To(Equal(false))
 
 			})
 
