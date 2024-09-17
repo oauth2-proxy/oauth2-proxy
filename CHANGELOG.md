@@ -16,6 +16,7 @@
 - [#2112](https://github.com/oauth2-proxy/oauth2-proxy/pull/2112) docs: update list of providers which support refresh tokens (@mikefab-msf)
 - [#2734](https://github.com/oauth2-proxy/oauth2-proxy/pull/2734) Added s390x architecture option support (@priby05)
 - [#2589](https://github.com/oauth2-proxy/oauth2-proxy/pull/2589) Added support for regex path matching and rewriting when using a static `file:` upstream (@ianroberts)
+- [#2782](https://github.com/oauth2-proxy/oauth2-proxy/pull/2782) Added support for limiting a user to a single session in the Redis store (@tristanbuckner)
 
 # V7.6.0
 
