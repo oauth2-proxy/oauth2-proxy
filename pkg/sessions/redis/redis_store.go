@@ -15,6 +15,8 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+const mappingNamespace = "email"
+
 // SessionStore is an implementation of the persistence.Store
 // interface that stores sessions in redis
 type SessionStore struct {
@@ -53,7 +55,7 @@ func (store *SessionStore) SaveAndEvict(ctx context.Context, key string, value [
 	if err != nil {
 		return fmt.Errorf("error saving redis session: %v", err)
 	}
-	lastSession, err := store.Client.GetSet(ctx, email, []byte(key))
+	lastSession, err := store.Client.GetSet(ctx, addNameSpace(email), []byte(key))
 	if err != nil && err != redis.Nil {
 		return fmt.Errorf("error saving redis user to session mapping: %v", err)
 	}
@@ -65,6 +67,10 @@ func (store *SessionStore) SaveAndEvict(ctx context.Context, key string, value [
 		}
 	}
 	return nil
+}
+
+func addNameSpace(user string) string {
+	return fmt.Sprintf("%s:%s", mappingNamespace, user)
 }
 
 // Load reads sessions.SessionState information from a persistence

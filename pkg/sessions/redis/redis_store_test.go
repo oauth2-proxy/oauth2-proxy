@@ -262,7 +262,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 				return nil
 			},
 			func(userEmail string) (redisSessionKey string) {
-				redisSessionKey, _ = mr.Get(userEmail)
+				redisSessionKey, _ = mr.Get(addNameSpace(userEmail))
 				return
 			},
 			func(sessionId string) bool {
