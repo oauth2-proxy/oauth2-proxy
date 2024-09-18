@@ -1326,6 +1326,9 @@ func checkAllowedEmails(req *http.Request, s *sessionsapi.SessionState) bool {
 // encodedState builds the OAuth state param out of our nonce and
 // original application redirect
 func encodeState(nonce, redirect, providerID string, encode bool) string {
+	// encoding redirect to make sure that any colons in url like in `https://` are not considered
+	// as separators while splitting state
+	redirect = url.QueryEscape(redirect)
 	rawString := fmt.Sprintf("%v:%v:%v", nonce, redirect, providerID)
 	if encode {
 		return base64.RawURLEncoding.EncodeToString([]byte(rawString))
@@ -1346,7 +1349,13 @@ func decodeState(state string, encode bool) (nonce string, redirect string, prov
 	if len(parsedState) != 3 {
 		return "", "", "", errors.New("invalid length")
 	}
-	return parsedState[0], parsedState[1], parsedState[2], nil
+
+	redirect, err = url.QueryUnescape(parsedState[1])
+	if err != nil {
+		return "", "", "", fmt.Errorf("invalid redirect uri in state")
+	}
+
+	return parsedState[0], redirect, parsedState[2], nil
 }
 
 // addHeadersForProxying adds the appropriate headers the request / response for proxying

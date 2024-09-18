@@ -3435,29 +3435,40 @@ func TestAuthOnlyAllowedEmailDomains(t *testing.T) {
 	}
 }
 
-func TestStateEncodesCorrectly(t *testing.T) {
-	state := "some_state_to_test"
+func Test_t(t *testing.T) {
+
+	redirect := "https://some_redirect_uri_to_test"
 	nonce := "some_nonce_to_test"
 	providerID := "test_provider"
 
-	encodedResult := encodeState(nonce, state, providerID, true)
-	assert.Equal(t, "c29tZV9ub25jZV90b190ZXN0OnNvbWVfc3RhdGVfdG9fdGVzdDp0ZXN0X3Byb3ZpZGVy", encodedResult)
+	s := encodeState(nonce, redirect, providerID, true)
 
-	notEncodedResult := encodeState(nonce, state, providerID, false)
-	assert.Equal(t, "some_nonce_to_test:some_state_to_test:test_provider", notEncodedResult)
+	t.Error(s)
+}
+
+func TestStateEncodesCorrectly(t *testing.T) {
+	redirect := "https://some_redirect_uri_to_test"
+	nonce := "some_nonce_to_test"
+	providerID := "test_provider"
+
+	encodedResult := encodeState(nonce, redirect, providerID, true)
+	assert.Equal(t, "c29tZV9ub25jZV90b190ZXN0Omh0dHBzJTNBJTJGJTJGc29tZV9yZWRpcmVjdF91cmlfdG9fdGVzdDp0ZXN0X3Byb3ZpZGVy", encodedResult)
+
+	notEncodedResult := encodeState(nonce, redirect, providerID, false)
+	assert.Equal(t, `some_nonce_to_test:https%3A%2F%2Fsome_redirect_uri_to_test:test_provider`, notEncodedResult)
 }
 
 func TestStateDecodesCorrectly(t *testing.T) {
-	nonce, redirect, providerID, _ := decodeState("c29tZV9ub25jZV90b190ZXN0OnNvbWVfc3RhdGVfdG9fdGVzdDp0ZXN0X3Byb3ZpZGVy", true)
+	nonce, redirect, providerID, _ := decodeState("c29tZV9ub25jZV90b190ZXN0Omh0dHBzJTNBJTJGJTJGc29tZV9yZWRpcmVjdF91cmlfdG9fdGVzdDp0ZXN0X3Byb3ZpZGVy", true)
 
 	assert.Equal(t, "some_nonce_to_test", nonce)
-	assert.Equal(t, "some_state_to_test", redirect)
+	assert.Equal(t, "https://some_redirect_uri_to_test", redirect)
 	assert.Equal(t, "test_provider", providerID)
 
-	nonce2, redirect2, providerID2, _ := decodeState("some_nonce_to_test:some_state_to_test:test_provider", false)
+	nonce2, redirect2, providerID2, _ := decodeState(`some_nonce_to_test:https%3A%2F%2Fsome_redirect_uri_to_test:test_provider`, false)
 
 	assert.Equal(t, "some_nonce_to_test", nonce2)
-	assert.Equal(t, "some_state_to_test", redirect2)
+	assert.Equal(t, "https://some_redirect_uri_to_test", redirect2)
 	assert.Equal(t, "test_provider", providerID2)
 
 }
