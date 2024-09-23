@@ -1231,7 +1231,7 @@ func checkAllowedEmails(req *http.Request, s *sessionsapi.SessionState) bool {
 	return allowed
 }
 
-// encodedState builds the OAuth state param out of our nonce and
+// encodeState builds the OAuth state param out of our nonce and
 // original application redirect
 func encodeState(nonce string, redirect string, encode bool) string {
 	rawString := fmt.Sprintf("%v:%v", nonce, redirect)
