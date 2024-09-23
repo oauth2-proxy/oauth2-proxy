@@ -15,7 +15,7 @@ We suggest using [Visual Studio Code](https://code.visualstudio.com/docs/languag
 
 # Go version
 
-This project is currently still using go 1.19. You can follow the installation guide for go [here.](https://go.dev/doc/install) And you can find go version 1.19 in the archived section [here.](https://go.dev/dl/)
+This project is currently still using go 1.22. You can follow the installation guide for go [here.](https://go.dev/doc/install) And you can find go version 1.22 in the archived section [here.](https://go.dev/dl/)
 
 # Preparing your fork
 Clone your fork, create a feature branch and update the depedencies to get started.
@@ -44,7 +44,7 @@ For starting oauth2-proxy locally open the debugging tab and create the `launch.
             "program": "${workspaceFolder}",
             "args": [
                 "--config",
-                // The following configuration contains settings for a locally deployed 
+                // The following configuration contains settings for a locally deployed
                 // upstream and dex as an idetity provider
                 "contrib/local-environment/oauth2-proxy.cfg"
             ]
@@ -57,7 +57,7 @@ For starting oauth2-proxy locally open the debugging tab and create the `launch.
             "program": "${workspaceFolder}",
             "args": [
                 "--config",
-                // The following configuration contains settings for a locally deployed 
+                // The following configuration contains settings for a locally deployed
                 // upstream and keycloak as an idetity provider
                 "contrib/local-environment/oauth2-proxy-keycloak.cfg"
             ]
