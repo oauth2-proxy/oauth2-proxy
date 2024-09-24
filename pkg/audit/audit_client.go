@@ -123,11 +123,13 @@ func (c *Client) createAuditEntry(ss *sessions.SessionState, appURL string, tena
 	auditMessage, err := json.Marshal(auditObject)
 	if err != nil {
 		logger.Errorf("%s: could not marshal the audit object: %v", ErrPersitAuditEvent.Error(), err)
+		AuditErrorMetricCounter.Inc()
 		return
 	}
 	err = c.send(string(auditMessage))
 	if err != nil {
 		logger.Errorf("%s: could not send the audit message to the url '%s': %v", ErrPersitAuditEvent.Error(), c.opts.URL, err)
+		AuditErrorMetricCounter.Inc()
 		return
 	}
 }
