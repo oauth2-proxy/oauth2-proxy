@@ -6,6 +6,8 @@
 
 ## Breaking Changes
 
+## Changes since v7.7.0
+
 # V7.7.0
 
 ## Release Highlights
