@@ -12,6 +12,15 @@
 
 ## Release Highlights
 
+- 🌐 Custom user agent "oauth2-proxy/<version>"
+- 💾 Added s390x architecture support
+- 🕵️‍♀️ Vulnerabilities have been addressed
+  - CVE-2024-24786
+  - CVE-2024-24791
+  - CVE-2024-24790
+  - CVE-2024-24784
+- 📖 Improved docs
+
 ## Important Notes
 
 ## Breaking Changes
