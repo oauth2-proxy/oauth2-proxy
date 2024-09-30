@@ -140,7 +140,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 					Host:   cookieDomain,
 					Path:   cookiePath,
 				},
-			}
+				Header: make(http.Header)}
 		})
 
 		AfterEach(func() {
@@ -165,6 +165,67 @@ var _ = Describe("CSRF Cookie Tests", func() {
 						testCookieExpires(testNow.Add(cookieOpts.CSRFExpire)),
 					),
 				))
+			})
+		})
+
+		Context("LoadCSRFCookie", func() {
+			BeforeEach(func() {
+				// we need to reset the time to ensure the cookie is valid
+				privateCSRF.time.Reset()
+			})
+
+			It("should return error when no cookie is set", func() {
+				csrf, err := LoadCSRFCookie(req, cookieOpts)
+				Expect(err).To(HaveOccurred())
+				Expect(csrf).To(BeNil())
+			})
+
+			It("should find one valid cookie", func() {
+				privateCSRF.OAuthState = []byte(csrfState)
+				privateCSRF.OIDCNonce = []byte(csrfNonce)
+				encoded, err := privateCSRF.encodeCookie()
+				Expect(err).ToNot(HaveOccurred())
+
+				req.AddCookie(&http.Cookie{
+					Name:  privateCSRF.cookieName(),
+					Value: encoded,
+				})
+
+				csrf, err := LoadCSRFCookie(req, cookieOpts)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(csrf).ToNot(BeNil())
+			})
+
+			It("should return error when one invalid cookie is set", func() {
+				req.AddCookie(&http.Cookie{
+					Name:  privateCSRF.cookieName(),
+					Value: "invalid",
+				})
+
+				csrf, err := LoadCSRFCookie(req, cookieOpts)
+				Expect(err).To(HaveOccurred())
+				Expect(csrf).To(BeNil())
+			})
+
+			It("should be able to handle two cookie with one invalid", func() {
+				privateCSRF.OAuthState = []byte(csrfState)
+				privateCSRF.OIDCNonce = []byte(csrfNonce)
+				encoded, err := privateCSRF.encodeCookie()
+				Expect(err).ToNot(HaveOccurred())
+
+				req.AddCookie(&http.Cookie{
+					Name:  privateCSRF.cookieName(),
+					Value: "invalid",
+				})
+
+				req.AddCookie(&http.Cookie{
+					Name:  privateCSRF.cookieName(),
+					Value: encoded,
+				})
+
+				csrf, err := LoadCSRFCookie(req, cookieOpts)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(csrf).ToNot(BeNil())
 			})
 		})
 
