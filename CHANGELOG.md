@@ -9,7 +9,15 @@
 ## Changes since v7.6.0
 
 - [#2539](https://github.com/oauth2-proxy/oauth2-proxy/pull/2539) pkg/http: Fix leaky test (@isodude)
-- [#2607](https://github.com/oauth2-proxy/oauth2-proxy/pull/2607) Fix(csrf): fix possible infinite loop (@Primexz)
+- [#4917](https://github.com/oauth2-proxy/oauth2-proxy/pull/4917) Upgraded all modules to the latest version (@pierluigilenoci)
+- [#2570](https://github.com/oauth2-proxy/oauth2-proxy/pull/2570) Set default user agent to oauth2-proxy/$version (from default Golang one)
+- [#2674](https://github.com/oauth2-proxy/oauth2-proxy/pull/2674) docs: additional notes about available claims for HeaderValue (@vegetablest)
+- [#2459](https://github.com/oauth2-proxy/oauth2-proxy/pull/2459) chore(deps): Updated to ginkgo v2 (@kvanzuijlen, @tuunit)
+- [#2112](https://github.com/oauth2-proxy/oauth2-proxy/pull/2112) docs: update list of providers which support refresh tokens (@mikefab-msf)
+- [#2734](https://github.com/oauth2-proxy/oauth2-proxy/pull/2734) Added s390x architecture option support (@priby05)
+- [#2589](https://github.com/oauth2-proxy/oauth2-proxy/pull/2589) Added support for regex path matching and rewriting when using a static `file:` upstream (@ianroberts)
+- [#2790](https://github.com/oauth2-proxy/oauth2-proxy/pull/2790) chore(deps): update all golang dependencies (@tuunit)
+- [#2607](https://github.com/oauth2-proxy/oauth2-proxy/pull/2607) fix(csrf): fix possible infinite loop (@Primexz)
 
 # V7.6.0
 

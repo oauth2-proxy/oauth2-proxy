@@ -426,7 +426,7 @@ You have to substitute *name* with the actual cookie name you configured via --c
 
 ### ForwardAuth with 401 errors middleware
 
-The [Traefik v2 `ForwardAuth` middleware](https://doc.traefik.io/traefik/middlewares/forwardauth/) allows Traefik to authenticate requests via the oauth2-proxy's `/oauth2/auth` endpoint on every request, which only returns a 202 Accepted response or a 401 Unauthorized response without proxying the whole request through. For example, on Dynamic File (YAML) Configuration:
+The [Traefik v2 `ForwardAuth` middleware](https://doc.traefik.io/traefik/middlewares/http/forwardauth/) allows Traefik to authenticate requests via the oauth2-proxy's `/oauth2/auth` endpoint on every request, which only returns a 202 Accepted response or a 401 Unauthorized response without proxying the whole request through. For example, on Dynamic File (YAML) Configuration:
 
 ```yaml
 http:
@@ -491,7 +491,7 @@ http:
 
 ### ForwardAuth with static upstreams configuration
 
-Redirect to sign_in functionality provided without the use of `errors` middleware with [Traefik v2 `ForwardAuth` middleware](https://doc.traefik.io/traefik/middlewares/forwardauth/) pointing to oauth2-proxy service's `/` endpoint
+Redirect to sign_in functionality provided without the use of `errors` middleware with [Traefik v2 `ForwardAuth` middleware](https://doc.traefik.io/traefik/middlewares/http/forwardauth/) pointing to oauth2-proxy service's `/` endpoint
 
 **Following options need to be set on `oauth2-proxy`:**
 - `--upstream=static://202`: Configures a static response for authenticated sessions

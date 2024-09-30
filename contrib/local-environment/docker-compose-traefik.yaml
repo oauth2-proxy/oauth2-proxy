@@ -23,6 +23,7 @@ version: '3.0'
 services:
 
   oauth2-proxy:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
     ports: []
     hostname: oauth2-proxy
     volumes:
@@ -33,7 +34,7 @@ services:
   # Reverse proxy
   gateway:
     container_name: traefik
-    image: traefik:2.11.0
+    image: traefik:v2.11.6
     volumes:
       - "./traefik:/etc/traefik"
     ports:

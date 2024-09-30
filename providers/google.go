@@ -288,7 +288,7 @@ func getTargetPrincipal(ctx context.Context, opts options.GoogleOptions) (target
 	case content["client_email"] != nil:
 		targetPrincipal = fmt.Sprintf("%v", content["client_email"])
 	case metadata.OnGCE():
-		targetPrincipal, err = metadata.Email("")
+		targetPrincipal, err = metadata.EmailWithContext(ctx, "")
 		if err != nil {
 			logger.Fatal("error while calling the GCE metadata server", err)
 		}

@@ -42,7 +42,7 @@ services:
           - httpbin.localtest.me
 
   gitea:
-    image: gitea/gitea:1.21.10
+    image: gitea/gitea:1.22.1
     container_name: gitea
     environment:
       - USER_UID=1000

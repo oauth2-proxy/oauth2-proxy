@@ -1,8 +1,7 @@
 package validation
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"

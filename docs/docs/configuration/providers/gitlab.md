@@ -3,6 +3,15 @@ id: gitlab
 title: GitLab
 ---
 
+## Config Options
+
+| Flag                | Toml Field        | Type           | Description                                                                                                                                                                                                                                                                           | Default |
+| ------------------- | ----------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `--gitlab-group`    | `gitlab_groups`   | string \| list | restrict logins to members of any of these groups (slug), separated by a comma                                                                                                                                                                                                        |         |
+| `--gitlab-projects` | `gitlab_projects` | string \| list | restrict logins to members of any of these projects (may be given multiple times) formatted as `orgname/repo=accesslevel`. Access level should be a value matching [Gitlab access levels](https://docs.gitlab.com/ee/api/members.html#valid-access-levels), defaulted to 20 if absent |         |
+
+## Usage
+
 This auth provider has been tested against Gitlab version 12.X. Due to Gitlab API changes, it may not work for version 
 prior to 12.X (see [994](https://github.com/oauth2-proxy/oauth2-proxy/issues/994)).
 

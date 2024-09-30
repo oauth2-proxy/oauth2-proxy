@@ -37,6 +37,7 @@ RUN case ${TARGETPLATFORM} in \
          # https://github.com/golang/go/wiki/GoArm
          "linux/arm64" | "linux/arm/v8")  GOARCH=arm64  ;; \
          "linux/ppc64le")  GOARCH=ppc64le  ;; \
+         "linux/s390x")  GOARCH=s390x  ;; \
          "linux/arm/v6") GOARCH=arm GOARM=6  ;; \
          "linux/arm/v7") GOARCH=arm GOARM=7 ;; \
     esac && \

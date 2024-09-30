@@ -7,9 +7,10 @@ import (
 	"net/http/httptest"
 	"os"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -32,8 +33,12 @@ var _ = Describe("File Server Suite", func() {
 		_, err := io.ReadFull(rand.Reader, idBytes)
 		Expect(err).ToNot(HaveOccurred())
 		id = string(idBytes)
+		upstream := options.Upstream{
+			ID:   id,
+			Path: "/files",
+		}
 
-		handler = newFileServer(id, "/files", filesDir)
+		handler = newFileServer(upstream, filesDir)
 	})
 
 	AfterEach(func() {
