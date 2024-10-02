@@ -22,6 +22,7 @@
 - 📖 Improved docs
 
 ## Important Notes
+- Remove support of arm/v6 for distroless image runtime. Alpine tags still support arm/v6.
 
 ## Breaking Changes
 
