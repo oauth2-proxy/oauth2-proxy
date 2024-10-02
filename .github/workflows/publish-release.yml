@@ -49,7 +49,8 @@ jobs:
 
     - name: Get dependencies
       env:
-        GOLANGCI_LINT_VERSION: v1.55.2
+        # renovate: datasource=github-tags depName=golangci/golangci-lint
+        GOLANGCI_LINT_VERSION: v1.61.0
       run: |
         curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin ${GOLANGCI_LINT_VERSION}
         curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
