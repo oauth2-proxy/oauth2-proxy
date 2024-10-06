@@ -31,20 +31,16 @@ func Validate(o *options.Options) error {
 	msgs = parseSignatureKey(o, msgs)
 
 	if o.SSLInsecureSkipVerify {
-		transport := requests.DefaultTransport.Next.(*http.Transport).Clone()
+		transport := requests.DefaultTransport.(*http.Transport)
 		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // #nosec G402 -- InsecureSkipVerify is a configurable option we allow
-
-		requests.DefaultHTTPClient = &http.Client{Transport: transport}
 	} else if len(o.Providers[0].CAFiles) > 0 {
 		pool, err := util.GetCertPool(o.Providers[0].CAFiles, o.Providers[0].UseSystemTrustStore)
 		if err == nil {
-			transport := requests.DefaultTransport.Next.(*http.Transport).Clone()
+			transport := requests.DefaultTransport.(*http.Transport)
 			transport.TLSClientConfig = &tls.Config{
 				RootCAs:    pool,
 				MinVersion: tls.VersionTLS12,
 			}
-
-			requests.DefaultHTTPClient = &http.Client{Transport: transport}
 		} else {
 			msgs = append(msgs, fmt.Sprintf("unable to load provider CA file(s): %v", err))
 		}
