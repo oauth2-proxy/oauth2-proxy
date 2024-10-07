@@ -6,6 +6,18 @@
 
 ## Breaking Changes
 
+## Changes since v7.7.1
+
+# V7.7.1
+
+## Release Highlights
+
+- 🐛 Several bugs have been squashed
+
+## Important Notes
+
+## Breaking Changes
+
 ## Changes since v7.7.0
 
 - [#2803](https://github.com/oauth2-proxy/oauth2-proxy/pull/2803) fix: self signed certificate handling in v7.7.0 (@tuunit)
