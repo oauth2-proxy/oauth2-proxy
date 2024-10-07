@@ -1310,20 +1310,25 @@ func LoggingCSRFCookiesInOAuthCallback(req *http.Request, cookieName string) {
 	cookies := req.Cookies()
 	if len(cookies) == 0 {
 		logger.Println(req, logger.AuthFailure, "No cookies were found in OAuth callback.")
-	} else {
-		var anyFound = false
-		for i := range cookies {
-			var c = cookies[i]
-			if cookieName == c.Name {
-				logger.Println(req, logger.AuthFailure, "The CSRF cookie %s was found in OAuth callback.", c.Name)
-				anyFound = true
-			} else if strings.Contains(c.Name, "_csrf") {
-				logger.Println(req, logger.AuthFailure, "The CSRF cookie %s was found in OAuth callback, but it is not the expected one (%s).", c.Name, cookieName)
-				anyFound = true
-			}
+		return
+	}
+
+	foundCSRFCookie := false
+	for _, c := range cookies {
+		if cookieName == c.Name {
+			logger.Println(req, logger.AuthFailure, "CSRF cookie %s was found in OAuth callback.", c.Name)
+			foundCSRFCookie = true
+			break
 		}
-		if !anyFound {
-			logger.Println(req, logger.AuthFailure, "Cookies were found in OAuth callback, but none was a CSRF cookie.")
+
+		if strings.HasSuffix(c.Name, "_csrf") {
+			logger.Println(req, logger.AuthFailure, "CSRF cookie %s was found in OAuth callback, but it is not the expected one (%s).", c.Name, cookieName)
+			foundCSRFCookie = true
+			break
 		}
+	}
+
+	if !foundCSRFCookie {
+		logger.Println(req, logger.AuthFailure, "Cookies were found in OAuth callback, but none was a CSRF cookie.")
 	}
 }
