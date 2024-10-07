@@ -1313,22 +1313,17 @@ func LoggingCSRFCookiesInOAuthCallback(req *http.Request, cookieName string) {
 		return
 	}
 
-	foundCSRFCookie := false
 	for _, c := range cookies {
 		if cookieName == c.Name {
 			logger.Println(req, logger.AuthFailure, "CSRF cookie %s was found in OAuth callback.", c.Name)
-			foundCSRFCookie = true
-			break
+			return
 		}
 
 		if strings.HasSuffix(c.Name, "_csrf") {
 			logger.Println(req, logger.AuthFailure, "CSRF cookie %s was found in OAuth callback, but it is not the expected one (%s).", c.Name, cookieName)
-			foundCSRFCookie = true
-			break
+			return
 		}
 	}
 
-	if !foundCSRFCookie {
-		logger.Println(req, logger.AuthFailure, "Cookies were found in OAuth callback, but none was a CSRF cookie.")
-	}
+	logger.Println(req, logger.AuthFailure, "Cookies were found in OAuth callback, but none was a CSRF cookie.")
 }
