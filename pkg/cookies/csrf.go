@@ -216,7 +216,7 @@ func csrfCookieName(opts *options.Cookie, stateSubstring string) string {
 	if stateSubstring == "" {
 		return fmt.Sprintf("%v_csrf", opts.Name)
 	}
-	return fmt.Sprintf("%v_csrf_%v", opts.Name, stateSubstring)
+	return fmt.Sprintf("%v_%v_csrf", opts.Name, stateSubstring)
 }
 
 // ExtractStateSubstring extract the initial state characters, to add it to the CSRF cookie name
