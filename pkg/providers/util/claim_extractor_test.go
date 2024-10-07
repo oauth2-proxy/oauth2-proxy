@@ -26,10 +26,10 @@ const (
         "idTokenGroup2"
       ],
 	  "nested-groups-claim-containing-hyphen": {
-		"groups": [
-			"nestedClaimContainingHypenGroup1",
-			"nestedClaimContainingHypenGroup2"
-		]
+			"groups": [
+				"nestedClaimContainingHypenGroup1",
+				"nestedClaimContainingHypenGroup2"
+			]
 	  },
       "https://groups.test": [
         "fqdnGroup1",
