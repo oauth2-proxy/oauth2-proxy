@@ -90,9 +90,9 @@ func LoadCSRFCookie(req *http.Request, cookieName string, opts *options.Cookie) 
 	return nil, fmt.Errorf("CSRF cookie with name '%v' was not found", cookieName)
 }
 
-// CalculateCookieName in case cookie options state that CSRF cookie has fixed name then set fixed name, otherwise
+// GenerateCookieName in case cookie options state that CSRF cookie has fixed name then set fixed name, otherwise
 // build name based on the state
-func CalculateCookieName(opts *options.Cookie, state string) string {
+func GenerateCookieName(opts *options.Cookie, state string) string {
 	stateSubstring := ""
 	if opts.CSRFPerRequest {
 		// csrfCookieName will include a substring of the state to enable multiple csrf cookies

@@ -40,7 +40,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		privateCSRF = publicCSRF.(*csrf)
-		csrfName = CalculateCookieName(cookieOpts, csrfNonce)
+		csrfName = GenerateCookieName(cookieOpts, csrfNonce)
 	})
 
 	Context("NewCSRF", func() {

@@ -878,7 +878,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	// calculate the cookie name
-	cookieName := cookies.CalculateCookieName(p.CookieOptions, nonce)
+	cookieName := cookies.GenerateCookieName(p.CookieOptions, nonce)
 	// Try to find the CSRF cookie and decode it
 	csrf, err := cookies.LoadCSRFCookie(req, cookieName, p.CookieOptions)
 	if err != nil {
