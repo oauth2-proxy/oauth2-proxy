@@ -13,6 +13,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
 )
 
@@ -30,22 +31,16 @@ func Validate(o *options.Options) error {
 	msgs = parseSignatureKey(o, msgs)
 
 	if o.SSLInsecureSkipVerify {
-		// InsecureSkipVerify is a configurable option we allow
-		/* #nosec G402 */
-		insecureTransport := &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		}
-		http.DefaultClient = &http.Client{Transport: insecureTransport}
+		transport := requests.DefaultTransport.(*http.Transport)
+		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // #nosec G402 -- InsecureSkipVerify is a configurable option we allow
 	} else if len(o.Providers[0].CAFiles) > 0 {
 		pool, err := util.GetCertPool(o.Providers[0].CAFiles, o.Providers[0].UseSystemTrustStore)
 		if err == nil {
-			transport := http.DefaultTransport.(*http.Transport).Clone()
+			transport := requests.DefaultTransport.(*http.Transport)
 			transport.TLSClientConfig = &tls.Config{
 				RootCAs:    pool,
 				MinVersion: tls.VersionTLS12,
 			}
-
-			http.DefaultClient = &http.Client{Transport: transport}
 		} else {
 			msgs = append(msgs, fmt.Sprintf("unable to load provider CA file(s): %v", err))
 		}

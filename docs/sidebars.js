@@ -1,5 +1,9 @@
-module.exports = {
+const sidebars = {
   docs: [
+    {
+      type: 'doc',
+      id: 'welcome',
+    },
     {
       type: 'doc',
       id: 'installation',
@@ -18,6 +22,7 @@ module.exports = {
       collapsed: false,
       items: [
         'configuration/overview',
+        'configuration/integration',
         {
           type: 'category',
           label: 'OAuth Provider Configuration',
@@ -71,3 +76,5 @@ module.exports = {
     },
   ],
 };
+
+export default sidebars;

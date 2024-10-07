@@ -73,12 +73,21 @@ func NewCSRF(opts *options.Cookie, codeVerifier string) (CSRF, error) {
 
 // LoadCSRFCookie loads a CSRF object from a request's CSRF cookie
 func LoadCSRFCookie(req *http.Request, cookieName string, opts *options.Cookie) (CSRF, error) {
-	cookie, err := req.Cookie(cookieName)
-	if err != nil {
-		return nil, fmt.Errorf("the CSRF cookie with name was not found: %v", cookieName)
+	cookies := req.Cookies()
+	for _, cookie := range cookies {
+		if cookie.Name != cookieName {
+			continue
+		}
+
+		csrf, err := decodeCSRFCookie(cookie, opts)
+		if err != nil {
+			continue
+		}
+
+		return csrf, nil
 	}
 
-	return decodeCSRFCookie(cookie, opts)
+	return nil, fmt.Errorf("CSRF cookie with name '%v' was not found", cookieName)
 }
 
 // CalculateCookieName in case cookie options state that CSRF cookie has fixed name then set fixed name, otherwise

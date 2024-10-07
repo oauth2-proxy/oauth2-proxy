@@ -413,7 +413,7 @@ func (patTest *PassAccessTokenTest) getCallbackEndpoint() (httpCode int, cookie 
 		http.MethodGet,
 		fmt.Sprintf(
 			"/oauth2/callback?code=callback_code&state=%s",
-			encodeState(csrf.HashOAuthState(), "%2F"),
+			encodeState(csrf.HashOAuthState(), "%2F", false),
 		),
 		strings.NewReader(""),
 	)
@@ -576,8 +576,11 @@ type SignInPageTest struct {
 	signInProviderRegexp *regexp.Regexp
 }
 
-const signInRedirectPattern = `<input type="hidden" name="rd" value="(.*)">`
-const signInSkipProvider = `>Found<`
+const (
+	signInRedirectPattern = `<input type="hidden" name="rd" value="(.*)">`
+	signInSkipProvider    = `>Found<`
+	patternNotFound       = "Did not find pattern in body: "
+)
 
 func NewSignInPageTest(skipProvider bool) (*SignInPageTest, error) {
 	var sipTest SignInPageTest
@@ -720,7 +723,7 @@ func TestSignInPageIncludesTargetRedirect(t *testing.T) {
 
 	match := sipTest.signInRegexp.FindStringSubmatch(body)
 	if match == nil {
-		t.Fatal("Did not find pattern in body: " +
+		t.Fatal(patternNotFound +
 			signInRedirectPattern + "\nBody:\n" + body)
 	}
 	if match[1] != endpoint {
@@ -750,7 +753,7 @@ func TestSignInPageDirectAccessRedirectsToRoot(t *testing.T) {
 
 	match := sipTest.signInRegexp.FindStringSubmatch(body)
 	if match == nil {
-		t.Fatal("Did not find pattern in body: " +
+		t.Fatal(patternNotFound +
 			signInRedirectPattern + "\nBody:\n" + body)
 	}
 	if match[1] != "/" {
@@ -771,7 +774,7 @@ func TestSignInPageSkipProvider(t *testing.T) {
 
 	match := sipTest.signInProviderRegexp.FindStringSubmatch(body)
 	if match == nil {
-		t.Fatal("Did not find pattern in body: " +
+		t.Fatal(patternNotFound +
 			signInSkipProvider + "\nBody:\n" + body)
 	}
 }
@@ -789,7 +792,7 @@ func TestSignInPageSkipProviderDirect(t *testing.T) {
 
 	match := sipTest.signInProviderRegexp.FindStringSubmatch(body)
 	if match == nil {
-		t.Fatal("Did not find pattern in body: " +
+		t.Fatal(patternNotFound +
 			signInSkipProvider + "\nBody:\n" + body)
 	}
 }
@@ -1212,7 +1215,7 @@ func TestAuthOnlyEndpointSetXAuthRequestHeaders(t *testing.T) {
 
 	pcTest.rw = httptest.NewRecorder()
 	pcTest.req, _ = http.NewRequest("GET",
-		pcTest.opts.ProxyPrefix+"/auth", nil)
+		pcTest.opts.ProxyPrefix+authOnlyPath, nil)
 
 	created := time.Now()
 	startSession := &sessions.SessionState{
@@ -1305,7 +1308,7 @@ func TestAuthOnlyEndpointSetBasicAuthTrueRequestHeaders(t *testing.T) {
 
 	pcTest.rw = httptest.NewRecorder()
 	pcTest.req, _ = http.NewRequest("GET",
-		pcTest.opts.ProxyPrefix+"/auth", nil)
+		pcTest.opts.ProxyPrefix+authOnlyPath, nil)
 
 	created := time.Now()
 	startSession := &sessions.SessionState{
@@ -1385,7 +1388,7 @@ func TestAuthOnlyEndpointSetBasicAuthFalseRequestHeaders(t *testing.T) {
 
 	pcTest.rw = httptest.NewRecorder()
 	pcTest.req, _ = http.NewRequest("GET",
-		pcTest.opts.ProxyPrefix+"/auth", nil)
+		pcTest.opts.ProxyPrefix+authOnlyPath, nil)
 
 	created := time.Now()
 	startSession := &sessions.SessionState{
@@ -3286,6 +3289,29 @@ func TestAuthOnlyAllowedEmailDomains(t *testing.T) {
 			assert.Equal(t, tc.expectedStatusCode, test.rw.Code)
 		})
 	}
+}
+
+func TestStateEncodesCorrectly(t *testing.T) {
+	state := "some_state_to_test"
+	nonce := "some_nonce_to_test"
+
+	encodedResult := encodeState(nonce, state, true)
+	assert.Equal(t, "c29tZV9ub25jZV90b190ZXN0OnNvbWVfc3RhdGVfdG9fdGVzdA", encodedResult)
+
+	notEncodedResult := encodeState(nonce, state, false)
+	assert.Equal(t, "some_nonce_to_test:some_state_to_test", notEncodedResult)
+}
+
+func TestStateDecodesCorrectly(t *testing.T) {
+	nonce, redirect, _ := decodeState("c29tZV9ub25jZV90b190ZXN0OnNvbWVfc3RhdGVfdG9fdGVzdA", true)
+
+	assert.Equal(t, "some_nonce_to_test", nonce)
+	assert.Equal(t, "some_state_to_test", redirect)
+
+	nonce2, redirect2, _ := decodeState("some_nonce_to_test:some_state_to_test", false)
+
+	assert.Equal(t, "some_nonce_to_test", nonce2)
+	assert.Equal(t, "some_state_to_test", redirect2)
 }
 
 func TestAuthOnlyAllowedEmails(t *testing.T) {
