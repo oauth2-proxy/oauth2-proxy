@@ -73,8 +73,8 @@ func (p *MicrosoftEntraIDProvider) EnrichSession(ctx context.Context, session *s
 func (p *MicrosoftEntraIDProvider) ValidateSession(ctx context.Context, session *sessions.SessionState) bool {
 
 	if len(p.multiTenantAllowedTenants) > 0 {
-		issuer, exists, error := p.getIssuer(session)
-		if issuer == "" || !exists || error != nil {
+		issuer, exists, err := p.getIssuer(session)
+		if issuer == "" || !exists || err != nil {
 			return false
 		}
 
@@ -127,8 +127,10 @@ func (p *MicrosoftEntraIDProvider) addGraphGroupsToSesion(ctx context.Context, s
 		return fmt.Errorf("unable to unmarshal Microsoft Graph response: %v", err)
 	}
 
-	var groups []string
-	for i := range jsonRequest.Get("value").MustArray() {
+	reqGroups := jsonRequest.Get("value").MustArray()
+	groups := make([]string, len(reqGroups))
+
+	for i := range reqGroups {
 		value := jsonRequest.Get("value").GetIndex(i).Get("id").MustString()
 		groups = append(groups, value)
 	}
@@ -144,8 +146,8 @@ func (p *MicrosoftEntraIDProvider) getIssuer(session *sessions.SessionState) (st
 		return "", false, fmt.Errorf("unable to get claim extractor: %v", err)
 	}
 
-	value, exists, error := extractor.GetClaim("iss")
-	return value.(string), exists, error
+	value, exists, err := extractor.GetClaim("iss")
+	return value.(string), exists, err
 }
 
 func (p *MicrosoftEntraIDProvider) checkIssuerMatchesTenantList(issuer string, tenantList []string) bool {
