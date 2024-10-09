@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/coreos/go-oidc/v3/oidc"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/stretchr/testify/assert"
 
@@ -67,7 +67,7 @@ func mockGraphAPI(noGroupMemberPermissions bool) *httptest.Server {
 }
 
 type claimsWithGroupOverage struct {
-	jwt.StandardClaims
+	jwt.RegisteredClaims
 	ClaimNames interface{} `json:"_claim_names,omitempty"`
 }
 
@@ -80,7 +80,7 @@ func TestAzureEntraOIDCProviderEnrichSessionGroupOverage(t *testing.T) {
 	// Create ID Token that indicates group overage with _claim_names
 	key, _ := rsa.GenerateKey(rand.Reader, 2048)
 	claimsWithGroupOverage := &claimsWithGroupOverage{
-		jwt.StandardClaims{
+		jwt.RegisteredClaims{
 			Issuer: "https://login.microsoftonline.com/18014347-dd57-41a1-8191-7a1f734ea457/v2.0",
 		},
 		map[string]string{"groups": "src1"},
@@ -143,7 +143,7 @@ func TestAzureEntraOIDCProviderValidateSessionAllowedTenants(t *testing.T) {
 	// Check for invalid tenant
 	key, _ := rsa.GenerateKey(rand.Reader, 2048)
 
-	idToken := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.StandardClaims{
+	idToken := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.RegisteredClaims{
 		Issuer: "https://login.microsoftonline.com/invalid_tenant/v2.0",
 	})
 	invalidJWT, err := idToken.SignedString(key)
@@ -156,7 +156,7 @@ func TestAzureEntraOIDCProviderValidateSessionAllowedTenants(t *testing.T) {
 	assert.False(t, valid)
 
 	// Check for valid tenant
-	idToken = jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.StandardClaims{
+	idToken = jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.RegisteredClaims{
 		Issuer: "https://login.microsoftonline.com/85d7d600-7804-4d92-8d43-9c33c21c130c/v2.0",
 	})
 	validJWT, err := idToken.SignedString(key)
