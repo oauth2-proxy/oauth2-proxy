@@ -3,10 +3,10 @@ description: K8S example based on https://kind.sigs.k8s.io
 name: kubernetes
 dependencies:
   - name: dex
-    version: 0.18.0
+    version: 0.19.1
     repository: https://charts.dexidp.io
   - name: oauth2-proxy
-    version: &chartVersion 7.7.9
+    version: &chartVersion 7.7.26
     repository: https://oauth2-proxy.github.io/manifests
   # https://github.com/postmanlabs/httpbin/issues/549 is still in progress, for now using a non-official chart
   - name: httpbin
