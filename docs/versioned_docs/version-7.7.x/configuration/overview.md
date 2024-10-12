@@ -261,7 +261,7 @@ Provider specific options can be found on their respective subpages.
 
 `oauth2-proxy` supports having multiple upstreams, and has the option to pass requests on to HTTP(S) servers, unix socket or serve static files from the file system.
 
-HTTP and HTTPS upstreams are configured by providing a URL such as `http://127.0.0.1:8080/` for the upstream parameter. . This will forward all authenticated requests to the upstream server. If you instead provide `http://127.0.0.1:8080/some/path/` then it will only be requests that start with `/some/path/` which are forwarded to the upstream.
+HTTP and HTTPS upstreams are configured by providing a URL value. The path of the URL will be used to configure a matcher that incoming requests will be compared against, to decide which of the "upstream" servers to proxy the request to. A URL such as `http://127.0.0.1:8080/` for the upstream parameter will send all authenticated requests to 127.0.0.1:8080 . A path of the URL like `/foo` will match exactly and only `/foo` and not `/food` or `/foo/bar`, but a trailing slash is special and will be used as a prefix matcher; request URLs having that as a prefix will match it; for example `/foo/` will match an incoming `/foo/bar`. Since you may configure many values of `--upstream`, the longest length (and therefore most specific) configured matcher string will have priority over those that match more broadly.
 
 Unix socket upstreams are configured as `unix:///path/to/unix.sock`.
 
