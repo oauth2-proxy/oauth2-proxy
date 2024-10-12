@@ -20,7 +20,7 @@ jobs:
       uses: actions/setup-go@v5
       with:
         # renovate: datasource=golang-version depName=golang
-        go-version: 1.22.4
+        go-version: 1.23.2
       id: go
 
     - name: Get dependencies
@@ -65,7 +65,7 @@ jobs:
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
-    
+
     - name: Set up Docker Buildx
       id: buildx
       uses: docker/setup-buildx-action@v3
