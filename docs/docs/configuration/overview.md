@@ -261,11 +261,16 @@ Provider specific options can be found on their respective subpages.
 
 `oauth2-proxy` supports having multiple upstreams, and has the option to pass requests on to HTTP(S) servers, unix socket or serve static files from the file system.
 
-HTTP and HTTPS upstreams are configured by providing a URL such as `http://127.0.0.1:8080/` for the upstream parameter. . This will forward all authenticated requests to the upstream server. If you instead provide `http://127.0.0.1:8080/some/path/` then it will only be requests that start with `/some/path/` which are forwarded to the upstream.
+To configure **HTTP and HTTPS upstreams**, provide such a URL in `--upstream=URL`. The scheme+host portion and the path portion are extracted to configure proxying behavior. When processing incoming requests, the path portion becomes a lookup key for selecting the destination server of the proxied request.
 
-Unix socket upstreams are configured as `unix:///path/to/unix.sock`.
+* Upstream URLs *without a trailing slash,* like in `--upstream=http://service2.internal/foo`, will match an incoming request exactly to `/foo` in `https://this.o2p.example.com/foo`, and forward the request on to service2.internal, but not match a request to `https://this.o2p.example.com/foo/more` nor ...`.com/food`.
+* Upstream URLs *with a trailing slash,* like in `--upstream=http://service1.internal/foo/`, will match any incoming request to any incoming requests's path *starting with* `/foo/`, like `/foo/` and `/foo/more` and `/foo/lots/more?etc`.
 
-Static file paths are configured as a file:// URL. `file:///var/www/static/` will serve the files from that directory at `http://[oauth2-proxy url]/var/www/static/`, which may not be what you want. You can provide the path to where the files should be available by adding a fragment to the configured URL. The value of the fragment will then be used to specify which path the files are available at, e.g. `file:///var/www/static/#/static/` will make `/var/www/static/` available at `http://[oauth2-proxy url]/static/`.
+If multiple `--upstream` URLs' paths match an incoming request, the one with the longest matching path (the most specific match) takes priority over shorter (less specific) ones.
+
+**Unix socket upstreams** are configured as `unix:///path/to/unix.sock`.
+
+**Static file paths** are configured as a file:// URL. `file:///var/www/static/` will serve the files from that directory at `http://[oauth2-proxy url]/var/www/static/`, which may not be what you want. You can provide the path to where the files should be available by adding a fragment to the configured URL. The value of the fragment will then be used to specify which path the files are available at, e.g. `file:///var/www/static/#/static/` will make `/var/www/static/` available at `http://[oauth2-proxy url]/static/`.
 
 Multiple upstreams can either be configured by supplying a comma separated list to the `--upstream` parameter, supplying the parameter multiple times or providing a list in the [config file](#config-file). When multiple upstreams are used routing to them will be based on the path they are set up with.
 
