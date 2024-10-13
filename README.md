@@ -47,6 +47,9 @@ OAuth2-Proxy is a community-driven project. We rely on the contribut️ions of o
 
 If you want to contribute to the project. Please see our [Contributing](https://oauth2-proxy.github.io/oauth2-proxy/community/contribution) guide.
 
+Who uses OAuth2-Proxy have a look at our new [ADOPTERS](ADOPTERS.md) file and
+feel free to open a PR to add your organisation.
+
 Thanks to all the people who already contributed ❤
 
 <a href="https://github.com/oauth2-proxy/oauth2-proxy/graphs/contributors">
