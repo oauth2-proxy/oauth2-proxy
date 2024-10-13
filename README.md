@@ -38,6 +38,8 @@ These images are considered unstable and therefore should **NOT** be used for pr
 ![Microsoft](https://upload.wikimedia.org/wikipedia/commons/9/96/Microsoft_logo_%282012%29.svg)
 Microsoft Azure credits for open source projects
 
+Would you like to sponsor the project then please contact us at [sponsors@oauth2-proxy.dev](mailto:sponsors@oauth2-proxy.dev)
+
 ## Getting Involved
 [![Slack](https://img.shields.io/badge/slack-Gopher_%23oauth2--proxy-red?logo=slack)](https://gophers.slack.com/archives/CM2RSS25N)
 
