@@ -15,43 +15,43 @@ import TabItem from '@theme/TabItem';
 <Tabs defaultValue="python">
   <TabItem value="python" label="Python">
 
-  ```shell
-  python -c 'import os,base64; print(base64.urlsafe_b64encode(os.urandom(32)).decode())'
-  ```
-  
+```shell
+python -c 'import os,base64; print(base64.urlsafe_b64encode(os.urandom(32)).decode())'
+```
+
   </TabItem>
   <TabItem value="bash" label="Bash">
 
-  ```shell
-  dd if=/dev/urandom bs=32 count=1 2>/dev/null | base64 | tr -d -- '\n' | tr -- '+/' '-_' ; echo
-  ```
-  
+```shell
+dd if=/dev/urandom bs=32 count=1 2>/dev/null | base64 | tr -d -- '\n' | tr -- '+/' '-_' ; echo
+```
+
   </TabItem>
   <TabItem value="openssl" label="OpenSSL">
 
-  ```shell
-  openssl rand -base64 32 | tr -- '+/' '-_'
-  ```
+```shell
+openssl rand -base64 32 | tr -- '+/' '-_'
+```
 
   </TabItem>
   <TabItem value="powershell" label="PowerShell">
 
-  ```powershell
-  # Add System.Web assembly to session, just in case
-  Add-Type -AssemblyName System.Web
-  [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes([System.Web.Security.Membership]::GeneratePassword(32,4))).Replace("+","-").Replace("/","_")
-  ```
+```powershell
+# Add System.Web assembly to session, just in case
+Add-Type -AssemblyName System.Web
+[Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes([System.Web.Security.Membership]::GeneratePassword(32,4))).Replace("+","-").Replace("/","_")
+```
 
   </TabItem>
   <TabItem value="terraform" label="Terraform">
 
-  ```hcl
-  # Valid 32 Byte Base64 URL encoding set that will decode to 24 []byte AES-192 secret
-  resource "random_password" "cookie_secret" {
-    length           = 32
-    override_special = "-_"
-  }
-  ```
+```hcl
+# Valid 32 Byte Base64 URL encoding set that will decode to 24 []byte AES-192 secret
+resource "random_password" "cookie_secret" {
+  length           = 32
+  override_special = "-_"
+}
+```
 
   </TabItem>
 </Tabs>
@@ -199,7 +199,7 @@ Provider specific options can be found on their respective subpages.
 | flag: `--htpasswd-file`<br/>toml: `htpasswd_file`                         | string         | additionally authenticate against a htpasswd file. Entries must be created with `htpasswd -B` for bcrypt encryption                                                                                                           |             |
 | flag: `--htpasswd-user-group`<br/>toml: `htpasswd_user_groups`            | string \| list | the groups to be set on sessions for htpasswd users                                                                                                                                                                           |             |
 | flag: `--proxy-prefix`<br/>toml: `proxy_prefix`                           | string         | the url root path that this proxy should be nested under (e.g. /`<oauth2>/sign_in`)                                                                                                                                           | `"/oauth2"` |
-| flag: `--real-client-ip-header`<br/>toml: `real_client_ip_header`         | string         | Header used to determine the real IP of the client, requires `--reverse-proxy` to be set (one of: X-Forwarded-For, X-Real-IP, or X-ProxyUser-IP)                                                                              | X-Real-IP   |
+| flag: `--real-client-ip-header`<br/>toml: `real_client_ip_header`         | string         | Header used to determine the real IP of the client, requires `--reverse-proxy` to be set (one of: X-Forwarded-For, X-Real-IP, X-ProxyUser-IP, or X-Envoy-External-Address)                                                    | X-Real-IP   |
 | flag: `--redirect-url`<br/>toml: `redirect_url`                           | string         | the OAuth Redirect URL, e.g. `"https://internalapp.yourcompany.com/oauth2/callback"`                                                                                                                                          |             |
 | flag: `--relative-redirect-url`<br/>toml: `relative_redirect_url`         | bool           | allow relative OAuth Redirect URL.`                                                                                                                                                                                           | false       |
 | flag: `--reverse-proxy`<br/>toml: `reverse_proxy`                         | bool           | are we running behind a reverse proxy, controls whether headers like X-Real-IP are accepted and allows X-Forwarded-\{Proto,Host,Uri\} headers to be used on redirect selection                                                | false       |
@@ -231,6 +231,7 @@ Provider specific options can be found on their respective subpages.
 | flag: `--tls-min-version`<br/>toml: `tls_min_version`               | string         | minimum TLS version that is acceptable, either `"TLS1.2"` or `"TLS1.3"`                                                                                                                                                                                                                                       | `"TLS1.2"`         |
 
 ### Session Options
+
 | Flag / Config Field                                                                 | Type           | Description                                                                                                                                                                                                                                                                                                                                                                                                   | Default |
 | ----------------------------------------------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
 | flag: `--session-cookie-minimal`<br/>toml: `session_cookie_minimal`                 | bool           | strip OAuth tokens from cookie session stores if they aren't needed (cookie session store only)                                                                                                                                                                                                                                                                                                               | false   |
@@ -307,6 +308,7 @@ Each type of logging has its own configurable format and variables. By default, 
 Logging of requests to the `/ping` endpoint (or using `--ping-user-agent`) and the `/ready` endpoint can be disabled with `--silence-ping-logging` reducing log volume.
 
 ## Auth Log Format
+
 Authentication logs are logs which are guaranteed to contain a username or email address of a user attempting to authenticate. These logs are output by default in the below format:
 
 ```
@@ -342,6 +344,7 @@ Available variables for auth logging:
 | Status        | AuthSuccess                          | The status of the auth request. See above for details.                                                   |
 
 ## Request Log Format
+
 HTTP request logs will output by default in the below format:
 
 ```
@@ -374,6 +377,7 @@ Available variables for request logging:
 | Username        | username@email.com                   | The email or username of the auth request.                                                               |
 
 ## Standard Log Format
+
 All other logging that is not covered by the above two types of logging will be output in this standard logging format. This includes configuration information at startup and errors that occur outside of a session. The default format is below:
 
 ```
