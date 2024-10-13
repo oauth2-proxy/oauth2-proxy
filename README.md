@@ -33,6 +33,11 @@ For debugging purposes (and those who really need it. e.g. `armv6`) we still pro
 Since 2023-11-18 we provide nightly image builds directly from the `master` branch and provided at `quay.io/oauth2-proxy/oauth2-proxy-nightly`.
 These images are considered unstable and therefore **should not** be used for production purposes unless you know what you're doing.
 
+## Sponsors
+
+![Microsoft](https://upload.wikimedia.org/wikipedia/commons/9/96/Microsoft_logo_%282012%29.svg)
+Microsoft Azure credits for open source projects
+
 ## Getting Involved
 [![Slack](https://img.shields.io/badge/slack-Gopher_%23oauth2--proxy-red?logo=slack)](https://gophers.slack.com/archives/CM2RSS25N)
 
