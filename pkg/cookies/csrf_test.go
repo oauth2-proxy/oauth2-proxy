@@ -19,6 +19,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 		cookieOpts  *options.Cookie
 		publicCSRF  CSRF
 		privateCSRF *csrf
+		csrfName    string
 	)
 
 	BeforeEach(func() {
@@ -39,6 +40,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		privateCSRF = publicCSRF.(*csrf)
+		csrfName = GenerateCookieName(cookieOpts, csrfNonce)
 	})
 
 	Context("NewCSRF", func() {
@@ -175,7 +177,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 			})
 
 			It("should return error when no cookie is set", func() {
-				csrf, err := LoadCSRFCookie(req, cookieOpts)
+				csrf, err := LoadCSRFCookie(req, csrfName, cookieOpts)
 				Expect(err).To(HaveOccurred())
 				Expect(csrf).To(BeNil())
 			})
@@ -191,7 +193,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 					Value: encoded,
 				})
 
-				csrf, err := LoadCSRFCookie(req, cookieOpts)
+				csrf, err := LoadCSRFCookie(req, csrfName, cookieOpts)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(csrf).ToNot(BeNil())
 			})
@@ -202,7 +204,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 					Value: "invalid",
 				})
 
-				csrf, err := LoadCSRFCookie(req, cookieOpts)
+				csrf, err := LoadCSRFCookie(req, csrfName, cookieOpts)
 				Expect(err).To(HaveOccurred())
 				Expect(csrf).To(BeNil())
 			})
@@ -223,7 +225,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 					Value: encoded,
 				})
 
-				csrf, err := LoadCSRFCookie(req, cookieOpts)
+				csrf, err := LoadCSRFCookie(req, csrfName, cookieOpts)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(csrf).ToNot(BeNil())
 			})
