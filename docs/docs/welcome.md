@@ -20,4 +20,4 @@ A list of changes can be seen in the [CHANGELOG](https://github.com/oauth2-proxy
 
 ## Architecture
 
-![OAuth2 Proxy Architecture](/img/architecture.svg)
+![OAuth2 Proxy Architecture](/img/simplified-architecture.svg)
