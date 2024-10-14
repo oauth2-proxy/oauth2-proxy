@@ -9,6 +9,7 @@
 ## Changes since v7.7.1
 
 - [#2800](https://github.com/oauth2-proxy/oauth2-proxy/pull/2800) Add some opencontainer labels to docker image (@halkeye)
+- [#2755](https://github.com/oauth2-proxy/oauth2-proxy/pull/2755) feat: add X-Envoy-External-Address as supported header (@bjencks)
 
 # V7.7.1
 
