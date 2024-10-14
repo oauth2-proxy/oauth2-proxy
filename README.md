@@ -55,7 +55,8 @@ feel free to open a PR to add your organisation.
 Thanks to all the people who already contributed ❤
 
 <a href="https://github.com/oauth2-proxy/oauth2-proxy/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=oauth2-proxy/oauth2-proxy" />
+  <img src="https://contrib.rocks/image?repo=oauth2-proxy/oauth2-proxy&columns=15&max=75" />
+  <img src="https://img.shields.io/github/contributors/oauth2-proxy/oauth2-proxy" />
 </a>
 
 Made with [contrib.rocks](https://contrib.rocks).

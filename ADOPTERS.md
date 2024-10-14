@@ -16,6 +16,9 @@ OAuth2-Proxy project!
 To add your organization to this list, you can just [open a PR](https://github.com/oauth2-proxy/oauth2-proxy/pulls)
 to directly update this list.
 
+Add your organization name, your github username and if you desire a short
+description on how you utilize oauth2-proxy.
+
 ## OAuth2-Proxy Adopters
 
 This list is sorted in the order that organizations were added to it.
