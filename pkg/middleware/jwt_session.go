@@ -13,7 +13,7 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
-const jwtRegexFormat = `^ey[IJ][a-zA-Z0-9_-]*\.ey[IJ][a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]+$`
+const jwtRegexFormat = `^[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]+$`
 
 func NewJwtSessionLoader(sessionLoaders []middlewareapi.TokenToSessionFunc) alice.Constructor {
 	js := &jwtSessionLoader{
