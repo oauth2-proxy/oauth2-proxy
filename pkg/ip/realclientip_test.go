@@ -22,6 +22,7 @@ func TestGetRealClientIPParser(t *testing.T) {
 		{"X-REAL-IP", "", forwardedForType},
 		{"x-proxyuser-ip", "", forwardedForType},
 		{"x-envoy-external-address", "", forwardedForType},
+		{"cf-connecting-ip", "", forwardedForType},
 		{"", "the http header key () is either invalid or unsupported", nil},
 		{"Forwarded", "the http header key (Forwarded) is either invalid or unsupported", nil},
 		{"2#* @##$$:kd", "the http header key (2#* @##$$:kd) is either invalid or unsupported", nil},
