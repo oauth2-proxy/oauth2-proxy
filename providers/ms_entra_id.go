@@ -67,7 +67,7 @@ func (p *MicrosoftEntraIDProvider) EnrichSession(ctx context.Context, session *s
 
 		if hasGroupOverage {
 			logger.Printf("entra overage found, reading groups from Graph API")
-			if err = p.addGraphGroupsToSesion(ctx, session); err != nil {
+			if err = p.addGraphGroupsToSession(ctx, session); err != nil {
 				return fmt.Errorf("unable to read groups from graph: %v", err)
 			}
 		}
@@ -129,7 +129,7 @@ func (p *MicrosoftEntraIDProvider) checkGroupOverage(session *sessions.SessionSt
 	return false, nil
 }
 
-func (p *MicrosoftEntraIDProvider) addGraphGroupsToSesion(ctx context.Context, s *sessions.SessionState) error {
+func (p *MicrosoftEntraIDProvider) addGraphGroupsToSession(ctx context.Context, s *sessions.SessionState) error {
 	groupsHeaders := makeAuthorizationHeader(tokenTypeBearer, s.AccessToken, nil)
 	groupsHeaders.Add("ConsistencyLevel", "eventual")
 
