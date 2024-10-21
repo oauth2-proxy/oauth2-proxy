@@ -92,6 +92,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 			JWKsURL:                providerConfig.OIDCConfig.JwksURL,
 			SkipDiscovery:          providerConfig.OIDCConfig.SkipDiscovery,
 			SkipIssuerVerification: providerConfig.OIDCConfig.InsecureSkipIssuerVerification,
+			AllowUnverifiedEmail:   providerConfig.OIDCConfig.InsecureAllowUnverifiedEmail,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("error building OIDC ProviderVerifier: %v", err)
