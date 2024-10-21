@@ -169,7 +169,7 @@ http:
 
 ## ForwardAuth with static upstreams configuration
 
-Redirect to sign_in functionality provided without the use of `errors` middleware with [Traefik v2 `ForwardAuth` middleware](https://doc.traefik.io/traefik/middlewares/http/forwardauth/) pointing to oauth2-proxy service's `/` endpoint 
+Redirect to sign_in functionality provided without the use of `errors` middleware with [Traefik v2 `ForwardAuth` middleware](https://doc.traefik.io/traefik/middlewares/http/forwardauth/) pointing to oauth2-proxy service's `/` endpoint
 
 **Following options need to be set on `oauth2-proxy`:**
 - `--upstream=static://202`: Configures a static response for authenticated sessions
@@ -263,6 +263,42 @@ http:
         authResponseHeaders:
           - X-Auth-Request-Access-Token
           - Authorization
+```
+
+## Configuring for use with the caddy v2 `forward_auth` directive
+
+The [Caddy `forward_auth` directive](https://caddyserver.com/docs/caddyfile/directives/forward_auth) allows Caddy to authenticate requests via the `oauth2-proxy`'s `/auth`.
+
+This example is for a simple reverse proxy setup where the `/oauth2/` path is kept under the same domain and failed auth requests (401 status returned) will be caught and redirected to the `sign_in` endpoint.
+
+**Following options need to be set on `oauth2-proxy`:**
+- `--reverse-proxy=true`: Enables the use of `X-Forwarded-*` headers to determine redirects correctly
+
+```nginx
+{{ domain }} {
+	# define forward auth for any path under `/`, if not more specific defined
+	forward_auth / {{ oauth.internalIP }}:4180 {
+		uri /oauth2/auth
+		copy_headers Authorization X-Auth-Request-User X-Auth-Request-Email
+
+		@error status 401
+		handle_response @error {
+			redir * /oauth2/sign_in?rd={scheme}://{host}{uri} 302
+		}
+	}
+
+	# define `/oauth2/*` as specific endpoint, to avoid forward auth protection to be able to use service
+	reverse_proxy /oauth2/* {{ oauth.internalIP }}:4180 {
+		header_up X-Real-IP {remote}
+		header_up X-Forwarded-Proto https
+	}
+
+	# unspecific reverse proxy will be protected from `forward_auth /`
+	reverse_proxy {{ endpointIP }} {
+		header_up X-Real-IP {remote}
+		header_up X-Forwarded-Proto https
+	}
+}
 ```
 
 :::note

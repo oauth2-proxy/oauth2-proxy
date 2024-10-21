@@ -26,12 +26,10 @@ jobs:
     - name: Get dependencies
       env:
         # renovate: datasource=github-tags depName=golangci/golangci-lint
-        GOLANGCI_LINT_VERSION: v1.60.3
-        # renovate: datasource=github-tags depName=codeclimate/test-reporter
-        CODECLIMATE_VERSION: v1.0.1
+        GOLANGCI_LINT_VERSION: v1.61.0
       run: |
         curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin ${GOLANGCI_LINT_VERSION}
-        curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-${CODECLIMATE_VERSION#v}-linux-amd64 > ./cc-test-reporter
+        curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
         chmod +x ./cc-test-reporter
 
     - name: Verify Code Generation
@@ -43,8 +41,15 @@ jobs:
         make lint
 
     - name: Build
+      if: (!startsWith(github.head_ref, 'release'))
       run: |
         make build
+
+    # For release testing
+    - name: Build All
+      if: github.base_ref == 'master' && startsWith(github.head_ref, 'release')
+      run: |
+        make release
 
     - name: Test
       env:
@@ -66,5 +71,12 @@ jobs:
       uses: docker/setup-buildx-action@v3
 
     - name: Docker Build
+      if: (!startsWith(github.head_ref, 'release'))
       run: |
         make docker
+
+    # For release testing
+    - name: Docker Build All
+      if: github.base_ref == 'master' && startsWith(github.head_ref, 'release')
+      run: |
+        make docker-all

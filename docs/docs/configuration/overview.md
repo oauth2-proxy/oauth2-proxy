@@ -15,43 +15,43 @@ import TabItem from '@theme/TabItem';
 <Tabs defaultValue="python">
   <TabItem value="python" label="Python">
 
-  ```shell
-  python -c 'import os,base64; print(base64.urlsafe_b64encode(os.urandom(32)).decode())'
-  ```
-  
+```shell
+python -c 'import os,base64; print(base64.urlsafe_b64encode(os.urandom(32)).decode())'
+```
+
   </TabItem>
   <TabItem value="bash" label="Bash">
 
-  ```shell
-  dd if=/dev/urandom bs=32 count=1 2>/dev/null | base64 | tr -d -- '\n' | tr -- '+/' '-_' ; echo
-  ```
-  
+```shell
+dd if=/dev/urandom bs=32 count=1 2>/dev/null | base64 | tr -d -- '\n' | tr -- '+/' '-_' ; echo
+```
+
   </TabItem>
   <TabItem value="openssl" label="OpenSSL">
 
-  ```shell
-  openssl rand -base64 32 | tr -- '+/' '-_'
-  ```
+```shell
+openssl rand -base64 32 | tr -- '+/' '-_'
+```
 
   </TabItem>
   <TabItem value="powershell" label="PowerShell">
 
-  ```powershell
-  # Add System.Web assembly to session, just in case
-  Add-Type -AssemblyName System.Web
-  [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes([System.Web.Security.Membership]::GeneratePassword(32,4))).Replace("+","-").Replace("/","_")
-  ```
+```powershell
+# Add System.Web assembly to session, just in case
+Add-Type -AssemblyName System.Web
+[Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes([System.Web.Security.Membership]::GeneratePassword(32,4))).Replace("+","-").Replace("/","_")
+```
 
   </TabItem>
   <TabItem value="terraform" label="Terraform">
 
-  ```hcl
-  # Valid 32 Byte Base64 URL encoding set that will decode to 24 []byte AES-192 secret
-  resource "random_password" "cookie_secret" {
-    length           = 32
-    override_special = "-_"
-  }
-  ```
+```hcl
+# Valid 32 Byte Base64 URL encoding set that will decode to 24 []byte AES-192 secret
+resource "random_password" "cookie_secret" {
+  length           = 32
+  override_special = "-_"
+}
+```
 
   </TabItem>
 </Tabs>
@@ -99,7 +99,7 @@ Provider specific options can be found on their respective subpages.
 | flag: `--oidc-jwks-url`<br/>toml: `oidc_jwks_url`                                                   | string         | OIDC JWKS URI for token verification; required if OIDC discovery is disabled                                                                                                              |                       |
 | flag: `--profile-url`<br/>toml: `profile_url`                                                       | string         | Profile access endpoint                                                                                                                                                                   |                       |
 | flag: `--prompt`<br/>toml: `prompt`                                                                 | string         | [OIDC prompt](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest); if present, `approval-prompt` is ignored                                                                | `""`                  |
-| flag: `--provider-ca-file`<br/>toml: `provider_ca_file`                                             | string \| list | Paths to CA certificates that should be used when connecting to the provider. If not specified, the default Go trust sources are used instead.                                            |
+| flag: `--provider-ca-file`<br/>toml: `provider_ca_files`                                             | string \| list | Paths to CA certificates that should be used when connecting to the provider. If not specified, the default Go trust sources are used instead.                                            |
 | flag: `--provider-display-name`<br/>toml: `provider_display_name`                                   | string         | Override the provider's name with the given string; used for the sign-in page                                                                                                             | (depends on provider) |
 | flag: `--provider`<br/>toml: `provider`                                                             | string         | OAuth provider                                                                                                                                                                            | google                |
 | flag: `--pubjwk-url`<br/>toml: `pubjwk_url`                                                         | string         | JWK pubkey access endpoint: required by login.gov                                                                                                                                         |                       |
@@ -199,7 +199,7 @@ Provider specific options can be found on their respective subpages.
 | flag: `--htpasswd-file`<br/>toml: `htpasswd_file`                         | string         | additionally authenticate against a htpasswd file. Entries must be created with `htpasswd -B` for bcrypt encryption                                                                                                           |             |
 | flag: `--htpasswd-user-group`<br/>toml: `htpasswd_user_groups`            | string \| list | the groups to be set on sessions for htpasswd users                                                                                                                                                                           |             |
 | flag: `--proxy-prefix`<br/>toml: `proxy_prefix`                           | string         | the url root path that this proxy should be nested under (e.g. /`<oauth2>/sign_in`)                                                                                                                                           | `"/oauth2"` |
-| flag: `--real-client-ip-header`<br/>toml: `real_client_ip_header`         | string         | Header used to determine the real IP of the client, requires `--reverse-proxy` to be set (one of: X-Forwarded-For, X-Real-IP, or X-ProxyUser-IP)                                                                              | X-Real-IP   |
+| flag: `--real-client-ip-header`<br/>toml: `real_client_ip_header`         | string         | Header used to determine the real IP of the client, requires `--reverse-proxy` to be set (one of: X-Forwarded-For, X-Real-IP, X-ProxyUser-IP, or X-Envoy-External-Address)                                                    | X-Real-IP   |
 | flag: `--redirect-url`<br/>toml: `redirect_url`                           | string         | the OAuth Redirect URL, e.g. `"https://internalapp.yourcompany.com/oauth2/callback"`                                                                                                                                          |             |
 | flag: `--relative-redirect-url`<br/>toml: `relative_redirect_url`         | bool           | allow relative OAuth Redirect URL.`                                                                                                                                                                                           | false       |
 | flag: `--reverse-proxy`<br/>toml: `reverse_proxy`                         | bool           | are we running behind a reverse proxy, controls whether headers like X-Real-IP are accepted and allows X-Forwarded-\{Proto,Host,Uri\} headers to be used on redirect selection                                                | false       |
@@ -231,6 +231,7 @@ Provider specific options can be found on their respective subpages.
 | flag: `--tls-min-version`<br/>toml: `tls_min_version`               | string         | minimum TLS version that is acceptable, either `"TLS1.2"` or `"TLS1.3"`                                                                                                                                                                                                                                       | `"TLS1.2"`         |
 
 ### Session Options
+
 | Flag / Config Field                                                                 | Type           | Description                                                                                                                                                                                                                                                                                                                                                                                                   | Default |
 | ----------------------------------------------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
 | flag: `--session-cookie-minimal`<br/>toml: `session_cookie_minimal`                 | bool           | strip OAuth tokens from cookie session stores if they aren't needed (cookie session store only)                                                                                                                                                                                                                                                                                                               | false   |
@@ -261,11 +262,16 @@ Provider specific options can be found on their respective subpages.
 
 `oauth2-proxy` supports having multiple upstreams, and has the option to pass requests on to HTTP(S) servers, unix socket or serve static files from the file system.
 
-HTTP and HTTPS upstreams are configured by providing a URL such as `http://127.0.0.1:8080/` for the upstream parameter. . This will forward all authenticated requests to the upstream server. If you instead provide `http://127.0.0.1:8080/some/path/` then it will only be requests that start with `/some/path/` which are forwarded to the upstream.
+To configure **HTTP and HTTPS upstreams**, provide such a URL in `--upstream=URL`. The scheme+host portion and the path portion are extracted to configure proxying behavior. When processing incoming requests, the path portion becomes a lookup key for selecting the destination server of the proxied request.
 
-Unix socket upstreams are configured as `unix:///path/to/unix.sock`.
+* Upstream URLs *without a trailing slash,* like in `--upstream=http://service2.internal/foo`, will match an incoming request exactly to `/foo` in `https://this.o2p.example.com/foo`, and forward the request on to service2.internal, but not match a request to `https://this.o2p.example.com/foo/more` nor ...`.com/food`.
+* Upstream URLs *with a trailing slash,* like in `--upstream=http://service1.internal/foo/`, will match any incoming request to any incoming requests's path *starting with* `/foo/`, like `/foo/` and `/foo/more` and `/foo/lots/more?etc`.
 
-Static file paths are configured as a file:// URL. `file:///var/www/static/` will serve the files from that directory at `http://[oauth2-proxy url]/var/www/static/`, which may not be what you want. You can provide the path to where the files should be available by adding a fragment to the configured URL. The value of the fragment will then be used to specify which path the files are available at, e.g. `file:///var/www/static/#/static/` will make `/var/www/static/` available at `http://[oauth2-proxy url]/static/`.
+If multiple `--upstream` URLs' paths match an incoming request, the one with the longest matching path (the most specific match) takes priority over shorter (less specific) ones.
+
+**Unix socket upstreams** are configured as `unix:///path/to/unix.sock`.
+
+**Static file paths** are configured as a file:// URL. `file:///var/www/static/` will serve the files from that directory at `http://[oauth2-proxy url]/var/www/static/`, which may not be what you want. You can provide the path to where the files should be available by adding a fragment to the configured URL. The value of the fragment will then be used to specify which path the files are available at, e.g. `file:///var/www/static/#/static/` will make `/var/www/static/` available at `http://[oauth2-proxy url]/static/`.
 
 Multiple upstreams can either be configured by supplying a comma separated list to the `--upstream` parameter, supplying the parameter multiple times or providing a list in the [config file](#config-file). When multiple upstreams are used routing to them will be based on the path they are set up with.
 
@@ -302,6 +308,7 @@ Each type of logging has its own configurable format and variables. By default, 
 Logging of requests to the `/ping` endpoint (or using `--ping-user-agent`) and the `/ready` endpoint can be disabled with `--silence-ping-logging` reducing log volume.
 
 ## Auth Log Format
+
 Authentication logs are logs which are guaranteed to contain a username or email address of a user attempting to authenticate. These logs are output by default in the below format:
 
 ```
@@ -337,6 +344,7 @@ Available variables for auth logging:
 | Status        | AuthSuccess                          | The status of the auth request. See above for details.                                                   |
 
 ## Request Log Format
+
 HTTP request logs will output by default in the below format:
 
 ```
@@ -369,6 +377,7 @@ Available variables for request logging:
 | Username        | username@email.com                   | The email or username of the auth request.                                                               |
 
 ## Standard Log Format
+
 All other logging that is not covered by the above two types of logging will be output in this standard logging format. This includes configuration information at startup and errors that occur outside of a session. The default format is below:
 
 ```
