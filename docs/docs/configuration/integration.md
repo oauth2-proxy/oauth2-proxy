@@ -102,7 +102,7 @@ You have to substitute *name* with the actual cookie name you configured via --c
 
 **This option requires `--reverse-proxy` option to be set.**
 
-## ForwardAuth with 401 errors middleware
+### ForwardAuth with 401 errors middleware
 
 The [Traefik v2 `ForwardAuth` middleware](https://doc.traefik.io/traefik/middlewares/http/forwardauth/) allows Traefik to authenticate requests via the oauth2-proxy's `/oauth2/auth` endpoint on every request, which only returns a 202 Accepted response or a 401 Unauthorized response without proxying the whole request through. For example, on Dynamic File (YAML) Configuration:
 
@@ -167,7 +167,7 @@ http:
         query: "/oauth2/sign_in?rd={url}"
 ```
 
-## ForwardAuth with static upstreams configuration
+### ForwardAuth with static upstreams configuration
 
 Redirect to sign_in functionality provided without the use of `errors` middleware with [Traefik v2 `ForwardAuth` middleware](https://doc.traefik.io/traefik/middlewares/http/forwardauth/) pointing to oauth2-proxy service's `/` endpoint
 
@@ -265,7 +265,7 @@ http:
           - Authorization
 ```
 
-## Configuring for use with the caddy v2 `forward_auth` directive
+## Configuring for use with the Caddy (v2) `forward_auth` directive
 
 The [Caddy `forward_auth` directive](https://caddyserver.com/docs/caddyfile/directives/forward_auth) allows Caddy to authenticate requests via the `oauth2-proxy`'s `/auth`.
 
