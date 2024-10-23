@@ -193,7 +193,7 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
 
 // needsRefresh determines whether we should attempt to refresh a session or not.
 func needsRefresh(refreshPeriod time.Duration, session *sessionsapi.SessionState) bool {
-	return refreshPeriod > time.Duration(0) && session.Age() > refreshPeriod
+	return refreshPeriod > time.Duration(0) && ((session.Age() > refreshPeriod) || session.IsExpired())
 }
 
 // refreshSession attempts to refresh the session with the provider
