@@ -23,6 +23,7 @@ type CookieStoreOptions struct {
 // RedisStoreOptions contains configuration options for the RedisSessionStore.
 type RedisStoreOptions struct {
 	ConnectionURL          string   `flag:"redis-connection-url" cfg:"redis_connection_url"`
+	Username               string   `flag:"redis-username" cfg:"redis_username"`
 	Password               string   `flag:"redis-password" cfg:"redis_password"`
 	UseSentinel            bool     `flag:"redis-use-sentinel" cfg:"redis_use_sentinel"`
 	SentinelPassword       string   `flag:"redis-sentinel-password" cfg:"redis_sentinel_password"`
@@ -32,6 +33,7 @@ type RedisStoreOptions struct {
 	ClusterConnectionURLs  []string `flag:"redis-cluster-connection-urls" cfg:"redis_cluster_connection_urls"`
 	CAPath                 string   `flag:"redis-ca-path" cfg:"redis_ca_path"`
 	InsecureSkipTLSVerify  bool     `flag:"redis-insecure-skip-tls-verify" cfg:"redis_insecure_skip_tls_verify"`
+	IdleTimeout            int      `flag:"redis-connection-idle-timeout" cfg:"redis_connection_idle_timeout"`
 }
 
 func sessionOptionsDefaults() SessionOptions {

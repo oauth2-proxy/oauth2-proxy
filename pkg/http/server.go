@@ -81,6 +81,27 @@ func (s *server) setupListener(opts Opts) error {
 	return nil
 }
 
+func parseCipherSuites(names []string) ([]uint16, error) {
+	cipherNameMap := make(map[string]uint16)
+
+	for _, cipherSuite := range tls.CipherSuites() {
+		cipherNameMap[cipherSuite.Name] = cipherSuite.ID
+	}
+	for _, cipherSuite := range tls.InsecureCipherSuites() {
+		cipherNameMap[cipherSuite.Name] = cipherSuite.ID
+	}
+
+	result := make([]uint16, len(names))
+	for i, name := range names {
+		id, present := cipherNameMap[name]
+		if !present {
+			return nil, fmt.Errorf("unknown TLS cipher suite name specified %q", name)
+		}
+		result[i] = id
+	}
+	return result, nil
+}
+
 // setupTLSListener sets the server TLS listener if the HTTPS server is enabled.
 // The HTTPS server can be disabled by setting the SecureBindAddress to "-" or by
 // leaving it empty.
@@ -91,7 +112,7 @@ func (s *server) setupTLSListener(opts Opts) error {
 	}
 
 	config := &tls.Config{
-		MinVersion: tls.VersionTLS12,
+		MinVersion: tls.VersionTLS12, // default, override below
 		MaxVersion: tls.VersionTLS13,
 		NextProtos: []string{"http/1.1"},
 	}
@@ -103,6 +124,25 @@ func (s *server) setupTLSListener(opts Opts) error {
 		return fmt.Errorf("could not load certificate: %v", err)
 	}
 	config.Certificates = []tls.Certificate{cert}
+
+	if len(opts.TLS.CipherSuites) > 0 {
+		cipherSuites, err := parseCipherSuites(opts.TLS.CipherSuites)
+		if err != nil {
+			return fmt.Errorf("could not parse cipher suites: %v", err)
+		}
+		config.CipherSuites = cipherSuites
+	}
+
+	if len(opts.TLS.MinVersion) > 0 {
+		switch opts.TLS.MinVersion {
+		case "TLS1.2":
+			config.MinVersion = tls.VersionTLS12
+		case "TLS1.3":
+			config.MinVersion = tls.VersionTLS13
+		default:
+			return errors.New("unknown TLS MinVersion config provided")
+		}
+	}
 
 	listenAddr := getListenAddress(opts.SecureBindAddress)
 
@@ -146,7 +186,7 @@ func (s *server) Start(ctx context.Context) error {
 // When the given context is cancelled the server will be shutdown.
 // If any errors occur, only the first error will be returned.
 func (s *server) startServer(ctx context.Context, listener net.Listener) error {
-	srv := &http.Server{Handler: s.handler}
+	srv := &http.Server{Handler: s.handler, ReadHeaderTimeout: time.Minute}
 	g, groupCtx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {

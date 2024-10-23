@@ -4,13 +4,14 @@ GOLANGCILINT ?= golangci-lint
 BINARY := oauth2-proxy
 VERSION ?= $(shell git describe --always --dirty --tags 2>/dev/null || echo "undefined")
 # Allow to override image registry.
+
 REGISTRY ?= gcr.io/devsentient-infra/oauth2-proxy
 .NOTPARALLEL:
 
 GO_MAJOR_VERSION = $(shell $(GO) version | cut -c 14- | cut -d' ' -f1 | cut -d'.' -f1)
 GO_MINOR_VERSION = $(shell $(GO) version | cut -c 14- | cut -d' ' -f1 | cut -d'.' -f2)
 MINIMUM_SUPPORTED_GO_MAJOR_VERSION = 1
-MINIMUM_SUPPORTED_GO_MINOR_VERSION = 15
+MINIMUM_SUPPORTED_GO_MINOR_VERSION = 20
 GO_VERSION_VALIDATION_ERR_MSG = Golang version is not supported, please update to at least $(MINIMUM_SUPPORTED_GO_MAJOR_VERSION).$(MINIMUM_SUPPORTED_GO_MINOR_VERSION)
 
 ifeq ($(COVER),true)
@@ -37,6 +38,7 @@ lint: validate-go-version
 build: validate-go-version clean $(BINARY)
 
 $(BINARY):
+
 	CGO_ENABLED=0 $(GO) build -a -installsuffix cgo -ldflags="-X main.VERSION=${VERSION}" -o $@ github.com/oauth2-proxy/oauth2-proxy/v7
 
 DOCKER_BUILD_PLATFORM ?= linux/amd64
@@ -44,35 +46,50 @@ DOCKER_BUILDX_ARGS ?=
 DOCKER_BUILDX := docker buildx build ${DOCKER_BUILDX_ARGS} --build-arg VERSION=${VERSION}
 DOCKER_BUILDX_X_PLATFORM := $(DOCKER_BUILDX) --platform ${DOCKER_BUILD_PLATFORM}
 DOCKER_BUILDX_PUSH := docker buildx build --push
+
 DOCKER_BUILDX_PUSH_X_PLATFORM := $(DOCKER_BUILDX_PUSH) --platform ${DOCKER_BUILD_PLATFORM}
+
+DOCKER_BUILD_PLATFORM_ALPINE         ?= linux/amd64,linux/arm64,linux/ppc64le,linux/arm/v6,linux/arm/v7,linux/s390x
+DOCKER_BUILD_RUNTIME_IMAGE_ALPINE    ?= alpine:3.20.0
+DOCKER_BUILDX_ARGS_ALPINE            ?= --build-arg RUNTIME_IMAGE=${DOCKER_BUILD_RUNTIME_IMAGE_ALPINE} --build-arg VERSION=${VERSION}
+DOCKER_BUILDX_X_PLATFORM_ALPINE      := docker buildx build ${DOCKER_BUILDX_ARGS_ALPINE} --platform ${DOCKER_BUILD_PLATFORM_ALPINE}
+DOCKER_BUILDX_PUSH_X_PLATFORM_ALPINE := $(DOCKER_BUILDX_X_PLATFORM_ALPINE) --push
 
 .PHONY: docker
 docker:
-	$(DOCKER_BUILDX_X_PLATFORM) -f Dockerfile -t $(REGISTRY)/oauth2-proxy:latest .
-
-.PHONY: docker-all
-docker-all: docker
-	$(DOCKER_BUILDX) --platform linux/amd64 -t $(REGISTRY)/oauth2-proxy:latest-amd64 .
-	$(DOCKER_BUILDX_X_PLATFORM) -f Dockerfile -t $(REGISTRY)/oauth2-proxy:${VERSION} .
-	$(DOCKER_BUILDX) --platform linux/amd64 -t $(REGISTRY)/oauth2-proxy:${VERSION}-amd64 .
-	$(DOCKER_BUILDX) --platform linux/arm64 -t $(REGISTRY)/oauth2-proxy:latest-arm64 .
-	$(DOCKER_BUILDX) --platform linux/arm64 -t $(REGISTRY)/oauth2-proxy:${VERSION}-arm64 .
-	$(DOCKER_BUILDX) --platform linux/arm/v6 -t $(REGISTRY)/oauth2-proxy:latest-armv6 .
-	$(DOCKER_BUILDX) --platform linux/arm/v6 -t $(REGISTRY)/oauth2-proxy:${VERSION}-armv6 .
+	$(DOCKER_BUILDX_X_PLATFORM) -t $(REGISTRY)/$(REPOSITORY):latest -t $(REGISTRY)/$(REPOSITORY):${VERSION} .
+	$(DOCKER_BUILDX_X_PLATFORM_ALPINE) -t $(REGISTRY)/$(REPOSITORY):latest-alpine -t $(REGISTRY)/$(REPOSITORY):${VERSION}-alpine .
 
 .PHONY: docker-push
 docker-push:
-	$(DOCKER_BUILDX_PUSH_X_PLATFORM) -t $(REGISTRY)/oauth2-proxy:latest .
+	$(DOCKER_BUILDX_PUSH_X_PLATFORM) -t $(REGISTRY)/$(REPOSITORY):latest -t $(REGISTRY)/$(REPOSITORY):${VERSION} .
+	$(DOCKER_BUILDX_PUSH_X_PLATFORM_ALPINE) -t $(REGISTRY)/$(REPOSITORY):latest-alpine -t $(REGISTRY)/$(REPOSITORY):${VERSION}-alpine .
+
+.PHONY: docker-all
+docker-all: docker
+	$(DOCKER_BUILDX) --platform linux/amd64   -t $(REGISTRY)/$(REPOSITORY):latest-amd64   -t $(REGISTRY)/$(REPOSITORY):${VERSION}-amd64 .
+	$(DOCKER_BUILDX) --platform linux/arm64   -t $(REGISTRY)/$(REPOSITORY):latest-arm64   -t $(REGISTRY)/$(REPOSITORY):${VERSION}-arm64 .
+	$(DOCKER_BUILDX) --platform linux/ppc64le -t $(REGISTRY)/$(REPOSITORY):latest-ppc64le -t $(REGISTRY)/$(REPOSITORY):${VERSION}-ppc64le .
+	$(DOCKER_BUILDX) --platform linux/arm/v7  -t $(REGISTRY)/$(REPOSITORY):latest-armv7   -t $(REGISTRY)/$(REPOSITORY):${VERSION}-armv7 .
+	$(DOCKER_BUILDX) --platform linux/s390x   -t $(REGISTRY)/$(REPOSITORY):latest-s390x -t $(REGISTRY)/$(REPOSITORY):${VERSION}-s390x .
 
 .PHONY: docker-push-all
 docker-push-all: docker-push
-	$(DOCKER_BUILDX_PUSH) --platform linux/amd64 -t $(REGISTRY)/oauth2-proxy:latest-amd64 .
-	$(DOCKER_BUILDX_PUSH_X_PLATFORM) -t $(REGISTRY)/oauth2-proxy:${VERSION} .
-	$(DOCKER_BUILDX_PUSH) --platform linux/amd64 -t $(REGISTRY)/oauth2-proxy:${VERSION}-amd64 .
-	$(DOCKER_BUILDX_PUSH) --platform linux/arm64 -t $(REGISTRY)/oauth2-proxy:latest-arm64 .
-	$(DOCKER_BUILDX_PUSH) --platform linux/arm64 -t $(REGISTRY)/oauth2-proxy:${VERSION}-arm64 .
-	$(DOCKER_BUILDX_PUSH) --platform linux/arm/v6 -t $(REGISTRY)/oauth2-proxy:latest-armv6 .
-	$(DOCKER_BUILDX_PUSH) --platform linux/arm/v6 -t $(REGISTRY)/oauth2-proxy:${VERSION}-armv6 .
+	$(DOCKER_BUILDX_PUSH) --platform linux/amd64   -t $(REGISTRY)/$(REPOSITORY):latest-amd64   -t $(REGISTRY)/$(REPOSITORY):${VERSION}-amd64 .
+	$(DOCKER_BUILDX_PUSH) --platform linux/arm64   -t $(REGISTRY)/$(REPOSITORY):latest-arm64   -t $(REGISTRY)/$(REPOSITORY):${VERSION}-arm64 .
+	$(DOCKER_BUILDX_PUSH) --platform linux/ppc64le -t $(REGISTRY)/$(REPOSITORY):latest-ppc64le -t $(REGISTRY)/$(REPOSITORY):${VERSION}-ppc64le .
+	$(DOCKER_BUILDX_PUSH) --platform linux/arm/v7  -t $(REGISTRY)/$(REPOSITORY):latest-armv7   -t $(REGISTRY)/$(REPOSITORY):${VERSION}-armv7 .
+	$(DOCKER_BUILDX_PUSH) --platform linux/s390x   -t $(REGISTRY)/$(REPOSITORY):latest-s390x -t $(REGISTRY)/$(REPOSITORY):${VERSION}-s390x .
+
+.PHONY: docker-nightly-build
+docker-nightly-build:
+	$(DOCKER_BUILDX_X_PLATFORM) -t $(REGISTRY)/$(REPOSITORY)-nightly:latest -t $(REGISTRY)/$(REPOSITORY)-nightly:${DATE} .
+	$(DOCKER_BUILDX_X_PLATFORM_ALPINE) -t ${REGISTRY}/$(REPOSITORY)-nightly:latest-alpine -t $(REGISTRY)/$(REPOSITORY)-nightly:${DATE}-alpine .
+
+.PHONY: docker-nightly-push
+docker-nightly-push:
+	$(DOCKER_BUILDX_PUSH_X_PLATFORM) -t $(REGISTRY)/$(REPOSITORY)-nightly:latest -t $(REGISTRY)/$(REPOSITORY)-nightly:${DATE} .
+	$(DOCKER_BUILDX_PUSH_X_PLATFORM_ALPINE) -t ${REGISTRY}/$(REPOSITORY)-nightly:latest-alpine -t $(REGISTRY)/$(REPOSITORY)-nightly:${DATE}-alpine .
 
 .PHONY: generate
 generate:
@@ -104,10 +121,10 @@ validate-go-version:
 
 # local-env can be used to interact with the local development environment
 # eg:
-#    make local-env-up 					# Bring up a basic test environment
-#    make local-env-down 				# Tear down the basic test environment
-#    make local-env-nginx-up 		# Bring up an nginx based test environment
-#    make local-env-nginx-down 	# Tead down the nginx based test environment
+#    make local-env-up          # Bring up a basic test environment
+#    make local-env-down        # Tear down the basic test environment
+#    make local-env-nginx-up    # Bring up an nginx based test environment
+#    make local-env-nginx-down  # Tead down the nginx based test environment
 .PHONY: local-env-%
 local-env-%:
 	make -C contrib/local-environment $*

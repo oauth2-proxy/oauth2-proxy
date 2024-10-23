@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 )
 
@@ -59,7 +58,7 @@ func (r *builder) WithMethod(method string) Builder {
 
 // WithHeaders replaces the request header map with the given header map.
 func (r *builder) WithHeaders(header http.Header) Builder {
-	r.header = header
+	r.header = header.Clone()
 	return r
 }
 
@@ -100,14 +99,14 @@ func (r *builder) do() Result {
 	}
 	req.Header = r.header
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := DefaultHTTPClient.Do(req)
 	if err != nil {
 		r.result = &result{err: fmt.Errorf("error performing request: %v", err)}
 		return r.result
 	}
 
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		r.result = &result{err: fmt.Errorf("error reading response body: %v", err)}
 		return r.result

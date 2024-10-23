@@ -43,7 +43,7 @@ oauth2-proxy:
   config:
     configFile: |-
       cookie_secret="OQINaROshtE9TcZkNAm-5Zs2Pv3xaWytBmc5W7sPX7w="
-      cookie_domain=".localtest.me"
+      cookie_domains=".localtest.me"
       whitelist_domains=[".localtest.me"]
       # only users with this domain will be let in
       email_domains=["example.com"]

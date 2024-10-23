@@ -12,7 +12,7 @@ import (
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	cookiesapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/cookies"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -483,6 +483,12 @@ func SessionStoreInterfaceTests(in *testInput) {
 			It("should return a no cookie error", func() {
 				Expect(loadErr).To(MatchError(http.ErrNoCookie))
 			})
+		})
+	})
+
+	Context("when VerifyConnection is called", func() {
+		It("should return without an error", func() {
+			Expect(in.ss().VerifyConnection(in.request.Context())).ToNot(HaveOccurred())
 		})
 	})
 }

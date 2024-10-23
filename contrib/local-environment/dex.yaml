@@ -1,7 +1,7 @@
 # This configuration is intended to be used with the docker-compose testing
 # environment.
 # This should configure Dex to run on port 4190 and provides a static login
-issuer: http://dex.localhost:4190/dex
+issuer: http://dex.localtest.me:4190/dex
 storage:
   type: etcd
   config:
@@ -19,7 +19,7 @@ staticClients:
 - id: oauth2-proxy
   redirectURIs:
   # These redirect URIs point to the `--redirect-url` for OAuth2 proxy.
-  - 'http://localhost:4180/oauth2/callback' # For basic proxy example.
+  - 'http://oauth2-proxy.localtest.me:4180/oauth2/callback' # For basic proxy example.
   - 'http://oauth2-proxy.oauth2-proxy.localhost/oauth2/callback' # For nginx and traefik example.
   name: 'OAuth2 Proxy'
   secret: b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK

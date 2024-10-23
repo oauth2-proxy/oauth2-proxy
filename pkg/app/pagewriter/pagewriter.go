@@ -10,7 +10,7 @@ import (
 // It can also be used to write errors for the http.ReverseProxy used in the
 // upstream package.
 type Writer interface {
-	WriteSignInPage(rw http.ResponseWriter, req *http.Request, redirectURL string)
+	WriteSignInPage(rw http.ResponseWriter, req *http.Request, redirectURL string, statusCode int)
 	WriteErrorPage(rw http.ResponseWriter, opts ErrorPageOpts)
 	ProxyErrorHandler(rw http.ResponseWriter, req *http.Request, proxyErr error)
 	WriteRobotsTxt(rw http.ResponseWriter, req *http.Request)
@@ -108,7 +108,7 @@ func NewWriter(opts Opts) (Writer, error) {
 // If any of the funcs are not provided, a default implementation will be used.
 // This is primarily for us in testing.
 type WriterFuncs struct {
-	SignInPageFunc func(rw http.ResponseWriter, req *http.Request, redirectURL string)
+	SignInPageFunc func(rw http.ResponseWriter, req *http.Request, redirectURL string, statusCode int)
 	ErrorPageFunc  func(rw http.ResponseWriter, opts ErrorPageOpts)
 	ProxyErrorFunc func(rw http.ResponseWriter, req *http.Request, proxyErr error)
 	RobotsTxtfunc  func(rw http.ResponseWriter, req *http.Request)
@@ -117,9 +117,9 @@ type WriterFuncs struct {
 // WriteSignInPage implements the Writer interface.
 // If the SignInPageFunc is provided, this will be used, else a default
 // implementation will be used.
-func (w *WriterFuncs) WriteSignInPage(rw http.ResponseWriter, req *http.Request, redirectURL string) {
+func (w *WriterFuncs) WriteSignInPage(rw http.ResponseWriter, req *http.Request, redirectURL string, statusCode int) {
 	if w.SignInPageFunc != nil {
-		w.SignInPageFunc(rw, req, redirectURL)
+		w.SignInPageFunc(rw, req, redirectURL, statusCode)
 		return
 	}
 

@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/go-redis/redis/v8"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/redis/go-redis/v9"
 )
 
 // Client is wrapper interface for redis.Client and redis.ClusterClient.
@@ -14,6 +14,7 @@ type Client interface {
 	Lock(key string) sessions.Lock
 	Set(ctx context.Context, key string, value []byte, expiration time.Duration) error
 	Del(ctx context.Context, key string) error
+	Ping(ctx context.Context) error
 }
 
 var _ Client = (*client)(nil)
@@ -44,6 +45,10 @@ func (c *client) Lock(key string) sessions.Lock {
 	return NewLock(c.Client, key)
 }
 
+func (c *client) Ping(ctx context.Context) error {
+	return c.Client.Ping(ctx).Err()
+}
+
 var _ Client = (*clusterClient)(nil)
 
 type clusterClient struct {
@@ -70,4 +75,8 @@ func (c *clusterClient) Del(ctx context.Context, key string) error {
 
 func (c *clusterClient) Lock(key string) sessions.Lock {
 	return NewLock(c.ClusterClient, key)
+}
+
+func (c *clusterClient) Ping(ctx context.Context) error {
+	return c.ClusterClient.Ping(ctx).Err()
 }

@@ -5,11 +5,14 @@ import "time"
 const (
 	// DefaultUpstreamFlushInterval is the default value for the Upstream FlushInterval.
 	DefaultUpstreamFlushInterval = 1 * time.Second
+
+	// DefaultUpstreamTimeout is the maximum duration a network dial to a upstream server for a response.
+	DefaultUpstreamTimeout = 30 * time.Second
 )
 
 // UpstreamConfig is a collection of definitions for upstream servers.
 type UpstreamConfig struct {
-	// ProxyRawPath will pass the raw url path to upstream allowing for url's
+	// ProxyRawPath will pass the raw url path to upstream allowing for urls
 	// like: "/%2F/" which would otherwise be redirected to "/"
 	ProxyRawPath bool `json:"proxyRawPath,omitempty"`
 
@@ -36,11 +39,13 @@ type Upstream struct {
 	Path string `json:"path,omitempty"`
 
 	// RewriteTarget allows users to rewrite the request path before it is sent to
-	// the upstream server.
+	// the upstream server (for an HTTP/HTTPS upstream) or mapped to the filesystem
+	// (for a `file:` upstream).
 	// Use the Path to capture segments for reuse within the rewrite target.
 	// Eg: With a Path of `^/baz/(.*)`, a RewriteTarget of `/foo/$1` would rewrite
 	// the request `/baz/abc/123` to `/foo/abc/123` before proxying to the
-	// upstream server.
+	// upstream server.  Or if the upstream were `file:///app`, a request for
+	// `/baz/info.html` would return the contents of the file `/app/foo/info.html`.
 	RewriteTarget string `json:"rewriteTarget,omitempty"`
 
 	// The URI of the upstream server. This may be an HTTP(S) server of a File
@@ -57,7 +62,7 @@ type Upstream struct {
 
 	// InsecureSkipTLSVerify will skip TLS verification of upstream HTTPS hosts.
 	// This option is insecure and will allow potential Man-In-The-Middle attacks
-	// betweem OAuth2 Proxy and the usptream server.
+	// between OAuth2 Proxy and the upstream server.
 	// Defaults to false.
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 
@@ -84,4 +89,8 @@ type Upstream struct {
 	// ProxyWebSockets enables proxying of websockets to upstream servers
 	// Defaults to true.
 	ProxyWebSockets *bool `json:"proxyWebSockets,omitempty"`
+
+	// Timeout is the maximum duration the server will wait for a response from the upstream server.
+	// Defaults to 30 seconds.
+	Timeout *Duration `json:"timeout,omitempty"`
 }

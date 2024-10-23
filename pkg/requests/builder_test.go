@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/version"
+
 	"github.com/bitly/go-simplejson"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -19,7 +21,7 @@ var _ = Describe("Builder suite", func() {
 
 	baseHeaders := http.Header{
 		"Accept-Encoding": []string{"gzip"},
-		"User-Agent":      []string{"Go-http-client/1.1"},
+		"User-Agent":      []string{"oauth2-proxy/" + version.VERSION},
 	}
 
 	BeforeEach(func() {
@@ -285,7 +287,7 @@ func assertSuccessfulRequest(builder func() Builder, expectedRequest testHTTPReq
 
 		BeforeEach(func() {
 			var err error
-			response, err = builder().Do().UnmarshalJSON()
+			response, err = builder().Do().UnmarshalSimpleJSON()
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -340,7 +342,7 @@ func assertRequestError(builder func() Builder, errorMessage string) {
 
 	Context("UnmarshalJSON", func() {
 		It("returns an error", func() {
-			resp, err := builder().Do().UnmarshalJSON()
+			resp, err := builder().Do().UnmarshalSimpleJSON()
 			Expect(err).To(MatchError(ContainSubstring(errorMessage)))
 			Expect(resp).To(BeNil())
 		})
@@ -368,7 +370,7 @@ func assertJSONError(builder func() Builder, errorMessage string) {
 
 	Context("UnmarshalJSON", func() {
 		It("returns an error", func() {
-			resp, err := builder().Do().UnmarshalJSON()
+			resp, err := builder().Do().UnmarshalSimpleJSON()
 			Expect(err).To(MatchError(ContainSubstring(errorMessage)))
 			Expect(resp).To(BeNil())
 		})

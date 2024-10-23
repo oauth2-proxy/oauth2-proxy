@@ -51,7 +51,7 @@ func validateRedisSessionStore(o *options.Options) []string {
 		return []string{fmt.Sprintf("unable to initialize a redis client: %v", err)}
 	}
 
-	n, err := encryption.Nonce()
+	n, err := encryption.Nonce(32)
 	if err != nil {
 		return []string{fmt.Sprintf("unable to generate a redis initialization test key: %v", err)}
 	}

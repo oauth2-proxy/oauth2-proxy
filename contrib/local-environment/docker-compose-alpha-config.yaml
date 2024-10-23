@@ -13,6 +13,7 @@
 version: '3.0'
 services:
   oauth2-proxy:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.7.1
     command: --config /oauth2-proxy.cfg --alpha-config /oauth2-proxy-alpha-config.yaml
     volumes:
       - "./oauth2-proxy-alpha-config.cfg:/oauth2-proxy.cfg"

@@ -2,15 +2,14 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
 	"os"
 	"runtime"
-	"time"
 
 	"github.com/ghodss/yaml"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/version"
 	"github.com/spf13/pflag"
 )
 
@@ -30,12 +29,12 @@ func main() {
 	configFlagSet.Parse(os.Args[1:])
 
 	if *showVersion {
-		fmt.Printf("oauth2-proxy %s (built with %s)\n", VERSION, runtime.Version())
+		fmt.Printf("oauth2-proxy %s (built with %s)\n", version.VERSION, runtime.Version())
 		return
 	}
 
 	if *convertConfig && *alphaConfig != "" {
-		logger.Fatal("cannot use alpha-config and conver-config-to-alpha together")
+		logger.Fatal("cannot use alpha-config and convert-config-to-alpha together")
 	}
 
 	opts, err := loadConfiguration(*config, *alphaConfig, configFlagSet, os.Args[1:])
@@ -59,8 +58,6 @@ func main() {
 	if err != nil {
 		logger.Fatalf("ERROR: Failed to initialise OAuth2 Proxy: %v", err)
 	}
-
-	rand.Seed(time.Now().UnixNano())
 
 	if err := oauthproxy.Start(); err != nil {
 		logger.Fatalf("ERROR: Failed to start OAuth2 Proxy: %v", err)

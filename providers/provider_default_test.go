@@ -30,7 +30,7 @@ func TestRefresh(t *testing.T) {
 	assert.Equal(t, ErrNotImplemented, err)
 }
 
-func TestAcrValuesNotConfigured(t *testing.T) {
+func TestCodeChallengeConfigured(t *testing.T) {
 	p := &ProviderData{
 		LoginURL: &url.URL{
 			Scheme: "http",
@@ -39,22 +39,26 @@ func TestAcrValuesNotConfigured(t *testing.T) {
 		},
 	}
 
-	result := p.GetLoginURL("https://my.test.app/oauth", "", "")
-	assert.NotContains(t, result, "acr_values")
+	extraValues := url.Values{}
+	extraValues["code_challenge"] = []string{"challenge"}
+	extraValues["code_challenge_method"] = []string{"method"}
+	result := p.GetLoginURL("https://my.test.app/oauth", "", "", extraValues)
+	assert.Contains(t, result, "code_challenge=challenge")
+	assert.Contains(t, result, "code_challenge_method=method")
 }
 
-func TestAcrValuesConfigured(t *testing.T) {
+func TestCodeChallengeNotConfigured(t *testing.T) {
 	p := &ProviderData{
 		LoginURL: &url.URL{
 			Scheme: "http",
 			Host:   "my.test.idp",
 			Path:   "/oauth/authorize",
 		},
-		AcrValues: "testValue",
 	}
 
-	result := p.GetLoginURL("https://my.test.app/oauth", "", "")
-	assert.Contains(t, result, "acr_values=testValue")
+	result := p.GetLoginURL("https://my.test.app/oauth", "", "", url.Values{})
+	assert.NotContains(t, result, "code_challenge")
+	assert.NotContains(t, result, "code_challenge_method")
 }
 
 func TestProviderDataEnrichSession(t *testing.T) {
@@ -107,7 +111,7 @@ func TestProviderDataAuthorize(t *testing.T) {
 				Groups: tc.groups,
 			}
 			p := &ProviderData{}
-			p.SetAllowedGroups(tc.allowedGroups)
+			p.setAllowedGroups(tc.allowedGroups)
 
 			authorized, err := p.Authorize(context.Background(), session)
 			g.Expect(err).ToNot(HaveOccurred())

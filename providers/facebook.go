@@ -58,6 +58,7 @@ func NewFacebookProvider(p *ProviderData) *FacebookProvider {
 		validateURL: facebookDefaultProfileURL,
 		scope:       facebookDefaultScope,
 	})
+	p.getAuthorizationHeaderFunc = makeOIDCHeader
 	return &FacebookProvider{ProviderData: p}
 }
 

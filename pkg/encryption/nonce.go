@@ -8,9 +8,9 @@ import (
 	"golang.org/x/crypto/blake2b"
 )
 
-// Nonce generates a random 32-byte slice to be used as a nonce
-func Nonce() ([]byte, error) {
-	b := make([]byte, 32)
+// Nonce generates a random n-byte slice
+func Nonce(length int) ([]byte, error) {
+	b := make([]byte, length)
 	_, err := rand.Read(b)
 	if err != nil {
 		return nil, err
