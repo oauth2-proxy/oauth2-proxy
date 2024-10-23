@@ -115,7 +115,16 @@ insecure_oidc_skip_issuer_verification=true
 To provide additional security against the insecure setting, Entra ID provider performs additional check on `issuer` claim to accept tokens issued only by `https://login.microsoftonline.com/{tenant-id}/v2.0`.
 
 ### Example configurations
-Single-tenant app with up to 200 groups (consider using generic OIDC provider):
+Single-tenant app without groups (*groups claim* not enabled). Consider using generic OIDC provider:
+```shell
+provider="entra-id"
+oidc_issuer_url="https://login.microsoftonline.com/<tenant-id>/v2.0"
+client_id="<client-id>"
+client_secret="<client-secret>"
+scope="openid"
+```
+
+Single-tenant app with up to 200 groups (*groups claim* enabled). Consider using generic OIDC provider:
 ```shell
 provider="entra-id"
 entra_id_skip_groups_from_graph=true
@@ -126,7 +135,7 @@ scope="openid"
 allowed_groups=["ac51800c-2679-4ecb-8130-636380a3b491"]
 ```
 
-Single-tenant with group overage support, without admin consent (comprehensive):
+Single-tenant app with up to 999 groups, without admin consent (comprehensive):
 ```shell
 provider="entra-id"
 oidc_issuer_url="https://login.microsoftonline.com/<tenant-id>/v2.0"
@@ -136,14 +145,14 @@ scope="openid User.Read"
 allowed_groups=["968b4844-d5e7-4e18-a834-59927959369f"]
 ```
 
-Multi-tenant with Microsoft personal accounts & one Entra tenant allowed:
+Multi-tenant with Microsoft personal accounts & one Entra tenant allowed, with group overage considered:
 ```shell
 provider="entra-id"
 oidc_issuer_url="https://login.microsoftonline.com/common/v2.0"
 client_id="<client-id>"
 client_secret="<client-secret>"
 insecure_oidc_skip_issuer_verification=true
-scope="openid profile email"
+scope="openid profile email User.Read"
 entra_id_allowed_tenants=["9188040d-6c67-4c5b-b112-36a304b66dad","<my-tenant-id>"] # Allow only <my-tenant-id> and Personal MS Accounts tenant 
 email_domains="*"
 ```
