@@ -85,14 +85,14 @@ If you want to make use of groups, you can configure *groups claim* to be presen
 ## Configure provider
 The provider is OIDC-compliant, so all the OIDC parameters are honored. Additional provider-specific configuration parameters are:
 * `entra_id_skip_groups_from_graph` - never read groups from Graph API, even when the ID token indicates that there's a group overage. Set if you expect group overage in some cases, but still don't want to grant `User.Read`. Defaults to `false`. If you don't need groups, consider disabling the *groups claim* in the App registration 
-* `entra_id_allowed_tenant` - specify an allowed tenant. Use with multi-tenant apps, when incoming tokens are issued by different issuers. When not specified, all tenants are allowed. Redundant for single-tenant apps. Can be specified multiple times.
+* `entra_id_allowed_tenants` - list of allowed tenants. Use with multi-tenant apps, when incoming tokens are issued by different issuers and OIDC issuer verification is disabled. When not specified, all tenants are allowed. Redundant for single-tenant apps (regular ID token validation matches the issuer).
 
 ### Scopes and claims
 For single-tenant and multi-tenant apps without groups, the only required scope is `openid` (See: [Scopes and permissions](https://learn.microsoft.com/en-us/entra/identity-platform/scopes-oidc#the-openid-scope)):
 
-To make use of groups - for example use `allowed_groups` setting or authorize based on groups inside your service - you need to enable *groups claims*, so list of your groups is present in the issued ID token (See: [Configure groups](#configure-groups)). No additional scopes are required besides `openid`. This works up to 200 groups.
+To make use of groups - for example use `allowed_groups` setting or authorize based on groups inside your service - you need to enable *groups claims* in the App Registration. When enabled, list of your groups is present in the issued ID token. No additional scopes are required besides `openid`. This works up to 200 groups.
 
-When user has more than 200 group memberships (See: [group overages](https://learn.microsoft.com/en-us/security/zero-trust/develop/configure-tokens-group-claims-app-roles#group-overages)), OAuth2-Proxy retrieves the complete list from Microsoft Graph API's [`me/transitiveMemberOf` endpoint](https://learn.microsoft.com/en-us/graph/api/user-list-transitivememberof). Endpoint requires `User.Read` scope (delegated permission). This permission can be by default consented by user during first login. Set scope to `openid User.Read` to request user consent. OAuth2-Proxy supports up to 999 groups.
+When user has more than 200 group memberships, OAuth2-Proxy retrieves the complete list from Microsoft Graph API's [`transitiveMemberOf`](https://learn.microsoft.com/en-us/graph/api/user-list-transitivememberof). Endpoint requires `User.Read` scope (delegated permission). This permission can be by default consented by user during first login. Set scope to `openid User.Read` to request user consent. OAuth2-Proxy supports up to 999 groups. See: [group overages](https://learn.microsoft.com/en-us/security/zero-trust/develop/configure-tokens-group-claims-app-roles#group-overages).
 
 Alternatively to user consent, both `openid` and `User.Read` permissions can be consented by admistrator. Then, user is not asked for consent on the first login, and group overage works with `openid` scope only. Admin consent can also be required for some tenants. It can be granted with [azuread_service_principal_delegated_permission_grant](https://registry.terraform.io/providers/hashicorp/azuread/latest/docs/resources/service_principal_delegated_permission_grant) terraform resource.
 
@@ -103,16 +103,16 @@ For personal microsoft accounts, required scope is `openid profile email`.
 See: [Overview of permissions and consent in the Microsoft identity platform](https://learn.microsoft.com/en-us/entra/identity-platform/permissions-consent-overview).
 
 ### Multi-tenant apps
-To use multi-tenant apps, set the appropriate OIDC provider and disable verification:
+To authenticate apps from multiple tenants (including personal Microsoft accounts), set the appropriate OIDC provider and disable verification:
 ```shell
 oidc_issuer_url=https://login.microsoftonline.com/common/v2.0
 insecure_oidc_skip_issuer_verification=true
 ```
-`insecure_oidc_skip_issuer_verification` setting disables following checks:
-* Startup check for matching the issuer URL returned from [discovery document](https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration) with `oidc_issuer_url` setting ([OIDC Discovery 4.3](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationValidation)). The document's `issuer` field equals `https://login.microsoftonline.com/{tenantid}/v2.0` which is a template, not the exact value.
-* Matching Issuer URL in the ID token with `oidc_issuer_url` setting during ID token validation ([OIDC Core 3.1.3.7](https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation) point 2) The tokens are coming from different tenants so the `issuer` is different.
+`insecure_oidc_skip_issuer_verification` setting is required to disable following checks:
+* Startup check for matching issuer URL returned from [discovery document](https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration) with `oidc_issuer_url` setting. Required, as document's `issuer` field doesn't equal to `https://login.microsoftonline.com/common/v2.0`. See [OIDC Discovery 4.3](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationValidation).
+* Matching ID token's `issuer` claim with `oidc_issuer_url` setting during ID token validation. Required to support tokens issued by diffrerent tenants. See [OIDC Core 3.1.3.7](https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation). 
 
-MS Entra ID provider provides additional validation for multi-tenant apps to compensate the disabled verification. By default, every incoming ID token's `issuer` claim is validated to match the `https://login.microsoftonline.com/{tenantid}/v2.0` template. Additionaly, you can limit the allowed tenant IDs by setting `ms_entra_id_allowed_tenants`. 
+To provide additional security against the insecure setting, Entra ID provider performs additional check on `issuer` claim to accept tokens issued only by `https://login.microsoftonline.com/{tenant-id}/v2.0`.
 
 ### Example configurations
 

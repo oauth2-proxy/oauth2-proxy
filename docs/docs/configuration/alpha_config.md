@@ -393,8 +393,8 @@ character.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `disableGroupsFromGraph` | _bool_ |  |
-| `allowedMultiTenants` | _[]string_ |  |
+| `skipGroupsFromGraph` | _bool_ |  |
+| `allowedTenants` | _[]string_ |  |
 
 ### OIDCOptions
 
