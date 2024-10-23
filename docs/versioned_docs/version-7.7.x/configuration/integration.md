@@ -274,7 +274,7 @@ This example is for a simple reverse proxy setup where the `/oauth2/` path is ke
 **Following options need to be set on `oauth2-proxy`:**
 - `--reverse-proxy=true`: Enables the use of `X-Forwarded-*` headers to determine redirects correctly
 
-```nginx
+```nginx title="Caddyfile"
 example.com {
 	# Requests to /oauth2/* are proxied to oauth2-proxy without authentication.
 	# You can't use `reverse_proxy /oauth2/* oauth2-proxy.internal:4180` here because the reverse_proxy directive has lower precedence than the handle directive.
