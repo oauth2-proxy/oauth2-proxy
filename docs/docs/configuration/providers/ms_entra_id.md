@@ -84,7 +84,6 @@ If you want to make use of groups, you can configure *groups claim* to be presen
 
 ## Configure provider
 The provider is OIDC-compliant, so all the OIDC parameters are honored. Additional provider-specific configuration parameters are:
-* `entra_id_skip_groups_from_graph` - never read groups from Graph API, even when the ID token indicates that there's a group overage. Set if you expect group overage in some cases, but still don't want to grant `User.Read`. Defaults to `false`. If you don't need groups, consider disabling the *groups claim* in the App registration.
 * `entra_id_allowed_tenants` - list of allowed tenants. Use with multi-tenant apps, when incoming tokens are issued by different issuers and OIDC issuer verification is disabled. When not specified, all tenants are allowed. Redundant for single-tenant apps (regular ID token validation matches the issuer).
 
 ### Scopes and claims
@@ -92,11 +91,9 @@ For single-tenant and multi-tenant apps without groups, the only required scope 
 
 To make use of groups - for example use `allowed_groups` setting or authorize based on groups inside your service - you need to enable *groups claims* in the App Registration. When enabled, list of groups is present in the issued ID token. No additional scopes are required besides `openid`. This works up to 200 groups.
 
-When user has more than 200 group memberships, OAuth2-Proxy attempts to retrieve the complete list from Microsoft Graph API's [`transitiveMemberOf`](https://learn.microsoft.com/en-us/graph/api/user-list-transitivememberof). Endpoint requires `User.Read` scope (delegated permission). This permission can be by default consented by user during first login. Set scope to `openid User.Read` to request user consent. OAuth2-Proxy supports up to 999 groups. See: [group overages](https://learn.microsoft.com/en-us/security/zero-trust/develop/configure-tokens-group-claims-app-roles#group-overages).
+When user has more than 200 group memberships, OAuth2-Proxy attempts to retrieve the complete list from Microsoft Graph API's [`transitiveMemberOf`](https://learn.microsoft.com/en-us/graph/api/user-list-transitivememberof). Endpoint requires `User.Read` scope (delegated permission). This permission can be by default consented by user during first login. Set scope to `openid User.Read` to request user consent. Without proper scope, user with 200+ groups will authenticate with 0 groups. Up to 999 groups is supported. See: [group overages](https://learn.microsoft.com/en-us/security/zero-trust/develop/configure-tokens-group-claims-app-roles#group-overages).
 
 Alternatively to user consent, both `openid` and `User.Read` permissions can be consented by admistrator. Then, user is not asked for consent on the first login, and group overage works with `openid` scope only. Admin consent can also be required for some tenants. It can be granted with [azuread_service_principal_delegated_permission_grant](https://registry.terraform.io/providers/hashicorp/azuread/latest/docs/resources/service_principal_delegated_permission_grant) terraform resource.
-
-Reading groups from Graph API can be disabled with `entra_id_skip_groups_from_graph` setting. With this flag set to `true`, even when token will indicate the group overage, there will be no attempt to call Graph API.
 
 For personal microsoft accounts, required scope is `openid profile email`.
 
@@ -127,7 +124,6 @@ scope="openid"
 Single-tenant app with up to 200 groups (*groups claim* enabled). Consider using generic OIDC provider:
 ```shell
 provider="entra-id"
-entra_id_skip_groups_from_graph=true
 oidc_issuer_url="https://login.microsoftonline.com/<tenant-id>/v2.0"
 client_id="<client-id>"
 client_secret="<client-secret>"

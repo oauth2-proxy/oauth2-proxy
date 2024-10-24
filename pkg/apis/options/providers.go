@@ -161,8 +161,7 @@ type AzureOptions struct {
 }
 
 type MicrosoftEntraIDOptions struct {
-	DisableGroupsFromGraph bool     `json:"disableGroupsFromGraph,omitempty"`
-	AllowedMultiTenants    []string `json:"allowedMultiTenants,omitempty"`
+	AllowedTenants []string `json:"allowedTenants,omitempty"`
 }
 
 type ADFSOptions struct {
