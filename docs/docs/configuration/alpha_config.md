@@ -393,7 +393,6 @@ character.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `skipGroupsFromGraph` | _bool_ |  |
 | `allowedTenants` | _[]string_ |  |
 
 ### OIDCOptions

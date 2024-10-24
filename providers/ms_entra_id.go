@@ -18,7 +18,6 @@ import (
 // MicrosoftEntraIDProvider represents provider for Azure Entra Authentication V2 endpoint
 type MicrosoftEntraIDProvider struct {
 	*OIDCProvider
-	skipGraphGroups           bool
 	isMultiTenant             bool
 	multiTenantAllowedTenants []string
 
@@ -51,31 +50,33 @@ func NewMicrosoftEntraIDProvider(p *ProviderData, opts options.Provider) *Micros
 	return &MicrosoftEntraIDProvider{
 		OIDCProvider: NewOIDCProvider(p, opts.OIDCConfig),
 
-		skipGraphGroups:           opts.MicrosoftEntraIDConfig.DisableGroupsFromGraph,
 		isMultiTenant:             isMultiTenant,
-		multiTenantAllowedTenants: opts.MicrosoftEntraIDConfig.AllowedMultiTenants,
+		multiTenantAllowedTenants: opts.MicrosoftEntraIDConfig.AllowedTenants,
 		microsoftGraphURL:         microsoftGraphURL,
 	}
 }
 
 // EnrichSession checks for group overage after calling generic EnrichSession
 func (p *MicrosoftEntraIDProvider) EnrichSession(ctx context.Context, session *sessions.SessionState) error {
-	err := p.OIDCProvider.EnrichSession(ctx, session)
-
-	if !p.skipGraphGroups {
-		hasGroupOverage, _ := p.checkGroupOverage(session)
-
-		if hasGroupOverage {
-			logger.Printf("entra overage found, reading groups from Graph API")
-			if err = p.addGraphGroupsToSession(ctx, session); err != nil {
-				return fmt.Errorf("unable to read groups from graph: %v", err)
-			}
-		} else {
-			logger.Printf("entra group overage not found")
-		}
+	if err := p.OIDCProvider.EnrichSession(ctx, session); err != nil {
+		return fmt.Errorf("unable to enrich session: %v", err)
 	}
 
-	return err
+	hasGroupOverage, err := p.checkGroupOverage(session)
+	if err != nil {
+		return fmt.Errorf("unable to check token: %v", err)
+	}
+
+	if hasGroupOverage {
+		logger.Printf("entra overage found, reading groups from Graph API")
+		if err = p.addGraphGroupsToSession(ctx, session); err != nil {
+			return fmt.Errorf("unable to enrich session: %v", err)
+		}
+	} else {
+		logger.Printf("entra group overage not found")
+	}
+
+	return nil
 }
 
 // ValidateSession checks for allowed tenants (e.g. for multi-tenant apps) and passes through to generic ValidateSession
@@ -143,7 +144,8 @@ func (p *MicrosoftEntraIDProvider) addGraphGroupsToSession(ctx context.Context, 
 		UnmarshalSimpleJSON()
 
 	if err != nil {
-		return fmt.Errorf("unable to unmarshal Microsoft Graph response: %v", err)
+		logger.Errorf("invalid response from microsoft graph, no groups added to session: %v", err)
+		return nil
 	}
 
 	reqGroups := jsonRequest.Get("value").MustArray()
