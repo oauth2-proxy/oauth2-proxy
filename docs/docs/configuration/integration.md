@@ -303,7 +303,7 @@ example.com {
 			# If oauth2-proxy returns a 401 status, redirect the client to the sign-in page.
 			@error status 401
 			handle_response @error {
-				redir * /oauth2/sign_in?rd={scheme}://{host}{uri}
+				redir * /oauth2/sign_in?rd={uri}
 			}
 		}
 
