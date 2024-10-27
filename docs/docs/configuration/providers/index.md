@@ -8,18 +8,19 @@ with Redirect URI(s) for the domain you intend to run `oauth2-proxy` on.
 
 Valid providers are :
 
-- [Google](google.md) _default_
 - [ADFS](adfs.md)
 - [Bitbucket](bitbucket.md)
 - [DigitalOcean](digitalocean.md)
 - [Facebook](facebook.md)
-- [GitHub](github.md)
 - [Gitea](gitea.md)
+- [GitHub](github.md)
 - [GitLab](gitlab.md)
-- [Keycloak](keycloak.md)/[Keycloak OIDC](keycloak_oidc.md)
+- [Google](google.md) _default_
+- [Keycloak](keycloak.md) (Deprecated)
+- [Keycloak OIDC](keycloak_oidc.md)
 - [LinkedIn](linkedin.md)
 - [login.gov](login_gov.md)
-- [Microsoft Azure](azure.md)
+- [Microsoft Azure](ms_azure_ad.md) (Deprecated)
 - [Microsoft Entra ID](ms_entra_id.md)
 - [Nextcloud](nextcloud.md)
 - [OpenID Connect](openid_connect.md)
