@@ -7,13 +7,25 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/coreos/go-systemd/activation"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options/util"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"golang.org/x/sync/errgroup"
+)
+
+// listenFdsStart corresponds to `SD_LISTEN_FDS_START`.
+// Since the 3 first file descriptors in every linux process is
+// stdin, stdout and stderr. The first usable file descriptor is 3.
+// systemd-socket-activate will always assume that the first socket will be
+// 3 and the rest follow.
+const (
+	listenFdsStart = 3
 )
 
 // Server represents an HTTP or HTTPS server.
@@ -35,6 +47,9 @@ type Opts struct {
 
 	// TLS is the TLS configuration for the server.
 	TLS *options.TLS
+
+	// Let testing infrastructure circumvent parsing file descriptors
+	fdFiles []*os.File
 }
 
 // NewServer creates a new Server from the options given.
@@ -42,6 +57,11 @@ func NewServer(opts Opts) (Server, error) {
 	s := &server{
 		handler: opts.Handler,
 	}
+
+	if len(opts.fdFiles) > 0 {
+		s.fdFiles = opts.fdFiles
+	}
+
 	if err := s.setupListener(opts); err != nil {
 		return nil, fmt.Errorf("error setting up listener: %v", err)
 	}
@@ -58,6 +78,30 @@ type server struct {
 
 	listener    net.Listener
 	tlsListener net.Listener
+
+	// ensure activation.Files are called once
+	fdFiles []*os.File
+}
+
+// convert a string filedescriptor to an actual listener
+func (s *server) fdToListener(bindAddress string) (net.Listener, error) {
+	fd, err := strconv.Atoi(bindAddress)
+	if err != nil {
+		return nil, fmt.Errorf("listen failed: fd with name is not implemented yet")
+	}
+	fdIndex := fd - listenFdsStart
+
+	if len(s.fdFiles) == 0 {
+		s.fdFiles = activation.Files(true)
+	}
+
+	l := len(s.fdFiles)
+
+	if fdIndex < 0 || fdIndex >= l || l == 0 {
+		return nil, fmt.Errorf("listen failed: fd outside of range of available file descriptors")
+	}
+
+	return net.FileListener(s.fdFiles[fdIndex])
 }
 
 // setupListener sets the server listener if the HTTP server is enabled.
@@ -67,6 +111,22 @@ func (s *server) setupListener(opts Opts) error {
 	if opts.BindAddress == "" || opts.BindAddress == "-" {
 		// No HTTP listener required
 		return nil
+	}
+
+	// Use fd: as a prefix for systemd socket activation, it's generic
+	// enough and short.
+	// The most common usage would be --http-address fd:3.
+	// This causes oauth2-proxy to just assume that the third fd passed
+	// to the program is indeed a net.Listener and starts using it
+	// without setting up a new listener.
+	if strings.HasPrefix(strings.ToLower(opts.BindAddress), "fd:") {
+		listenAddr := opts.BindAddress[3:]
+		listener, err := s.fdToListener(listenAddr)
+		if err != nil {
+			err = fmt.Errorf("listen (%s, %s) failed: %v", "file", listenAddr, err)
+		}
+		s.listener = listener
+		return err
 	}
 
 	networkType := getNetworkScheme(opts.BindAddress)
