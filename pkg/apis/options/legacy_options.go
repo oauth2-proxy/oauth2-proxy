@@ -709,10 +709,6 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		GraphGroupField: l.AzureGraphGroupField,
 	}
 
-	provider.MicrosoftEntraIDConfig = MicrosoftEntraIDOptions{
-		AllowedTenants: l.EntraIDAllowedTenants,
-	}
-
 	switch provider.Type {
 	case "github":
 		provider.GitHubConfig = GitHubOptions{
@@ -761,6 +757,10 @@ func (l *LegacyProvider) convert() (Providers, error) {
 			ServiceAccountJSON:               l.GoogleServiceAccountJSON,
 			UseApplicationDefaultCredentials: l.GoogleUseApplicationDefaultCredentials,
 			TargetPrincipal:                  l.GoogleTargetPrincipal,
+		}
+	case "entra-id":
+		provider.MicrosoftEntraIDConfig = MicrosoftEntraIDOptions{
+			AllowedTenants: l.EntraIDAllowedTenants,
 		}
 	}
 
