@@ -19,6 +19,14 @@ OAuth2-Proxy's [Installation Docs](https://oauth2-proxy.github.io/oauth2-proxy/i
 
 ## Releases
 
+This reporsitory add extra config setting for our usage. By able to pass access token to Upstream Authentication header under Bearer.
+example in config file: pass_access_token_to_bearer = true
+
+
+flag: --pass-access-token-to-bearer
+
+toml: pass_access_token_to_bearer
+
 ### Binaries
 We publish oauth2-proxy as compiled binaries on GitHub for all major architectures as well as more exotic ones like `ppc64le` as well as `s390x`.
 
