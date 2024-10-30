@@ -189,6 +189,7 @@ func (l *LegacyUpstreams) convert() (UpstreamConfig, error) {
 type LegacyHeaders struct {
 	PassBasicAuth     bool `flag:"pass-basic-auth" cfg:"pass_basic_auth"`
 	PassAccessToken   bool `flag:"pass-access-token" cfg:"pass_access_token"`
+	PassAccessTokenToBearer bool `flag:"pass-access-token-to-bearer" cfg:"pass_access_token_to_bearer"`
 	PassUserHeaders   bool `flag:"pass-user-headers" cfg:"pass_user_headers"`
 	PassAuthorization bool `flag:"pass-authorization-header" cfg:"pass_authorization_header"`
 
@@ -206,6 +207,7 @@ func legacyHeadersFlagSet() *pflag.FlagSet {
 
 	flagSet.Bool("pass-basic-auth", true, "pass HTTP Basic Auth, X-Forwarded-User and X-Forwarded-Email information to upstream")
 	flagSet.Bool("pass-access-token", false, "pass OAuth access_token to upstream via X-Forwarded-Access-Token header")
+	flagSet.Bool("pass-access-token-to-bearer", false, "pass OAuth access_token to upstream via Authorization Header Bearer")
 	flagSet.Bool("pass-user-headers", true, "pass X-Forwarded-User and X-Forwarded-Email information to upstream")
 	flagSet.Bool("pass-authorization-header", false, "pass the Authorization Header to upstream")
 
@@ -241,6 +243,10 @@ func (l *LegacyHeaders) getRequestHeaders() []Header {
 
 	if l.PassAccessToken {
 		requestHeaders = append(requestHeaders, getPassAccessTokenHeader())
+	}
+
+	if l.PassAccessTokenToBearer {
+		requestHeaders = append(requestHeaders, getPassAccessTokenHeaderToBearer())
 	}
 
 	if l.PassAuthorization {
@@ -357,6 +363,20 @@ func getPassAccessTokenHeader() Header {
 			{
 				ClaimSource: &ClaimSource{
 					Claim: "access_token",
+				},
+			},
+		},
+	}
+}
+
+func getPassAccessTokenHeaderToBearer() Header {
+	return Header{
+		Name: "Authorization",
+		Values: []HeaderValue{
+			{
+				ClaimSource: &ClaimSource{
+					Claim: "access_token",
+					Prefix: "Bearer",
 				},
 			},
 		},
