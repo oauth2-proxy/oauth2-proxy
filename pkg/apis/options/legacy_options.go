@@ -187,11 +187,11 @@ func (l *LegacyUpstreams) convert() (UpstreamConfig, error) {
 }
 
 type LegacyHeaders struct {
-	PassBasicAuth     bool `flag:"pass-basic-auth" cfg:"pass_basic_auth"`
-	PassAccessToken   bool `flag:"pass-access-token" cfg:"pass_access_token"`
+	PassBasicAuth           bool `flag:"pass-basic-auth" cfg:"pass_basic_auth"`
+	PassAccessToken         bool `flag:"pass-access-token" cfg:"pass_access_token"`
 	PassAccessTokenToBearer bool `flag:"pass-access-token-to-bearer" cfg:"pass_access_token_to_bearer"`
-	PassUserHeaders   bool `flag:"pass-user-headers" cfg:"pass_user_headers"`
-	PassAuthorization bool `flag:"pass-authorization-header" cfg:"pass_authorization_header"`
+	PassUserHeaders         bool `flag:"pass-user-headers" cfg:"pass_user_headers"`
+	PassAuthorization       bool `flag:"pass-authorization-header" cfg:"pass_authorization_header"`
 
 	SetBasicAuth     bool `flag:"set-basic-auth" cfg:"set_basic_auth"`
 	SetXAuthRequest  bool `flag:"set-xauthrequest" cfg:"set_xauthrequest"`
@@ -375,8 +375,8 @@ func getPassAccessTokenHeaderToBearer() Header {
 		Values: []HeaderValue{
 			{
 				ClaimSource: &ClaimSource{
-					Claim: "access_token",
-					Prefix: "Bearer",
+					Claim:  "access_token",
+					Prefix: "Bearer ",
 				},
 			},
 		},
