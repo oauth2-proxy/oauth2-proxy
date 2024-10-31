@@ -9,6 +9,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/util"
 	k8serrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
@@ -162,6 +163,14 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 	p.setAllowedGroups(providerConfig.AllowedGroups)
 
 	p.BackendLogoutURL = providerConfig.BackendLogoutURL
+
+	// Validate configurable claims are valid paths
+	if err := util.IsClaimPathInvalid(p.EmailClaim); err != nil {
+		logger.Printf("Warning: email claim `%s` is invalid: %v", p.EmailClaim, err)
+	}
+	if err := util.IsClaimPathInvalid(p.GroupsClaim); err != nil {
+		logger.Printf("Warning: group claim `%s` is invalid: %v", p.EmailClaim, err)
+	}
 
 	return p, nil
 }
