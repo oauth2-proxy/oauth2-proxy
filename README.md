@@ -4,7 +4,7 @@
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![Maintainability](https://api.codeclimate.com/v1/badges/a58ff79407212e2beacb/maintainability)](https://codeclimate.com/github/oauth2-proxy/oauth2-proxy/maintainability)
 [![Test Coverage](https://api.codeclimate.com/v1/badges/a58ff79407212e2beacb/test_coverage)](https://codeclimate.com/github/oauth2-proxy/oauth2-proxy/test_coverage)
-[![Gurubase](https://img.shields.io/badge/Gurubase-Ask%20OAuth2-Proxy%20Guru-006BFF)](https://gurubase.io/g/oauth2-proxy)
+[![Gurubase](https://img.shields.io/badge/Gurubase-Ask%20OAuth2--Proxy%20Guru-006BFF)](https://gurubase.io/g/oauth2-proxy)
 
 ![OAuth2 Proxy](docs/static/img/logos/OAuth2_Proxy_horizontal.svg)
 
