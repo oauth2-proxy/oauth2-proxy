@@ -169,7 +169,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 		logger.Printf("Warning: email claim `%s` is invalid: %v", p.EmailClaim, err)
 	}
 	if err := util.IsClaimPathInvalid(p.GroupsClaim); err != nil {
-		logger.Printf("Warning: group claim `%s` is invalid: %v", p.EmailClaim, err)
+		logger.Printf("Warning: group claim `%s` is invalid: %v", p.GroupsClaim, err)
 	}
 
 	return p, nil

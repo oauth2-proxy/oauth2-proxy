@@ -1,5 +1,7 @@
 # Vx.x.x (Pre-release)
 
+- [#2834](https://github.com/oauth2-proxy/oauth2-proxy/pull/2834) feat: configure claim as JMES Path
+
 ## Release Highlights
 
 ## Important Notes
