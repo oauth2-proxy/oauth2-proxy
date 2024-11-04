@@ -5,6 +5,14 @@ title: Microsoft Entra ID
 
 Provider for Microsoft Entra ID. Fully compliant with OIDC, with support for group overage and multi-tenant apps.
 
+## Config Options
+
+The provider is OIDC-compliant, so all the OIDC parameters are honored. Additional provider-specific configuration parameters are:
+
+| Flag                        | Toml Field                 | Type           | Description                                                                                                                                                                                                                                                                               | Default |
+| --------------------------- | -------------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `--entra-id-allowed-tenant` | `entra_id_allowed_tenants` | string \| list | List of allowed tenants. In case of multi-tenant apps, incoming tokens are issued by different issuers and OIDC issuer verification needs to be disabled. When not specified, all tenants are allowed. Redundant for single-tenant apps (regular ID token validation matches the issuer). |         |
+
 ## Configure App registration
 To begin, create an App registration, set a redirect URI, and generate a secret. All account types are supported, including single-tenant, multi-tenant, multi-tenant with Microsoft accounts, and Microsoft accounts only.
 
@@ -82,10 +90,6 @@ If you want to make use of groups, you can configure *groups claim* to be presen
 ```
 </details>
 
-## Configure provider
-The provider is OIDC-compliant, so all the OIDC parameters are honored. Additional provider-specific configuration parameters are:
-* `entra_id_allowed_tenants` - list of allowed tenants. Use with multi-tenant apps, when incoming tokens are issued by different issuers and OIDC issuer verification is disabled. When not specified, all tenants are allowed. Redundant for single-tenant apps (regular ID token validation matches the issuer).
-
 ### Scopes and claims
 For single-tenant and multi-tenant apps without groups, the only required scope is `openid` (See: [Scopes and permissions](https://learn.microsoft.com/en-us/entra/identity-platform/scopes-oidc#the-openid-scope)).
 
@@ -100,8 +104,8 @@ For personal microsoft accounts, required scope is `openid profile email`.
 See: [Overview of permissions and consent in the Microsoft identity platform](https://learn.microsoft.com/en-us/entra/identity-platform/permissions-consent-overview).
 
 ### Multi-tenant apps
-To authenticate apps from multiple tenants (including personal Microsoft accounts), set the appropriate OIDC provider and disable verification:
-```shell
+To authenticate apps from multiple tenants (including personal Microsoft accounts), set the common OIDC issuer url and disable verification:
+```toml
 oidc_issuer_url=https://login.microsoftonline.com/common/v2.0
 insecure_oidc_skip_issuer_verification=true
 ```
@@ -109,11 +113,11 @@ insecure_oidc_skip_issuer_verification=true
 * Startup check for matching issuer URL returned from [discovery document](https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration) with `oidc_issuer_url` setting. Required, as document's `issuer` field doesn't equal to `https://login.microsoftonline.com/common/v2.0`. See [OIDC Discovery 4.3](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationValidation).
 * Matching ID token's `issuer` claim with `oidc_issuer_url` setting during ID token validation. Required to support tokens issued by diffrerent tenants. See [OIDC Core 3.1.3.7](https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation). 
 
-To provide additional security against the insecure setting, Entra ID provider performs additional check on `issuer` claim to accept tokens issued only by `https://login.microsoftonline.com/{tenant-id}/v2.0`.
+To Entra ID provider performs a custom issuer check on the `issuer` claim to accept tokens issued only by `https://login.microsoftonline.com/{tenant-id}/v2.0`.
 
 ### Example configurations
 Single-tenant app without groups (*groups claim* not enabled). Consider using generic OIDC provider:
-```shell
+```toml
 provider="entra-id"
 oidc_issuer_url="https://login.microsoftonline.com/<tenant-id>/v2.0"
 client_id="<client-id>"
@@ -122,7 +126,7 @@ scope="openid"
 ```
 
 Single-tenant app with up to 200 groups (*groups claim* enabled). Consider using generic OIDC provider:
-```shell
+```toml
 provider="entra-id"
 oidc_issuer_url="https://login.microsoftonline.com/<tenant-id>/v2.0"
 client_id="<client-id>"
@@ -132,7 +136,7 @@ allowed_groups=["ac51800c-2679-4ecb-8130-636380a3b491"]
 ```
 
 Single-tenant app with up to 999 groups:
-```shell
+```toml
 provider="entra-id"
 oidc_issuer_url="https://login.microsoftonline.com/<tenant-id>/v2.0"
 client_id="<client-id>"
@@ -142,13 +146,13 @@ allowed_groups=["968b4844-d5e7-4e18-a834-59927959369f"]
 ```
 
 Multi-tenant app with Microsoft personal accounts & one Entra tenant allowed, with group overage considered:
-```shell
+```toml
 provider="entra-id"
 oidc_issuer_url="https://login.microsoftonline.com/common/v2.0"
 client_id="<client-id>"
 client_secret="<client-secret>"
 insecure_oidc_skip_issuer_verification=true
 scope="openid profile email User.Read"
-entra_id_allowed_tenants=["9188040d-6c67-4c5b-b112-36a304b66dad","<my-tenant-id>"] # Allow only <my-tenant-id> and Personal MS Accounts tenant 
+entra_id_allowed_tenant=["9188040d-6c67-4c5b-b112-36a304b66dad","<my-tenant-id>"] # Allow only <my-tenant-id> and Personal MS Accounts tenant 
 email_domains="*"
 ```

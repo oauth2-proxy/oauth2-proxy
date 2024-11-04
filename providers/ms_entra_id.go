@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/url"
 	"regexp"
-	"strings"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
@@ -18,7 +17,6 @@ import (
 // MicrosoftEntraIDProvider represents provider for Azure Entra Authentication V2 endpoint
 type MicrosoftEntraIDProvider struct {
 	*OIDCProvider
-	isMultiTenant             bool
 	multiTenantAllowedTenants []string
 
 	microsoftGraphURL *url.URL
@@ -42,15 +40,9 @@ func NewMicrosoftEntraIDProvider(p *ProviderData, opts options.Provider) *Micros
 		name: microsoftEntraIDProviderName,
 	})
 
-	isMultiTenant := false
-	if strings.Contains(opts.OIDCConfig.IssuerURL, "https://login.microsoftonline.com/common/v2.0") {
-		isMultiTenant = true
-	}
-
 	return &MicrosoftEntraIDProvider{
 		OIDCProvider: NewOIDCProvider(p, opts.OIDCConfig),
 
-		isMultiTenant:             isMultiTenant,
 		multiTenantAllowedTenants: opts.MicrosoftEntraIDConfig.AllowedTenants,
 		microsoftGraphURL:         microsoftGraphURL,
 	}
@@ -81,23 +73,13 @@ func (p *MicrosoftEntraIDProvider) EnrichSession(ctx context.Context, session *s
 
 // ValidateSession checks for allowed tenants (e.g. for multi-tenant apps) and passes through to generic ValidateSession
 func (p *MicrosoftEntraIDProvider) ValidateSession(ctx context.Context, session *sessions.SessionState) bool {
-
-	if p.isMultiTenant {
-		tenant, err := p.getTenantFromToken(session)
-		if err != nil {
-			logger.Errorf("unable to retrieve entra tenant from token: %v", err)
-			return false
-		}
-		logger.Errorf("entra multi-tenant: issuer verified successfully, tenant: %s", tenant)
+	tenant, err := p.getTenantFromToken(session)
+	if err != nil {
+		logger.Errorf("unable to retrieve entra tenant from token: %v", err)
+		return false
 	}
 
 	if len(p.multiTenantAllowedTenants) > 0 {
-		tenant, err := p.getTenantFromToken(session)
-		if err != nil {
-			logger.Errorf("unable to retrieve entra tenant from token: %v", err)
-			return false
-		}
-
 		tenantAllowed := p.checkTenantMatchesTenantList(tenant, p.multiTenantAllowedTenants)
 		if !tenantAllowed {
 			logger.Printf("entra: tenant %s is not specified in the list of allowed tenants", tenant)

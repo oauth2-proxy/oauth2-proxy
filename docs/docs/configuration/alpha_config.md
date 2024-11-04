@@ -393,7 +393,7 @@ character.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `allowedTenants` | _[]string_ |  |
+| `allowedTenants` | _[]string_ | List of allowed tenants. In case of multi-tenant apps, incoming tokens are<br/>issued by different issuers and OIDC issuer verification needs to be disabled.<br/>When not specified, all tenants are allowed. Redundant for single-tenant apps<br/>(regular ID token validation matches the issuer). |
 
 ### OIDCOptions
 
