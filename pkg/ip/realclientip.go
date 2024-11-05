@@ -16,7 +16,9 @@ func GetRealClientIPParser(headerKey string) (ipapi.RealClientIPParser, error) {
 	case http.CanonicalHeaderKey("X-Forwarded-For"),
 		http.CanonicalHeaderKey("X-Real-IP"),
 		http.CanonicalHeaderKey("X-ProxyUser-IP"),
-		http.CanonicalHeaderKey("X-Envoy-External-Address"):
+		http.CanonicalHeaderKey("X-Envoy-External-Address"),
+		// Cloudflare specific Real-IP header
+		http.CanonicalHeaderKey("CF-Connecting-IP"):
 		return &xForwardedForClientIPParser{header: headerKey}, nil
 	}
 

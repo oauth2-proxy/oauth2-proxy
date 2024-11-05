@@ -23,7 +23,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           # renovate: datasource=node-version depName=node
-          node-version: 20
+          node-version: 22
 
       - name: Test Build
         working-directory: ./docs
@@ -40,7 +40,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           # renovate: datasource=node-version depName=node
-          node-version: 20
+          node-version: 22
 
       - name: Build docusaurus
         working-directory: ./docs
