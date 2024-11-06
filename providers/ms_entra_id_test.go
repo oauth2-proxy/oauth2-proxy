@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -77,6 +78,7 @@ func TestAzureEntraOIDCProviderEnrichSessionGroupOverage(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Contains(t, session.Groups, "85d7d600-7804-4d92-8d43-9c33c21c130c")
 	assert.Contains(t, session.Groups, "916f0604-8a3b-4a69-bda9-06db11a8f0cd")
+	assert.Contains(t, session.Groups, "b1aef995-6b55-4ac6-bbfe-e829810e9352", "Pagination using $skiptoken failed")
 }
 
 func TestAzureEntraOIDCProviderValidateSessionAllowedTenants(t *testing.T) {
@@ -133,9 +135,23 @@ func mockGraphAPI(noGroupMemberPermissions bool) *httptest.Server {
 		func(w http.ResponseWriter, r *http.Request) {
 			if noGroupMemberPermissions {
 				w.WriteHeader(401)
-			} else if r.URL.Path == groupsPath && r.Method == http.MethodGet {
+			} else if r.URL.Path == groupsPath && r.Method == http.MethodGet && len(r.URL.Query()["$skiptoken"]) > 0 {
+				// Second page (pagination)
 				w.Write([]byte(`{
 					"@odata.context": "https://graph.microsoft.com/v1.0/$metadata#directoryObjects(id)",
+					"value": [
+						{
+							"@odata.type": "#microsoft.graph.group",
+							"id": "b1aef995-6b55-4ac6-bbfe-e829810e9352"
+						}
+					]
+				}`))
+
+			} else if r.URL.Path == groupsPath && r.Method == http.MethodGet {
+				// First page (pagination)
+				w.Write([]byte(fmt.Sprintf(`{
+					"@odata.context": "https://graph.microsoft.com/v1.0/$metadata#directoryObjects(id)",
+					"@odata.nextLink": "http://%s/v1.0/me/transitiveMemberOf?$select=id&$top=2&$skiptoken=TEST_TOKEN",
 					"value": [
 						{
 							"@odata.type": "#microsoft.graph.group",
@@ -146,7 +162,7 @@ func mockGraphAPI(noGroupMemberPermissions bool) *httptest.Server {
 							"id": "916f0604-8a3b-4a69-bda9-06db11a8f0cd"
 						  }
 					]
-				}`))
+				}`, r.Host)))
 			}
 		},
 	))

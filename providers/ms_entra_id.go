@@ -117,29 +117,39 @@ func (p *MicrosoftEntraIDProvider) addGraphGroupsToSession(ctx context.Context, 
 	groupsHeaders := makeAuthorizationHeader(tokenTypeBearer, s.AccessToken, nil)
 	groupsHeaders.Add("ConsistencyLevel", "eventual")
 
-	groupsURL := fmt.Sprintf("%s/transitiveMemberOf?$select=id&$top=999", p.microsoftGraphURL)
+	var allGroups []string
+	var nextLink string
 
-	jsonRequest, err := requests.New(groupsURL).
-		WithContext(ctx).
-		WithHeaders(groupsHeaders).
-		Do().
-		UnmarshalSimpleJSON()
+	for {
+		if nextLink == "" {
+			nextLink = fmt.Sprintf("%s/transitiveMemberOf?$select=id&$top=100", p.microsoftGraphURL)
+		}
 
-	if err != nil {
-		logger.Errorf("invalid response from microsoft graph, no groups added to session: %v", err)
-		return nil
+		response, err := requests.New(nextLink).
+			WithContext(ctx).
+			WithHeaders(groupsHeaders).
+			Do().
+			UnmarshalSimpleJSON()
+
+		if err != nil {
+			return fmt.Errorf("invalid response from microsoft graph, no groups added to session: %v", err)
+		}
+		reqGroups := response.Get("value").MustArray()
+
+		for i := range reqGroups {
+			value := response.Get("value").GetIndex(i).Get("id").MustString()
+			allGroups = append(allGroups, value)
+		}
+
+		// https://learn.microsoft.com/en-us/graph/paging?view=graph-rest-1.0&tabs=http#how-paging-works
+		nextLink = response.Get("@odata.nextLink").MustString()
+
+		if nextLink == "" {
+			break
+		}
 	}
 
-	reqGroups := jsonRequest.Get("value").MustArray()
-	groups := make([]string, len(reqGroups))
-
-	for i := range reqGroups {
-		value := jsonRequest.Get("value").GetIndex(i).Get("id").MustString()
-		groups = append(groups, value)
-	}
-
-	s.Groups = util.RemoveDuplicateStr(append(s.Groups, groups...))
-
+	s.Groups = util.RemoveDuplicateStr(append(s.Groups, allGroups...))
 	return nil
 }
 
