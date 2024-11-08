@@ -161,9 +161,8 @@ func ClearExtraCsrfCookies(opts *options.Cookie, rw http.ResponseWriter, req *ht
 			existingCsrfCookies = append(existingCsrfCookies, cookie)
 		}
 	}
-	limit := opts.CSRFPerRequestLimit
 	//short circuit return
-	if len(existingCsrfCookies) <= limit {
+	if len(existingCsrfCookies) <= opts.CSRFPerRequestLimit {
 		return
 	}
 	decodedCookies := []*csrf{}
