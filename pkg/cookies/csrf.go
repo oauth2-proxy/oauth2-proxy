@@ -180,7 +180,7 @@ func ClearExtraCsrfCookies(opts *options.Cookie, rw http.ResponseWriter, req *ht
 	}
 	//delete the X oldest cookies
 	slices.SortStableFunc(decodedCookies, func(a, b *csrf) int {
-		return a.time.Now().Compare(b.time.Now())
+		return a.time.Compare(b.time)
 	})
 	numberToDelete := len(decodedCookies) - opts.CSRFPerRequestLimit
 	for i := 0; i < numberToDelete; i++ {
