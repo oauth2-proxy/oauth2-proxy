@@ -182,7 +182,7 @@ func ClearExtraCsrfCookies(opts *options.Cookie, rw http.ResponseWriter, req *ht
 	slices.SortStableFunc(decodedCookies, func(a, b *csrf) int {
 		return a.time.Now().Compare(b.time.Now())
 	})
-	numberToDelete := len(decodedCookies) - limit
+	numberToDelete := len(decodedCookies) - opts.CSRFPerRequestLimit
 	for i := 0; i < numberToDelete; i++ {
 		decodedCookies[i].ClearCookie(rw, req)
 	}
