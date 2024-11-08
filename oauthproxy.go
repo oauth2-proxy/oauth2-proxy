@@ -30,6 +30,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	proxyhttp "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/http"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/version"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
@@ -142,7 +143,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		CustomLogo:       opts.Templates.CustomLogo,
 		ProxyPrefix:      opts.ProxyPrefix,
 		Footer:           opts.Templates.Footer,
-		Version:          VERSION,
+		Version:          version.VERSION,
 		Debug:            opts.Templates.Debug,
 		ProviderName:     buildProviderName(provider, opts.Providers[0].Name),
 		SignInMessage:    buildSignInMessage(opts),
@@ -605,7 +606,9 @@ func (p *OAuthProxy) isAPIPath(req *http.Request) bool {
 
 // isTrustedIP is used to check if a request comes from a trusted client IP address.
 func (p *OAuthProxy) isTrustedIP(req *http.Request) bool {
-	if p.trustedIPs == nil {
+	// RemoteAddr @ means unix socket
+	// https://github.com/golang/go/blob/0fa53e41f122b1661d0678a6d36d71b7b5ad031d/src/syscall/syscall_linux.go#L506-L511
+	if p.trustedIPs == nil && req.RemoteAddr != "@" {
 		return false
 	}
 
@@ -799,7 +802,7 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 	)
 	if p.provider.Data().CodeChallengeMethod != "" {
 		codeChallengeMethod = p.provider.Data().CodeChallengeMethod
-		codeVerifier, err = encryption.GenerateRandomASCIIString(96)
+		codeVerifier, err = encryption.GenerateCodeVerifierString(96)
 		if err != nil {
 			logger.Errorf("Unable to build random ASCII string for code verifier: %v", err)
 			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
@@ -868,9 +871,22 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	csrf, err := cookies.LoadCSRFCookie(req, p.CookieOptions)
+	nonce, appRedirect, err := decodeState(req.Form.Get("state"), p.encodeState)
 	if err != nil {
-		logger.Println(req, logger.AuthFailure, "Invalid authentication via OAuth2. Error while loading CSRF cookie:", err.Error())
+		logger.Errorf("Error while parsing OAuth2 state: %v", err)
+		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// calculate the cookie name
+	cookieName := cookies.GenerateCookieName(p.CookieOptions, nonce)
+	// Try to find the CSRF cookie and decode it
+	csrf, err := cookies.LoadCSRFCookie(req, cookieName, p.CookieOptions)
+	if err != nil {
+		// There are a lot of issues opened complaining about missing CSRF cookies.
+		// Try to log the INs and OUTs of OAuthProxy, to be easier to analyse these issues.
+		LoggingCSRFCookiesInOAuthCallback(req, cookieName)
+		logger.Println(req, logger.AuthFailure, "Invalid authentication via OAuth2: unable to obtain CSRF cookie: %s (state=%s)", err, nonce)
 		p.ErrorPage(rw, req, http.StatusForbidden, err.Error(), "Login Failed: Unable to find a valid CSRF token. Please try again.")
 		return
 	}
@@ -890,13 +906,6 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	csrf.ClearCookie(rw, req)
-
-	nonce, appRedirect, err := decodeState(req.Form.Get("state"), p.encodeState)
-	if err != nil {
-		logger.Errorf("Error while parsing OAuth2 state: %v", err)
-		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
-		return
-	}
 
 	if !csrf.CheckOAuthState(nonce) {
 		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: CSRF token mismatch, potential attack")
@@ -1229,7 +1238,7 @@ func checkAllowedEmails(req *http.Request, s *sessionsapi.SessionState) bool {
 	return allowed
 }
 
-// encodedState builds the OAuth state param out of our nonce and
+// encodeState builds the OAuth state param out of our nonce and
 // original application redirect
 func encodeState(nonce string, redirect string, encode bool) string {
 	rawString := fmt.Sprintf("%v:%v", nonce, redirect)
@@ -1294,4 +1303,28 @@ func (p *OAuthProxy) errorJSON(rw http.ResponseWriter, code int) {
 	// we need to send some JSON response because we set the Content-Type to
 	// application/json
 	rw.Write([]byte("{}"))
+}
+
+// LoggingCSRFCookiesInOAuthCallback Log all CSRF cookies found in HTTP request OAuth callback,
+// which were successfully parsed
+func LoggingCSRFCookiesInOAuthCallback(req *http.Request, cookieName string) {
+	cookies := req.Cookies()
+	if len(cookies) == 0 {
+		logger.Println(req, logger.AuthFailure, "No cookies were found in OAuth callback.")
+		return
+	}
+
+	for _, c := range cookies {
+		if cookieName == c.Name {
+			logger.Println(req, logger.AuthFailure, "CSRF cookie %s was found in OAuth callback.", c.Name)
+			return
+		}
+
+		if strings.HasSuffix(c.Name, "_csrf") {
+			logger.Println(req, logger.AuthFailure, "CSRF cookie %s was found in OAuth callback, but it is not the expected one (%s).", c.Name, cookieName)
+			return
+		}
+	}
+
+	logger.Println(req, logger.AuthFailure, "Cookies were found in OAuth callback, but none was a CSRF cookie.")
 }

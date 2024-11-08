@@ -4,8 +4,7 @@ import (
 	"net/http"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -20,6 +19,7 @@ var _ = Describe("Director Suite", func() {
 		expectedRedirect string
 	}
 
+	const fooBar = "/foo/bar"
 	DescribeTable("GetRedirect",
 		func(in getRedirectTableInput) {
 			appDirector := NewAppDirector(AppDirectorOpts{
@@ -42,11 +42,11 @@ var _ = Describe("Director Suite", func() {
 			Expect(redirect).To(Equal(in.expectedRedirect))
 		},
 		Entry("Request outside of the proxy prefix, redirects to original request", getRedirectTableInput{
-			requestURL:       "/foo/bar",
+			requestURL:       fooBar,
 			headers:          nil,
 			reverseProxy:     false,
 			validator:        testValidator(true),
-			expectedRedirect: "/foo/bar",
+			expectedRedirect: fooBar,
 		}),
 		Entry("Request with query, preserves the query", getRedirectTableInput{
 			requestURL:       "/foo?bar",
@@ -56,7 +56,7 @@ var _ = Describe("Director Suite", func() {
 			expectedRedirect: "/foo?bar",
 		}),
 		Entry("Request under the proxy prefix, redirects to root", getRedirectTableInput{
-			requestURL:       testProxyPrefix + "/foo/bar",
+			requestURL:       testProxyPrefix + fooBar,
 			headers:          nil,
 			reverseProxy:     false,
 			validator:        testValidator(true),
@@ -67,7 +67,7 @@ var _ = Describe("Director Suite", func() {
 			headers: map[string]string{
 				"X-Forwarded-Proto": "https",
 				"X-Forwarded-Host":  "a-service.example.com",
-				"X-Forwarded-Uri":   "/foo/bar",
+				"X-Forwarded-Uri":   fooBar,
 			},
 			reverseProxy:     true,
 			validator:        testValidator(true),
@@ -78,29 +78,29 @@ var _ = Describe("Director Suite", func() {
 			headers: map[string]string{
 				"X-Forwarded-Proto": "https",
 				"X-Forwarded-Host":  "a-service.example.com",
-				"X-Forwarded-Uri":   "/foo/bar",
+				"X-Forwarded-Uri":   fooBar,
 			},
 			reverseProxy:     false,
 			validator:        testValidator(true),
 			expectedRedirect: "/foo?bar",
 		}),
 		Entry("Proxied request with headers, under ProxyPrefix, redirects to  root", getRedirectTableInput{
-			requestURL: "https://oauth.example.com" + testProxyPrefix + "/foo/bar",
+			requestURL: "https://oauth.example.com" + testProxyPrefix + fooBar,
 			headers: map[string]string{
 				"X-Forwarded-Proto": "https",
 				"X-Forwarded-Host":  "a-service.example.com",
-				"X-Forwarded-Uri":   testProxyPrefix + "/foo/bar",
+				"X-Forwarded-Uri":   testProxyPrefix + fooBar,
 			},
 			reverseProxy:     true,
 			validator:        testValidator(true),
 			expectedRedirect: "https://a-service.example.com/",
 		}),
 		Entry("Proxied request with port, under ProxyPrefix, redirects to  root", getRedirectTableInput{
-			requestURL: "https://oauth.example.com" + testProxyPrefix + "/foo/bar",
+			requestURL: "https://oauth.example.com" + testProxyPrefix + fooBar,
 			headers: map[string]string{
 				"X-Forwarded-Proto": "https",
 				"X-Forwarded-Host":  "a-service.example.com:8443",
-				"X-Forwarded-Uri":   testProxyPrefix + "/foo/bar",
+				"X-Forwarded-Uri":   testProxyPrefix + fooBar,
 			},
 			reverseProxy:     true,
 			validator:        testValidator(true),
@@ -167,7 +167,7 @@ var _ = Describe("Director Suite", func() {
 			headers: map[string]string{
 				"X-Forwarded-Proto": "https",
 				"X-Forwarded-Host":  "a-service.example.com",
-				"X-Forwarded-Uri":   "/foo/bar",
+				"X-Forwarded-Uri":   fooBar,
 			},
 			reverseProxy:     true,
 			validator:        testValidator(false, "https://a-service.example.com/foo/bar"),

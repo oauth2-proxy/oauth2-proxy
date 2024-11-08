@@ -105,7 +105,7 @@ func (s *storedSessionLoader) loadSession(next http.Handler) http.Handler {
 }
 
 // getValidatedSession is responsible for loading a session and making sure
-// that is is valid.
+// that it is valid.
 func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *http.Request) (*sessionsapi.SessionState, error) {
 	session, err := s.store.Load(req)
 	if err != nil || session == nil {

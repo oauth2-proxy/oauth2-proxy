@@ -66,7 +66,7 @@ jobs:
         VERSION=${FULL_VERSION%.*}.x
 
         if [ ! -d "versioned_docs/version-${VERSION}" ]; then
-          npm ci
+          npm install
           npm run docusaurus docs:version ${VERSION}
 
           git add .
@@ -90,6 +90,8 @@ jobs:
         ## Important Notes
 
         ## Breaking Changes
+
+        ## Changes since v${VERSION}
         EOF
 
         echo -e "$(cat /tmp/CHANGELOG.prepend)\n\n$(cat CHANGELOG.md)" > CHANGELOG.md
