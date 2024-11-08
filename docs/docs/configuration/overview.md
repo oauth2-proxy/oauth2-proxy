@@ -91,7 +91,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--cookie-secure` | bool | set [secure (HTTPS only) cookie flag](https://owasp.org/www-community/controls/SecureFlag) | true |
 | `--cookie-samesite` | string | set SameSite cookie attribute (`"lax"`, `"strict"`, `"none"`, or `""`). | `""` |
 | `--cookie-csrf-per-request` | bool | Enable having different CSRF cookies per request, making it possible to have parallel requests. | false |
-| `--cookie-csrf-per-request-limit` | int | Sets a limit on the number of different CSRF requests cookies that oauth2-proxy will set. The oldest cookie will be removed. Useful if users end up with 431 Request headers too large status codes. Only effective if --cookie-csrf-per-request is true | "infinite" |
+| `--cookie-csrf-per-request-limit` | int | Sets a limit on the number of CSRF requests cookies that oauth2-proxy will create. The oldest cookie will be removed. Useful if users end up with 431 Request headers too large status codes. Only effective if --cookie-csrf-per-request is true | "infinite" |
 | `--cookie-csrf-expire` | duration | expire timeframe for CSRF cookie | 15m |
 | `--custom-templates-dir` | string | path to custom html templates | |
 | `--custom-sign-in-logo` | string | path or a URL to an custom image for the sign_in page logo. Use `"-"` to disable default logo. |
