@@ -1012,7 +1012,6 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 	session, err := p.getAuthenticatedSession(rw, req)
 	switch err {
 	case nil:
-
 		// Unauthorized cases need to return 403 to prevent infinite redirects with
 		// subrequest architectures
 		if !authOnlyAuthorize(req, session) {
