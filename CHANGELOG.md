@@ -14,6 +14,7 @@
 - [#3237](https://github.com/oauth2-proxy/oauth2-proxy/pull/3237) - feat: add option to use organization id for preferred username in Google Provider (@pixeldrew)
 - [GHSA-vjrc-mh2v-45x6](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-vjrc-mh2v-45x6) fix: request header smuggling by stripping all normalized header variants (@tuunit)
 - [#1933](https://github.com/oauth2-proxy/oauth2-proxy/pull/1933) fix: validation of refreshed sessions using the access_token in the OIDC provider (@gysel / @tuunit)
+- [#2841](https://github.com/oauth2-proxy/oauth2-proxy/pull/2841) feat: add allowed_* constraint option to proxy endpoint query string (@jacobalberty)
 
 # V7.12.0
 
