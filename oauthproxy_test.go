@@ -2941,17 +2941,72 @@ func TestProxyAllowedGroups(t *testing.T) {
 		querystring        string
 		expectUnauthorized bool
 	}{
-		{"NoAllowedGroups", []string{}, []string{}, "", false},
-		{"NoAllowedGroupsUserHasGroups", []string{}, []string{"a", "b"}, "", false},
-		{"UserInAllowedGroup", []string{"a"}, []string{"a", "b"}, "", false},
-		{"UserNotInAllowedGroup", []string{"a"}, []string{"c"}, "", true},
-		{"UserInQuerystringGroup", []string{"a", "b"}, []string{"a", "c"}, "?allowed_groups=a", false},
-		{"UserInMultiParamQuerystringGroup", []string{"a", "b"}, []string{"b"}, "?allowed_groups=a&allowed_groups=b,d", false},
-		{"UserInOnlyQuerystringGroup", []string{}, []string{"a", "c"}, "?allowed_groups=a,b", false},
-		{"UserInDelimitedQuerystringGroup", []string{"a", "b", "c"}, []string{"c"}, "?allowed_groups=a,c", false},
-		{"UserNotInQuerystringGroup", []string{}, []string{"c"}, "?allowed_groups=a,b", true},
-		{"UserInConfigGroupNotInQuerystringGroup", []string{"a", "b", "c"}, []string{"c"}, "?allowed_groups=a,b", true},
-		{"UserInQuerystringGroupNotInConfigGroup", []string{"a", "b"}, []string{"c"}, "?allowed_groups=b,c", true},
+		{
+			name:               "NoAllowedGroups",
+			allowedGroups:      []string{},
+			groups:             []string{},
+			querystring:        "",
+			expectUnauthorized: false},
+		{
+			name:               "NoAllowedGroupsUserHasGroups",
+			allowedGroups:      []string{},
+			groups:             []string{"a", "b"},
+			querystring:        "",
+			expectUnauthorized: false},
+		{
+			name:               "UserInAllowedGroup",
+			allowedGroups:      []string{"a"},
+			groups:             []string{"a", "b"},
+			querystring:        "",
+			expectUnauthorized: false},
+		{
+			name:               "UserNotInAllowedGroup",
+			allowedGroups:      []string{"a"},
+			groups:             []string{"c"},
+			querystring:        "",
+			expectUnauthorized: true},
+		{
+			name:               "UserInQuerystringGroup",
+			allowedGroups:      []string{"a", "b"},
+			groups:             []string{"a", "c"},
+			querystring:        "?allowed_groups=a",
+			expectUnauthorized: false},
+		{
+			name:               "UserInMultiParamQuerystringGroup",
+			allowedGroups:      []string{"a", "b"},
+			groups:             []string{"b"},
+			querystring:        "?allowed_groups=a&allowed_groups=b,d",
+			expectUnauthorized: false},
+		{
+			name:               "UserInOnlyQuerystringGroup",
+			allowedGroups:      []string{},
+			groups:             []string{"a", "c"},
+			querystring:        "?allowed_groups=a,b",
+			expectUnauthorized: false},
+		{
+			name:               "UserInDelimitedQuerystringGroup",
+			allowedGroups:      []string{"a", "b", "c"},
+			groups:             []string{"c"},
+			querystring:        "?allowed_groups=a,c",
+			expectUnauthorized: false},
+		{
+			name:               "UserNotInQuerystringGroup",
+			allowedGroups:      []string{},
+			groups:             []string{"c"},
+			querystring:        "?allowed_groups=a,b",
+			expectUnauthorized: true},
+		{
+			name:               "UserInConfigGroupNotInQuerystringGroup",
+			allowedGroups:      []string{"a", "b", "c"},
+			groups:             []string{"c"},
+			querystring:        "?allowed_groups=a,b",
+			expectUnauthorized: true},
+		{
+			name:               "UserInQuerystringGroupNotInConfigGroup",
+			allowedGroups:      []string{"a", "b"},
+			groups:             []string{"c"},
+			querystring:        "?allowed_groups=b,c",
+			expectUnauthorized: true},
 	}
 
 	for _, tt := range tests {
