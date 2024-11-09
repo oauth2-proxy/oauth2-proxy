@@ -2938,12 +2938,20 @@ func TestProxyAllowedGroups(t *testing.T) {
 		name               string
 		allowedGroups      []string
 		groups             []string
+		querystring        string
 		expectUnauthorized bool
 	}{
-		{"NoAllowedGroups", []string{}, []string{}, false},
-		{"NoAllowedGroupsUserHasGroups", []string{}, []string{"a", "b"}, false},
-		{"UserInAllowedGroup", []string{"a"}, []string{"a", "b"}, false},
-		{"UserNotInAllowedGroup", []string{"a"}, []string{"c"}, true},
+		{"NoAllowedGroups", []string{}, []string{}, "", false},
+		{"NoAllowedGroupsUserHasGroups", []string{}, []string{"a", "b"}, "", false},
+		{"UserInAllowedGroup", []string{"a"}, []string{"a", "b"}, "", false},
+		{"UserNotInAllowedGroup", []string{"a"}, []string{"c"}, "", true},
+		{"UserInQuerystringGroup", []string{"a", "b"}, []string{"a", "c"}, "?allowed_groups=a", false},
+		{"UserInMultiParamQuerystringGroup", []string{"a", "b"}, []string{"b"}, "?allowed_groups=a&allowed_groups=b,d", false},
+		{"UserInOnlyQuerystringGroup", []string{}, []string{"a", "c"}, "?allowed_groups=a,b", false},
+		{"UserInDelimitedQuerystringGroup", []string{"a", "b", "c"}, []string{"c"}, "?allowed_groups=a,c", false},
+		{"UserNotInQuerystringGroup", []string{}, []string{"c"}, "?allowed_groups=a,b", true},
+		{"UserInConfigGroupNotInQuerystringGroup", []string{"a", "b", "c"}, []string{"c"}, "?allowed_groups=a,b", true},
+		{"UserInQuerystringGroupNotInConfigGroup", []string{"a", "b"}, []string{"c"}, "?allowed_groups=b,c", true},
 	}
 
 	for _, tt := range tests {
@@ -2979,7 +2987,7 @@ func TestProxyAllowedGroups(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			test.req, _ = http.NewRequest("GET", "/", nil)
+			test.req, _ = http.NewRequest("GET", fmt.Sprintf("/%s", tt.querystring), nil)
 
 			test.req.Header.Add("accept", applicationJSON)
 			err = test.SaveSession(session)
