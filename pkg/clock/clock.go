@@ -5,51 +5,50 @@ import (
 	"sync"
 	"time"
 
-	clockapi "github.com/benbjohnson/clock"
+	clockapi "github.com/jonboulle/clockwork"
 )
 
 var (
-	globalClock = clockapi.New()
+	globalClock clockapi.Clock = clockapi.NewRealClock()
 	mu          sync.Mutex
 )
 
-// Set the global clock to a clockapi.Mock with the given time.Time
+// Set the globalClock to a new mock clock at the specified time.Time.
 func Set(t time.Time) {
 	mu.Lock()
 	defer mu.Unlock()
-	mock, ok := globalClock.(*clockapi.Mock)
-	if !ok {
-		mock = clockapi.NewMock()
-	}
-	mock.Set(t)
-	globalClock = mock
+
+	globalClock = clockapi.NewFakeClockAt(t)
 }
 
-// Add moves the mocked global clock forward the given duration. It will error
-// if the global clock is not mocked.
+// Add moves the mocked global clock forward the given time.Duration.
+// It will error if the global clock is not mocked.
 func Add(d time.Duration) error {
 	mu.Lock()
 	defer mu.Unlock()
-	mock, ok := globalClock.(*clockapi.Mock)
+
+	mock, ok := globalClock.(clockapi.FakeClock)
 	if !ok {
 		return errors.New("time not mocked")
 	}
-	mock.Add(d)
+	mock.Advance(d)
 	return nil
 }
 
-// Reset sets the global clock to a pure time implementation. Returns any
-// existing Mock if set in case lingering time operations are attached to it.
-func Reset() *clockapi.Mock {
+// Reset sets the global clock to a pure time implementation.
+// Returns any existing Mock if set in case lingering time operations are attached to it.
+func Reset() clockapi.FakeClock {
 	mu.Lock()
 	defer mu.Unlock()
-	existing := globalClock
-	globalClock = clockapi.New()
 
-	mock, ok := existing.(*clockapi.Mock)
+	existing := globalClock
+	globalClock = clockapi.NewRealClock()
+
+	mock, ok := existing.(clockapi.FakeClock)
 	if !ok {
 		return nil
 	}
+
 	return mock
 }
 
@@ -62,30 +61,26 @@ func Reset() *clockapi.Mock {
 // If nothing is stubbed, it defaults to default time behavior in the time
 // package.
 type Clock struct {
-	mock *clockapi.Mock
+	mock clockapi.FakeClock
 }
 
-// Set sets the Clock to a clock.Mock at the given time.Time
+// Set sets the Clock to a new mock clock at the specified time.Time.
 func (c *Clock) Set(t time.Time) {
-	if c.mock == nil {
-		c.mock = clockapi.NewMock()
-	}
-	c.mock.Set(t)
+	c.mock = clockapi.NewFakeClockAt(t)
 }
 
-// Add moves clock forward time.Duration if it is mocked. It will error
-// if the clock is not mocked.
+// Add moves clock forward time.Duration if it is mocked.
+// It will error if the clock is not mocked.
 func (c *Clock) Add(d time.Duration) error {
 	if c.mock == nil {
 		return errors.New("clock not mocked")
 	}
-	c.mock.Add(d)
+	c.mock.Advance(d)
 	return nil
 }
 
-// Reset removes local clock.Mock.  Returns any existing Mock if set in case
-// lingering time operations are attached to it.
-func (c *Clock) Reset() *clockapi.Mock {
+// Reset removes local Clock.mock and returns any existing mock if it's set, in case lingering time operations are attached to it.
+func (c *Clock) Reset() clockapi.FakeClock {
 	existing := c.mock
 	c.mock = nil
 	return existing
@@ -99,7 +94,7 @@ func (c *Clock) After(d time.Duration) <-chan time.Time {
 	return m.After(d)
 }
 
-func (c *Clock) AfterFunc(d time.Duration, f func()) *clockapi.Timer {
+func (c *Clock) AfterFunc(d time.Duration, f func()) clockapi.Timer {
 	m := c.mock
 	if m == nil {
 		return globalClock.AfterFunc(d, f)
@@ -135,23 +130,23 @@ func (c *Clock) Sleep(d time.Duration) {
 func (c *Clock) Tick(d time.Duration) <-chan time.Time {
 	m := c.mock
 	if m == nil {
-		return globalClock.Tick(d)
+		return globalClock.NewTicker(d).Chan()
 	}
-	return m.Tick(d)
+	return m.NewTicker(d).Chan()
 }
 
-func (c *Clock) Ticker(d time.Duration) *clockapi.Ticker {
+func (c *Clock) Ticker(d time.Duration) clockapi.Ticker {
 	m := c.mock
 	if m == nil {
-		return globalClock.Ticker(d)
+		return globalClock.NewTicker(d)
 	}
-	return m.Ticker(d)
+	return m.NewTicker(d)
 }
 
-func (c *Clock) Timer(d time.Duration) *clockapi.Timer {
+func (c *Clock) Timer(d time.Duration) clockapi.Timer {
 	m := c.mock
 	if m == nil {
-		return globalClock.Timer(d)
+		return globalClock.NewTimer(d)
 	}
-	return m.Timer(d)
+	return m.NewTimer(d)
 }

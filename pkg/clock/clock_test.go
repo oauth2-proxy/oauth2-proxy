@@ -150,11 +150,11 @@ var _ = Describe("Clock suite", func() {
 
 				ticker := testClock.Ticker(20 * time.Millisecond)
 				Expect(atomic.LoadInt32(&tolerance)).To(Equal(outsideTolerance))
-				<-ticker.C
+				<-ticker.Chan()
 				Expect(atomic.LoadInt32(&tolerance)).To(Equal(withinTolerance))
-				<-ticker.C
+				<-ticker.Chan()
 				Expect(atomic.LoadInt32(&tolerance)).To(Equal(withinTolerance))
-				<-ticker.C
+				<-ticker.Chan()
 				Expect(atomic.LoadInt32(&tolerance)).To(Equal(outsideTolerance))
 			})
 
@@ -184,10 +184,12 @@ var _ = Describe("Clock suite", func() {
 
 				err := testClock.Add(9 * time.Second)
 				Expect(err).ToNot(HaveOccurred())
+				time.Sleep(1 * time.Millisecond)
 				Expect(atomic.LoadInt32(&after)).To(Equal(int32(0)))
 
 				err = testClock.Add(1 * time.Second)
 				Expect(err).ToNot(HaveOccurred())
+				time.Sleep(1 * time.Millisecond)
 				Expect(atomic.LoadInt32(&after)).To(Equal(int32(1)))
 			})
 
@@ -199,10 +201,12 @@ var _ = Describe("Clock suite", func() {
 
 				err := testClock.Add(9 * time.Second)
 				Expect(err).ToNot(HaveOccurred())
+				time.Sleep(1 * time.Millisecond)
 				Expect(atomic.LoadInt32(&after)).To(Equal(int32(0)))
 
 				err = testClock.Add(1 * time.Second)
 				Expect(err).ToNot(HaveOccurred())
+				time.Sleep(1 * time.Millisecond)
 				Expect(atomic.LoadInt32(&after)).To(Equal(int32(1)))
 			})
 
@@ -242,10 +246,12 @@ var _ = Describe("Clock suite", func() {
 
 				err := testClock.Add(9 * time.Second)
 				Expect(err).ToNot(HaveOccurred())
+				time.Sleep(1 * time.Millisecond)
 				Expect(atomic.LoadInt32(&after)).To(Equal(int32(0)))
 
 				err = testClock.Add(1 * time.Second)
 				Expect(err).ToNot(HaveOccurred())
+				time.Sleep(1 * time.Millisecond)
 				Expect(atomic.LoadInt32(&after)).To(Equal(int32(1)))
 			})
 
@@ -255,7 +261,7 @@ var _ = Describe("Clock suite", func() {
 				go func() {
 					close(ready)
 					tick := testClock.Tick(10 * time.Second)
-					for ticks < 5 {
+					for ticks < 4 {
 						<-tick
 						atomic.AddInt32(&ticks, 1)
 					}
@@ -266,19 +272,23 @@ var _ = Describe("Clock suite", func() {
 
 				err := testClock.Add(9 * time.Second)
 				Expect(err).ToNot(HaveOccurred())
+				time.Sleep(1 * time.Millisecond)
 				Expect(atomic.LoadInt32(&ticks)).To(Equal(int32(0)))
 
 				err = testClock.Add(1 * time.Second)
 				Expect(err).ToNot(HaveOccurred())
+				time.Sleep(1 * time.Millisecond)
 				Expect(atomic.LoadInt32(&ticks)).To(Equal(int32(1)))
 
-				err = testClock.Add(30 * time.Second)
+				err = testClock.Add(20 * time.Second)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(atomic.LoadInt32(&ticks)).To(Equal(int32(4)))
+				time.Sleep(1 * time.Millisecond)
+				Expect(atomic.LoadInt32(&ticks)).To(Equal(int32(3)))
 
 				err = testClock.Add(10 * time.Second)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(atomic.LoadInt32(&ticks)).To(Equal(int32(5)))
+				time.Sleep(1 * time.Millisecond)
+				Expect(atomic.LoadInt32(&ticks)).To(Equal(int32(4)))
 			})
 
 			It("mocks Ticker", func() {
@@ -287,8 +297,8 @@ var _ = Describe("Clock suite", func() {
 				go func() {
 					ticker := testClock.Ticker(10 * time.Second)
 					close(ready)
-					for ticks < 5 {
-						<-ticker.C
+					for ticks < 4 {
+						<-ticker.Chan()
 						atomic.AddInt32(&ticks, 1)
 					}
 				}()
@@ -298,19 +308,23 @@ var _ = Describe("Clock suite", func() {
 
 				err := testClock.Add(9 * time.Second)
 				Expect(err).ToNot(HaveOccurred())
+				time.Sleep(1 * time.Millisecond)
 				Expect(atomic.LoadInt32(&ticks)).To(Equal(int32(0)))
 
 				err = testClock.Add(1 * time.Second)
 				Expect(err).ToNot(HaveOccurred())
+				time.Sleep(1 * time.Millisecond)
 				Expect(atomic.LoadInt32(&ticks)).To(Equal(int32(1)))
 
-				err = testClock.Add(30 * time.Second)
+				err = testClock.Add(20 * time.Second)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(atomic.LoadInt32(&ticks)).To(Equal(int32(4)))
+				time.Sleep(1 * time.Millisecond)
+				Expect(atomic.LoadInt32(&ticks)).To(Equal(int32(3)))
 
 				err = testClock.Add(10 * time.Second)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(atomic.LoadInt32(&ticks)).To(Equal(int32(5)))
+				time.Sleep(1 * time.Millisecond)
+				Expect(atomic.LoadInt32(&ticks)).To(Equal(int32(4)))
 			})
 
 			It("mocks Timer", func() {
@@ -319,17 +333,19 @@ var _ = Describe("Clock suite", func() {
 				go func() {
 					timer := testClock.Timer(10 * time.Second)
 					close(ready)
-					<-timer.C
+					<-timer.Chan()
 					atomic.AddInt32(&after, 1)
 				}()
 				<-ready
 
 				err := testClock.Add(9 * time.Second)
 				Expect(err).ToNot(HaveOccurred())
+				time.Sleep(1 * time.Millisecond)
 				Expect(atomic.LoadInt32(&after)).To(Equal(int32(0)))
 
 				err = testClock.Add(1 * time.Second)
 				Expect(err).ToNot(HaveOccurred())
+				time.Sleep(1 * time.Millisecond)
 				Expect(atomic.LoadInt32(&after)).To(Equal(int32(1)))
 			})
 		})

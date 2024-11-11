@@ -7,7 +7,6 @@ require (
 	github.com/Bose/minisentinel v0.0.0-20200130220412-917c5a9223bb
 	github.com/a8m/envsubst v1.4.2
 	github.com/alicebob/miniredis/v2 v2.33.0
-	github.com/benbjohnson/clock v1.3.5
 	github.com/bitly/go-simplejson v0.5.1
 	github.com/bsm/redislock v0.9.4
 	github.com/coreos/go-oidc/v3 v3.11.0
@@ -15,17 +14,16 @@ require (
 	github.com/fsnotify/fsnotify v1.8.0
 	github.com/ghodss/yaml v1.0.1-0.20220118164431-d8423dcdf344
 	github.com/go-jose/go-jose/v3 v3.0.3
-	github.com/go-jose/go-jose/v4 v4.0.4
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
+	github.com/jonboulle/clockwork v0.4.0
 	github.com/justinas/alice v1.2.0
 	github.com/mbland/hmacauth v0.0.0-20170912233209-44256dfd4bfa
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/oauth2-proxy/mockoidc v0.0.0-20240214162133-caebfff84d25
 	github.com/oauth2-proxy/tools/reference-gen v0.0.0-20220223111546-d3b50d1a591a
-	github.com/ohler55/ojg v1.25.0
 	github.com/onsi/ginkgo/v2 v2.21.0
 	github.com/onsi/gomega v1.35.1
 	github.com/pierrec/lz4/v4 v4.1.21
@@ -56,6 +54,7 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
+	github.com/go-jose/go-jose/v4 v4.0.4 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
