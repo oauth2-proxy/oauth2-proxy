@@ -102,7 +102,7 @@ You have to substitute *name* with the actual cookie name you configured via --c
 
 **This option requires `--reverse-proxy` option to be set.**
 
-## ForwardAuth with 401 errors middleware
+### ForwardAuth with 401 errors middleware
 
 The [Traefik v2 `ForwardAuth` middleware](https://doc.traefik.io/traefik/middlewares/http/forwardauth/) allows Traefik to authenticate requests via the oauth2-proxy's `/oauth2/auth` endpoint on every request, which only returns a 202 Accepted response or a 401 Unauthorized response without proxying the whole request through. For example, on Dynamic File (YAML) Configuration:
 
@@ -167,7 +167,7 @@ http:
         query: "/oauth2/sign_in?rd={url}"
 ```
 
-## ForwardAuth with static upstreams configuration
+### ForwardAuth with static upstreams configuration
 
 Redirect to sign_in functionality provided without the use of `errors` middleware with [Traefik v2 `ForwardAuth` middleware](https://doc.traefik.io/traefik/middlewares/http/forwardauth/) pointing to oauth2-proxy service's `/` endpoint
 
@@ -265,7 +265,7 @@ http:
           - Authorization
 ```
 
-## Configuring for use with the caddy v2 `forward_auth` directive
+## Configuring for use with the Caddy (v2) `forward_auth` directive
 
 The [Caddy `forward_auth` directive](https://caddyserver.com/docs/caddyfile/directives/forward_auth) allows Caddy to authenticate requests via the `oauth2-proxy`'s `/auth`.
 
@@ -274,29 +274,41 @@ This example is for a simple reverse proxy setup where the `/oauth2/` path is ke
 **Following options need to be set on `oauth2-proxy`:**
 - `--reverse-proxy=true`: Enables the use of `X-Forwarded-*` headers to determine redirects correctly
 
-```nginx
-{{ domain }} {
-	# define forward auth for any path under `/`, if not more specific defined
-	forward_auth / {{ oauth.internalIP }}:4180 {
-		uri /oauth2/auth
-		copy_headers Authorization X-Auth-Request-User X-Auth-Request-Email
-
-		@error status 401
-		handle_response @error {
-			redir * /oauth2/sign_in?rd={scheme}://{host}{uri} 302
+```nginx title="Caddyfile"
+example.com {
+	# Requests to /oauth2/* are proxied to oauth2-proxy without authentication.
+	# You can't use `reverse_proxy /oauth2/* oauth2-proxy.internal:4180` here because the reverse_proxy directive has lower precedence than the handle directive.
+	handle /oauth2/* {
+		reverse_proxy oauth2-proxy.internal:4180 {
+			# oauth2-proxy requires the X-Real-IP and X-Forwarded-{Proto,Host,Uri} headers.
+			# The reverse_proxy directive automatically sets X-Forwarded-{For,Proto,Host} headers.
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-Uri {uri}
 		}
 	}
 
-	# define `/oauth2/*` as specific endpoint, to avoid forward auth protection to be able to use service
-	reverse_proxy /oauth2/* {{ oauth.internalIP }}:4180 {
-		header_up X-Real-IP {remote}
-		header_up X-Forwarded-Proto https
-	}
+	# Requests to other paths are first processed by oauth2-proxy for authentication.
+	handle {
+		forward_auth oauth2-proxy.internal:4180 {
+			uri /oauth2/auth
 
-	# unspecific reverse proxy will be protected from `forward_auth /`
-	reverse_proxy {{ endpointIP }} {
-		header_up X-Real-IP {remote}
-		header_up X-Forwarded-Proto https
+			# oauth2-proxy requires the X-Real-IP and X-Forwarded-{Proto,Host,Uri} headers.
+			# The forward_auth directive automatically sets the X-Forwarded-{For,Proto,Host,Method,Uri} headers.
+			header_up X-Real-IP {remote_host}
+
+			# If needed, you can copy headers from the oauth2-proxy response to the request sent to the upstream.
+			# Make sure to configure the --set-xauthrequest flag to enable this feature.
+			#copy_headers X-Auth-Request-User X-Auth-Request-Email
+
+			# If oauth2-proxy returns a 401 status, redirect the client to the sign-in page.
+			@error status 401
+			handle_response @error {
+				redir * /oauth2/sign_in?rd={scheme}://{host}{uri}
+			}
+		}
+
+		# If oauth2-proxy returns a 2xx status, the request is then proxied to the upstream.
+		reverse_proxy upstream.internal:3000
 	}
 }
 ```
