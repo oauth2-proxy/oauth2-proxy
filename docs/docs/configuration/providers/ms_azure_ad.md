@@ -1,7 +1,11 @@
 ---
 id: azure
-title: Azure
+title: Azure (Deprecated)
 ---
+
+:::note
+This is the legacy and deprecated provider for Azure, use [Microsoft Entra ID](ms_entra_id.md) if possible.
+:::
 
 ## Config Options
 

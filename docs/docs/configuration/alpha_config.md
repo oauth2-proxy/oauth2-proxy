@@ -385,6 +385,16 @@ character.
 | `default` | _[]string_ |  _(Optional)_ Default specifies a default value or values that will be<br/>passed to the IdP if not overridden. |
 | `allow` | _[[]URLParameterRule](#urlparameterrule)_ |  _(Optional)_ Allow specifies rules about how the default (if any) may be<br/>overridden via the query string to `/oauth2/start`.  Only<br/>values that match one or more of the allow rules will be<br/>forwarded to the IdP. |
 
+### MicrosoftEntraIDOptions
+
+(**Appears on:** [Provider](#provider))
+
+
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `allowedTenants` | _[]string_ | List of allowed tenants. In case of multi-tenant apps, incoming tokens are<br/>issued by different issuers and OIDC issuer verification needs to be disabled.<br/>When not specified, all tenants are allowed. Redundant for single-tenant apps<br/>(regular ID token validation matches the issuer). |
+
 ### OIDCOptions
 
 (**Appears on:** [Provider](#provider))
@@ -418,6 +428,7 @@ Provider holds all configuration for a single provider
 | `clientSecretFile` | _string_ | ClientSecretFile is the name of the file<br/>containing the OAuth Client Secret, it will be used if ClientSecret is not set. |
 | `keycloakConfig` | _[KeycloakOptions](#keycloakoptions)_ | KeycloakConfig holds all configurations for Keycloak provider. |
 | `azureConfig` | _[AzureOptions](#azureoptions)_ | AzureConfig holds all configurations for Azure provider. |
+| `microsoftEntraIDConfig` | _[MicrosoftEntraIDOptions](#microsoftentraidoptions)_ | MicrosoftEntraIDConfig holds all configurations for Entra ID provider. |
 | `ADFSConfig` | _[ADFSOptions](#adfsoptions)_ | ADFSConfig holds all configurations for ADFS provider. |
 | `bitbucketConfig` | _[BitbucketOptions](#bitbucketoptions)_ | BitbucketConfig holds all configurations for Bitbucket provider. |
 | `githubConfig` | _[GitHubOptions](#githuboptions)_ | GitHubConfig holds all configurations for GitHubC provider. |
