@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
 	"net"
 	"net/http"
 	"net/url"
@@ -585,6 +586,17 @@ func isAllowedPath(req *http.Request, route allowedRoute) bool {
 	return matches
 }
 
+func httpRedirect(rw http.ResponseWriter, req *http.Request, url string, code int) {
+	http.Redirect(rw, req, url, code)
+
+	// this is a workaround for browsers not redirecting when status code has been overridden
+	// for example:
+	// traefik custom error handlers won't change the original status code
+	// so we need to send a meta refresh to the browser to force the redirect
+	location := rw.Header().Get("Location")
+	fmt.Fprintln(rw, "<meta http-equiv=\"refresh\" content=\"0; url="+html.EscapeString(location)+"\" />\n")
+}
+
 // IsAllowedRoute is used to check if the request method & path is allowed without auth
 func (p *OAuthProxy) isAllowedRoute(req *http.Request) bool {
 	for _, route := range p.allowedRoutes {
@@ -688,7 +700,7 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 			return
 		}
-		http.Redirect(rw, req, redirect, http.StatusFound)
+		httpRedirect(rw, req, redirect, http.StatusFound)
 	} else {
 		if p.SkipProviderButton {
 			p.OAuthStart(rw, req)
@@ -848,7 +860,7 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 		return
 	}
 
-	http.Redirect(rw, req, loginURL, http.StatusFound)
+	httpRedirect(rw, req, loginURL, http.StatusFound)
 }
 
 // OAuthCallback is the OAuth2 authentication flow callback that finishes the
