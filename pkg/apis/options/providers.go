@@ -34,6 +34,8 @@ type Provider struct {
 	ADFSConfig ADFSOptions `json:"ADFSConfig,omitempty"`
 	// BitbucketConfig holds all configurations for Bitbucket provider.
 	BitbucketConfig BitbucketOptions `json:"bitbucketConfig,omitempty"`
+	// DiscordConfig holds all configurations for Discord provider.
+	DiscordConfig DiscordOptions `json:"discordConfig,omitempty"`
 	// GitHubConfig holds all configurations for GitHubC provider.
 	GitHubConfig GitHubOptions `json:"githubConfig,omitempty"`
 	// GitLabConfig holds all configurations for GitLab provider.
@@ -103,6 +105,9 @@ const (
 
 	// BitbucketProvider is the provider type for Bitbucket
 	BitbucketProvider ProviderType = "bitbucket"
+
+	// DiscordProvider is the provider type for Discord
+	DiscordProvider ProviderType = "discord"
 
 	// DigitalOceanProvider is the provider type for DigitalOcean
 	DigitalOceanProvider ProviderType = "digitalocean"
@@ -181,6 +186,11 @@ type GitHubOptions struct {
 	// Users allows users with these usernames to login
 	// even if they do not belong to the specified org and team or collaborators
 	Users []string `json:"users,omitempty"`
+}
+
+type DiscordOptions struct {
+	// Restrict logins to certain guilds
+	Guilds []string `json:"guilds,omitempty"`
 }
 
 type GitLabOptions struct {
