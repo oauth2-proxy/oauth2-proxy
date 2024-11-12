@@ -412,7 +412,7 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 	case err == nil:
 		rw.WriteHeader(http.StatusOK)
 		if p.passAuthorization {
-			proxywasm.AddHttpRequestHeader("Authorization", fmt.Sprintf("%s %s", providers.TokenTypeBearer, session.AccessToken))
+			proxywasm.AddHttpRequestHeader("Authorization", fmt.Sprintf("%s %s", providers.TokenTypeBearer, session.IDToken))
 		}
 		if cookies, ok := rw.Header()[SetCookieHeader]; ok && len(cookies) > 0 {
 			newCookieValue := strings.Join(cookies, ",")
