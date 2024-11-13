@@ -88,9 +88,11 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 		})
 
 		type jwtSessionLoaderTableInput struct {
-			authorizationHeader string
-			existingSession     *sessionsapi.SessionState
-			expectedSession     *sessionsapi.SessionState
+			authorizationHeader  string
+			additionalJwtHeaders []string
+			extraHeaders         map[string]string
+			existingSession      *sessionsapi.SessionState
+			expectedSession      *sessionsapi.SessionState
 		}
 
 		DescribeTable("with an authorization header",
@@ -102,6 +104,9 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				// Set up the request with the authorization header and a request scope
 				req := httptest.NewRequest("", "/", nil)
 				req.Header.Set("Authorization", in.authorizationHeader)
+				for headerName, headerValue := range in.extraHeaders {
+					req.Header.Set(headerName, headerValue)
+				}
 				req = middlewareapi.AddRequestScope(req, scope)
 
 				rw := httptest.NewRecorder()
@@ -113,7 +118,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				// Create the handler with a next handler that will capture the session
 				// from the scope
 				var gotSession *sessionsapi.SessionState
-				handler := NewJwtSessionLoader(sessionLoaders)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				handler := NewJwtSessionLoader(sessionLoaders, in.additionalJwtHeaders)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					gotSession = middlewareapi.GetRequestScope(r).Session
 				}))
 				handler.ServeHTTP(rw, req)
@@ -121,44 +126,102 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				Expect(gotSession).To(Equal(in.expectedSession))
 			},
 			Entry("<no value>", jwtSessionLoaderTableInput{
-				authorizationHeader: "",
-				existingSession:     nil,
-				expectedSession:     nil,
+				authorizationHeader:  "",
+				extraHeaders:         nil,
+				additionalJwtHeaders: []string{},
+				existingSession:      nil,
+				expectedSession:      nil,
 			}),
 			Entry("abcdef", jwtSessionLoaderTableInput{
-				authorizationHeader: "abcdef",
-				existingSession:     nil,
-				expectedSession:     nil,
+				authorizationHeader:  "abcdef",
+				extraHeaders:         nil,
+				additionalJwtHeaders: []string{},
+				existingSession:      nil,
+				expectedSession:      nil,
 			}),
 			Entry("abcdef  (with existing session)", jwtSessionLoaderTableInput{
-				authorizationHeader: "abcdef",
-				existingSession:     &sessionsapi.SessionState{User: "user"},
-				expectedSession:     &sessionsapi.SessionState{User: "user"},
+				authorizationHeader:  "abcdef",
+				extraHeaders:         nil,
+				additionalJwtHeaders: []string{},
+				existingSession:      &sessionsapi.SessionState{User: "user"},
+				expectedSession:      &sessionsapi.SessionState{User: "user"},
 			}),
 			Entry("Bearer <verifiedToken>", jwtSessionLoaderTableInput{
-				authorizationHeader: fmt.Sprintf("Bearer %s", verifiedToken),
-				existingSession:     nil,
-				expectedSession:     verifiedSession,
+				authorizationHeader:  fmt.Sprintf("Bearer %s", verifiedToken),
+				extraHeaders:         nil,
+				additionalJwtHeaders: []string{},
+				existingSession:      nil,
+				expectedSession:      verifiedSession,
 			}),
 			Entry("Bearer <nonVerifiedToken>", jwtSessionLoaderTableInput{
-				authorizationHeader: fmt.Sprintf("Bearer %s", nonVerifiedToken),
-				existingSession:     nil,
-				expectedSession:     nil,
+				authorizationHeader:  fmt.Sprintf("Bearer %s", nonVerifiedToken),
+				extraHeaders:         nil,
+				additionalJwtHeaders: []string{},
+				existingSession:      nil,
+				expectedSession:      nil,
+			}),
+			Entry("<VerifiedToken> in unknown header", jwtSessionLoaderTableInput{
+				authorizationHeader: "",
+				extraHeaders: map[string]string{
+					"x-my-token": fmt.Sprintf("Bearer %s", verifiedToken),
+				},
+				additionalJwtHeaders: []string{},
+				existingSession:      nil,
+				expectedSession:      nil,
+			}),
+			Entry("<VerifiedToken> in custom header", jwtSessionLoaderTableInput{
+				authorizationHeader: "",
+				extraHeaders: map[string]string{
+					"x-my-token": fmt.Sprintf("Bearer %s", verifiedToken),
+				},
+				additionalJwtHeaders: []string{
+					"x-my-token",
+				},
+				existingSession: nil,
+				expectedSession: verifiedSession,
+			}),
+			Entry("<VerifiedToken> in custom header without tokenType", jwtSessionLoaderTableInput{
+				authorizationHeader: "",
+				extraHeaders: map[string]string{
+					"x-my-token": verifiedToken,
+				},
+				additionalJwtHeaders: []string{
+					"x-my-token",
+				},
+				existingSession: nil,
+				expectedSession: verifiedSession,
+			}),
+			Entry("<nonVerifiedToken> in custom header", jwtSessionLoaderTableInput{
+				authorizationHeader: "",
+				extraHeaders: map[string]string{
+					"x-my-token": fmt.Sprintf("Bearer %s", nonVerifiedToken),
+				},
+				additionalJwtHeaders: []string{
+					"x-my-token",
+				},
+				existingSession: nil,
+				expectedSession: nil,
 			}),
 			Entry("Bearer <verifiedToken> (with existing session)", jwtSessionLoaderTableInput{
-				authorizationHeader: fmt.Sprintf("Bearer %s", verifiedToken),
-				existingSession:     &sessionsapi.SessionState{User: "user"},
-				expectedSession:     &sessionsapi.SessionState{User: "user"},
+				authorizationHeader:  fmt.Sprintf("Bearer %s", verifiedToken),
+				extraHeaders:         nil,
+				additionalJwtHeaders: []string{},
+				existingSession:      &sessionsapi.SessionState{User: "user"},
+				expectedSession:      &sessionsapi.SessionState{User: "user"},
 			}),
 			Entry("Basic Base64(<nonVerifiedToken>:) (No password)", jwtSessionLoaderTableInput{
-				authorizationHeader: "Basic ZXlKZm9vYmFyLmV5SmZvb2Jhci4xMjM0NWFzZGY6",
-				existingSession:     nil,
-				expectedSession:     nil,
+				authorizationHeader:  "Basic ZXlKZm9vYmFyLmV5SmZvb2Jhci4xMjM0NWFzZGY6",
+				extraHeaders:         nil,
+				additionalJwtHeaders: []string{},
+				existingSession:      nil,
+				expectedSession:      nil,
 			}),
 			Entry("Basic Base64(<verifiedToken>:x-oauth-basic) (Sentinel password)", jwtSessionLoaderTableInput{
-				authorizationHeader: fmt.Sprintf("Basic %s", verifiedTokenXOAuthBasicBase64),
-				existingSession:     nil,
-				expectedSession:     verifiedSession,
+				authorizationHeader:  fmt.Sprintf("Basic %s", verifiedTokenXOAuthBasicBase64),
+				extraHeaders:         nil,
+				additionalJwtHeaders: []string{},
+				existingSession:      nil,
+				expectedSession:      verifiedSession,
 			}),
 		)
 
