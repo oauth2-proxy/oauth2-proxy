@@ -61,6 +61,7 @@ func Validate(o *options.Options) error {
 					o.Providers[0].OIDCConfig.AudienceClaims,
 					o.Providers[0].OIDCConfig.ExtraAudiences,
 					jwtIssuer,
+					o.Providers[0].OIDCConfig.InsecureAllowUnverifiedEmail,
 				)
 				if err != nil {
 					msgs = append(msgs, fmt.Sprintf("error building verifiers: %s", err))
@@ -142,12 +143,13 @@ func parseJwtIssuers(issuers []string, msgs []string) ([]jwtIssuer, []string) {
 
 // newVerifierFromJwtIssuer takes in issuer information in jwtIssuer info and returns
 // a verifier for that issuer.
-func newVerifierFromJwtIssuer(audienceClaims []string, extraAudiences []string, jwtIssuer jwtIssuer) (internaloidc.IDTokenVerifier, error) {
+func newVerifierFromJwtIssuer(audienceClaims []string, extraAudiences []string, jwtIssuer jwtIssuer, allowUnverifiedEmail bool) (internaloidc.IDTokenVerifier, error) {
 	pvOpts := internaloidc.ProviderVerifierOptions{
-		AudienceClaims: audienceClaims,
-		ClientID:       jwtIssuer.audience,
-		ExtraAudiences: extraAudiences,
-		IssuerURL:      jwtIssuer.issuerURI,
+		AudienceClaims:       audienceClaims,
+		ClientID:             jwtIssuer.audience,
+		ExtraAudiences:       extraAudiences,
+		IssuerURL:            jwtIssuer.issuerURI,
+		AllowUnverifiedEmail: allowUnverifiedEmail,
 	}
 
 	pv, err := internaloidc.NewProviderVerifier(context.TODO(), pvOpts)

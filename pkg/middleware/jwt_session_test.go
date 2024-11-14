@@ -495,7 +495,10 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 					Email:    "foo@example.com",
 					Verified: &notVerified,
 				},
-				expectedErr: errors.New("email in id_token (foo@example.com) isn't verified"),
+				expectedErr:     nil,
+				expectedUser:    "123456789",
+				expectedEmail:   "foo@example.com",
+				expectedExpires: &expiresFuture,
 			}),
 		)
 	})

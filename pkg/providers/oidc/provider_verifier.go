@@ -48,6 +48,10 @@ type ProviderVerifierOptions struct {
 	// SupportedSigningAlgs is the list of signature algorithms supported by the
 	// provider.
 	SupportedSigningAlgs []string
+
+	// AllowUnverifiedEmail ignores email_verified in ID token.
+	// When false, email_verified must be true.
+	AllowUnverifiedEmail bool
 }
 
 // validate checks that the required options are present before attempting to create
@@ -72,9 +76,10 @@ func (p ProviderVerifierOptions) validate() error {
 // toVerificationOptions returns an IDTokenVerificationOptions based on the configured options.
 func (p ProviderVerifierOptions) toVerificationOptions() IDTokenVerificationOptions {
 	return IDTokenVerificationOptions{
-		AudienceClaims: p.AudienceClaims,
-		ClientID:       p.ClientID,
-		ExtraAudiences: p.ExtraAudiences,
+		AudienceClaims:       p.AudienceClaims,
+		ClientID:             p.ClientID,
+		ExtraAudiences:       p.ExtraAudiences,
+		AllowUnverifiedEmail: p.AllowUnverifiedEmail,
 	}
 }
 
