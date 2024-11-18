@@ -369,7 +369,8 @@ func parseJwtIssuers(issuers []string, msgs []string) ([]jwtIssuer, []string) {
 // a verifier for that issuer.
 func newVerifierFromJwtIssuer(jwtIssuer jwtIssuer) (*oidc.IDTokenVerifier, error) {
 	config := &oidc.Config{
-		ClientID: jwtIssuer.audience,
+		ClientID:        jwtIssuer.audience,
+		SkipExpiryCheck: true,
 	}
 	// Try as an OpenID Connect Provider first
 	var verifier *oidc.IDTokenVerifier
