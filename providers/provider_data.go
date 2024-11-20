@@ -53,6 +53,7 @@ type ProviderData struct {
 	// Universal Group authorization data structure
 	// any provider can set to consume
 	AllowedGroups map[string]struct{}
+	AllowedACRs   map[string]struct{}
 
 	getAuthorizationHeaderFunc func(string) http.Header
 	loginURLParameterDefaults  url.Values
@@ -181,6 +182,14 @@ func (p *ProviderData) setAllowedGroups(groups []string) {
 	}
 }
 
+func (p *ProviderData) setAllowedACR(acrs string) {
+	p.AllowedACRs = make(map[string]struct{})
+	var resultingACRs = strings.Split(acrs, ",")
+	for _, acr := range resultingACRs {
+		p.AllowedACRs[acr] = struct{}{}
+	}
+}
+
 type providerDefaults struct {
 	name        string
 	loginURL    *url.URL
@@ -258,6 +267,7 @@ func (p *ProviderData) buildSessionFromClaims(rawIDToken, accessToken string) (*
 		{p.UserClaim, &ss.User},
 		{p.EmailClaim, &ss.Email},
 		{p.GroupsClaim, &ss.Groups},
+		{"acr", &ss.Acr},
 		// TODO (@NickMeves) Deprecate for dynamic claim to session mapping
 		{"preferred_username", &ss.PreferredUsername},
 	} {

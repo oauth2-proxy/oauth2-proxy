@@ -3,6 +3,7 @@ package providers
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -116,6 +117,16 @@ func (p *ProviderData) EnrichSession(_ context.Context, _ *sessions.SessionState
 // Authorize performs global authorization on an authenticated session.
 // This is not used for fine-grained per route authorization rules.
 func (p *ProviderData) Authorize(_ context.Context, s *sessions.SessionState) (bool, error) {
+	println("ACR level is", s.Acr)
+	bs, _ := json.Marshal(p.AllowedACRs)
+	fmt.Println("Current configured acr is", string(bs))
+	if len(p.AllowedACRs) > 0 {
+		var _, ok = p.AllowedACRs[s.Acr]
+		if !ok {
+			return false, nil
+		}
+	}
+
 	if len(p.AllowedGroups) == 0 {
 		return true, nil
 	}
