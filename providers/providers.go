@@ -76,6 +76,8 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 		ClientID:         providerConfig.ClientID,
 		ClientSecret:     providerConfig.ClientSecret,
 		ClientSecretFile: providerConfig.ClientSecretFile,
+		// additional claims to be extracted from the ID Token
+		AdditionalClaims: providerConfig.AdditionalClaims,
 	}
 
 	needsVerifier, err := providerRequiresOIDCProviderVerifier(providerConfig.Type)
