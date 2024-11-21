@@ -13,5 +13,9 @@ jobs:
     - uses: actions/stale@v9
       with:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
-        stale-issue-message: 'This issue has been inactive for 60 days. If the issue is still relevant please comment to re-activate the issue. If no action is taken within 7 days, the issue will be marked closed.'
-        stale-pr-message: 'This pull request has been inactive for 60 days. If the pull request is still relevant please comment to re-activate the pull request. If no action is taken within 7 days, the pull request will be marked closed.'
+        days-before-stale: 180
+        days-before-close: 14
+        stale-issue-message: 'This issue has been inactive for 180 days. If the issue is still relevant please comment to re-activate the issue. If no action is taken within 14 days, the issue will be marked closed.'
+        stale-pr-message: 'This pull request has been inactive for 180 days. If the pull request is still relevant please comment to re-activate the pull request. If no action is taken within 14 days, the pull request will be marked closed.'
+        exempt-issue-labels: bug,high-priority
+        exempt-pr-labels: bug,high-priority

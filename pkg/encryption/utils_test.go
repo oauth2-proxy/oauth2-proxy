@@ -130,12 +130,12 @@ func TestValidate(t *testing.T) {
 	assert.Equal(t, validValue, expectedValue)
 }
 
-func TestGenerateRandomASCIIString(t *testing.T) {
-	randomString, err := GenerateRandomASCIIString(96)
+func TestGenerateCodeVerifierString(t *testing.T) {
+	randomString, err := GenerateCodeVerifierString(96)
 	assert.NoError(t, err)
 
-	// Only 8-bit characters
-	assert.Equal(t, 96, len([]byte(randomString)))
+	// Should be 128 characters long
+	assert.Equal(t, 128, len([]byte(randomString)))
 
 	// All non-ascii characters removed should still be the original string
 	removedChars := strings.Map(func(r rune) rune {

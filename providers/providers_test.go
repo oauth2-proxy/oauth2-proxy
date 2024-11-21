@@ -137,10 +137,30 @@ func TestScope(t *testing.T) {
 			expectedScope:   "openid email profile",
 		},
 		{
-			name:            "oidc: with no scope provided and groups",
+			name:            "oidc: with no scope provided and allowed groups",
 			configuredType:  "oidc",
 			configuredScope: "",
 			expectedScope:   "openid email profile groups",
+			allowedGroups:   []string{"foo"},
+		},
+		{
+			name:            "oidc: with custom scope including groups without allowed groups",
+			configuredType:  "oidc",
+			configuredScope: "myscope groups",
+			expectedScope:   "myscope groups",
+		},
+		{
+			name:            "oidc: with custom scope without groups but allowed groups",
+			configuredType:  "oidc",
+			configuredScope: "myscope",
+			expectedScope:   "myscope",
+			allowedGroups:   []string{"foo"},
+		},
+		{
+			name:            "oidc: with custom scope with groups and allowed groups",
+			configuredType:  "oidc",
+			configuredScope: "myscope groups",
+			expectedScope:   "myscope groups",
 			allowedGroups:   []string{"foo"},
 		},
 		{
@@ -160,6 +180,27 @@ func TestScope(t *testing.T) {
 			configuredType:  "github",
 			configuredScope: "read:user read:org",
 			expectedScope:   "read:user read:org",
+		},
+		{
+			name:            "keycloak: with no scope provided and groups",
+			configuredType:  "keycloak-oidc",
+			configuredScope: "",
+			expectedScope:   "openid email profile groups",
+			allowedGroups:   []string{"foo"},
+		},
+		{
+			name:            "keycloak: with custom scope and groups",
+			configuredType:  "keycloak-oidc",
+			configuredScope: "myscope",
+			expectedScope:   "myscope",
+			allowedGroups:   []string{"foo"},
+		},
+		{
+			name:            "keycloak: with custom scope and groups scope",
+			configuredType:  "keycloak-oidc",
+			configuredScope: "myscope groups",
+			expectedScope:   "myscope groups",
+			allowedGroups:   []string{"foo"},
 		},
 	}
 

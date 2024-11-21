@@ -50,6 +50,7 @@ func rewritePath(rewriteRegExp *regexp.Regexp, rewriteTarget string, writer page
 		}
 
 		req.RequestURI = reqURL.String()
+		req.URL.Path = reqURL.Path // set path for websocket connections
 		next.ServeHTTP(rw, req)
 	})
 }
