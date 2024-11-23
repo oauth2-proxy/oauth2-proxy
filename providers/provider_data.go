@@ -22,6 +22,7 @@ import (
 const (
 	// This is not exported as it's not currently user configurable
 	oidcUserClaim = "sub"
+	oidcAcrClaim  = "acr"
 )
 
 // ProviderData contains information required to configure all implementations
@@ -267,7 +268,7 @@ func (p *ProviderData) buildSessionFromClaims(rawIDToken, accessToken string) (*
 		{p.UserClaim, &ss.User},
 		{p.EmailClaim, &ss.Email},
 		{p.GroupsClaim, &ss.Groups},
-		{"acr", &ss.Acr},
+		{oidcAcrClaim, &ss.Acr},
 		// TODO (@NickMeves) Deprecate for dynamic claim to session mapping
 		{"preferred_username", &ss.PreferredUsername},
 	} {
