@@ -490,6 +490,18 @@ var _ = Describe("Legacy Options", func() {
 			},
 		}
 
+		authMethodHeader := Header{
+			Name:                 "AuthMethod",
+			PreserveRequestValue: false,
+			Values: []HeaderValue{
+				{
+					ScopeSource: &ScopeSource{
+						Field: "AuthMethod",
+					},
+				},
+			},
+		}
+
 		DescribeTable("should convert to injectRequestHeaders",
 			func(in legacyHeadersTableInput) {
 				requestHeaders, responseHeaders := in.legacyHeaders.convert()
@@ -817,6 +829,30 @@ var _ = Describe("Legacy Options", func() {
 				},
 				expectedResponseHeaders: []Header{
 					csrfResponseHeader,
+				},
+			}),
+			Entry("with AuthMethod header", legacyHeadersTableInput{
+				legacyHeaders: &LegacyHeaders{
+					PassBasicAuth:     false,
+					PassAccessToken:   true,
+					PassUserHeaders:   false,
+					PassAuthorization: false,
+
+					SetBasicAuth:     false,
+					SetXAuthRequest:  false,
+					SetAuthorization: false,
+
+					PreferEmailToUser:    false,
+					BasicAuthPassword:    "",
+					SkipAuthStripHeaders: true,
+					AuthMethodHeader:     "AuthMethod",
+				},
+				expectedRequestHeaders: []Header{
+					xForwardedAccessToken,
+					authMethodHeader,
+				},
+				expectedResponseHeaders: []Header{
+					authMethodHeader,
 				},
 			}),
 		)

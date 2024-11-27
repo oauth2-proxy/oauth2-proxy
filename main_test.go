@@ -28,6 +28,7 @@ basic_auth_password="super-secret-password"
 client_id="oauth2-proxy"
 client_secret="b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK"
 csrftoken_response_header="X-CSRF-Token"
+auth_method_header="AuthMethod"
 `
 
 	const testAlphaConfig = `
@@ -197,7 +198,19 @@ redirect_url="http://localhost:4180/oauth2/callback"
 			PreserveRequestValue: true,
 		}
 
-		opts.InjectResponseHeaders = append(opts.InjectResponseHeaders, csrfResponseHeader)
+		authMethodHeader := options.Header{
+			Name: "AuthMethod",
+			Values: []options.HeaderValue{
+				{
+					ScopeSource: &options.ScopeSource{
+						Field: "AuthMethod",
+					},
+				},
+			},
+		}
+
+		opts.InjectRequestHeaders = append(opts.InjectRequestHeaders, authMethodHeader)
+		opts.InjectResponseHeaders = append(opts.InjectResponseHeaders, csrfResponseHeader, authMethodHeader)
 		return opts
 	}
 

@@ -29,6 +29,7 @@ var _ = Describe("Load", func() {
 			PassUserHeaders:         true,
 			SkipAuthStripHeaders:    true,
 			CSRFTokenResponseHeader: "X-CSRF-Token",
+			AuthMethodHeader:        "AuthMethod",
 		},
 
 		LegacyServer: LegacyServer{
