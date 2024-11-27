@@ -58,8 +58,7 @@ func Validate(o *options.Options) error {
 			jwtIssuers, msgs = parseJwtIssuers(o.ExtraJwtIssuers, msgs)
 			for _, jwtIssuer := range jwtIssuers {
 				verifier, err := newVerifierFromJwtIssuer(
-					o.Providers[0].OIDCConfig.AudienceClaims,
-					o.Providers[0].OIDCConfig.ExtraAudiences,
+					o.Providers[0].OIDCConfig,
 					jwtIssuer,
 				)
 				if err != nil {
@@ -142,12 +141,14 @@ func parseJwtIssuers(issuers []string, msgs []string) ([]jwtIssuer, []string) {
 
 // newVerifierFromJwtIssuer takes in issuer information in jwtIssuer info and returns
 // a verifier for that issuer.
-func newVerifierFromJwtIssuer(audienceClaims []string, extraAudiences []string, jwtIssuer jwtIssuer) (internaloidc.IDTokenVerifier, error) {
+func newVerifierFromJwtIssuer(odicOptions options.OIDCOptions, jwtIssuer jwtIssuer) (internaloidc.IDTokenVerifier, error) {
 	pvOpts := internaloidc.ProviderVerifierOptions{
-		AudienceClaims: audienceClaims,
+		AudienceClaims: odicOptions.AudienceClaims,
 		ClientID:       jwtIssuer.audience,
-		ExtraAudiences: extraAudiences,
+		ExtraAudiences: odicOptions.ExtraAudiences,
 		IssuerURL:      jwtIssuer.issuerURI,
+		SkipDiscovery:  odicOptions.SkipDiscovery,
+		JWKsURL:        odicOptions.JwksURL,
 	}
 
 	pv, err := internaloidc.NewProviderVerifier(context.TODO(), pvOpts)
