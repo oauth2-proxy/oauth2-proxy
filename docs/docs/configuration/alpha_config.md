@@ -104,6 +104,8 @@ longer available when using alpha configuration:
 - `prefer-email-to-user`/`prefer_email_to_user`
 - `basic-auth-password`/`basic_auth_password`
 - `skip-auth-strip-headers`/`skip_auth_strip_headers`
+- `csrftoken-response-header`/`csrftoken_response_header`
+- `auth-method-header`/`auth_method_header`
 
 <!-- Legacy provider FlagSet -->
 - `client-id`/`client_id`
@@ -204,6 +206,16 @@ ClaimSource allows loading a header value from a claim within the session
 | `prefix` | _string_ | Prefix is an optional prefix that will be prepended to the value of the<br/>claim if it is non-empty. |
 | `basicAuthPassword` | _[SecretSource](#secretsource)_ | BasicAuthPassword converts this claim into a basic auth header.<br/>Note the value of claim will become the basic auth username and the<br/>basicAuthPassword will be used as the password value. |
 
+### ScopeSource
+
+(**Appears on:** [HeaderValue](#headervalue))
+
+ScopeSource allows loading a header value from the request scope.
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `field` | _string_ | Field is the name of the scope that the value should be<br/> loaded from. |
+
 ### Duration
 #### (`string` alias)
 
@@ -281,6 +293,7 @@ make up the header value
 | `claim` | _string_ | Claim is the name of the claim in the session that the value should be<br/>loaded from. Available claims: `access_token` `id_token` `created_at`<br/>`expires_on` `refresh_token` `email` `user` `groups` `preferred_username`. |
 | `prefix` | _string_ | Prefix is an optional prefix that will be prepended to the value of the<br/>claim if it is non-empty. |
 | `basicAuthPassword` | _[SecretSource](#secretsource)_ | BasicAuthPassword converts this claim into a basic auth header.<br/>Note the value of claim will become the basic auth username and the<br/>basicAuthPassword will be used as the password value. |
+| `field` | _string_ | Field is the name of the scope that the value should be<br/> loaded from. |
 
 ### KeycloakOptions
 
