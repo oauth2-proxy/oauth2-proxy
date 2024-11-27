@@ -49,6 +49,8 @@ func newValueinjector(name string, value options.HeaderValue) (valueInjector, er
 		return newSecretInjector(name, value.SecretSource)
 	case value.SecretSource == nil && value.ClaimSource != nil:
 		return newClaimInjector(name, value.ClaimSource)
+	case value.ScopeSource != nil && value.ClaimSource == nil && value.SecretSource == nil:
+		return newScopeInjector(name, value.ScopeSource)
 	default:
 		return nil, fmt.Errorf("header %q value has multiple entries: only one entry per value is allowed", name)
 	}
@@ -118,4 +120,11 @@ func newClaimInjector(name string, source *options.ClaimSource) (valueInjector, 
 			}
 		}), nil
 	}
+}
+
+func newScopeInjector(name string, source *options.ScopeSource) (valueInjector, error) {
+	return newInjectorFunc(func(header http.Header, scope *middlewareapi.RequestScope) {
+		value := scope.GetRequestScopeField(source.Field)
+		header.Add(name, value)
+	}), nil
 }

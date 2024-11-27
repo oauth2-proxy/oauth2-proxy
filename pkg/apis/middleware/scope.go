@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"net/http"
+	"strconv"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 )
@@ -61,4 +62,19 @@ func GetRequestScope(req *http.Request) *RequestScope {
 func AddRequestScope(req *http.Request, scope *RequestScope) *http.Request {
 	ctx := context.WithValue(req.Context(), RequestScopeKey, scope)
 	return req.WithContext(ctx)
+}
+
+func (s *RequestScope) GetRequestScopeField(name string) string {
+	switch name {
+	case "ReverseProxy":
+		return strconv.FormatBool(s.ReverseProxy)
+	case "RequestId":
+		return s.RequestID
+	case "Upstream":
+		return s.Upstream
+	case "AuthMethod":
+		return s.AuthMethod
+	default:
+		return ""
+	}
 }

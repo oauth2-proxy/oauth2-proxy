@@ -25,6 +25,9 @@ type HeaderValue struct {
 
 	// Allow users to load the value from a session claim
 	*ClaimSource `json:",omitempty"`
+
+	// Allow users to load the value from the request scope
+	*ScopeSource `json:",omitempty"`
 }
 
 // ClaimSource allows loading a header value from a claim within the session
@@ -42,4 +45,11 @@ type ClaimSource struct {
 	// Note the value of claim will become the basic auth username and the
 	// basicAuthPassword will be used as the password value.
 	BasicAuthPassword *SecretSource `json:"basicAuthPassword,omitempty"`
+}
+
+// ScopeSource allows loading a header value from the request scope
+type ScopeSource struct {
+	// Name is the name of the field of the request scope that the value should
+	// be loaded from
+	Field string `json:"field,omitempty"`
 }
