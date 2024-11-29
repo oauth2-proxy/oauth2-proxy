@@ -217,6 +217,7 @@ func TestGetCertPool(t *testing.T) {
 
 	certFile1 := makeTestCertFile(t, root1Cert, tempDir)
 	certFile2 := makeTestCertFile(t, root2Cert, tempDir)
+
 	for _, tc := range tests {
 		// Append certs to "known" pool so we can compare them
 		assert.True(t, tc.pool.AppendCertsFromPEM([]byte(root1Cert)))

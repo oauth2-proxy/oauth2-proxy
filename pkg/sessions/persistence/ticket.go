@@ -129,7 +129,6 @@ func decodeTicket(encTicket string, cookieOpts *options.Cookie) (*ticket, error)
 	if errSecret != nil {
 		return nil, fmt.Errorf("failed to decode ticket: %v", errSecret)
 	}
-
 	return &ticket{
 		id:      ticketID,
 		secret:  secret,

@@ -28,10 +28,10 @@ var _ = Describe("CSRF Cookie Tests", func() {
 			Domains:        []string{cookieDomain},
 			Path:           cookiePath,
 			Expire:         time.Hour,
-			CSRFExpire:     time.Hour,
 			Secure:         true,
 			HTTPOnly:       true,
 			CSRFPerRequest: false,
+			CSRFExpire:     time.Hour,
 		}
 
 		var err error

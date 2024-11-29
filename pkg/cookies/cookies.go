@@ -35,11 +35,11 @@ func MakeCookieFromOptions(req *http.Request, name string, value string, opts *o
 		SameSite: ParseSameSite(opts.SameSite),
 	}
 
-	warnInvalidDomain(c, req)
-
 	if expiration != time.Duration(0) {
 		c.Expires = now.Add(expiration)
 	}
+
+	warnInvalidDomain(c, req)
 
 	return c
 }
