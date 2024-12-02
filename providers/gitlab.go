@@ -35,6 +35,7 @@ func NewGitLabProvider(p *ProviderData, opts options.Provider) (*GitLabProvider,
 	p.setProviderDefaults(providerDefaults{
 		name: gitlabProviderName,
 	})
+
 	if p.Scope == "" {
 		p.Scope = gitlabDefaultScope
 	}
