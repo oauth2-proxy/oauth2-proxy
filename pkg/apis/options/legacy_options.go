@@ -192,9 +192,10 @@ type LegacyHeaders struct {
 	PassUserHeaders   bool `flag:"pass-user-headers" cfg:"pass_user_headers"`
 	PassAuthorization bool `flag:"pass-authorization-header" cfg:"pass_authorization_header"`
 
-	SetBasicAuth          bool `flag:"set-basic-auth" cfg:"set_basic_auth"`
-	SetXAuthRequest       bool `flag:"set-xauthrequest" cfg:"set_xauthrequest"`
-	SetAuthorization      bool `flag:"set-authorization-header" cfg:"set_authorization_header"`
+	SetBasicAuth     bool `flag:"set-basic-auth" cfg:"set_basic_auth"`
+	SetXAuthRequest  bool `flag:"set-xauthrequest" cfg:"set_xauthrequest"`
+	SetAuthorization bool `flag:"set-authorization-header" cfg:"set_authorization_header"`
+
 	SetIntrospectionValue bool `flag:"set-introspection-value" cfg:"set_introspection_value"`
 
 	PreferEmailToUser    bool   `flag:"prefer-email-to-user" cfg:"prefer_email_to_user"`

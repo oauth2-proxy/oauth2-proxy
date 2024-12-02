@@ -24,10 +24,11 @@ type providerJSON struct {
 // Endpoints represents the endpoints discovered as part of the OIDC discovery process
 // that will be used by the authentication providers.
 type Endpoints struct {
-	AuthURL            string
-	TokenURL           string
-	JWKsURL            string
-	UserInfoURL        string
+	AuthURL     string
+	TokenURL    string
+	JWKsURL     string
+	UserInfoURL string
+
 	IntrospectEndpoint string
 }
 
@@ -91,10 +92,11 @@ type discoveryProvider struct {
 // Endpoints returns the discovered endpoints needed for an authentication provider.
 func (p *discoveryProvider) Endpoints() Endpoints {
 	return Endpoints{
-		AuthURL:            p.authURL,
-		TokenURL:           p.tokenURL,
-		JWKsURL:            p.jwksURL,
-		UserInfoURL:        p.userInfoURL,
+		AuthURL:     p.authURL,
+		TokenURL:    p.tokenURL,
+		JWKsURL:     p.jwksURL,
+		UserInfoURL: p.userInfoURL,
+
 		IntrospectEndpoint: p.introspectEndpoint,
 	}
 }
