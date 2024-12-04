@@ -132,8 +132,8 @@ func TestScope(t *testing.T) {
 	}{
 		{
 			name:            "oidc: with no scope provided",
-			configuredScope: "",
 			configuredType:  "oidc",
+			configuredScope: "",
 			expectedScope:   "openid email profile",
 		},
 		{

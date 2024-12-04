@@ -106,23 +106,6 @@ func TestSignAndValidate(t *testing.T) {
 	assert.False(t, checkSignature(sha1sig, seed, key, "tampered", epoch))
 }
 
-func TestGenerateRandomASCIIString(t *testing.T) {
-	randomString, err := GenerateRandomASCIIString(96)
-	assert.NoError(t, err)
-
-	// Only 8-bit characters
-	assert.Equal(t, 96, len([]byte(randomString)))
-
-	// All non-ascii characters removed should still be the original string
-	removedChars := strings.Map(func(r rune) rune {
-		if r > unicode.MaxASCII {
-			return -1
-		}
-		return r
-	}, randomString)
-	assert.Equal(t, removedChars, randomString)
-}
-
 func TestValidate(t *testing.T) {
 	seed := "0123456789abcdef"
 	key := "cookie-name"
@@ -145,4 +128,21 @@ func TestValidate(t *testing.T) {
 	expectedValue, err := base64.URLEncoding.DecodeString(value)
 	assert.NoError(t, err)
 	assert.Equal(t, validValue, expectedValue)
+}
+
+func TestGenerateRandomASCIIString(t *testing.T) {
+	randomString, err := GenerateRandomASCIIString(96)
+	assert.NoError(t, err)
+
+	// Only 8-bit characters
+	assert.Equal(t, 96, len([]byte(randomString)))
+
+	// All non-ascii characters removed should still be the original string
+	removedChars := strings.Map(func(r rune) rune {
+		if r > unicode.MaxASCII {
+			return -1
+		}
+		return r
+	}, randomString)
+	assert.Equal(t, removedChars, randomString)
 }

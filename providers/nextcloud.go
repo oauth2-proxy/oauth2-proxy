@@ -24,6 +24,7 @@ func NewNextcloudProvider(p *ProviderData) *NextcloudProvider {
 	p.setProviderDefaults(providerDefaults{
 		name: nextCloudProviderName,
 	})
+
 	p.getAuthorizationHeaderFunc = makeOIDCHeader
 	if p.EmailClaim == options.OIDCEmailClaim {
 		// This implies the email claim has not been overridden, we should set a default

@@ -414,6 +414,7 @@ sub:
 				} else {
 					input = &TestOptions{}
 				}
+
 				err := LoadYAML(configFileName, input)
 				if in.expectedErr != nil {
 					Expect(err).To(MatchError(in.expectedErr.Error()))

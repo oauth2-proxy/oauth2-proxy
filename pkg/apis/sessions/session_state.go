@@ -31,9 +31,10 @@ type SessionState struct {
 	IntrospectClaims  string   `msgpack:"ic,omitempty"`
 
 	// Internal helpers, not serialized
-	Clock                clock.Clock `msgpack:"-"`
-	Lock                 Lock        `msgpack:"-"`
-	SessionJustRefreshed bool        `msgpack:"-"`
+	Clock clock.Clock `msgpack:"-"`
+	Lock  Lock        `msgpack:"-"`
+
+	SessionJustRefreshed bool `msgpack:"-"`
 }
 
 func (s *SessionState) ObtainLock(ctx context.Context, expiration time.Duration) error {

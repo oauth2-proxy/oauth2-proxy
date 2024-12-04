@@ -87,7 +87,7 @@ mmu20Q5sWqggb0WNk1GoHIlpiObgY38KfnNSZ5Ra/QuXLF3QM2NdK5bT1iNFfPG3
 fQklEouz/2lqZkRhsKSeXFKQ+h8GtNevKwFg6y3wWvH62WF5mTe9eyUE9VWl64y6
 js5ESoVXA+e+QfsMsJrI5XfLV1O8ZxXKAVrYxBnC+WQbrNOjI7VBkjcn/QDmDjBw
 sC1lo4YZwxEQ/bE0kEWI7PT/Skml4bTLw0jsgXNV9Nd8
------END CERTIFICATE-----
+-----END CERTIFICATE-----		
 `
 	cert1CertSubj = "CN=oauth2-proxy test cert1 ca"
 	cert1Cert     = `-----BEGIN CERTIFICATE-----
@@ -217,6 +217,7 @@ func TestGetCertPool(t *testing.T) {
 
 	certFile1 := makeTestCertFile(t, root1Cert, tempDir)
 	certFile2 := makeTestCertFile(t, root2Cert, tempDir)
+
 	for _, tc := range tests {
 		// Append certs to "known" pool so we can compare them
 		assert.True(t, tc.pool.AppendCertsFromPEM([]byte(root1Cert)))

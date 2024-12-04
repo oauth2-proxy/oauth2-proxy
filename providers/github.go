@@ -227,11 +227,14 @@ func (p *GitHubProvider) hasRepoAccess(ctx context.Context, accessToken string) 
 		Pull bool `json:"pull"`
 		Push bool `json:"push"`
 	}
+
 	type repository struct {
 		Permissions permissions `json:"permissions"`
 		Private     bool        `json:"private"`
 	}
+
 	endpoint := p.makeGitHubAPIEndpoint("/repos/"+p.Repo, nil)
+
 	var repo repository
 	err := requests.New(endpoint.String()).
 		WithContext(ctx).
@@ -309,6 +312,7 @@ func (p *GitHubProvider) getEmail(ctx context.Context, s *sessions.SessionState)
 	}
 
 	endpoint := p.makeGitHubAPIEndpoint("/user/emails", nil)
+
 	err := requests.New(endpoint.String()).
 		WithContext(ctx).
 		WithHeaders(makeGitHubHeader(s.AccessToken)).
@@ -359,7 +363,6 @@ func (p *GitHubProvider) getUser(ctx context.Context, s *sessions.SessionState) 
 	return nil
 }
 
-// isVerifiedUser
 func (p *GitHubProvider) isVerifiedUser(username string) bool {
 	for _, u := range p.Users {
 		if username == u {

@@ -75,6 +75,7 @@ func validateGoogleConfig(provider options.Provider) []string {
 	if !hasGoogleGroups && !hasAdminEmail && !hasSAJSON && !useADC {
 		return msgs
 	}
+
 	if !hasGoogleGroups {
 		msgs = append(msgs, "missing setting: google-group")
 	}

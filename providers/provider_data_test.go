@@ -429,6 +429,7 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 	for testName, tc := range testCases {
 		t.Run(testName, func(t *testing.T) {
 			g := NewWithT(t)
+
 			var (
 				profileURL       *url.URL
 				profileURLCalled bool

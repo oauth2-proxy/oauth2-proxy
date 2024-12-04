@@ -137,6 +137,7 @@ func TestOIDCProviderRedeem(t *testing.T) {
 		RefreshToken: refreshToken,
 		IDToken:      idToken,
 	})
+
 	server, provider := newTestOIDCSetup(body, []byte(`{}`), []byte(`{}`))
 	defer server.Close()
 
