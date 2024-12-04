@@ -33,7 +33,7 @@ type Client struct {
 func NewAuditClient(opts *ClientOpts) (*Client, error) {
 	if opts.Enabled {
 		log.Print("Audit entries will be created since OAUTH2_PROXY_ENABLE_AUDIT is true")
-		err := opts.validate()
+		err := opts.Validate()
 		if err != nil {
 			return nil, err
 		}
@@ -154,7 +154,7 @@ func (c *Client) send(msg string) error {
 	return nil
 }
 
-func (c *ClientOpts) validate() error {
+func (c *ClientOpts) Validate() error {
 	err := errors.New("")
 	if strings.TrimSpace(c.URL) == "" {
 		err = errors.New("the OAUTH2_PROXY_AUDIT_URL must be set")
