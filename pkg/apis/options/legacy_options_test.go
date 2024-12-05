@@ -454,17 +454,7 @@ var _ = Describe("Legacy Options", func() {
 			},
 		}
 
-		xAuthIntrospectResponse := Header{
-			Name:                 "X-Auth-Introspect-Value",
-			PreserveRequestValue: false,
-			Values: []HeaderValue{
-				{
-					ClaimSource: &ClaimSource{
-						Claim: "introspect-claims",
-					},
-				},
-			},
-		}
+		xAuthIntrospectResponse := PicsGetXAuthInstrospectResponseHeader()
 
 		xAuthRequestAccessToken := Header{
 			Name:                 "X-Auth-Request-Access-Token",
@@ -491,17 +481,7 @@ var _ = Describe("Legacy Options", func() {
 			},
 		}
 
-		idTokenHeader := Header{
-			Name:                 "x-auth-request-id-token",
-			PreserveRequestValue: false,
-			Values: []HeaderValue{
-				{
-					ClaimSource: &ClaimSource{
-						Claim: "id_token",
-					},
-				},
-			},
-		}
+		idTokenHeader := PicsGetIdTokenHeader()
 
 		DescribeTable("should convert to injectRequestHeaders",
 			func(in legacyHeadersTableInput) {
