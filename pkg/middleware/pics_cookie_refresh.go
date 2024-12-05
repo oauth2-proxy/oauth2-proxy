@@ -15,7 +15,7 @@ type CookieRefreshOptions struct {
 	CookieRefreshURL  string
 }
 
-func NewCookieRefresh(opts *CookieRefreshOptions) alice.Constructor {
+func PicsNewCookieRefresh(opts *CookieRefreshOptions) alice.Constructor {
 	cr := &cookieRefresh{
 		HTTPClient:        &http.Client{},
 		CookieRefreshName: opts.CookieRefreshName,
