@@ -369,19 +369,20 @@ func getPassAccessTokenHeader() Header {
 	}
 }
 
-func getAuthorizationHeader() Header {
-	return Header{
-		Name: "Authorization",
-		Values: []HeaderValue{
-			{
-				ClaimSource: &ClaimSource{
-					Claim:  "id_token",
-					Prefix: "Bearer ",
-				},
-			},
-		},
-	}
-}
+// PICS: changed to PicsGetAuthorizationHeader, this one is not used anywhere
+// func getAuthorizationHeader() Header {
+// 	return Header{
+// 		Name: "Authorization",
+// 		Values: []HeaderValue{
+// 			{
+// 				ClaimSource: &ClaimSource{
+// 					Claim:  "id_token",
+// 					Prefix: "Bearer ",
+// 				},
+// 			},
+// 		},
+// 	}
+// }
 
 func getPreferredUsernameHeader() Header {
 	return Header{

@@ -54,7 +54,7 @@ func PicsGetXAuthInstrospectResponseHeader() Header {
 	}
 }
 
-func PicsGetIdTokenHeader() Header {
+func PicsGetIDTokenHeader() Header {
 	return Header{
 		Name:                 "x-auth-request-id-token",
 		PreserveRequestValue: false,

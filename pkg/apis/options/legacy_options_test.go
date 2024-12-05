@@ -481,7 +481,7 @@ var _ = Describe("Legacy Options", func() {
 			},
 		}
 
-		idTokenHeader := PicsGetIdTokenHeader()
+		idTokenHeader := PicsGetIDTokenHeader()
 
 		DescribeTable("should convert to injectRequestHeaders",
 			func(in legacyHeadersTableInput) {
