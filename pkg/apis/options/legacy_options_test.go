@@ -454,7 +454,17 @@ var _ = Describe("Legacy Options", func() {
 			},
 		}
 
-		xAuthIntrospectResponse := PicsGetXAuthInstrospectResponseHeader()
+		xAuthIntrospectResponse := Header{
+			Name:                 "X-Auth-Introspect-Value",
+			PreserveRequestValue: false,
+			Values: []HeaderValue{
+				{
+					ClaimSource: &ClaimSource{
+						Claim: "introspect-claims",
+					},
+				},
+			},
+		}
 
 		xAuthRequestAccessToken := Header{
 			Name:                 "X-Auth-Request-Access-Token",
