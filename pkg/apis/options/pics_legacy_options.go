@@ -39,31 +39,3 @@ func PicsGetXAuthIntrospectionValueHeaders() Header {
 		},
 	}
 }
-
-func PicsGetXAuthInstrospectResponseHeader() Header {
-	return Header{
-		Name:                 "X-Auth-Introspect-Value",
-		PreserveRequestValue: false,
-		Values: []HeaderValue{
-			{
-				ClaimSource: &ClaimSource{
-					Claim: "introspect-claims",
-				},
-			},
-		},
-	}
-}
-
-func PicsGetIDTokenHeader() Header {
-	return Header{
-		Name:                 "x-auth-request-id-token",
-		PreserveRequestValue: false,
-		Values: []HeaderValue{
-			{
-				ClaimSource: &ClaimSource{
-					Claim: "id_token",
-				},
-			},
-		},
-	}
-}
