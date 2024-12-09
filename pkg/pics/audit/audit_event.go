@@ -81,6 +81,7 @@ type ExtensionContent struct {
 	URL         string `json:"url,omitempty"`
 	ValueString string `json:"valueString,omitempty"`
 }
+
 type Extension struct {
 	URL       string              `json:"url,omitempty"`
 	Extension []*ExtensionContent `json:"extension,omitempty"`

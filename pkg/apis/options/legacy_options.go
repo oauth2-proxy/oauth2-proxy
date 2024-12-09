@@ -247,7 +247,7 @@ func (l *LegacyHeaders) getRequestHeaders() []Header {
 	}
 
 	if l.PassAuthorization {
-		requestHeaders = append(requestHeaders, getAuthorizationHeader()...)
+		requestHeaders = append(requestHeaders, PicsGetAuthorizationHeader()...)
 	}
 
 	for i := range requestHeaders {
@@ -272,11 +272,11 @@ func (l *LegacyHeaders) getResponseHeaders() []Header {
 	}
 
 	if l.SetAuthorization {
-		responseHeaders = append(responseHeaders, getAuthorizationHeader()...)
+		responseHeaders = append(responseHeaders, PicsGetAuthorizationHeader()...)
 	}
 
 	if l.SetIntrospectionValue {
-		responseHeaders = append(responseHeaders, getXAuthIntrospectionValueHeaders())
+		responseHeaders = append(responseHeaders, PicsGetXAuthIntrospectionValueHeaders())
 	}
 	return responseHeaders
 }
@@ -369,32 +369,20 @@ func getPassAccessTokenHeader() Header {
 	}
 }
 
-func getAuthorizationHeader() []Header {
-	headers := []Header{
-		{
-			Name: "Authorization",
-			Values: []HeaderValue{
-				{
-					ClaimSource: &ClaimSource{
-						Claim:  "id_token",
-						Prefix: "Bearer ",
-					},
-				},
-			},
-		},
-		{
-			Name: "x-auth-request-id-token",
-			Values: []HeaderValue{
-				{
-					ClaimSource: &ClaimSource{
-						Claim: "id_token",
-					},
-				},
-			},
-		},
-	}
-	return headers
-}
+// PICS: changed to PicsGetAuthorizationHeader, this one is not used anywhere
+// func getAuthorizationHeader() Header {
+// 	return Header{
+// 		Name: "Authorization",
+// 		Values: []HeaderValue{
+// 			{
+// 				ClaimSource: &ClaimSource{
+// 					Claim:  "id_token",
+// 					Prefix: "Bearer ",
+// 				},
+// 			},
+// 		},
+// 	}
+// }
 
 func getPreferredUsernameHeader() Header {
 	return Header{
@@ -463,19 +451,6 @@ func getXAuthRequestAccessTokenHeader() Header {
 			{
 				ClaimSource: &ClaimSource{
 					Claim: "access_token",
-				},
-			},
-		},
-	}
-}
-
-func getXAuthIntrospectionValueHeaders() Header {
-	return Header{
-		Name: "X-Auth-Introspect-Value",
-		Values: []HeaderValue{
-			{
-				ClaimSource: &ClaimSource{
-					Claim: "introspect-claims",
 				},
 			},
 		},
