@@ -2,8 +2,12 @@ dex:
   ingress:
     enabled: true
     hosts:
-      - dex.localtest.me
-  grpc: false
+      - host: dex.localtest.me
+        paths:
+        - path: /
+          pathType: ImplementationSpecific
+  grpc: 
+    enabled: false
   certs:
     grpc:
       create: false
@@ -12,6 +16,11 @@ dex:
 
   config:
     issuer: http://dex.localtest.me
+    storage:
+      type: kubernetes
+      config:
+        inCluster: true
+    enablePasswordDB: true
     expiry:
       signingKeys: "4h"
       idTokens: "1h"
@@ -35,9 +44,6 @@ oauth2-proxy:
     enabled: true
     hosts:
       - oauth2-proxy.localtest.me
-    annotations:
-      nginx.ingress.kubernetes.io/server-snippet: |
-        large_client_header_buffers 4 32k;
   # pick up client_id and client_secret from configFile as opposed to helm .Values.config.clientID and .Values.config.clientSecret
   proxyVarsAsSecrets: false
   config:
