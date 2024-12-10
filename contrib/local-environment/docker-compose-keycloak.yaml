@@ -14,7 +14,7 @@ version: '3.0'
 services:
   oauth2-proxy:
     container_name: oauth2-proxy
-    image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.7.1
     command: --config /oauth2-proxy.cfg
     hostname: oauth2-proxy
     volumes:
@@ -43,23 +43,18 @@ services:
 
   keycloak:
     container_name: keycloak
-    image: jboss/keycloak:10.0.0
+    image: keycloak/keycloak:25.0
     hostname: keycloak
     command:
-      [
-        '-b',
-        '0.0.0.0',
-        '-Djboss.socket.binding.port-offset=1000',
-        '-Dkeycloak.migration.action=import',
-        '-Dkeycloak.migration.provider=dir',
-        '-Dkeycloak.migration.dir=/realm-config',
-        '-Dkeycloak.migration.strategy=IGNORE_EXISTING'
-      ]
+      - 'start-dev'
+      - '--http-port=9080'
+      - '--import-realm'
     volumes:
-      - ./keycloak:/realm-config
+      - ./keycloak:/opt/keycloak/data/import
     environment:
-      KEYCLOAK_USER: admin@example.com
-      KEYCLOAK_PASSWORD: password
+      KC_HTTP_PORT: 9080
+      KEYCLOAK_ADMIN: admin@example.com
+      KEYCLOAK_ADMIN_PASSWORD: password
     ports:
       - 9080:9080/tcp
     networks:

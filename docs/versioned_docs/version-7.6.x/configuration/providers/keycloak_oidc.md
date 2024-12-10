@@ -3,6 +3,14 @@ id: keycloak_oidc
 title: Keycloak OIDC
 ---
 
+## Config Options
+
+| Flag             | Toml Field      | Type           | Description                                                                                                        | Default |
+| ---------------- | --------------- | -------------- | ------------------------------------------------------------------------------------------------------------------ | ------- |
+| `--allowed-role` | `allowed_roles` | string \| list | restrict logins to users with this role (may be given multiple times). Only works with the keycloak-oidc provider. |         |
+
+## Usage
+
 ```
     --provider=keycloak-oidc
     --client-id=<your client's id>

@@ -22,6 +22,7 @@ const sidebars = {
       collapsed: false,
       items: [
         'configuration/overview',
+        'configuration/integration',
         {
           type: 'category',
           label: 'OAuth Provider Configuration',

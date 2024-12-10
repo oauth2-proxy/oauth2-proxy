@@ -18,6 +18,7 @@ linters:
     - misspell
     - prealloc
     - exportloopref
+    - copyloopvar
     - stylecheck
     - unconvert
     - gocritic
@@ -33,6 +34,7 @@ issues:
         - gocritic
         - gosec
         - goconst
+        - revive
     - path: _test\.go
       linters:
         - revive
@@ -41,6 +43,5 @@ issues:
     - path: tests/.*_tests\.go
       linters:
         - revive
-        - golint
         - bodyclose
         - stylecheck

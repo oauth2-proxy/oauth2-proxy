@@ -5,7 +5,7 @@ ARG RUNTIME_IMAGE=gcr.io/distroless/static:nonroot
 #  cache sharing of the go mod download step.
 # Go cross compilation is also faster than emulation the go compilation across
 #  multiple platforms.
-FROM --platform=${BUILDPLATFORM} docker.io/library/golang:1.21-bookworm AS builder
+FROM --platform=${BUILDPLATFORM} docker.io/library/golang:1.22-bookworm AS builder
 
 # Copy sources
 WORKDIR $GOPATH/src/github.com/oauth2-proxy/oauth2-proxy
@@ -32,13 +32,14 @@ ARG BUILDPLATFORM
 # Set the cross compilation arguments based on the TARGETPLATFORM which is
 #  automatically set by the docker engine.
 RUN case ${TARGETPLATFORM} in \
-    "linux/amd64")  GOARCH=amd64  ;; \
-    # arm64 and arm64v8 are equivilant in go and do not require a goarm
-    # https://github.com/golang/go/wiki/GoArm
-    "linux/arm64" | "linux/arm/v8") GOARCH=arm64 ;; \
-    "linux/ppc64le")  GOARCH=ppc64le  ;; \
-    "linux/arm/v6") GOARCH=arm GOARM=6  ;; \
-    "linux/arm/v7") GOARCH=arm GOARM=7 ;; \
+         "linux/amd64")  GOARCH=amd64  ;; \
+         # arm64 and arm64v8 are equivilant in go and do not require a goarm
+         # https://github.com/golang/go/wiki/GoArm
+         "linux/arm64" | "linux/arm/v8")  GOARCH=arm64  ;; \
+         "linux/ppc64le")  GOARCH=ppc64le  ;; \
+         "linux/s390x")  GOARCH=s390x  ;; \
+         "linux/arm/v6") GOARCH=arm GOARM=6  ;; \
+         "linux/arm/v7") GOARCH=arm GOARM=7 ;; \
     esac && \
     printf "Building OAuth2 Proxy for arch ${GOARCH}\n" && \
     GOARCH=${GOARCH} VERSION=${VERSION} make build && touch jwt_signing_key.pem

@@ -72,7 +72,7 @@ func newSecretInjector(name string, source *options.SecretSource) (valueInjector
 		return nil, fmt.Errorf("error getting secret value: %v", err)
 	}
 
-	return newInjectorFunc(func(header http.Header, session *sessionsapi.SessionState) {
+	return newInjectorFunc(func(header http.Header, _ *sessionsapi.SessionState) {
 		header.Add(name, string(value))
 	}), nil
 }
