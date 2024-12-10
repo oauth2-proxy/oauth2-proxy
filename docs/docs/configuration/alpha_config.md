@@ -404,6 +404,9 @@ character.
 | `userIDClaim` | _string_ | UserIDClaim indicates which claim contains the user ID<br/>default set to 'email' |
 | `audienceClaims` | _[]string_ | AudienceClaim allows to define any claim that is verified against the client id<br/>By default `aud` claim is used for verification. |
 | `extraAudiences` | _[]string_ | ExtraAudiences is a list of additional audiences that are allowed<br/>to pass verification in addition to the client id. |
+| `enableCookieRefresh` | _bool_ | Enable cookie refresh functionality that is going to be triggered every time the session is updated |
+| `cookieRefreshName` | _string_ | Name of the cookie that is going to be extracted from the request and refreshed |
+| `cookieRefreshURL` | _string_ | Url that is going to be used to refresh the cookie |
 
 ### Provider
 
@@ -435,6 +438,7 @@ Provider holds all configuration for a single provider
 | `redeemURL` | _string_ | RedeemURL is the token redemption endpoint |
 | `profileURL` | _string_ | ProfileURL is the profile access endpoint |
 | `skipClaimsFromProfileURL` | _bool_ | SkipClaimsFromProfileURL allows to skip request to Profile URL for resolving claims not present in id_token<br/>default set to 'false' |
+| `introspectURL` | _string_ | IntrospectURL is the claims and permissions access Endpoint (OIDC) |
 | `resource` | _string_ | ProtectedResource is the resource that is protected (Azure AD and ADFS only) |
 | `validateURL` | _string_ | ValidateURL is the access token validation endpoint |
 | `scope` | _string_ | Scope is the OAuth scope specification |
