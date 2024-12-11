@@ -72,26 +72,32 @@ func NewCSRF(opts *options.Cookie, codeVerifier string) (CSRF, error) {
 }
 
 // LoadCSRFCookie loads a CSRF object from a request's CSRF cookie
-func LoadCSRFCookie(req *http.Request, opts *options.Cookie) (CSRF, error) {
+func LoadCSRFCookie(req *http.Request, cookieName string, opts *options.Cookie) (CSRF, error) {
+	cookies := req.Cookies()
+	for _, cookie := range cookies {
+		if cookie.Name != cookieName {
+			continue
+		}
 
-	cookieName := GenerateCookieName(req, opts)
+		csrf, err := decodeCSRFCookie(cookie, opts)
+		if err != nil {
+			continue
+		}
 
-	cookie, err := req.Cookie(cookieName)
-	if err != nil {
-		return nil, err
+		return csrf, nil
 	}
 
-	return decodeCSRFCookie(cookie, opts)
+	return nil, fmt.Errorf("CSRF cookie with name '%v' was not found", cookieName)
 }
 
 // GenerateCookieName in case cookie options state that CSRF cookie has fixed name then set fixed name, otherwise
 // build name based on the state
-func GenerateCookieName(req *http.Request, opts *options.Cookie) string {
+func GenerateCookieName(opts *options.Cookie, state string) string {
 	stateSubstring := ""
 	if opts.CSRFPerRequest {
 		// csrfCookieName will include a substring of the state to enable multiple csrf cookies
 		// in case of parallel requests
-		stateSubstring = ExtractStateSubstring(req)
+		stateSubstring = ExtractStateSubstring(state)
 	}
 	return csrfCookieName(opts, stateSubstring)
 }
@@ -210,20 +216,15 @@ func csrfCookieName(opts *options.Cookie, stateSubstring string) string {
 	if stateSubstring == "" {
 		return fmt.Sprintf("%v_csrf", opts.Name)
 	}
-	return fmt.Sprintf("%v_csrf_%v", opts.Name, stateSubstring)
+	return fmt.Sprintf("%v_%v_csrf", opts.Name, stateSubstring)
 }
 
 // ExtractStateSubstring extract the initial state characters, to add it to the CSRF cookie name
-func ExtractStateSubstring(req *http.Request) string {
+func ExtractStateSubstring(state string) string {
 	lastChar := csrfStateLength - 1
 	stateSubstring := ""
-
-	state := req.URL.Query()["state"]
-	if state[0] != "" {
-		state := state[0]
-		if lastChar <= len(state) {
-			stateSubstring = state[0:lastChar]
-		}
+	if lastChar <= len(state) {
+		stateSubstring = state[0:lastChar]
 	}
 	return stateSubstring
 }

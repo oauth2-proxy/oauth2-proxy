@@ -23,3 +23,4 @@
 - [ ] My change requires a change to the documentation or CHANGELOG.
 - [ ] I have updated the documentation/CHANGELOG accordingly.
 - [ ] I have created a feature (non-master) branch for my PR.
+- [ ] I have written tests for my code changes.

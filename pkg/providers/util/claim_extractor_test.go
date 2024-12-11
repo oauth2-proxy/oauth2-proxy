@@ -10,8 +10,7 @@ import (
 	"net/url"
 	"sync/atomic"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -26,6 +25,12 @@ const (
         "idTokenGroup1",
         "idTokenGroup2"
       ],
+	  "nested-groups-claim-containing-hyphen": {
+			"groups": [
+				"nestedClaimContainingHypenGroup1",
+				"nestedClaimContainingHypenGroup2"
+			]
+	  },
       "https://groups.test": [
         "fqdnGroup1",
         "fqdnGroup2"
@@ -238,6 +243,18 @@ var _ = Describe("Claim Extractor Suite", func() {
 				claim:         "https://groups.test",
 				expectExists:  true,
 				expectedValue: []interface{}{"fqdnGroup1", "fqdnGroup2"},
+				expectedError: nil,
+			}),
+			Entry("retrieves claim with nested groups claim containing hyphen", getClaimTableInput{
+				testClaimExtractorOpts: testClaimExtractorOpts{
+					idTokenPayload:        basicIDTokenPayload,
+					setProfileURL:         true,
+					profileRequestHeaders: newAuthorizedHeader(),
+					profileRequestHandler: shouldNotBeRequestedProfileHandler,
+				},
+				claim:         "nested-groups-claim-containing-hyphen.groups",
+				expectExists:  true,
+				expectedValue: []interface{}{"nestedClaimContainingHypenGroup1", "nestedClaimContainingHypenGroup2"},
 				expectedError: nil,
 			}),
 		)

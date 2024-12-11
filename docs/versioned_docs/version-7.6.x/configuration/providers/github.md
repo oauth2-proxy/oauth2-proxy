@@ -3,6 +3,18 @@ id: github
 title: GitHub
 ---
 
+## Config Options
+
+| Flag             | Toml Field     | Type           | Description                                                                                                   | Default |
+| ---------------- | -------------- | -------------- | ------------------------------------------------------------------------------------------------------------- | ------- |
+| `--github-org`   | `github_org`   | string         | restrict logins to members of this organisation                                                               |         |
+| `--github-team`  | `github_team`  | string         | restrict logins to members of any of these teams (slug), separated by a comma                                 |         |
+| `--github-repo`  | `github_repo`  | string         | restrict logins to collaborators of this repository formatted as `orgname/repo`                               |         |
+| `--github-token` | `github_token` | string         | the token to use when verifying repository collaborators (must have push access to the repository)            |         |
+| `--github-user`  | `github_users` | string \| list | To allow users to login by username even if they do not belong to the specified org and team or collaborators |         |
+
+## Usage
+
 1.  Create a new project: https://github.com/settings/developers
 2.  Under `Authorization callback URL` enter the correct url ie `https://internal.yourcompany.com/oauth2/callback`
 

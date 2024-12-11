@@ -32,14 +32,15 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.21"
-          cache: false
+          go-version: 1.22.4
+
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.54
+          version: v1.61.0
 
   Tests:
     name: Tests - Executing unit tests
@@ -52,10 +53,10 @@ jobs:
         uses: vazco/github-actions-branch-name@v1
         id: branch
 
-      - name: Set up Go 1.21
+      - name: Set up Go 1.22.4
         uses: actions/setup-go@v5
         with:
-          go-version: 1.21.x
+          go-version: 1.22.4
         id: go
 
       - name: Downloads golang mods

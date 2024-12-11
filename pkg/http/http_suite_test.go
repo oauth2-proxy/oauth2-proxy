@@ -2,6 +2,7 @@ package http
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
@@ -11,14 +12,14 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
 var ipv4CertData, ipv6CertData []byte
 var ipv4CertDataSource, ipv4KeyDataSource options.SecretSource
 var ipv6CertDataSource, ipv6KeyDataSource options.SecretSource
-var client *http.Client
+var transport *http.Transport
 
 func TestHTTPSuite(t *testing.T) {
 	logger.SetOutput(GinkgoWriter)
@@ -26,6 +27,17 @@ func TestHTTPSuite(t *testing.T) {
 
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "HTTP")
+}
+
+func httpGet(ctx context.Context, url string) (*http.Response, error) {
+	c := &http.Client{
+		Transport: transport.Clone(),
+	}
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	return c.Do(req)
 }
 
 var _ = BeforeSuite(func() {
@@ -70,11 +82,7 @@ var _ = BeforeSuite(func() {
 		certpool.AddCert(ipv4certificate)
 		certpool.AddCert(ipv6certificate)
 
-		transport := http.DefaultTransport.(*http.Transport).Clone()
+		transport = http.DefaultTransport.(*http.Transport).Clone()
 		transport.TLSClientConfig.RootCAs = certpool
-
-		client = &http.Client{
-			Transport: transport,
-		}
 	})
 })

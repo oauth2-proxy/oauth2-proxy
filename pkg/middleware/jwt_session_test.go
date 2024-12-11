@@ -14,11 +14,10 @@ import (
 	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	k8serrors "k8s.io/apimachinery/pkg/util/errors"
 )
@@ -401,7 +400,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 		type idTokenClaims struct {
 			Email    string `json:"email,omitempty"`
 			Verified *bool  `json:"email_verified,omitempty"`
-			jwt.StandardClaims
+			jwt.RegisteredClaims
 		}
 
 		type tokenToSessionTableInput struct {
@@ -451,13 +450,12 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 			},
 			Entry("with no email", tokenToSessionTableInput{
 				idToken: idTokenClaims{
-					StandardClaims: jwt.StandardClaims{
-						Audience:  "asdf1234",
-						ExpiresAt: expiresFuture.Unix(),
-						Id:        "id-some-id",
-						IssuedAt:  time.Now().Unix(),
+					RegisteredClaims: jwt.RegisteredClaims{
+						Audience:  jwt.ClaimStrings{"asdf1234"},
+						ExpiresAt: jwt.NewNumericDate(expiresFuture),
+						IssuedAt:  jwt.NewNumericDate(time.Now()),
 						Issuer:    "https://issuer.example.com",
-						NotBefore: 0,
+						NotBefore: jwt.NewNumericDate(time.Time{}),
 						Subject:   "123456789",
 					},
 				},
@@ -468,13 +466,12 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 			}),
 			Entry("with a verified email", tokenToSessionTableInput{
 				idToken: idTokenClaims{
-					StandardClaims: jwt.StandardClaims{
-						Audience:  "asdf1234",
-						ExpiresAt: expiresFuture.Unix(),
-						Id:        "id-some-id",
-						IssuedAt:  time.Now().Unix(),
+					RegisteredClaims: jwt.RegisteredClaims{
+						Audience:  jwt.ClaimStrings{"asdf1234"},
+						ExpiresAt: jwt.NewNumericDate(expiresFuture),
+						IssuedAt:  jwt.NewNumericDate(time.Now()),
 						Issuer:    "https://issuer.example.com",
-						NotBefore: 0,
+						NotBefore: jwt.NewNumericDate(time.Time{}),
 						Subject:   "123456789",
 					},
 					Email:    "foo@example.com",
@@ -487,13 +484,12 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 			}),
 			Entry("with a non-verified email", tokenToSessionTableInput{
 				idToken: idTokenClaims{
-					StandardClaims: jwt.StandardClaims{
-						Audience:  "asdf1234",
-						ExpiresAt: expiresFuture.Unix(),
-						Id:        "id-some-id",
-						IssuedAt:  time.Now().Unix(),
+					RegisteredClaims: jwt.RegisteredClaims{
+						Audience:  jwt.ClaimStrings{"asdf1234"},
+						ExpiresAt: jwt.NewNumericDate(expiresFuture),
+						IssuedAt:  jwt.NewNumericDate(time.Now()),
 						Issuer:    "https://issuer.example.com",
-						NotBefore: 0,
+						NotBefore: jwt.NewNumericDate(time.Time{}),
 						Subject:   "123456789",
 					},
 					Email:    "foo@example.com",

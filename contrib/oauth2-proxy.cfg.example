@@ -52,6 +52,10 @@
 # client_id = "123456.apps.googleusercontent.com"
 # client_secret = ""
 
+## Scopes Added to the request
+## It has the same behavior as the --scope flag
+# scope = "openid email profile"
+
 ## Pass OAuth Access token to upstream via "X-Forwarded-Access-Token"
 # pass_access_token = false
 

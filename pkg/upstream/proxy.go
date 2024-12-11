@@ -81,7 +81,7 @@ func (m *multiUpstreamProxy) registerStaticResponseHandler(upstream options.Upst
 // registerFileServer registers a new fileServer based on the configuration given.
 func (m *multiUpstreamProxy) registerFileServer(upstream options.Upstream, u *url.URL, writer pagewriter.Writer) error {
 	logger.Printf("mapping path %q => file system %q", upstream.Path, u.Path)
-	return m.registerHandler(upstream, newFileServer(upstream.ID, upstream.Path, u.Path), writer)
+	return m.registerHandler(upstream, newFileServer(upstream, u.Path), writer)
 }
 
 // registerHTTPUpstreamProxy registers a new httpUpstreamProxy based on the configuration given.
@@ -122,7 +122,7 @@ func (m *multiUpstreamProxy) registerRewriteHandler(upstream options.Upstream, h
 
 	rewrite := newRewritePath(rewriteRegExp, upstream.RewriteTarget, writer)
 	h := alice.New(rewrite).Then(handler)
-	m.serveMux.MatcherFunc(func(req *http.Request, match *mux.RouteMatch) bool {
+	m.serveMux.MatcherFunc(func(req *http.Request, _ *mux.RouteMatch) bool {
 		return rewriteRegExp.MatchString(req.URL.Path)
 	}).Handler(h)
 

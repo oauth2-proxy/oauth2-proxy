@@ -30,7 +30,8 @@ type HeaderValue struct {
 // ClaimSource allows loading a header value from a claim within the session
 type ClaimSource struct {
 	// Claim is the name of the claim in the session that the value should be
-	// loaded from.
+	// loaded from. Available claims: `access_token` `id_token` `created_at`
+	// `expires_on` `refresh_token` `email` `user` `groups` `preferred_username`.
 	Claim string `json:"claim,omitempty"`
 
 	// Prefix is an optional prefix that will be prepended to the value of the

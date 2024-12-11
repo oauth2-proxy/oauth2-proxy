@@ -46,7 +46,7 @@ func validateAuthRoutes(o *options.Options) []string {
 	return msgs
 }
 
-// validateRegex validates regex paths passed with options.SkipAuthRegex
+// validateAuthRegexes validates regex paths passed with options.SkipAuthRegex
 func validateAuthRegexes(o *options.Options) []string {
 	return validateRegexes(o.SkipAuthRegex)
 }

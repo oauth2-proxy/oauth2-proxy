@@ -46,7 +46,7 @@ func NewAuditClient(opts *ClientOpts) (*Client, error) {
 		SetRetryWaitTime(5 * time.Second).
 		SetRetryMaxWaitTime(20 * time.Second).
 		SetContentLength(true).
-		SetRetryAfter(func(client *resty.Client, resp *resty.Response) (time.Duration, error) {
+		SetRetryAfter(func(_ *resty.Client, _ *resty.Response) (time.Duration, error) {
 			return 0, fmt.Errorf("%w: retry quota exceeded", ErrPersitAuditEvent)
 		})
 	return &Client{enabled: opts.Enabled, apiSignature: apiSignature, client: client, opts: opts}, nil
