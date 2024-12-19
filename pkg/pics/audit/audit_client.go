@@ -54,7 +54,7 @@ func NewAuditClient(opts *ClientOpts) (*Client, error) {
 
 func (c *Client) CreateSuccessfulLoginAuditEntry(ss *sessions.SessionState, appURL string, tenantID string) {
 	coding := Coding{
-		System: "http://hl7.org/fhir/ValueSet/audit-event-type", Version: "1", Code: "110114", Display: "Sailinder Test Image", UserSelected: ""}
+		System: "http://hl7.org/fhir/ValueSet/audit-event-type", Version: "1", Code: "110114", Display: "User Authentication", UserSelected: ""}
 	c.createAuditEntry(ss, appURL, tenantID, "0", "Success", &coding)
 }
 
