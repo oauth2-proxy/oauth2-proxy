@@ -37,18 +37,17 @@ account is still authorized.
 
 #### Restrict auth to specific Google groups on your domain. (optional)
 
-1.  Create a [service account](https://developers.google.com/identity/protocols/OAuth2ServiceAccount) and configure it 
+1.  Create a [service account](https://developers.google.com/identity/protocols/oauth2/service-account) and configure it 
     to use [Application Default Credentials / Workload Identity / Workload Identity Federation (recommended)](#using-application-default-credentials-adc--workload-identity--workload-identity-federation-recommended) or, 
     alternatively download the JSON.
 2.  Make note of the Client ID for a future step.
 3.  Under "APIs & Auth", choose APIs.
 4.  Click on Admin SDK and then Enable API.
-5.  Follow the steps on https://developers.google.com/admin-sdk/directory/v1/guides/delegation#delegate_domain-wide_authority_to_your_service_account 
+5.  Follow the steps on [Set up domain-wide delegation for a service account](https://developers.google.com/workspace/guides/create-credentials#optional_set_up_domain-wide_delegation_for_a_service_account)
     and give the client id from step 2 the following oauth scopes:
 
     ```
-    https://www.googleapis.com/auth/admin.directory.group.readonly
-    https://www.googleapis.com/auth/admin.directory.user.readonly
+    https://www.googleapis.com/auth/admin.directory.group.member.readonly
     ```
 
 6.  Follow the steps on https://support.google.com/a/answer/60757 to enable Admin API access.
