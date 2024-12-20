@@ -53,14 +53,23 @@ func NewAuditClient(opts *ClientOpts) (*Client, error) {
 }
 
 func (c *Client) CreateSuccessfulLoginAuditEntry(ss *sessions.SessionState, appURL string, tenantID string) {
-	c.createAuditEntry(ss, appURL, tenantID, "0", "Success")
+	coding := Coding{
+		System: "http://hl7.org/fhir/ValueSet/audit-event-type", Version: "1", Code: "110114", Display: "User Authentication", UserSelected: ""}
+	c.createAuditEntry(ss, appURL, tenantID, "0", "Success", &coding)
 }
 
 func (c *Client) CreateFailedLoginAuditEntry(ss *sessions.SessionState, appURL string, tenantID string, errorDesc string) {
-	c.createAuditEntry(ss, appURL, tenantID, "1", errorDesc)
+	coding := Coding{
+		System: "http://hl7.org/fhir/ValueSet/audit-event-type", Version: "1", Code: "110114", Display: "User Authentication", UserSelected: ""}
+	c.createAuditEntry(ss, appURL, tenantID, "1", errorDesc, &coding)
 }
 
-func (c *Client) createAuditEntry(ss *sessions.SessionState, appURL string, tenantID string, outcomeCode string, outcomeDesc string) {
+func (c *Client) CreateSuccessfulLogoutAuditEntry(ss *sessions.SessionState, appURL string, tenantID string) {
+	coding := Coding{
+		System: "http://hl7.org/fhir/ValueSet/audit-event-type", Version: "1", Code: "110123", Display: "Logout", UserSelected: "All Sessions"}
+	c.createAuditEntry(ss, appURL, tenantID, "0", "Success", &coding)
+}
+func (c *Client) createAuditEntry(ss *sessions.SessionState, appURL string, tenantID string, outcomeCode string, outcomeDesc string, coding *Coding) {
 	if !c.enabled {
 		return
 	}
@@ -68,7 +77,7 @@ func (c *Client) createAuditEntry(ss *sessions.SessionState, appURL string, tena
 		ResourceType: "AuditEvent",
 		Event: &Event{
 			Type: &Coding{
-				System: "http://hl7.org/fhir/ValueSet/audit-event-type", Version: "1", Code: "110114", Display: "User Authentication"},
+				coding.System, coding.Version, coding.Code, coding.Display, coding.UserSelected},
 			Action:      "E",
 			DateTime:    time.Now().UTC().Format(time.RFC3339),
 			Outcome:     outcomeCode,
