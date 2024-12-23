@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/higress-group/oauth2-proxy/pkg/apis/sessions"
+	"github.com/Jing-ze/oauth2-proxy/pkg/apis/sessions"
 )
 
 type scopeKey string

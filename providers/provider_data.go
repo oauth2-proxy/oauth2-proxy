@@ -9,13 +9,13 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/higress-group/oauth2-proxy/pkg/apis/options"
-	"github.com/higress-group/oauth2-proxy/pkg/apis/sessions"
-	"github.com/higress-group/oauth2-proxy/pkg/middleware"
-	oidc "github.com/higress-group/oauth2-proxy/pkg/providers/go_oidc"
-	internaloidc "github.com/higress-group/oauth2-proxy/pkg/providers/oidc"
-	"github.com/higress-group/oauth2-proxy/pkg/providers/util"
-	pkgutil "github.com/higress-group/oauth2-proxy/pkg/util"
+	"github.com/Jing-ze/oauth2-proxy/pkg/apis/options"
+	"github.com/Jing-ze/oauth2-proxy/pkg/apis/sessions"
+	"github.com/Jing-ze/oauth2-proxy/pkg/middleware"
+	oidc "github.com/Jing-ze/oauth2-proxy/pkg/providers/go_oidc"
+	internaloidc "github.com/Jing-ze/oauth2-proxy/pkg/providers/oidc"
+	"github.com/Jing-ze/oauth2-proxy/pkg/providers/util"
+	pkgutil "github.com/Jing-ze/oauth2-proxy/pkg/util"
 )
 
 const (

@@ -26,7 +26,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/higress-group/oauth2-proxy/pkg/util"
+	"github.com/Jing-ze/oauth2-proxy/pkg/util"
 
 	"github.com/alibaba/higress/plugins/wasm-go/pkg/wrapper"
 	"github.com/go-jose/go-jose/v4"

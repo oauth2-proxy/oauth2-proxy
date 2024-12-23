@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
-	oidc "github.com/higress-group/oauth2-proxy/pkg/providers/go_oidc"
+	oidc "github.com/Jing-ze/oauth2-proxy/pkg/providers/go_oidc"
 )
 
 // idTokenVerifier allows an ID Token to be verified against the issue and provided keys.

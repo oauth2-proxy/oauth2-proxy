@@ -8,11 +8,11 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/higress-group/oauth2-proxy/pkg/apis/options"
-	"github.com/higress-group/oauth2-proxy/pkg/apis/sessions"
-	internaloidc "github.com/higress-group/oauth2-proxy/pkg/providers/oidc"
-	"github.com/higress-group/oauth2-proxy/pkg/providers/util"
-	pkgutil "github.com/higress-group/oauth2-proxy/pkg/util"
+	"github.com/Jing-ze/oauth2-proxy/pkg/apis/options"
+	"github.com/Jing-ze/oauth2-proxy/pkg/apis/sessions"
+	internaloidc "github.com/Jing-ze/oauth2-proxy/pkg/providers/oidc"
+	"github.com/Jing-ze/oauth2-proxy/pkg/providers/util"
+	pkgutil "github.com/Jing-ze/oauth2-proxy/pkg/util"
 
 	"github.com/alibaba/higress/plugins/wasm-go/pkg/wrapper"
 )
@@ -45,6 +45,8 @@ func NewProvider(providerConfig options.Provider) (Provider, error) {
 		return NewOIDCProvider(providerData, providerConfig.OIDCConfig), nil
 	case options.AliyunProvider:
 		return NewAliyunProvider(providerData), nil
+	case options.GitHubProvider:
+		return NewGitHubProvider(providerData), nil
 	default:
 		return nil, fmt.Errorf("unknown provider type %q", providerConfig.Type)
 	}
@@ -158,7 +160,7 @@ func providerRequiresOIDCProviderVerifier(providerType options.ProviderType) (bo
 	switch providerType {
 	case options.OIDCProvider:
 		return true, nil
-	case options.AliyunProvider:
+	case options.AliyunProvider, options.GitHubProvider:
 		return false, nil
 	default:
 		return false, fmt.Errorf("unknown provider type: %s", providerType)

@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	sessionsapi "github.com/higress-group/oauth2-proxy/pkg/apis/sessions"
+	sessionsapi "github.com/Jing-ze/oauth2-proxy/pkg/apis/sessions"
 
-	oidc "github.com/higress-group/oauth2-proxy/pkg/providers/go_oidc"
+	oidc "github.com/Jing-ze/oauth2-proxy/pkg/providers/go_oidc"
 )
 
 // TokenToSessionFunc takes a raw ID Token and converts it into a SessionState.

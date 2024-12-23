@@ -1,4 +1,4 @@
-module github.com/higress-group/oauth2-proxy
+module github.com/Jing-ze/oauth2-proxy
 
 go 1.19
 

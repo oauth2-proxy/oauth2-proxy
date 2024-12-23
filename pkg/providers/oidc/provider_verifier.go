@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	oidc "github.com/higress-group/oauth2-proxy/pkg/providers/go_oidc"
-	"github.com/higress-group/oauth2-proxy/pkg/providers/util"
+	oidc "github.com/Jing-ze/oauth2-proxy/pkg/providers/go_oidc"
+	"github.com/Jing-ze/oauth2-proxy/pkg/providers/util"
 )
 
 // ProviderVerifier represents the OIDC discovery and verification process

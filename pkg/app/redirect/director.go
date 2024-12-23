@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/higress-group/oauth2-proxy/pkg/util"
+	"github.com/Jing-ze/oauth2-proxy/pkg/util"
 )
 
 // AppDirector is responsible for determining where OAuth2 Proxy should redirect

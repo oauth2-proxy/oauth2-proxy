@@ -70,6 +70,8 @@ const (
 	OIDCProvider ProviderType = "oidc"
 
 	AliyunProvider ProviderType = "aliyun"
+
+	GitHubProvider ProviderType = "github"
 )
 
 type OIDCOptions struct {

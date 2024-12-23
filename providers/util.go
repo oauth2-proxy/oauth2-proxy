@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"net/url"
 
-	pkgutil "github.com/higress-group/oauth2-proxy/pkg/util"
+	pkgutil "github.com/Jing-ze/oauth2-proxy/pkg/util"
 )
 
 const (

@@ -3,7 +3,7 @@ package util
 import (
 	"net/http"
 
-	middlewareapi "github.com/higress-group/oauth2-proxy/pkg/apis/middleware"
+	middlewareapi "github.com/Jing-ze/oauth2-proxy/pkg/apis/middleware"
 )
 
 const (

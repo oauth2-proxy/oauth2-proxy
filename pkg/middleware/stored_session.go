@@ -7,11 +7,11 @@ import (
 	"net/http"
 	"time"
 
-	middlewareapi "github.com/higress-group/oauth2-proxy/pkg/apis/middleware"
-	sessionsapi "github.com/higress-group/oauth2-proxy/pkg/apis/sessions"
-	"github.com/higress-group/oauth2-proxy/pkg/util"
+	middlewareapi "github.com/Jing-ze/oauth2-proxy/pkg/apis/middleware"
+	sessionsapi "github.com/Jing-ze/oauth2-proxy/pkg/apis/sessions"
+	"github.com/Jing-ze/oauth2-proxy/pkg/util"
 
-	oidc "github.com/higress-group/oauth2-proxy/pkg/providers/go_oidc"
+	oidc "github.com/Jing-ze/oauth2-proxy/pkg/providers/go_oidc"
 
 	"github.com/alibaba/higress/plugins/wasm-go/pkg/wrapper"
 	"github.com/higress-group/proxy-wasm-go-sdk/proxywasm"
