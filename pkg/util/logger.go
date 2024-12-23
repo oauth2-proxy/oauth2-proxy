@@ -7,7 +7,7 @@ import (
 	"github.com/higress-group/proxy-wasm-go-sdk/proxywasm"
 )
 
-var Logger *wrapper.DefaultLog
+var Logger wrapper.Log
 
 func SendError(errMsg string, rw http.ResponseWriter, status int) {
 	Logger.Errorf(errMsg)

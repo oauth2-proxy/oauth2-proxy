@@ -146,7 +146,7 @@ func NewOAuthProxy(opts *options.Options) (*OAuthProxy, error) {
 }
 
 func SetLogger(log wrapper.Log) {
-	util.Logger = &log
+	util.Logger = log
 }
 
 func (p *OAuthProxy) buildServeMux(proxyPrefix string) {
