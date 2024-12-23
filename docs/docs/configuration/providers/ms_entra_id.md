@@ -95,7 +95,7 @@ For single-tenant and multi-tenant apps without groups, the only required scope 
 
 To make use of groups - for example use `allowed_groups` setting or authorize based on groups inside your service - you need to enable *groups claims* in the App Registration. When enabled, list of groups is present in the issued ID token. No additional scopes are required besides `openid`. This works up to 200 groups.
 
-When user has more than 200 group memberships, OAuth2-Proxy attempts to retrieve the complete list from Microsoft Graph API's [`transitiveMemberOf`](https://learn.microsoft.com/en-us/graph/api/user-list-transitivememberof). Endpoint requires `User.Read` scope (delegated permission). This permission can be by default consented by user during first login. Set scope to `openid User.Read` to request user consent. Without proper scope, user with 200+ groups will authenticate with 0 groups. Up to 999 groups is supported. See: [group overages](https://learn.microsoft.com/en-us/security/zero-trust/develop/configure-tokens-group-claims-app-roles#group-overages).
+When user has more than 200 group memberships, OAuth2-Proxy attempts to retrieve the complete list from Microsoft Graph API's [`transitiveMemberOf`](https://learn.microsoft.com/en-us/graph/api/user-list-transitivememberof). Endpoint requires `User.Read` scope (delegated permission). This permission can be by default consented by user during first login. Set scope to `openid User.Read` to request user consent. Without proper scope, user with 200+ groups will authenticate with 0 groups. See: [group overages](https://learn.microsoft.com/en-us/security/zero-trust/develop/configure-tokens-group-claims-app-roles#group-overages).
 
 Alternatively to user consent, both `openid` and `User.Read` permissions can be consented by admistrator. Then, user is not asked for consent on the first login, and group overage works with `openid` scope only. Admin consent can also be required for some tenants. It can be granted with [azuread_service_principal_delegated_permission_grant](https://registry.terraform.io/providers/hashicorp/azuread/latest/docs/resources/service_principal_delegated_permission_grant) terraform resource.
 
@@ -135,7 +135,7 @@ scope="openid"
 allowed_groups=["ac51800c-2679-4ecb-8130-636380a3b491"]
 ```
 
-Single-tenant app with up to 999 groups:
+Single-tenant app with more than 200 groups:
 ```toml
 provider="entra-id"
 oidc_issuer_url="https://login.microsoftonline.com/<tenant-id>/v2.0"
