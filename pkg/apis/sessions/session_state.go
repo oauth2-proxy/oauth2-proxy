@@ -29,6 +29,9 @@ type SessionState struct {
 	Groups            []string `msgpack:"g,omitempty"`
 	PreferredUsername string   `msgpack:"pu,omitempty"`
 
+	// Additional claims
+	AdditionalClaims map[string]interface{} `msgpack:"ac,omitempty"`
+
 	// Internal helpers, not serialized
 	Clock clock.Clock `msgpack:"-"`
 	Lock  Lock        `msgpack:"-"`
@@ -149,8 +152,32 @@ func (s *SessionState) GetClaim(claim string) []string {
 	case "preferred_username":
 		return []string{s.PreferredUsername}
 	default:
-		return []string{}
+		return s.getAdditionalClaim(claim)
 	}
+}
+
+func (s *SessionState) getAdditionalClaim(claim string) []string {
+	if value, ok := s.AdditionalClaims[claim]; ok {
+		switch v := value.(type) {
+		case string:
+			return []string{v}
+		case []string:
+			return v
+		case []interface{}:
+			result := make([]string, len(v))
+			for i, item := range v {
+				if str, ok := item.(string); ok {
+					result[i] = str
+				} else {
+					result[i] = fmt.Sprintf("%v", item)
+				}
+			}
+			return result
+		default:
+			return []string{fmt.Sprintf("%v", value)}
+		}
+	}
+	return []string{}
 }
 
 // CheckNonce compares the Nonce against a potential hash of it
