@@ -113,7 +113,7 @@ insecure_oidc_skip_issuer_verification=true
 * Startup check for matching issuer URL returned from [discovery document](https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration) with `oidc_issuer_url` setting. Required, as document's `issuer` field doesn't equal to `https://login.microsoftonline.com/common/v2.0`. See [OIDC Discovery 4.3](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationValidation).
 * Matching ID token's `issuer` claim with `oidc_issuer_url` setting during ID token validation. Required to support tokens issued by diffrerent tenants. See [OIDC Core 3.1.3.7](https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation). 
 
-To Entra ID provider performs a custom issuer check on the `issuer` claim to accept tokens issued only by `https://login.microsoftonline.com/{tenant-id}/v2.0`.
+To provide additional security, Entra ID provider performs check on the ID token's `issuer` claim to match the `https://login.microsoftonline.com/{tenant-id}/v2.0` template.
 
 ### Example configurations
 Single-tenant app without groups (*groups claim* not enabled). Consider using generic OIDC provider:
