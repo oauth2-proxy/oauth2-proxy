@@ -69,6 +69,7 @@ type OAuthProxy struct {
 	appDirector       redirect.AppDirector
 
 	passAuthorization bool
+	passAccessToken   bool
 	encodeState       bool
 
 	client wrapper.HttpClient
@@ -137,6 +138,7 @@ func NewOAuthProxy(opts *options.Options) (*OAuthProxy, error) {
 		appDirector:       appDirector,
 		encodeState:       opts.EncodeState,
 		passAuthorization: opts.PassAuthorization,
+		passAccessToken:   opts.PassAccessToken,
 
 		client: serviceClient,
 	}
@@ -440,6 +442,10 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 		if p.passAuthorization {
 			proxywasm.AddHttpRequestHeader("Authorization", fmt.Sprintf("%s %s", providers.TokenTypeBearer, session.IDToken))
 			util.Logger.Debug("Authorization header add id token")
+		}
+		if p.passAccessToken {
+			proxywasm.AddHttpRequestHeader("X-Forwarded-Access-Token", session.AccessToken)
+			util.Logger.Debug("X-Forwarded-Access-Token header add access token")
 		}
 		if cookies, ok := rw.Header()[SetCookieHeader]; ok && len(cookies) > 0 {
 			newCookieValue := strings.Join(cookies, ",")
