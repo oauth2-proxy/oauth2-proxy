@@ -60,13 +60,19 @@ func validateToken(ctx context.Context, p Provider, accessToken string, header h
 			endpoint = endpoint + "?" + params.Encode()
 		}
 	}
+	var headerArray [][2]string
+	for key, values := range header {
+		for _, value := range values {
+			headerArray = append(headerArray, [2]string{key, value})
+		}
+	}
 
-	client.Get(endpoint, headers, []byte{}, func(statusCode int, responseHeaders http.Header, responseBody []byte) {
+	client.Get(endpoint, headerArray, func(statusCode int, responseHeaders http.Header, responseBody []byte) {
 		util.Logger.Debugf("%d GET %s %s", statusCode, stripToken(endpoint), responseBody)
 		if statusCode == 200 {
 			callback()
 		} else {
-			util.SendError(fmt.Sprintf("token validation request failed: status %d - %s", result.StatusCode(), result.Body()), nil, http.StatusInternalServerError)
+			util.SendError(fmt.Sprintf("token validation request failed: status %d - %s", statusCode, responseBody), nil, http.StatusInternalServerError)
 		}
 	}, timeout)
 	return true, true
