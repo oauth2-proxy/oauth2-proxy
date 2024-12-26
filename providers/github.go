@@ -69,6 +69,7 @@ func makeGitHubHeader(accessToken string) http.Header {
 	// extra headers required by the GitHub API when making authenticated requests
 	extraHeaders := map[string]string{
 		acceptHeader: "application/vnd.github.v3+json",
+		"User-Agent": "HigressOidcPlugin/1.0",
 	}
 	return makeAuthorizationHeader(TokenTypeToken, accessToken, extraHeaders)
 }
