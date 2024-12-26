@@ -70,7 +70,7 @@ func validateToken(ctx context.Context, p Provider, accessToken string, header h
 	client.Get(endpoint, headerArray, func(statusCode int, responseHeaders http.Header, responseBody []byte) {
 		util.Logger.Debugf("%d GET %s %s", statusCode, stripToken(endpoint), responseBody)
 		if statusCode == 200 {
-			callback()
+			callback(true)
 		} else {
 			util.SendError(fmt.Sprintf("token validation request failed: status %d - %s", statusCode, responseBody), nil, http.StatusInternalServerError)
 		}
