@@ -1,7 +1,12 @@
 package providers
 
 import (
+	"context"
+	"net/http"
 	"net/url"
+
+	"github.com/Jing-ze/oauth2-proxy/pkg/apis/sessions"
+	"github.com/alibaba/higress/plugins/wasm-go/pkg/wrapper"
 )
 
 // GitHubProvider represents an GitHub based Identity Provider
@@ -60,15 +65,15 @@ func NewGitHubProvider(p *ProviderData) *GitHubProvider {
 	return provider
 }
 
-// func makeGitHubHeader(accessToken string) http.Header {
-// 	// extra headers required by the GitHub API when making authenticated requests
-// 	extraHeaders := map[string]string{
-// 		acceptHeader: "application/vnd.github.v3+json",
-// 	}
-// 	return makeAuthorizationHeader(tokenTypeToken, accessToken, extraHeaders)
-// }
+func makeGitHubHeader(accessToken string) http.Header {
+	// extra headers required by the GitHub API when making authenticated requests
+	extraHeaders := map[string]string{
+		acceptHeader: "application/vnd.github.v3+json",
+	}
+	return makeAuthorizationHeader(tokenTypeToken, accessToken, extraHeaders)
+}
 
 // ValidateSession validates the AccessToken
-// func (p *GitHubProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
-// 	return validateToken(ctx, p, s.AccessToken, makeGitHubHeader(s.AccessToken))
-// }
+func (p *GitHubProvider) ValidateSession(ctx context.Context, s *sessions.SessionState, client wrapper.HttpClient, callback func(args ...interface{}), timeout uint32) (bool, bool) {
+	return validateToken(ctx, p, s.AccessToken, makeGitHubHeader(s.AccessToken), client, callback, timeout)
+}

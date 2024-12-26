@@ -141,8 +141,8 @@ func (p *ProviderData) Authorize(_ context.Context, s *sessions.SessionState) (b
 }
 
 // ValidateSession validates the AccessToken
-func (p *ProviderData) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
-	return true
+func (p *ProviderData) ValidateSession(ctx context.Context, s *sessions.SessionState, client wrapper.HttpClient, callback func(args ...interface{}), timeout uint32) (bool, bool) {
+	return true, false
 }
 
 // RefreshSession refreshes the user's session

@@ -31,7 +31,7 @@ type Provider interface {
 	GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error)
 	EnrichSession(ctx context.Context, s *sessions.SessionState) error
 	Authorize(ctx context.Context, s *sessions.SessionState) (bool, error)
-	ValidateSession(ctx context.Context, s *sessions.SessionState) bool
+	ValidateSession(ctx context.Context, s *sessions.SessionState, client wrapper.HttpClient, callback func(args ...interface{}), timeout uint32) (bool, bool)
 	RefreshSession(ctx context.Context, s *sessions.SessionState, client wrapper.HttpClient, callback func(args ...interface{}), timeout uint32) (bool, error)
 }
 

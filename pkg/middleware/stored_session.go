@@ -28,13 +28,15 @@ type StoredSessionLoaderOptions struct {
 	// How often should sessions be refreshed
 	RefreshPeriod time.Duration
 
-	// Provider based session refreshing
+	// Provider based session
+	// return value isAsync and error
 	RefreshSession func(context.Context, *sessionsapi.SessionState, wrapper.HttpClient, func(args ...interface{}), uint32) (bool, error)
 
 	// Provider based session validation.
 	// If the session is older than `RefreshPeriod` but the provider doesn't
 	// refresh it, we must re-validate using this validation.
-	ValidateSession func(context.Context, *sessionsapi.SessionState) bool
+	// return value valid and isAsync
+	ValidateSession func(context.Context, *sessionsapi.SessionState, wrapper.HttpClient, func(args ...interface{}), uint32) (bool, bool)
 
 	// Refresh request parameters
 	RefreshClient         wrapper.HttpClient
@@ -63,7 +65,7 @@ type StoredSessionLoader struct {
 	store            sessionsapi.SessionStore
 	refreshPeriod    time.Duration
 	sessionRefresher func(context.Context, *sessionsapi.SessionState, wrapper.HttpClient, func(args ...interface{}), uint32) (bool, error)
-	sessionValidator func(context.Context, *sessionsapi.SessionState) bool
+	sessionValidator func(context.Context, *sessionsapi.SessionState, wrapper.HttpClient, func(args ...interface{}), uint32) (bool, bool)
 
 	// Refresh request parameters
 	refreshClient         wrapper.HttpClient
@@ -90,15 +92,25 @@ func (s *StoredSessionLoader) loadSession(next http.Handler) http.Handler {
 			resumeFlag := args[1].(bool)
 			updateKeysCallback := func(args ...interface{}) {
 				resumeFlag := args[0].(bool)
-				if session != nil && s.validateSession(req.Context(), session) != nil {
-					session = nil
-				}
-				scope.Session = session
-				next.ServeHTTP(rw, req)
-				if resumeFlag {
-					if rw.Header().Get(util.ResponseCode) == string(http.StatusOK) {
-						proxywasm.ResumeHttpRequest()
+				validateSessionCallback := func(args ...interface{}) {
+					scope.Session = session
+					next.ServeHTTP(rw, req)
+					if resumeFlag {
+						if rw.Header().Get(util.ResponseCode) == string(http.StatusOK) {
+							proxywasm.ResumeHttpRequest()
+						}
 					}
+				}
+				if session != nil {
+					err, isAsync := s.validateSession(req.Context(), session, validateSessionCallback)
+					if err != nil {
+						session = nil
+					}
+					if !isAsync {
+						validateSessionCallback()
+					}
+				} else {
+					validateSessionCallback()
 				}
 			}
 			keysNeedsUpdate := (session != nil) && (s.NeedsVerifier)
@@ -206,14 +218,14 @@ func (s *StoredSessionLoader) refreshSession(rw http.ResponseWriter, req *http.R
 // validateSession checks whether the session has expired and performs
 // provider validation on the session.
 // An error implies the session is no longer valid.
-func (s *StoredSessionLoader) validateSession(ctx context.Context, session *sessionsapi.SessionState) error {
+func (s *StoredSessionLoader) validateSession(ctx context.Context, session *sessionsapi.SessionState, callback func(args ...interface{})) (error, bool) {
 	if session.IsExpired() {
-		return errors.New("session is expired")
+		return errors.New("session is expired"), false
+	}
+	valid, isAsync := s.sessionValidator(ctx, session, s.refreshClient, callback, s.refreshRequestTimeout)
+	if !valid {
+		return errors.New("session is invalid"), isAsync
 	}
 
-	if !s.sessionValidator(ctx, session) {
-		return errors.New("session is invalid")
-	}
-
-	return nil
+	return nil, isAsync
 }
