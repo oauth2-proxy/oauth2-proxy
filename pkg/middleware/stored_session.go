@@ -105,6 +105,10 @@ func (s *StoredSessionLoader) loadSession(next http.Handler) http.Handler {
 				resumeFlag := args[0].(bool)
 				validateSessionCallback := func(args ...interface{}) {
 					resumeFlag := args[0].(bool)
+					sessionValid := args[1].(bool)
+					if !sessionValid {
+						session = nil
+					}
 					scope.Session = session
 					next.ServeHTTP(rw, req)
 					if resumeFlag {
@@ -115,14 +119,11 @@ func (s *StoredSessionLoader) loadSession(next http.Handler) http.Handler {
 				}
 				if session != nil {
 					err, isAsync := s.validateSession(req.Context(), session, validateSessionCallback)
-					if err != nil {
-						session = nil
-					}
 					if !isAsync {
-						validateSessionCallback(resumeFlag)
+						validateSessionCallback(resumeFlag, err == nil)
 					}
 				} else {
-					validateSessionCallback(resumeFlag)
+					validateSessionCallback(resumeFlag, true)
 				}
 			}
 			keysNeedsUpdate := (session != nil) && (s.NeedsVerifier)
