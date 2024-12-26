@@ -33,7 +33,7 @@ type ValidateService struct {
 	ServiceHost string `mapstructure:"validate_service_host"`
 }
 
-func (s *ValidateService) NewValidateService() (wrapper.HttpClient, error) {
+func (s *ValidateService) NewService() (wrapper.HttpClient, error) {
 	if s.ServiceName == "" || s.ServicePort == 0 {
 		return nil, errors.New("invalid service config")
 	}
