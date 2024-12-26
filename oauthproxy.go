@@ -383,30 +383,35 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		csrf.SetSessionNonce(session)
 
 		updateKeysCallback := func(args ...interface{}) {
-			if !p.provider.ValidateSession(req.Context(), session) {
+			validateSessionCallback := func(args ...interface{}) {
+				util.Logger.Debug("Session validated successfully")
+				if !p.redirectValidator.IsValidRedirect(appRedirect) {
+					appRedirect = "/"
+					util.Logger.Debugf("Invalid redirect, defaulting to root: %s", appRedirect)
+				}
+				// set cookie, or deny
+				authorized, err := p.provider.Authorize(req.Context(), session)
+				if err != nil {
+					util.Logger.Errorf("Error with authorization: %v", err)
+				}
+				if p.validator(session.Email) && authorized {
+					util.Logger.Infof("Authenticated successfully via OAuth2: %s", session)
+					err := p.SaveSession(rw, req, session)
+					if err != nil {
+						util.SendError(fmt.Sprintf("Error saving session state: %v", err), rw, http.StatusInternalServerError)
+						return
+					}
+					redirectToLocation(rw, appRedirect)
+				} else {
+					util.SendError("Invalid authentication via OAuth2: unauthorized", rw, http.StatusForbidden)
+				}
+			}
+			err, isAsync := p.provider.ValidateSession(req.Context(), session, p.client, validateSessionCallback, p.provider.Data().RedeemTimeout)
+			if err != nil {
 				util.SendError(fmt.Sprintf("Session validation failed: %s", session), rw, http.StatusForbidden)
 				return
-			}
-			util.Logger.Debug("Session validated successfully")
-			if !p.redirectValidator.IsValidRedirect(appRedirect) {
-				appRedirect = "/"
-				util.Logger.Debugf("Invalid redirect, defaulting to root: %s", appRedirect)
-			}
-			// set cookie, or deny
-			authorized, err := p.provider.Authorize(req.Context(), session)
-			if err != nil {
-				util.Logger.Errorf("Error with authorization: %v", err)
-			}
-			if p.validator(session.Email) && authorized {
-				util.Logger.Infof("Authenticated successfully via OAuth2: %s", session)
-				err := p.SaveSession(rw, req, session)
-				if err != nil {
-					util.SendError(fmt.Sprintf("Error saving session state: %v", err), rw, http.StatusInternalServerError)
-					return
-				}
-				redirectToLocation(rw, appRedirect)
-			} else {
-				util.SendError("Invalid authentication via OAuth2: unauthorized", rw, http.StatusForbidden)
+			} else if !isAsync {
+				validateSessionCallback()
 			}
 		}
 		if p.provider.Data().NeedsVerifier {
