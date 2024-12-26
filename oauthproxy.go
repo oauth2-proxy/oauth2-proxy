@@ -406,8 +406,8 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 					util.SendError("Invalid authentication via OAuth2: unauthorized", rw, http.StatusForbidden)
 				}
 			}
-			err, isAsync := p.provider.ValidateSession(req.Context(), session, p.client, validateSessionCallback, p.provider.Data().RedeemTimeout)
-			if err != nil {
+			valid, isAsync := p.provider.ValidateSession(req.Context(), session, p.client, validateSessionCallback, p.provider.Data().RedeemTimeout)
+			if !valid {
 				util.SendError(fmt.Sprintf("Session validation failed: %s", session), rw, http.StatusForbidden)
 				return
 			} else if !isAsync {
