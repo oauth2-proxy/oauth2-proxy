@@ -117,7 +117,7 @@ func NewOAuthProxy(opts *options.Options) (*OAuthProxy, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not build pre-auth chain: %v", err)
 	}
-	sessionChain := buildSessionChain(opts, provider, sessionStore, serviceClient)
+	sessionChain := buildSessionChain(opts, provider, sessionStore, serviceClient, validateServiceClient)
 
 	redirectValidator := redirect.NewValidator(opts.WhitelistDomains)
 	appDirector := redirect.NewAppDirector(redirect.AppDirectorOpts{
@@ -195,16 +195,18 @@ func buildPreAuthChain(opts *options.Options) (alice.Chain, error) {
 	return chain, nil
 }
 
-func buildSessionChain(opts *options.Options, provider providers.Provider, sessionStore sessionsapi.SessionStore, serviceClient wrapper.HttpClient) alice.Chain {
+func buildSessionChain(opts *options.Options, provider providers.Provider, sessionStore sessionsapi.SessionStore, serviceClient wrapper.HttpClient, validateClient wrapper.HttpClient) alice.Chain {
 	chain := alice.New()
 
 	ss, loadSession := middleware.NewStoredSessionLoader(&middleware.StoredSessionLoaderOptions{
-		SessionStore:          sessionStore,
-		RefreshPeriod:         opts.Cookie.Refresh,
-		RefreshSession:        provider.RefreshSession,
-		ValidateSession:       provider.ValidateSession,
-		RefreshClient:         serviceClient,
-		RefreshRequestTimeout: provider.Data().RedeemTimeout,
+		SessionStore:           sessionStore,
+		RefreshPeriod:          opts.Cookie.Refresh,
+		RefreshSession:         provider.RefreshSession,
+		ValidateSession:        provider.ValidateSession,
+		RefreshClient:          serviceClient,
+		ValidateClient:         validateClient,
+		RefreshRequestTimeout:  provider.Data().RedeemTimeout,
+		ValidateRequestTimeout: provider.Data().RedeemTimeout,
 	})
 	chain = chain.Append(loadSession)
 	provider.Data().StoredSession = ss

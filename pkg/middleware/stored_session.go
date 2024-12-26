@@ -41,6 +41,10 @@ type StoredSessionLoaderOptions struct {
 	// Refresh request parameters
 	RefreshClient         wrapper.HttpClient
 	RefreshRequestTimeout uint32
+
+	// Validate request parameters
+	ValidateClient         wrapper.HttpClient
+	ValidateRequestTimeout uint32
 }
 
 // NewStoredSessionLoader creates a new StoredSessionLoader which loads
@@ -49,12 +53,14 @@ type StoredSessionLoaderOptions struct {
 // If a session was loader by a previous handler, it will not be replaced.
 func NewStoredSessionLoader(opts *StoredSessionLoaderOptions) (*StoredSessionLoader, alice.Constructor) {
 	ss := &StoredSessionLoader{
-		store:                 opts.SessionStore,
-		refreshPeriod:         opts.RefreshPeriod,
-		sessionRefresher:      opts.RefreshSession,
-		sessionValidator:      opts.ValidateSession,
-		refreshClient:         opts.RefreshClient,
-		refreshRequestTimeout: opts.RefreshRequestTimeout,
+		store:                  opts.SessionStore,
+		refreshPeriod:          opts.RefreshPeriod,
+		sessionRefresher:       opts.RefreshSession,
+		sessionValidator:       opts.ValidateSession,
+		refreshClient:          opts.RefreshClient,
+		refreshRequestTimeout:  opts.RefreshRequestTimeout,
+		validateClient:         opts.ValidateClient,
+		validateRequestTimeout: opts.ValidateRequestTimeout,
 	}
 	return ss, ss.loadSession
 }
@@ -70,8 +76,13 @@ type StoredSessionLoader struct {
 	// Refresh request parameters
 	refreshClient         wrapper.HttpClient
 	refreshRequestTimeout uint32
-	RemoteKeySet          *oidc.KeySet
-	NeedsVerifier         bool
+
+	// Validate request parameters
+	validateClient         wrapper.HttpClient
+	validateRequestTimeout uint32
+
+	RemoteKeySet  *oidc.KeySet
+	NeedsVerifier bool
 }
 
 // loadSession attempts to load a session as identified by the request cookies.
@@ -222,7 +233,7 @@ func (s *StoredSessionLoader) validateSession(ctx context.Context, session *sess
 	if session.IsExpired() {
 		return errors.New("session is expired"), false
 	}
-	valid, isAsync := s.sessionValidator(ctx, session, s.refreshClient, callback, s.refreshRequestTimeout)
+	valid, isAsync := s.sessionValidator(ctx, session, s.validateClient, callback, s.validateRequestTimeout)
 	if !valid {
 		return errors.New("session is invalid"), isAsync
 	}
