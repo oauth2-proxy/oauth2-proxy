@@ -22,10 +22,11 @@ type Options struct {
 
 	WhitelistDomains []string `mapstructure:"whitelist_domains"`
 
-	Cookie     Cookie         `mapstructure:",squash"`
-	Session    SessionOptions `mapstructure:",squash"`
-	Service    Service        `mapstructure:",squash"`
-	MatchRules MatchRules     `mapstructure:",squash"`
+	Cookie          Cookie          `mapstructure:",squash"`
+	Session         SessionOptions  `mapstructure:",squash"`
+	Service         Service         `mapstructure:",squash"`
+	ValidateService ValidateService `mapstructure:",squash"`
+	MatchRules      MatchRules      `mapstructure:",squash"`
 
 	Providers Providers
 

@@ -72,7 +72,8 @@ type OAuthProxy struct {
 	passAccessToken   bool
 	encodeState       bool
 
-	client wrapper.HttpClient
+	client         wrapper.HttpClient
+	validateClient wrapper.HttpClient
 }
 
 // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
@@ -102,6 +103,14 @@ func NewOAuthProxy(opts *options.Options) (*OAuthProxy, error) {
 	serviceClient, err := opts.Service.NewService()
 	if err != nil {
 		return nil, err
+	}
+
+	var validateServiceClient wrapper.HttpClient
+	if opts.ValidateService.ServiceName != "" {
+		validateServiceClient, err = opts.ValidateService.NewService()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	preAuthChain, err := buildPreAuthChain(opts)
@@ -140,7 +149,8 @@ func NewOAuthProxy(opts *options.Options) (*OAuthProxy, error) {
 		passAuthorization: opts.PassAuthorization,
 		passAccessToken:   opts.PassAccessToken,
 
-		client: serviceClient,
+		client:         serviceClient,
+		validateClient: validateServiceClient,
 	}
 	p.buildServeMux(opts.ProxyPrefix)
 
@@ -406,7 +416,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 					util.SendError("Invalid authentication via OAuth2: unauthorized", rw, http.StatusForbidden)
 				}
 			}
-			valid, isAsync := p.provider.ValidateSession(req.Context(), session, p.client, validateSessionCallback, p.provider.Data().RedeemTimeout)
+			valid, isAsync := p.provider.ValidateSession(req.Context(), session, p.validateClient, validateSessionCallback, p.provider.Data().RedeemTimeout)
 			if !valid {
 				util.SendError(fmt.Sprintf("Session validation failed: %s", session), rw, http.StatusForbidden)
 				return
