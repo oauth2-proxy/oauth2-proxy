@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/Jing-ze/oauth2-proxy/pkg/apis/sessions"
 	"github.com/alibaba/higress/plugins/wasm-go/pkg/wrapper"
+	"github.com/higress-group/oauth2-proxy/pkg/apis/sessions"
 )
 
 // GitHubProvider represents an GitHub based Identity Provider
