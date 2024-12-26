@@ -10,6 +10,7 @@ import (
 
 const (
 	TokenTypeBearer = "Bearer"
+	TokenTypeToken  = "token"
 
 	acceptHeader          = "Accept"
 	acceptApplicationJSON = "application/json"

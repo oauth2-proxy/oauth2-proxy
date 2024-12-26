@@ -70,7 +70,7 @@ func makeGitHubHeader(accessToken string) http.Header {
 	extraHeaders := map[string]string{
 		acceptHeader: "application/vnd.github.v3+json",
 	}
-	return makeAuthorizationHeader(tokenTypeToken, accessToken, extraHeaders)
+	return makeAuthorizationHeader(TokenTypeToken, accessToken, extraHeaders)
 }
 
 // ValidateSession validates the AccessToken
