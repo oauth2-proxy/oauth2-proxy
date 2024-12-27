@@ -117,21 +117,21 @@ func (p *OIDCProvider) EnrichSession(_ context.Context, s *sessions.SessionState
 }
 
 // ValidateSession checks that the session's IDToken is still valid
-func (p *OIDCProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
+func (p *OIDCProvider) ValidateSession(ctx context.Context, s *sessions.SessionState, client wrapper.HttpClient, callback func(args ...interface{}), timeout uint32) (bool, bool) {
 	_, err := p.Verifier.Verify(ctx, s.IDToken)
 	if err != nil {
 		util.Logger.Errorf("id_token verification failed: %v", err)
-		return false
+		return false, false
 	}
 	if p.SkipNonce {
-		return true
+		return true, false
 	}
 	err = p.checkNonce(s)
 	if err != nil {
 		util.Logger.Errorf("nonce verification failed: %v", err)
-		return false
+		return false, false
 	}
-	return true
+	return true, false
 }
 
 // RefreshSession uses the RefreshToken to fetch new Access and ID Tokens

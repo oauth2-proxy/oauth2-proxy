@@ -22,16 +22,18 @@ type Options struct {
 
 	WhitelistDomains []string `mapstructure:"whitelist_domains"`
 
-	Cookie     Cookie         `mapstructure:",squash"`
-	Session    SessionOptions `mapstructure:",squash"`
-	Service    Service        `mapstructure:",squash"`
-	MatchRules MatchRules     `mapstructure:",squash"`
+	Cookie          Cookie          `mapstructure:",squash"`
+	Session         SessionOptions  `mapstructure:",squash"`
+	Service         Service         `mapstructure:",squash"`
+	ValidateService ValidateService `mapstructure:",squash"`
+	MatchRules      MatchRules      `mapstructure:",squash"`
 
 	Providers Providers
 
 	SkipAuthPreflight bool `mapstructure:"skip_auth_preflight"`
 	EncodeState       bool `mapstructure:"encode_state"`
 	PassAuthorization bool `mapstructure:"pass_authorization_header"`
+	PassAccessToken   bool `mapstructure:"pass_access_token"`
 
 	VerifierInterval   time.Duration `mapstructure:"verifier_interval"`
 	UpdateKeysInterval time.Duration `mapstructure:"update_keys_interval"`
@@ -57,6 +59,7 @@ func NewOptions() *Options {
 		Session:            sessionOptionsDefaults(),
 		SkipAuthPreflight:  false,
 		PassAuthorization:  true,
+		PassAccessToken:    false,
 		VerifierInterval:   2 * time.Second, // 5 seconds
 		UpdateKeysInterval: 24 * time.Hour,  // 24 hours
 		MatchRules:         matchRulesDefaults(),

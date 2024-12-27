@@ -2,7 +2,9 @@ package providers
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -75,13 +77,35 @@ func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code, codeVerifi
 	req.Body.Close()
 
 	client.Post(p.RedeemURL.String(), headerArray, bodyBytes, func(statusCode int, responseHeaders http.Header, responseBody []byte) {
-		token, err := util.UnmarshalToken(responseHeaders, responseBody)
-		if err != nil {
-			util.SendError(err.Error(), nil, http.StatusInternalServerError)
-			return
-		}
-		session := &sessions.SessionState{
-			AccessToken: token.AccessToken,
+		// blindly try json and x-www-form-urlencoded
+		var (
+			jsonResponse struct {
+				AccessToken string `json:"access_token"`
+			}
+			session *sessions.SessionState
+		)
+
+		jsonInValid := json.Unmarshal(responseBody, &jsonResponse)
+		if jsonInValid == nil && jsonResponse.AccessToken != "" {
+			session = &sessions.SessionState{
+				AccessToken: jsonResponse.AccessToken,
+			}
+			session.CreatedAtNow()
+		} else {
+			values, err := url.ParseQuery(string(responseBody))
+			if err != nil {
+				util.SendError(err.Error(), nil, http.StatusInternalServerError)
+				return
+			}
+			if token := values.Get("access_token"); token != "" {
+				session = &sessions.SessionState{
+					AccessToken: token,
+				}
+				session.CreatedAtNow()
+			} else {
+				util.SendError(fmt.Sprintf("no access token found %s", responseBody), nil, http.StatusInternalServerError)
+				return
+			}
 		}
 		callback(session)
 	}, timeout)
@@ -117,8 +141,8 @@ func (p *ProviderData) Authorize(_ context.Context, s *sessions.SessionState) (b
 }
 
 // ValidateSession validates the AccessToken
-func (p *ProviderData) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
-	return true
+func (p *ProviderData) ValidateSession(ctx context.Context, s *sessions.SessionState, client wrapper.HttpClient, callback func(args ...interface{}), timeout uint32) (bool, bool) {
+	return true, false
 }
 
 // RefreshSession refreshes the user's session

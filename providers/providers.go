@@ -31,7 +31,7 @@ type Provider interface {
 	GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error)
 	EnrichSession(ctx context.Context, s *sessions.SessionState) error
 	Authorize(ctx context.Context, s *sessions.SessionState) (bool, error)
-	ValidateSession(ctx context.Context, s *sessions.SessionState) bool
+	ValidateSession(ctx context.Context, s *sessions.SessionState, client wrapper.HttpClient, callback func(args ...interface{}), timeout uint32) (bool, bool)
 	RefreshSession(ctx context.Context, s *sessions.SessionState, client wrapper.HttpClient, callback func(args ...interface{}), timeout uint32) (bool, error)
 }
 
@@ -45,6 +45,8 @@ func NewProvider(providerConfig options.Provider) (Provider, error) {
 		return NewOIDCProvider(providerData, providerConfig.OIDCConfig), nil
 	case options.AliyunProvider:
 		return NewAliyunProvider(providerData), nil
+	case options.GitHubProvider:
+		return NewGitHubProvider(providerData), nil
 	default:
 		return nil, fmt.Errorf("unknown provider type %q", providerConfig.Type)
 	}
@@ -158,7 +160,7 @@ func providerRequiresOIDCProviderVerifier(providerType options.ProviderType) (bo
 	switch providerType {
 	case options.OIDCProvider:
 		return true, nil
-	case options.AliyunProvider:
+	case options.AliyunProvider, options.GitHubProvider:
 		return false, nil
 	default:
 		return false, fmt.Errorf("unknown provider type: %s", providerType)

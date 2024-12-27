@@ -69,9 +69,11 @@ type OAuthProxy struct {
 	appDirector       redirect.AppDirector
 
 	passAuthorization bool
+	passAccessToken   bool
 	encodeState       bool
 
-	client wrapper.HttpClient
+	client         wrapper.HttpClient
+	validateClient wrapper.HttpClient
 }
 
 // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
@@ -103,11 +105,19 @@ func NewOAuthProxy(opts *options.Options) (*OAuthProxy, error) {
 		return nil, err
 	}
 
+	var validateServiceClient wrapper.HttpClient
+	if opts.ValidateService.ServiceName != "" {
+		validateServiceClient, err = opts.ValidateService.NewService()
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	preAuthChain, err := buildPreAuthChain(opts)
 	if err != nil {
 		return nil, fmt.Errorf("could not build pre-auth chain: %v", err)
 	}
-	sessionChain := buildSessionChain(opts, provider, sessionStore, serviceClient)
+	sessionChain := buildSessionChain(opts, provider, sessionStore, serviceClient, validateServiceClient)
 
 	redirectValidator := redirect.NewValidator(opts.WhitelistDomains)
 	appDirector := redirect.NewAppDirector(redirect.AppDirectorOpts{
@@ -137,8 +147,10 @@ func NewOAuthProxy(opts *options.Options) (*OAuthProxy, error) {
 		appDirector:       appDirector,
 		encodeState:       opts.EncodeState,
 		passAuthorization: opts.PassAuthorization,
+		passAccessToken:   opts.PassAccessToken,
 
-		client: serviceClient,
+		client:         serviceClient,
+		validateClient: validateServiceClient,
 	}
 	p.buildServeMux(opts.ProxyPrefix)
 
@@ -146,7 +158,7 @@ func NewOAuthProxy(opts *options.Options) (*OAuthProxy, error) {
 }
 
 func SetLogger(log wrapper.Log) {
-	util.Logger = &log
+	util.Logger = log
 }
 
 func (p *OAuthProxy) buildServeMux(proxyPrefix string) {
@@ -183,16 +195,18 @@ func buildPreAuthChain(opts *options.Options) (alice.Chain, error) {
 	return chain, nil
 }
 
-func buildSessionChain(opts *options.Options, provider providers.Provider, sessionStore sessionsapi.SessionStore, serviceClient wrapper.HttpClient) alice.Chain {
+func buildSessionChain(opts *options.Options, provider providers.Provider, sessionStore sessionsapi.SessionStore, serviceClient wrapper.HttpClient, validateClient wrapper.HttpClient) alice.Chain {
 	chain := alice.New()
 
 	ss, loadSession := middleware.NewStoredSessionLoader(&middleware.StoredSessionLoaderOptions{
-		SessionStore:          sessionStore,
-		RefreshPeriod:         opts.Cookie.Refresh,
-		RefreshSession:        provider.RefreshSession,
-		ValidateSession:       provider.ValidateSession,
-		RefreshClient:         serviceClient,
-		RefreshRequestTimeout: provider.Data().RedeemTimeout,
+		SessionStore:           sessionStore,
+		RefreshPeriod:          opts.Cookie.Refresh,
+		RefreshSession:         provider.RefreshSession,
+		ValidateSession:        provider.ValidateSession,
+		RefreshClient:          serviceClient,
+		ValidateClient:         validateClient,
+		RefreshRequestTimeout:  provider.Data().RedeemTimeout,
+		ValidateRequestTimeout: provider.Data().RedeemTimeout,
 	})
 	chain = chain.Append(loadSession)
 	provider.Data().StoredSession = ss
@@ -381,30 +395,35 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		csrf.SetSessionNonce(session)
 
 		updateKeysCallback := func(args ...interface{}) {
-			if !p.provider.ValidateSession(req.Context(), session) {
+			validateSessionCallback := func(args ...interface{}) {
+				util.Logger.Debug("Session validated successfully")
+				if !p.redirectValidator.IsValidRedirect(appRedirect) {
+					appRedirect = "/"
+					util.Logger.Debugf("Invalid redirect, defaulting to root: %s", appRedirect)
+				}
+				// set cookie, or deny
+				authorized, err := p.provider.Authorize(req.Context(), session)
+				if err != nil {
+					util.Logger.Errorf("Error with authorization: %v", err)
+				}
+				if p.validator(session.Email) && authorized {
+					util.Logger.Infof("Authenticated successfully via OAuth2: %s", session)
+					err := p.SaveSession(rw, req, session)
+					if err != nil {
+						util.SendError(fmt.Sprintf("Error saving session state: %v", err), rw, http.StatusInternalServerError)
+						return
+					}
+					redirectToLocation(rw, appRedirect)
+				} else {
+					util.SendError("Invalid authentication via OAuth2: unauthorized", rw, http.StatusForbidden)
+				}
+			}
+			valid, isAsync := p.provider.ValidateSession(req.Context(), session, p.validateClient, validateSessionCallback, p.provider.Data().RedeemTimeout)
+			if !valid {
 				util.SendError(fmt.Sprintf("Session validation failed: %s", session), rw, http.StatusForbidden)
 				return
-			}
-			util.Logger.Debug("Session validated successfully")
-			if !p.redirectValidator.IsValidRedirect(appRedirect) {
-				appRedirect = "/"
-				util.Logger.Debugf("Invalid redirect, defaulting to root: %s", appRedirect)
-			}
-			// set cookie, or deny
-			authorized, err := p.provider.Authorize(req.Context(), session)
-			if err != nil {
-				util.Logger.Errorf("Error with authorization: %v", err)
-			}
-			if p.validator(session.Email) && authorized {
-				util.Logger.Infof("Authenticated successfully via OAuth2: %s", session)
-				err := p.SaveSession(rw, req, session)
-				if err != nil {
-					util.SendError(fmt.Sprintf("Error saving session state: %v", err), rw, http.StatusInternalServerError)
-					return
-				}
-				redirectToLocation(rw, appRedirect)
-			} else {
-				util.SendError("Invalid authentication via OAuth2: unauthorized", rw, http.StatusForbidden)
+			} else if !isAsync {
+				validateSessionCallback()
 			}
 		}
 		if p.provider.Data().NeedsVerifier {
@@ -440,6 +459,10 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 		if p.passAuthorization {
 			proxywasm.AddHttpRequestHeader("Authorization", fmt.Sprintf("%s %s", providers.TokenTypeBearer, session.IDToken))
 			util.Logger.Debug("Authorization header add id token")
+		}
+		if p.passAccessToken {
+			proxywasm.AddHttpRequestHeader("X-Forwarded-Access-Token", session.AccessToken)
+			util.Logger.Debug("X-Forwarded-Access-Token header add access token")
 		}
 		if cookies, ok := rw.Header()[SetCookieHeader]; ok && len(cookies) > 0 {
 			newCookieValue := strings.Join(cookies, ",")
