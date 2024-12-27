@@ -54,11 +54,11 @@ func getUserID(introspectClaims string) (string, error) {
 		return "", err
 	}
 
-	userId, ok := claims["sub"].(string)
+	userID, ok := claims["sub"].(string)
 	if !ok {
 		logger.Errorf("error extracting 'sub' from claims")
 		return "", err
 	}
 
-	return userId, nil
+	return userID, nil
 }
