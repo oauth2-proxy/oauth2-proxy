@@ -191,6 +191,7 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
 		// If a preemptive refresh fails, we still keep the session
 		// if validateSession succeeds.
 		logger.Errorf("Unable to refresh session: %v", err)
+		return fmt.Errorf("unable to refresh session: %v", err)
 	}
 
 	// Validate all sessions after any Redeem/Refresh operation (fail or success)
