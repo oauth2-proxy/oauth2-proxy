@@ -804,13 +804,15 @@ func (p *OAuthProxy) backendLogout(rw http.ResponseWriter, req *http.Request, si
 			return
 		}
 
-		resp, err = PicsSignOutAllSessions(providerData.BackendLogoutAllSessionsURL, session.IntrospectClaims, session.AccessToken)
+		resp, err := PicsSignOutAllSessions(providerData.BackendLogoutAllSessionsURL, session.IntrospectClaims, session.AccessToken)
 		if err != nil {
 			logger.Errorf("error while calling backend logout all sessions: %v", err)
 			return
 		}
 
-		defer resp.Body.Close()
+		if resp.StatusCode() != 200 {
+			logger.Errorf("error while calling backend logout url, returned error code %v", resp.StatusCode())
+		}
 	} else {
 		if providerData.BackendLogoutURL == "" {
 			return
@@ -826,10 +828,9 @@ func (p *OAuthProxy) backendLogout(rw http.ResponseWriter, req *http.Request, si
 		}
 
 		defer resp.Body.Close()
-	}
-
-	if resp.StatusCode != 200 {
-		logger.Errorf("error while calling backend logout url, returned error code %v", resp.StatusCode)
+		if resp.StatusCode != 200 {
+			logger.Errorf("error while calling backend logout url, returned error code %v", resp.StatusCode)
+		}
 	}
 }
 
