@@ -15,12 +15,12 @@ const (
 )
 
 func PicsSignOutAllSessions(backendLogoutAllSessionsURL string, introspectClaims string, accessToken string) (resp *http.Response, err error) {
-	userId, err := getUserId(introspectClaims)
+	userID, err := getUserID(introspectClaims)
 	if err != nil {
 		return nil, fmt.Errorf("error getting userId from instrospect claims: %v", err)
 	}
 
-	backendLogoutURL := strings.ReplaceAll(backendLogoutAllSessionsURL, "{user_id}", userId)
+	backendLogoutURL := strings.ReplaceAll(backendLogoutAllSessionsURL, "{user_id}", userID)
 
 	dummyBody := strings.NewReader(`{}`)
 	req, err := http.NewRequest("POST", backendLogoutURL, dummyBody)
@@ -40,7 +40,7 @@ func PicsSignOutAllSessions(backendLogoutAllSessionsURL string, introspectClaims
 	return resp, err
 }
 
-func getUserId(introspectClaims string) (string, error) {
+func getUserID(introspectClaims string) (string, error) {
 	decodedClaims, err := base64.StdEncoding.DecodeString(introspectClaims)
 	if err != nil {
 		logger.Errorf("error decoding claims: %v", err)
