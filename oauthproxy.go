@@ -358,7 +358,16 @@ func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
 
 	// The userinfo and logout endpoints needs to load sessions before handling the request
 	s.Path(userInfoPath).Handler(p.sessionChain.ThenFunc(p.UserInfo))
-	s.Path(signOutPath).Handler(p.sessionChain.ThenFunc(p.SignOut))
+	s.Path(signOutPath).Handler(p.sessionChain.ThenFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			p.SignOut(w, r, false)
+		},
+	))
+	s.Path(picsSignOutAllDevicesPath).Handler(p.sessionChain.ThenFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			p.SignOut(w, r, true)
+		},
+	))
 }
 
 // buildPreAuthChain constructs a chain that should process every request before
@@ -758,7 +767,7 @@ func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 }
 
 // SignOut sends a response to clear the authentication cookie
-func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
+func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request, signOutAllSessions bool) {
 	redirect, err := p.appDirector.GetRedirect(req)
 	if err != nil {
 		logger.Errorf("Error obtaining redirect: %v", err)
@@ -772,12 +781,12 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	p.backendLogout(rw, req)
+	p.backendLogout(rw, req, signOutAllSessions)
 
 	http.Redirect(rw, req, redirect, http.StatusFound)
 }
 
-func (p *OAuthProxy) backendLogout(rw http.ResponseWriter, req *http.Request) {
+func (p *OAuthProxy) backendLogout(rw http.ResponseWriter, req *http.Request, signOutAllSessions bool) {
 	session, err := p.getAuthenticatedSession(rw, req)
 	if err != nil {
 		logger.Errorf("error getting authenticated session during backend logout: %v", err)
@@ -789,14 +798,24 @@ func (p *OAuthProxy) backendLogout(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	providerData := p.provider.Data()
-	if providerData.BackendLogoutURL == "" {
-		return
+	var resp *http.Response
+	if signOutAllSessions {
+		if providerData.BackendLogoutAllSessionsURL == "" {
+			return
+		}
+
+		resp, err = PicsSignOutAllSessions(providerData.BackendLogoutAllSessionsURL, session.IntrospectClaims, session.AccessToken)
+	} else {
+		if providerData.BackendLogoutURL == "" {
+			return
+		}
+
+		backendLogoutURL := strings.ReplaceAll(providerData.BackendLogoutURL, "{id_token}", session.IDToken)
+		// security exception because URL is dynamic ({id_token} replacement) but
+		// base is not end-user provided but comes from configuration somewhat secure
+		resp, err = http.Get(backendLogoutURL) // #nosec G107
 	}
 
-	backendLogoutURL := strings.ReplaceAll(providerData.BackendLogoutURL, "{id_token}", session.IDToken)
-	// security exception because URL is dynamic ({id_token} replacement) but
-	// base is not end-user provided but comes from configuration somewhat secure
-	resp, err := http.Get(backendLogoutURL) // #nosec G107
 	if err != nil {
 		logger.Errorf("error while calling backend logout: %v", err)
 		return
