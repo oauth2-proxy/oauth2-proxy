@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	picsSignOutAllDevicesPath = "/sign_out_all_sessions"
+	picsSignOutAllSessionsPath = "/sign_out_all_sessions"
 )
 
 func PicsSignOutAllSessions(backendLogoutAllSessionsURL string, introspectClaims string, accessToken string) (resp requests.Result, err error) {

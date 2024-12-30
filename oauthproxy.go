@@ -363,7 +363,7 @@ func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
 			p.SignOut(w, r, false)
 		},
 	))
-	s.Path(picsSignOutAllDevicesPath).Handler(p.sessionChain.ThenFunc(
+	s.Path(picsSignOutAllSessionsPath).Handler(p.sessionChain.ThenFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			p.SignOut(w, r, true)
 		},
