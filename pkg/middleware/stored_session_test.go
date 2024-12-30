@@ -295,17 +295,12 @@ var _ = Describe("Stored Session Suite", func() {
 				refreshSession:  defaultRefreshFunc,
 				validateSession: defaultValidateFunc,
 			}),
-			Entry("when the provider refresh fails but validation succeeds", storedSessionLoaderTableInput{
+			Entry("when the provider refresh fails", storedSessionLoaderTableInput{
 				requestHeaders: http.Header{
 					"Cookie": []string{"_oauth2_proxy=RefreshError"},
 				},
 				existingSession: nil,
-				expectedSession: &sessionsapi.SessionState{
-					RefreshToken: "RefreshError",
-					CreatedAt:    &createdPast,
-					ExpiresOn:    &createdFuture,
-					Lock:         &sessionsapi.NoOpLock{},
-				},
+				expectedSession: nil,
 				store:           defaultSessionStore,
 				refreshPeriod:   1 * time.Minute,
 				refreshSession:  defaultRefreshFunc,

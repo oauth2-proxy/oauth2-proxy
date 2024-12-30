@@ -545,6 +545,8 @@ type LegacyProvider struct {
 	AllowedRoles                       []string `flag:"allowed-role" cfg:"allowed_roles"`
 	BackendLogoutURL                   string   `flag:"backend-logout-url" cfg:"backend_logout_url"`
 
+	BackendLogoutAllSessionsURL string `flag:"backend-logout-all-sessions-url" cfg:"backend_logout_all_sessions_url"`
+
 	AcrValues  string `flag:"acr-values" cfg:"acr_values"`
 	JWTKey     string `flag:"jwt-key" cfg:"jwt_key"`
 	JWTKeyFile string `flag:"jwt-key-file" cfg:"jwt_key_file"`
@@ -613,6 +615,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.StringSlice("allowed-group", []string{}, "restrict logins to members of this group (may be given multiple times)")
 	flagSet.StringSlice("allowed-role", []string{}, "(keycloak-oidc) restrict logins to members of these roles (may be given multiple times)")
 	flagSet.String("backend-logout-url", "", "url to perform a backend logout, {id_token} can be used as placeholder for the id_token")
+	flagSet.String("backend-logout-all-sessions-url", "", "url to perform a backend logout, {user_id} can be used as placeholder for the user_id")
 
 	return flagSet
 }
@@ -693,6 +696,8 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		AllowedGroups:            l.AllowedGroups,
 		CodeChallengeMethod:      l.CodeChallengeMethod,
 		BackendLogoutURL:         l.BackendLogoutURL,
+
+		BackendLogoutAllSessionsURL: l.BackendLogoutAllSessionsURL,
 	}
 
 	// This part is out of the switch section for all providers that support OIDC

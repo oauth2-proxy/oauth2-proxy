@@ -445,6 +445,7 @@ Provider holds all configuration for a single provider
 | `allowedGroups` | _[]string_ | AllowedGroups is a list of restrict logins to members of this group |
 | `code_challenge_method` | _string_ | The code challenge method |
 | `backendLogoutURL` | _string_ | URL to call to perform backend logout, `{id_token}` would be replaced by the actual `id_token` if available in the session |
+| `backendLogoutAllSessionsURL` | _string_ | URL to call to perform backend logout, `{user_id}` would be replaced by the actual `user_id` if available in the session IntrospectClaims |
 
 ### ProviderType
 #### (`string` alias)
