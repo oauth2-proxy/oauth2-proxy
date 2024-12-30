@@ -69,6 +69,7 @@ func (c *Client) CreateSuccessfulLogoutAuditEntry(ss *sessions.SessionState, app
 		System: "http://hl7.org/fhir/ValueSet/audit-event-type", Version: "1", Code: "110123", Display: "Logout", UserSelected: "All Sessions"}
 	c.createAuditEntry(ss, appURL, tenantID, "0", "Success", &coding)
 }
+
 func (c *Client) createAuditEntry(ss *sessions.SessionState, appURL string, tenantID string, outcomeCode string, outcomeDesc string, coding *Coding) {
 	if !c.enabled {
 		return
