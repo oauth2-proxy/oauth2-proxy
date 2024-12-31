@@ -8,6 +8,7 @@
 
 ## Changes since v7.7.1
 
+- [#2841](https://github.com/oauth2-proxy/oauth2-proxy/pull/2841) feat: add allowed_* constraint option to proxy endpoint query string (@jacobalberty)
 - [#2800](https://github.com/oauth2-proxy/oauth2-proxy/pull/2800) Add some opencontainer labels to docker image (@halkeye)
 - [#2755](https://github.com/oauth2-proxy/oauth2-proxy/pull/2755) feat: add X-Envoy-External-Address as supported header (@bjencks)
 - [#1985](https://github.com/oauth2-proxy/oauth2-proxy/pull/1985) Add support for systemd socket (@isodude)
