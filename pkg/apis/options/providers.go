@@ -161,7 +161,7 @@ type AzureOptions struct {
 }
 
 type MicrosoftEntraIDOptions struct {
-	// List of allowed tenants. In case of multi-tenant apps, incoming tokens are
+	// AllowedTenants is a list of allowed tenants. In case of multi-tenant apps, incoming tokens are
 	// issued by different issuers and OIDC issuer verification needs to be disabled.
 	// When not specified, all tenants are allowed. Redundant for single-tenant apps
 	// (regular ID token validation matches the issuer).

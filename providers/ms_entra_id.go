@@ -64,8 +64,6 @@ func (p *MicrosoftEntraIDProvider) EnrichSession(ctx context.Context, session *s
 		if err = p.addGraphGroupsToSession(ctx, session); err != nil {
 			return fmt.Errorf("unable to enrich session: %v", err)
 		}
-	} else {
-		logger.Printf("entra group overage not found")
 	}
 
 	return nil
