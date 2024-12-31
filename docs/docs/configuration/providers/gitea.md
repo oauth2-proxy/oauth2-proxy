@@ -3,6 +3,10 @@ id: gitea
 title: Gitea
 ---
 
+:::note
+This is not actually its own provider. For more details and options please refer to the [GitHub Provider Options](github.md)
+:::
+
 1. Create a new application: `https://< your gitea host >/user/settings/applications`
 2. Under `Redirect URI` enter the correct URL i.e. `https://<proxied host>/oauth2/callback`
 3. Note the Client ID and Client Secret.

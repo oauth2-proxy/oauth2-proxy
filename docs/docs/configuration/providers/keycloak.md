@@ -1,10 +1,10 @@
 ---
 id: keycloak
-title: Keycloak
+title: Keycloak (Deprecated)
 ---
 
 :::note
-This is the legacy provider for Keycloak, use [Keycloak OIDC Auth Provider](keycloak_oidc.md) if possible.
+This is the legacy and deprecated provider for Keycloak, use [Keycloak OIDC Auth Provider](keycloak_oidc.md) if possible.
 :::
 
 1.  Create new client in your Keycloak realm with **Access Type** 'confidential' and **Valid Redirect URIs** 'https://internal.yourcompany.com/oauth2/callback'

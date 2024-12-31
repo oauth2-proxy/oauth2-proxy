@@ -30,6 +30,8 @@ type Provider struct {
 	KeycloakConfig KeycloakOptions `json:"keycloakConfig,omitempty"`
 	// AzureConfig holds all configurations for Azure provider.
 	AzureConfig AzureOptions `json:"azureConfig,omitempty"`
+	// MicrosoftEntraIDConfig holds all configurations for Entra ID provider.
+	MicrosoftEntraIDConfig MicrosoftEntraIDOptions `json:"microsoftEntraIDConfig,omitempty"`
 	// ADFSConfig holds all configurations for ADFS provider.
 	ADFSConfig ADFSOptions `json:"ADFSConfig,omitempty"`
 	// BitbucketConfig holds all configurations for Bitbucket provider.
@@ -101,6 +103,9 @@ const (
 	// AzureProvider is the provider type for Azure
 	AzureProvider ProviderType = "azure"
 
+	// MicrosoftEntraIDProvider is the provider type for Entra OIDC
+	MicrosoftEntraIDProvider ProviderType = "entra-id"
+
 	// BitbucketProvider is the provider type for Bitbucket
 	BitbucketProvider ProviderType = "bitbucket"
 
@@ -153,6 +158,14 @@ type AzureOptions struct {
 	// GraphGroupField configures the group field to be used when building the groups list from Microsoft Graph
 	// Default value is 'id'
 	GraphGroupField string `json:"graphGroupField,omitempty"`
+}
+
+type MicrosoftEntraIDOptions struct {
+	// AllowedTenants is a list of allowed tenants. In case of multi-tenant apps, incoming tokens are
+	// issued by different issuers and OIDC issuer verification needs to be disabled.
+	// When not specified, all tenants are allowed. Redundant for single-tenant apps
+	// (regular ID token validation matches the issuer).
+	AllowedTenants []string `json:"allowedTenants,omitempty"`
 }
 
 type ADFSOptions struct {
