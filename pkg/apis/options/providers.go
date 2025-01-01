@@ -149,6 +149,7 @@ type KeycloakOptions struct {
 
 	// Role enables to restrict login to users with role (only available when using the keycloak-oidc provider)
 	Roles []string `json:"roles,omitempty"`
+	ACRs  string   `json:"acr,omitempty"`
 }
 
 type AzureOptions struct {
