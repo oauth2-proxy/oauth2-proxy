@@ -32,7 +32,9 @@ Now start the proxy up with the following options:
   -upstream=http://localhost:3000/ \
   -cookie-secret=somerandomstring12341234567890AB \
   -cookie-domain=localhost \
-  -skip-provider-button=true
+  -skip-provider-button=true \
+  -prompt=login \
+  -skip_claims_from_profile_url=true
 ```
 
 Once it is running, you should be able to go to `http://localhost:4180/` in your browser,
