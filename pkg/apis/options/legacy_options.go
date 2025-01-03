@@ -49,15 +49,16 @@ func NewLegacyOptions() *LegacyOptions {
 		},
 
 		LegacyProvider: LegacyProvider{
-			ProviderType:          "google",
-			AzureTenant:           "common",
-			ApprovalPrompt:        "force",
-			UserIDClaim:           "email",
-			OIDCEmailClaim:        "email",
-			OIDCGroupsClaim:       "groups",
-			OIDCAudienceClaims:    []string{"aud"},
-			OIDCExtraAudiences:    []string{},
-			InsecureOIDCSkipNonce: true,
+			ProviderType:           "google",
+			AzureTenant:            "common",
+			ApprovalPrompt:         "force",
+			UserIDClaim:            "email",
+			OIDCEmailClaim:         "email",
+			OIDCGroupsClaim:        "groups",
+			OIDCAudienceClaims:     []string{"aud"},
+			OIDCExtraAudiences:     []string{},
+			OIDCEnabledSigningAlgs: []string{},
+			InsecureOIDCSkipNonce:  true,
 		},
 
 		Options: *NewOptions(),
@@ -521,6 +522,7 @@ type LegacyProvider struct {
 	OIDCGroupsClaim                    string   `flag:"oidc-groups-claim" cfg:"oidc_groups_claim"`
 	OIDCAudienceClaims                 []string `flag:"oidc-audience-claim" cfg:"oidc_audience_claims"`
 	OIDCExtraAudiences                 []string `flag:"oidc-extra-audience" cfg:"oidc_extra_audiences"`
+	OIDCEnabledSigningAlgs             []string `flag:"oidc-enabled-signing-alg" cfg:"oidc_enabled_signing_algs"`
 	LoginURL                           string   `flag:"login-url" cfg:"login_url"`
 	RedeemURL                          string   `flag:"redeem-url" cfg:"redeem_url"`
 	ProfileURL                         string   `flag:"profile-url" cfg:"profile_url"`
@@ -579,6 +581,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("oidc-email-claim", OIDCEmailClaim, "which OIDC claim contains the user's email")
 	flagSet.StringSlice("oidc-audience-claim", OIDCAudienceClaims, "which OIDC claims are used as audience to verify against client id")
 	flagSet.StringSlice("oidc-extra-audience", []string{}, "additional audiences allowed to pass audience verification")
+	flagSet.StringSlice("oidc-enabled-signing-alg", []string{}, "accepted signing algorithms for provider to use")
 	flagSet.String("login-url", "", "Authentication endpoint")
 	flagSet.String("redeem-url", "", "Token redemption endpoint")
 	flagSet.String("profile-url", "", "Profile access endpoint")
@@ -695,6 +698,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		GroupsClaim:                    l.OIDCGroupsClaim,
 		AudienceClaims:                 l.OIDCAudienceClaims,
 		ExtraAudiences:                 l.OIDCExtraAudiences,
+		EnabledSigningAlgs:             l.OIDCEnabledSigningAlgs,
 	}
 
 	// Support for legacy configuration option
