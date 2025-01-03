@@ -47,7 +47,7 @@ func (p *ProConnectOIDCProvider) EnrichSession(ctx context.Context, s *sessions.
 		SetHeader("Authorization", tokenTypeBearer+" "+s.AccessToken).
 		Do().Body()
 
-	jws, err := jose.ParseSigned(string(jwtResponse[:]))
+	jws, err := jose.ParseSigned(string(jwtResponse))
 	if err != nil {
 		logger.Errorf("parse profileURL failed: %v", err)
 	}
