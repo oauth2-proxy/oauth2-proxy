@@ -1,9 +1,12 @@
 package providers
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
+	"os"
 	"regexp"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -12,12 +15,14 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
 	"github.com/spf13/cast"
+	"golang.org/x/oauth2"
 )
 
 // MicrosoftEntraIDProvider represents provider for Azure Entra Authentication V2 endpoint
 type MicrosoftEntraIDProvider struct {
 	*OIDCProvider
 	multiTenantAllowedTenants []string
+	federatedTokenAuth        bool
 
 	microsoftGraphURL *url.URL
 }
@@ -44,6 +49,7 @@ func NewMicrosoftEntraIDProvider(p *ProviderData, opts options.Provider) *Micros
 		OIDCProvider: NewOIDCProvider(p, opts.OIDCConfig),
 
 		multiTenantAllowedTenants: opts.MicrosoftEntraIDConfig.AllowedTenants,
+		federatedTokenAuth:        opts.MicrosoftEntraIDConfig.FederatedTokenAuth,
 		microsoftGraphURL:         microsoftGraphURL,
 	}
 }
@@ -87,6 +93,61 @@ func (p *MicrosoftEntraIDProvider) ValidateSession(ctx context.Context, session 
 	}
 
 	return p.OIDCProvider.ValidateSession(ctx, session)
+}
+
+// Redeem exchanges the OAuth2 authentication token for an ID token, considering federated token authentication
+func (p *MicrosoftEntraIDProvider) Redeem(ctx context.Context, redirectURL, code, codeVerifier string) (*sessions.SessionState, error) {
+	if p.federatedTokenAuth {
+		return p.redeemWithFederatedToken(ctx, redirectURL, code, codeVerifier)
+	}
+
+	return p.OIDCProvider.Redeem(ctx, redirectURL, code, codeVerifier)
+}
+
+// redeemWithFederatedToken performs custom token exchange with federated token instead of client secret
+func (p *MicrosoftEntraIDProvider) redeemWithFederatedToken(ctx context.Context, redirectURL, code, codeVerifier string) (*sessions.SessionState, error) {
+	federatedTokenPath := os.Getenv("AZURE_FEDERATED_TOKEN_FILE")
+	federatedToken, err := os.ReadFile(federatedTokenPath)
+	if err != nil {
+		return nil, fmt.Errorf("error reading federated token file %s: %s", federatedTokenPath, err)
+	}
+
+	params := url.Values{}
+
+	// create custom exchange parameters
+	if codeVerifier != "" {
+		params.Add("code_verifier", codeVerifier)
+	}
+	params.Add("redirect_uri", redirectURL)
+	params.Add("client_id", p.ClientID)
+	params.Add("client_assertion", string(federatedToken))
+	params.Add("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
+	params.Add("code", code)
+	params.Add("grant_type", "authorization_code")
+
+	// perform exchange
+	resp := requests.New(p.RedeemURL.String()).
+		WithContext(ctx).
+		WithMethod("POST").
+		WithBody(bytes.NewBufferString(params.Encode())).
+		SetHeader("Content-Type", "application/x-www-form-urlencoded").
+		Do()
+
+	// prepare token of type *oauth2.Token
+	var token *oauth2.Token
+	var rawResponse interface{}
+
+	body := resp.Body()
+	if err := json.Unmarshal(body, &rawResponse); err != nil {
+		return nil, err
+	}
+
+	if err := json.Unmarshal(body, &token); err != nil {
+		return nil, err
+	}
+
+	// create session using new token and generic OIDC provider
+	return p.OIDCProvider.createSession(ctx, token.WithExtra(rawResponse), false)
 }
 
 // checkGroupOverage checks ID token's group membership claims for the group overage

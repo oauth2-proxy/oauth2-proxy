@@ -166,6 +166,10 @@ type MicrosoftEntraIDOptions struct {
 	// When not specified, all tenants are allowed. Redundant for single-tenant apps
 	// (regular ID token validation matches the issuer).
 	AllowedTenants []string `json:"allowedTenants,omitempty"`
+
+	// FederatedTokenAuth enable oAuth2 client authentication with federated token projected
+	// by Entra Workload Identity plugin, instead of client secret.
+	FederatedTokenAuth bool `json:"federatedTokenAuth,omitempty"`
 }
 
 type ADFSOptions struct {
