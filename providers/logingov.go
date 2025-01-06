@@ -38,8 +38,8 @@ var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 func randSeq(n int) string {
 	b := make([]rune, n)
 	for i := range b {
-		max := big.NewInt(int64(len(letters)))
-		bigN, err := rand.Int(rand.Reader, max)
+		maxInt := big.NewInt(int64(len(letters)))
+		bigN, err := rand.Int(rand.Reader, maxInt)
 		if err != nil {
 			// This should never happen
 			panic(err)

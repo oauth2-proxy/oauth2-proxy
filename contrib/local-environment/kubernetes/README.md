@@ -16,6 +16,7 @@ Then:
 * `make deploy`
 
 Visit http://httpbin.localtest.me or http://hello-world.localtest.me/
+Note: When accessing the service for the first time you will need to authenticate with Dex. It is configured using static credentials for testing. With username `admin@example.com` and password set to `password`.
 
 ## Uninstall
 
