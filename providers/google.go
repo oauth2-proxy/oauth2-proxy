@@ -229,51 +229,53 @@ func (p *GoogleProvider) setGroupRestriction(opts options.GoogleOptions) {
 	}
 }
 
+// https://developers.google.com/admin-sdk/directory/reference/rest/v1/members/hasMember#authorization-scopes
+var possibleScopesList = [...]string{
+	admin.AdminDirectoryGroupMemberReadonlyScope,
+	admin.AdminDirectoryGroupReadonlyScope,
+	admin.AdminDirectoryGroupMemberScope,
+	admin.AdminDirectoryGroupScope,
+}
+
+func getOauth2TokenSource(ctx context.Context, opts options.GoogleOptions, scope string) oauth2.TokenSource {
+	if opts.UseApplicationDefaultCredentials {
+		ts, err := impersonate.CredentialsTokenSource(ctx, impersonate.CredentialsConfig{
+			TargetPrincipal: getTargetPrincipal(ctx, opts),
+			Scopes:          []string{scope},
+			Subject:         opts.AdminEmail,
+		})
+		if err != nil {
+			logger.Fatal("failed to fetch application default credentials: ", err)
+		}
+		return ts
+	} else {
+		credentialsReader, err := os.Open(opts.ServiceAccountJSON)
+		if err != nil {
+			logger.Fatal("couldn't open Google credentials file: ", err)
+		}
+
+		data, err := io.ReadAll(credentialsReader)
+		if err != nil {
+			logger.Fatal("can't read Google credentials file:", err)
+		}
+
+		conf, err := google.JWTConfigFromJSON(data, scope)
+		if err != nil {
+			logger.Fatal("can't load Google credentials file:", err)
+		}
+		conf.Subject = opts.AdminEmail
+		return conf.TokenSource(ctx)
+	}
+}
+
 func getAdminService(opts options.GoogleOptions) *admin.Service {
 	ctx := context.Background()
 	var client *http.Client
 
-	// https://developers.google.com/admin-sdk/directory/reference/rest/v1/members/hasMember#authorization-scopes
-	possibleScopesList := []string{
-		admin.AdminDirectoryGroupMemberReadonlyScope,
-		admin.AdminDirectoryGroupReadonlyScope,
-		admin.AdminDirectoryGroupMemberScope,
-		admin.AdminDirectoryGroupScope,
-	}
-
 	for _, scope := range possibleScopesList {
 
-		var ts oauth2.TokenSource
-		var err error
-		if opts.UseApplicationDefaultCredentials {
-			ts, err = impersonate.CredentialsTokenSource(ctx, impersonate.CredentialsConfig{
-				TargetPrincipal: getTargetPrincipal(ctx, opts),
-				Scopes:          []string{scope},
-				Subject:         opts.AdminEmail,
-			})
-			if err != nil {
-				logger.Fatal("failed to fetch application default credentials: ", err)
-			}
-		} else {
-			credentialsReader, err := os.Open(opts.ServiceAccountJSON)
-			if err != nil {
-				logger.Fatal("couldn't open Google credentials file: ", err)
-				return nil
-			}
-
-			data, err := io.ReadAll(credentialsReader)
-			if err != nil {
-				logger.Fatal("can't read Google credentials file:", err)
-			}
-
-			conf, err := google.JWTConfigFromJSON(data, scope)
-			if err != nil {
-				logger.Fatal("can't load Google credentials file:", err)
-			}
-			conf.Subject = opts.AdminEmail
-			ts = conf.TokenSource(ctx)
-		}
-		_, err = ts.Token()
+		ts := getOauth2TokenSource(ctx, opts, scope)
+		_, err := ts.Token()
 
 		if err == nil {
 			client = oauth2.NewClient(ctx, ts)
