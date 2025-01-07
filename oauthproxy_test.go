@@ -484,9 +484,7 @@ func TestForwardAccessTokenUpstream(t *testing.T) {
 
 	// A successful validation will redirect and set the auth cookie.
 	code, cookie := patTest.getCallbackEndpoint()
-	if code != 302 {
-		t.Fatalf("expected 302; got %d", code)
-	}
+	assert.Equal(t, 307, code)
 	assert.NotNil(t, cookie)
 
 	// Now we make a regular request; the access_token from the cookie is
@@ -516,9 +514,7 @@ func TestStaticProxyUpstream(t *testing.T) {
 
 	// A successful validation will redirect and set the auth cookie.
 	code, cookie := patTest.getCallbackEndpoint()
-	if code != 302 {
-		t.Fatalf("expected 302; got %d", code)
-	}
+	assert.Equal(t, 307, code)
 	assert.NotEqual(t, nil, cookie)
 
 	// Now we make a regular request against the upstream proxy; And validate
@@ -542,9 +538,7 @@ func TestDoNotForwardAccessTokenUpstream(t *testing.T) {
 
 	// A successful validation will redirect and set the auth cookie.
 	code, cookie := patTest.getCallbackEndpoint()
-	if code != 302 {
-		t.Fatalf("expected 302; got %d", code)
-	}
+	assert.Equal(t, 307, code)
 	assert.NotEqual(t, nil, cookie)
 
 	// Now we make a regular request, but the access token header should
@@ -644,7 +638,7 @@ func TestManualSignInStoresUserGroupsInTheSession(t *testing.T) {
 	signInReq.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	proxy.ServeHTTP(rw, signInReq)
 
-	assert.Equal(t, http.StatusFound, rw.Code)
+	assert.Equal(t, http.StatusTemporaryRedirect, rw.Code)
 
 	req, _ := http.NewRequest(http.MethodGet, "/something", strings.NewReader(formData.Encode()))
 	for _, c := range rw.Result().Cookies() {
@@ -708,7 +702,7 @@ func TestManualSignInInvalidCredentialsAlert(t *testing.T) {
 
 func TestManualSignInCorrectCredentials(t *testing.T) {
 	statusCode := ManualSignInWithCredentials(t, "admin", "adminPass")
-	assert.Equal(t, http.StatusFound, statusCode)
+	assert.Equal(t, http.StatusTemporaryRedirect, statusCode)
 }
 
 func TestSignInPageIncludesTargetRedirect(t *testing.T) {
@@ -770,7 +764,7 @@ func TestSignInPageSkipProvider(t *testing.T) {
 	endpoint := "/some/random/endpoint"
 
 	code, body := sipTest.GetEndpoint(endpoint)
-	assert.Equal(t, 302, code)
+	assert.Equal(t, 307, code)
 
 	match := sipTest.signInProviderRegexp.FindStringSubmatch(body)
 	if match == nil {
@@ -788,7 +782,7 @@ func TestSignInPageSkipProviderDirect(t *testing.T) {
 	endpoint := "/sign_in"
 
 	code, body := sipTest.GetEndpoint(endpoint)
-	assert.Equal(t, 302, code)
+	assert.Equal(t, 307, code)
 
 	match := sipTest.signInProviderRegexp.FindStringSubmatch(body)
 	if match == nil {
@@ -2525,7 +2519,7 @@ func TestApiRoutes(t *testing.T) {
 			proxy.ServeHTTP(rw, req)
 
 			if tc.shouldRedirect {
-				assert.Equal(t, 302, rw.Code)
+				assert.Equal(t, 307, rw.Code)
 			} else {
 				assert.Equal(t, 401, rw.Code)
 			}
