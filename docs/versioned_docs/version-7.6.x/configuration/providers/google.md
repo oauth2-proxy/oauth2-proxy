@@ -32,18 +32,18 @@ For Google, the registration steps are:
     - Choose **"Create"**
 7.  Take note of the **Client ID** and **Client Secret**
 
-It's recommended to refresh sessions on a short interval (1h) with `cookie-refresh` setting which validates that the 
+It's recommended to refresh sessions on a short interval (1h) with `cookie-refresh` setting which validates that the
 account is still authorized.
 
 #### Restrict auth to specific Google groups on your domain. (optional)
 
-1.  Create a [service account](https://developers.google.com/identity/protocols/OAuth2ServiceAccount) and configure it 
-    to use [Application Default Credentials / Workload Identity / Workload Identity Federation (recommended)](#using-application-default-credentials-adc--workload-identity--workload-identity-federation-recommended) or, 
+1.  Create a [service account](https://developers.google.com/identity/protocols/OAuth2ServiceAccount) and configure it
+    to use [Application Default Credentials / Workload Identity / Workload Identity Federation (recommended)](#using-application-default-credentials-adc--workload-identity--workload-identity-federation-recommended) or,
     alternatively download the JSON.
 2.  Make note of the Client ID for a future step.
 3.  Under "APIs & Auth", choose APIs.
 4.  Click on Admin SDK and then Enable API.
-5.  Follow the steps on https://developers.google.com/admin-sdk/directory/v1/guides/delegation#delegate_domain-wide_authority_to_your_service_account 
+5.  Follow the steps on https://developers.google.com/admin-sdk/directory/v1/guides/delegation#delegate_domain-wide_authority_to_your_service_account
     and give the client id from step 2 the following oauth scopes:
 
     ```
@@ -52,18 +52,19 @@ account is still authorized.
     ```
 
 6.  Follow the steps on https://support.google.com/a/answer/60757 to enable Admin API access.
-7.  Create or choose an existing administrative email address on the Gmail domain to assign to the `google-admin-email` 
-    flag. This email will be impersonated by this client to make calls to the Admin SDK. See the note on the link from 
+7.  Create or choose an existing administrative email address on the Gmail domain to assign to the `google-admin-email`
+    flag. This email will be impersonated by this client to make calls to the Admin SDK. See the note on the link from
     step 5 for the reason why.
-8.  Create or choose an existing email group and set that email to the `google-group` flag. You can pass multiple instances 
+8.  Create or choose an existing email group and set that email to the `google-group` flag. You can pass multiple instances
     of this flag with different groups and the user will be checked against all the provided groups.
 
 (Only if using a JSON file (see step 1))
-9.  Lock down the permissions on the json file downloaded from step 1 so only oauth2-proxy is able to read the file and 
+
+9.  Lock down the permissions on the json file downloaded from step 1 so only oauth2-proxy is able to read the file and
     set the path to the file in the `google-service-account-json` flag.
 10. Restart oauth2-proxy.
 
-Note: The user is checked against the group members list on initial authentication and every time the token is 
+Note: The user is checked against the group members list on initial authentication and every time the token is
 refreshed ( about once an hour ).
 
 ##### Using Application Default Credentials (ADC) / Workload Identity / Workload Identity Federation (recommended)
