@@ -363,7 +363,7 @@ func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
 			p.SignOut(w, r, false)
 		},
 	))
-	s.Path(picsSignOutAllDevicesPath).Handler(p.sessionChain.ThenFunc(
+	s.Path(picsSignOutAllSessionsPath).Handler(p.sessionChain.ThenFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			p.SignOut(w, r, true)
 		},
@@ -813,6 +813,8 @@ func (p *OAuthProxy) backendLogout(rw http.ResponseWriter, req *http.Request, si
 		if resp.StatusCode() != 200 {
 			logger.Errorf("error while calling backend logout url, returned error code %v", resp.StatusCode())
 		}
+
+		p.picsAuditClient.CreateSuccessfulLogoutAuditEntry(session, req.RequestURI, req.Header.Get("edisp-org-id"))
 	} else {
 		if providerData.BackendLogoutURL == "" {
 			return
