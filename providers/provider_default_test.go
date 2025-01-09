@@ -128,7 +128,7 @@ func TestProviderDataAuthorize(t *testing.T) {
 
 			session := &sessions.SessionState{
 				Groups: tc.groups,
-				Acr:    tc.userAcr,
+				ACR:    tc.userAcr,
 			}
 			p := &ProviderData{}
 			p.setAllowedGroups(tc.allowedGroups)

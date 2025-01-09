@@ -117,8 +117,7 @@ func (p *ProviderData) EnrichSession(_ context.Context, _ *sessions.SessionState
 // This is not used for fine-grained per route authorization rules.
 func (p *ProviderData) Authorize(_ context.Context, s *sessions.SessionState) (bool, error) {
 	if len(p.AllowedACRs) > 0 {
-		var _, ok = p.AllowedACRs[s.Acr]
-		if !ok {
+		if _, ok := p.AllowedACRs[s.ACR]; !ok {
 			return false, nil
 		}
 	}

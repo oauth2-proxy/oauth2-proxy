@@ -268,7 +268,7 @@ func (p *ProviderData) buildSessionFromClaims(rawIDToken, accessToken string) (*
 		{p.UserClaim, &ss.User},
 		{p.EmailClaim, &ss.Email},
 		{p.GroupsClaim, &ss.Groups},
-		{oidcAcrClaim, &ss.Acr},
+		{oidcAcrClaim, &ss.ACR},
 		// TODO (@NickMeves) Deprecate for dynamic claim to session mapping
 		{"preferred_username", &ss.PreferredUsername},
 	} {

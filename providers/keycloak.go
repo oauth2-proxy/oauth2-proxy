@@ -61,7 +61,6 @@ func NewKeycloakProvider(p *ProviderData, opts options.KeycloakOptions) *Keycloa
 
 	provider := &KeycloakProvider{ProviderData: p}
 	provider.setAllowedGroups(opts.Groups)
-	provider.setAllowedACR(opts.ACRs)
 	return provider
 }
 

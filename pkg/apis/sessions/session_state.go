@@ -28,7 +28,7 @@ type SessionState struct {
 	User              string   `msgpack:"u,omitempty"`
 	Groups            []string `msgpack:"g,omitempty"`
 	PreferredUsername string   `msgpack:"pu,omitempty"`
-	Acr               string   `msgpack:"acr,omitempty"`
+	ACR               string   `msgpack:"acr,omitempty"`
 
 	// Internal helpers, not serialized
 	Clock clock.Clock `msgpack:"-"`
@@ -150,7 +150,7 @@ func (s *SessionState) GetClaim(claim string) []string {
 	case "preferred_username":
 		return []string{s.PreferredUsername}
 	case "acr":
-		return []string{s.Acr}
+		return []string{s.ACR}
 	default:
 		return []string{}
 	}

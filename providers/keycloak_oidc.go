@@ -26,7 +26,6 @@ func NewKeycloakOIDCProvider(p *ProviderData, opts options.Provider) *KeycloakOI
 	}
 
 	provider.addAllowedRoles(opts.KeycloakConfig.Roles)
-	provider.setAllowedACR(opts.KeycloakConfig.ACRs)
 	return provider
 }
 

@@ -727,7 +727,6 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		provider.KeycloakConfig = KeycloakOptions{
 			Groups: l.KeycloakGroups,
 			Roles:  l.AllowedRoles,
-			ACRs:   l.AcrValues,
 		}
 	case "keycloak":
 		provider.KeycloakConfig = KeycloakOptions{
