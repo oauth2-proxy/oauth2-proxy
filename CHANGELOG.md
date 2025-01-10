@@ -8,6 +8,8 @@
 
 ## Changes since v7.12.0
 
+- [#2767](https://github.com/oauth2-proxy/oauth2-proxy/pull/2767) Propagate errors during route building (@sybereal)
+
 # V7.12.0
 
 ## Release Highlights
