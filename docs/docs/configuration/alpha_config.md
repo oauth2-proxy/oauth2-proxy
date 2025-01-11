@@ -410,6 +410,7 @@ character.
 | `insecureSkipNonce` | _bool_ | InsecureSkipNonce skips verifying the ID Token's nonce claim that must match<br/>the random nonce sent in the initial OAuth flow. Otherwise, the nonce is checked<br/>after the initial OAuth redeem & subsequent token refreshes.<br/>default set to 'true'<br/>Warning: In a future release, this will change to 'false' by default for enhanced security. |
 | `skipDiscovery` | _bool_ | SkipDiscovery allows to skip OIDC discovery and use manually supplied Endpoints<br/>default set to 'false' |
 | `jwksURL` | _string_ | JwksURL is the OpenID Connect JWKS URL<br/>eg: https://www.googleapis.com/oauth2/v3/certs |
+| `publicKeyFiles` | _[]string_ | PublicKeyFiles is a list of paths pointing to public key files in PEM format to use<br/>for verifying JWT tokens |
 | `emailClaim` | _string_ | EmailClaim indicates which claim contains the user email,<br/>default set to 'email' |
 | `groupsClaim` | _string_ | GroupsClaim indicates which claim contains the user groups<br/>default set to 'groups' |
 | `userIDClaim` | _string_ | UserIDClaim indicates which claim contains the user ID<br/>default set to 'email' |
