@@ -12,6 +12,7 @@ The provider is OIDC-compliant, so all the OIDC parameters are honored. Addition
 | Flag                        | Toml Field                 | Type           | Description                                                                                                                                                                                                                                                                               | Default |
 | --------------------------- | -------------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
 | `--entra-id-allowed-tenant` | `entra_id_allowed_tenants` | string \| list | List of allowed tenants. In case of multi-tenant apps, incoming tokens are issued by different issuers and OIDC issuer verification needs to be disabled. When not specified, all tenants are allowed. Redundant for single-tenant apps (regular ID token validation matches the issuer). |         |
+| `--entra-id-federated-token-auth` | `entra_id_federated_token_auth` | boolean | Enable oAuth2 client authentication with federated token projected by Entra Workload Identity plugin, instead of client secret.   | false |
 
 ## Configure App registration
 To begin, create an App registration, set a redirect URI, and generate a secret. All account types are supported, including single-tenant, multi-tenant, multi-tenant with Microsoft accounts, and Microsoft accounts only.
@@ -115,6 +116,34 @@ insecure_oidc_skip_issuer_verification=true
 
 To provide additional security, Entra ID provider performs check on the ID token's `issuer` claim to match the `https://login.microsoftonline.com/{tenant-id}/v2.0` template.
 
+### Workload Identity
+Provider supports authentication with federated token, without need of using client secret. Following conditions have to be met:
+
+* Cluster has public OIDC provider URL. For major cloud providers, it can be enabled with a single flag, for example for [Azure Kubernetes Service deployed with Terraform](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/kubernetes_cluster), it's `oidc_issuer_enabled`.
+* Workload Identity admission webhook is deployed on the cluster. For AKS, it can be enabled with a flag (`workload_identity_enabled` in Terraform resource), for clusters outside of Azure, it can be installed from [helm chart](https://github.com/Azure/azure-workload-identity).
+* Appropriate federated credential is added to application registration.
+<details>
+    <summary>See federated credential terraform example</summary>
+```
+    resource "azuread_application_federated_identity_credential" "fedcred" {
+        application_id = azuread_application.application.id # ID of your application
+        display_name   = "federation-cred"
+        description    = "Workload identity for oauth2-proxy"
+        audiences      = ["api://AzureADTokenExchange"] # Fixed value
+        issuer         = "https://cluster-oidc-issuer-url..."
+        subject        = "system:serviceaccount:oauth2-proxy-namespace-name:oauth2-proxy-sa-name" # set proper NS and SA name
+    }
+```
+</details>
+
+* Kubernetes service account associated with oauth2-proxy deployment, is annotated with `azure.workload.identity/client-id: <app-registration-client-id>`
+* oauth2-proxy pod is labeled with `azure.workload.identity/use: "true"`
+* oauth2-proxy is configured with `entra_id_federated_token_auth` set to `true`.
+
+`client_secret` setting can be omitted when using federated token authentication.
+
+See: [Azure Workload Identity documentation](https://azure.github.io/azure-workload-identity/docs/).
+
 ### Example configurations
 Single-tenant app without groups (*groups claim* not enabled). Consider using generic OIDC provider:
 ```toml
@@ -143,6 +172,16 @@ client_id="<client-id>"
 client_secret="<client-secret>"
 scope="openid User.Read"
 allowed_groups=["968b4844-d5e7-4e18-a834-59927959369f"]
+```
+
+Single-tenant app with more than 200 groups and workload identity enabled:
+```toml
+provider="entra-id"
+oidc_issuer_url="https://login.microsoftonline.com/<tenant-id>/v2.0"
+client_id="<client-id>"
+scope="openid User.Read"
+allowed_groups=["968b4844-d5e7-4e18-a834-59927959369f"]
+entra_id_federated_token_auth=true
 ```
 
 Multi-tenant app with Microsoft personal accounts & one Entra tenant allowed, with group overage considered:
