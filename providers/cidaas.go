@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/bitly/go-simplejson"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
@@ -39,8 +40,6 @@ func NewCIDAASProvider(p *ProviderData, opts options.Provider) *CIDAASProvider {
 		scope: CidaasDefaultScope,
 	})
 
-  opts.InsecureSkipNonce = true // Should this be configurable or not?! Do you need to skip the nonce for Cidaas?
-  
 	return &CIDAASProvider{
 		OIDCProvider: NewOIDCProvider(p, opts.OIDCConfig),
 	}
@@ -55,7 +54,7 @@ func (p *CIDAASProvider) RefreshSession(ctx context.Context, s *sessions.Session
 	if err := p.redeemRefreshToken(ctx, s); err != nil {
 		return false, fmt.Errorf("unable to redeem refresh token: %w", err)
 	}
-	
+
 	if err := p.EnrichSession(ctx, s); err != nil {
 		return false, fmt.Errorf("unable to enrich session data after refresh: %w %v", err, s)
 	}
@@ -68,7 +67,7 @@ func (p *CIDAASProvider) EnrichSession(ctx context.Context, s *sessions.SessionS
 	if p.ProfileURL.String() == "" && s.Email == "" {
 		return errors.New("id_token did not contain an email and profileURL is not defined")
 	} else if p.ProfileURL.String() == "" {
-			return nil
+		return nil
 	}
 
 	// Try to get missing emails or groups from a profileURL
@@ -115,7 +114,7 @@ func (p *CIDAASProvider) extractGroups(respJSON *simplejson.Json) ([]string, err
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var groupsClaimList GroupsClaimList
 	err = json.Unmarshal(rawGroupsClaim, &groupsClaimList)
 	if err != nil {
