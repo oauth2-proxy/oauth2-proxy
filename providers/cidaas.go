@@ -66,11 +66,10 @@ func (p *CIDAASProvider) RefreshSession(ctx context.Context, s *sessions.Session
 
 // EnrichSession data to add email an groups
 func (p *CIDAASProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
-	if p.ProfileURL.String() == "" {
-		if s.Email == "" {
-			return errors.New("id_token did not contain an email and profileURL is not defined")
-		}
-		return nil
+	if p.ProfileURL.String() == "" && s.Email == "" {
+		return errors.New("id_token did not contain an email and profileURL is not defined")
+	} else if p.ProfileURL.String() == "" {
+			return nil
 	}
 
 	// Try to get missing emails or groups from a profileURL
