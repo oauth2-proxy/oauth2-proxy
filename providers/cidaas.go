@@ -33,17 +33,16 @@ const (
 )
 
 // NewCIDAASProvider initiates a new CIDAASProvider
-func NewCIDAASProvider(p *ProviderData) *CIDAASProvider {
+func NewCIDAASProvider(p *ProviderData, opts options.Provider) *CIDAASProvider {
 	p.setProviderDefaults(providerDefaults{
 		name:  CidaasProviderName,
 		scope: CidaasDefaultScope,
 	})
 
+  opts.InsecureSkipNonce = true // Should this be configurable or not?! Do you need to skip the nonce for Cidaas?
+  
 	return &CIDAASProvider{
-		OIDCProvider: &OIDCProvider{
-			ProviderData: p,
-			SkipNonce:    true,
-		},
+		OIDCProvider: NewOIDCProvider(p, opts.OIDCConfig),
 	}
 }
 
@@ -116,6 +115,7 @@ func (p *CIDAASProvider) extractGroups(respJSON *simplejson.Json) ([]string, err
 	if err != nil {
 		return nil, err
 	}
+	
 	var groupsClaimList GroupsClaimList
 	err = json.Unmarshal(rawGroupsClaim, &groupsClaimList)
 	if err != nil {

@@ -46,7 +46,7 @@ func NewProvider(providerConfig options.Provider) (Provider, error) {
 	case options.BitbucketProvider:
 		return NewBitbucketProvider(providerData, providerConfig.BitbucketConfig), nil
 	case options.CidaasProvider:
-		return NewCIDAASProvider(providerData), nil
+		return NewCIDAASProvider(providerData, providerConfig), nil
 	case options.DigitalOceanProvider:
 		return NewDigitalOceanProvider(providerData), nil
 	case options.FacebookProvider:
