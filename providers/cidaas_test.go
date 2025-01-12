@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -46,8 +47,11 @@ func newCidaasProvider(serverURL *url.URL) *CIDAASProvider {
 			&oidc.Config{ClientID: oidcClientID},
 		),
 	}
+	cfg := options.Provider{
+		Type: options.CidaasProvider,
+	}
 
-	p := NewCIDAASProvider(providerData)
+	p := NewCIDAASProvider(providerData, cfg)
 
 	return p
 }
@@ -394,7 +398,11 @@ func TestCidaasProvider_EnrichSession(t *testing.T) {
 			defer server.Close()
 
 			err = provider.EnrichSession(context.Background(), tc.ExistingSession)
-			assert.Equal(t, tc.ExpectedError, err)
+			if tc.ExpectedError != nil {
+				assert.EqualError(t, err, tc.ExpectedError.Error())
+			} else {
+				assert.NoError(t, err)
+			}
 			assert.Equal(t, *tc.ExpectedSession, *tc.ExistingSession)
 		})
 	}
@@ -471,7 +479,11 @@ func TestCidaasProvider_RefreshSession(t *testing.T) {
 			var refreshed bool
 			refreshed, err = provider.RefreshSession(context.Background(), tc.ExistingSession)
 
-			assert.Equal(t, tc.ExpectedError, err)
+			if tc.ExpectedError != nil {
+				assert.EqualError(t, err, tc.ExpectedError.Error())
+			} else {
+				assert.NoError(t, err)
+			}
 			assert.Equal(t, tc.ExpectedRefreshed, refreshed)
 			assert.Equal(t, tc.ExpectedEmail, tc.ExistingSession.Email)
 			assert.Equal(t, tc.ExpectedUser, tc.ExistingSession.User)
