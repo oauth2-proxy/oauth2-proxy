@@ -8,24 +8,14 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
-	"github.com/coreos/go-systemd/activation"
+	"golang.org/x/sync/errgroup"
+
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options/util"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
-	"golang.org/x/sync/errgroup"
-)
-
-// listenFdsStart corresponds to `SD_LISTEN_FDS_START`.
-// Since the 3 first file descriptors in every linux process is
-// stdin, stdout and stderr. The first usable file descriptor is 3.
-// systemd-socket-activate will always assume that the first socket will be
-// 3 and the rest follow.
-const (
-	listenFdsStart = 3
 )
 
 // Server represents an HTTP or HTTPS server.
@@ -83,27 +73,6 @@ type server struct {
 	fdFiles []*os.File
 }
 
-// convert a string filedescriptor to an actual listener
-func (s *server) fdToListener(bindAddress string) (net.Listener, error) {
-	fd, err := strconv.Atoi(bindAddress)
-	if err != nil {
-		return nil, fmt.Errorf("listen failed: fd with name is not implemented yet")
-	}
-	fdIndex := fd - listenFdsStart
-
-	if len(s.fdFiles) == 0 {
-		s.fdFiles = activation.Files(true)
-	}
-
-	l := len(s.fdFiles)
-
-	if fdIndex < 0 || fdIndex >= l || l == 0 {
-		return nil, fmt.Errorf("listen failed: fd outside of range of available file descriptors")
-	}
-
-	return net.FileListener(s.fdFiles[fdIndex])
-}
-
 // setupListener sets the server listener if the HTTP server is enabled.
 // The HTTP server can be disabled by setting the BindAddress to "-" or by
 // leaving it empty.
@@ -120,13 +89,7 @@ func (s *server) setupListener(opts Opts) error {
 	// to the program is indeed a net.Listener and starts using it
 	// without setting up a new listener.
 	if strings.HasPrefix(strings.ToLower(opts.BindAddress), "fd:") {
-		listenAddr := opts.BindAddress[3:]
-		listener, err := s.fdToListener(listenAddr)
-		if err != nil {
-			err = fmt.Errorf("listen (%s, %s) failed: %v", "file", listenAddr, err)
-		}
-		s.listener = listener
-		return err
+		return s.checkSystemdSocketSupport(opts)
 	}
 
 	networkType := getNetworkScheme(opts.BindAddress)
@@ -134,7 +97,7 @@ func (s *server) setupListener(opts Opts) error {
 
 	listener, err := net.Listen(networkType, listenAddr)
 	if err != nil {
-		return fmt.Errorf("listen (%s, %s) failed: %v", networkType, listenAddr, err)
+		return fmt.Errorf("listen (%s, %s) failed: %w", networkType, listenAddr, err)
 	}
 	s.listener = listener
 
