@@ -53,13 +53,12 @@ func (p *CIDAASProvider) RefreshSession(ctx context.Context, s *sessions.Session
 		return false, nil
 	}
 
-	err := p.redeemRefreshToken(ctx, s)
-	if err != nil {
-		return false, fmt.Errorf("unable to redeem refresh token: %v", err)
+	if err := p.redeemRefreshToken(ctx, s); err != nil {
+		return false, fmt.Errorf("unable to redeem refresh token: %w", err)
 	}
-	err = p.EnrichSession(ctx, s)
-	if err != nil {
-		return false, fmt.Errorf("unable to enrich session data after refresh: %v %v", err, s)
+	
+	if err := p.EnrichSession(ctx, s); err != nil {
+		return false, fmt.Errorf("unable to enrich session data after refresh: %w %v", err, s)
 	}
 
 	return true, nil
