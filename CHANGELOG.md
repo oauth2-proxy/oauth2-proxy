@@ -12,21 +12,32 @@
 
 ## Release Highlights
 
+- ☁️ Introducing support for Microsoft Entra ID
+  - Including Support for Azure Workload Identity as well
+  - Including full e2e testing using Azure Credits from MS sponsoring
+  - Deprecated old Azure AD provider
+- 🪪 Static local JWKS file support
+- Support for systemd sockets
+- 🐛 Several bugs have been squashed
+- 🕵️‍♀️ Vulnerabilities have been addressed
+  - CVE-2024-45338
+
 ## Important Notes
 
 ## Breaking Changes
 
 ## Changes since v7.7.1
 
-- [#2800](https://github.com/oauth2-proxy/oauth2-proxy/pull/2800) Add some opencontainer labels to docker image (@halkeye)
+- [#2390](https://github.com/oauth2-proxy/oauth2-proxy/pull/2390) feat: add Microsoft Entra ID provider (@jjlakis / @tuunit)
+- [#2902](https://github.com/oauth2-proxy/oauth2-proxy/pull/2902) feat(entra): add Workload Identity support for Entra ID (@jjlakis)
+- [#2800](https://github.com/oauth2-proxy/oauth2-proxy/pull/2800) doc: add some opencontainer labels to docker image (@halkeye)
 - [#2755](https://github.com/oauth2-proxy/oauth2-proxy/pull/2755) feat: add X-Envoy-External-Address as supported header (@bjencks)
-- [#1985](https://github.com/oauth2-proxy/oauth2-proxy/pull/1985) Add support for systemd socket (@isodude)
-- [#2300](https://github.com/oauth2-proxy/oauth2-proxy/pull/2300) Add fix for websocket path rewrite (@rekup)
+- [#1985](https://github.com/oauth2-proxy/oauth2-proxy/pull/1985) feat: add support for systemd socket (@isodude)
+- [#2300](https://github.com/oauth2-proxy/oauth2-proxy/pull/2300) fix: add fix for websocket path rewrite (@rekup)
 - [#2821](https://github.com/oauth2-proxy/oauth2-proxy/pull/2821) feat: add CF-Connecting-IP as supported real ip header (@ondrejsika)
 - [#2620](https://github.com/oauth2-proxy/oauth2-proxy/pull/2620) fix: update code_verifier to use recommended method (@vishvananda)
-- [#2392](https://github.com/oauth2-proxy/oauth2-proxy/pull/2392) chore: extend test cases for oidc provider and documentation regarding implicit setting of the groups scope when no scope was specified in the config (@jjlakis / @tuunit)
-- [#2902](https://github.com/oauth2-proxy/oauth2-proxy/pull/2902) feat(entra): add Workload Identity support for Entra ID (@jjlakis)
 - [#2376](https://github.com/oauth2-proxy/oauth2-proxy/pull/2376) feat: static public keys file support for oidc provider (@axel7083 / @jjlakis)
+- [#2392](https://github.com/oauth2-proxy/oauth2-proxy/pull/2392) chore: extend test cases for oidc provider and documentation regarding implicit setting of the groups scope when no scope was specified in the config (@jjlakis / @tuunit)
 
 # V7.7.1
 
