@@ -73,9 +73,8 @@ func (p *CIDAASProvider) EnrichSession(ctx context.Context, s *sessions.SessionS
 	}
 
 	// Try to get missing emails or groups from a profileURL
-	err := p.enrichFromUserinfoEndpoint(ctx, s)
-	if err != nil {
-		logger.Errorf("Warning: Profile URL request failed: %v", err)
+	if err := p.enrichFromUserinfoEndpoint(ctx, s); err != nil {
+		logger.Errorf("Warning: Profile URL request failed: %w", err)
 	}
 
 	// If a mandatory email wasn't set, error at this point.
