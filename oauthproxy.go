@@ -803,7 +803,7 @@ func (p *OAuthProxy) backendLogout(rw http.ResponseWriter, req *http.Request, si
 		if providerData.BackendLogoutAllSessionsURL == "" {
 			return
 		}
-		p.picsAuditClient.CreateSuccessfulLogoutAuditEntry(session, req.RequestURI, req.Header.Get("edisp-org-id"))
+
 		resp, err := PicsSignOutAllSessions(providerData.BackendLogoutAllSessionsURL, session.IntrospectClaims, session.AccessToken)
 		if err != nil {
 			logger.Errorf("error while calling backend logout all sessions: %v", err)
@@ -813,6 +813,7 @@ func (p *OAuthProxy) backendLogout(rw http.ResponseWriter, req *http.Request, si
 		if resp.StatusCode() != 200 {
 			logger.Errorf("error while calling backend logout url, returned error code %v", resp.StatusCode())
 		}
+		p.picsAuditClient.CreateSuccessfulLogoutAuditEntry(session, req.RequestURI, req.Header.Get("edisp-org-id"))
 	} else {
 		if providerData.BackendLogoutURL == "" {
 			return
