@@ -1,10 +1,11 @@
 package audit
 
 type Coding struct {
-	System       string `json:"system,omitempty"`
-	Version      string `json:"version,omitempty"`
-	Code         string `json:"code,omitempty"`
-	Display      string `json:"display,omitempty"`
+	System  string `json:"system,omitempty"`
+	Version string `json:"version,omitempty"`
+	Code    string `json:"code,omitempty"`
+	Display string `json:"display,omitempty"`
+	// AuditServer is complaining about UserSelected. Do not use.
 	UserSelected string `json:"userSelected,omitempty"`
 }
 

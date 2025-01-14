@@ -54,19 +54,19 @@ func NewAuditClient(opts *ClientOpts) (*Client, error) {
 
 func (c *Client) CreateSuccessfulLoginAuditEntry(ss *sessions.SessionState, appURL string, tenantID string) {
 	coding := Coding{
-		System: "http://hl7.org/fhir/ValueSet/audit-event-type", Version: "1", Code: "110114", Display: "User Authentication", UserSelected: ""}
+		System: "http://hl7.org/fhir/ValueSet/audit-event-type", Version: "1", Code: "110114", Display: "User Authentication"}
 	c.createAuditEntry(ss, appURL, tenantID, "0", "Success", &coding)
 }
 
 func (c *Client) CreateFailedLoginAuditEntry(ss *sessions.SessionState, appURL string, tenantID string, errorDesc string) {
 	coding := Coding{
-		System: "http://hl7.org/fhir/ValueSet/audit-event-type", Version: "1", Code: "110114", Display: "User Authentication", UserSelected: ""}
+		System: "http://hl7.org/fhir/ValueSet/audit-event-type", Version: "1", Code: "110114", Display: "User Authentication"}
 	c.createAuditEntry(ss, appURL, tenantID, "1", errorDesc, &coding)
 }
 
 func (c *Client) CreateSuccessfulLogoutAuditEntry(ss *sessions.SessionState, appURL string, tenantID string) {
 	coding := Coding{
-		System: "http://hl7.org/fhir/ValueSet/audit-event-type", Version: "1", Code: "110114", Display: "Logout", UserSelected: "All Sessions"}
+		System: "http://hl7.org/fhir/ValueSet/audit-event-type", Version: "1", Code: "110123", Display: "User Logout All Sessions"}
 	c.createAuditEntry(ss, appURL, tenantID, "0", "Success", &coding)
 }
 
@@ -77,8 +77,7 @@ func (c *Client) createAuditEntry(ss *sessions.SessionState, appURL string, tena
 	auditObject := RootEvent{
 		ResourceType: "AuditEvent",
 		Event: &Event{
-			Type: &Coding{
-				coding.System, coding.Version, coding.Code, coding.Display, coding.UserSelected},
+			Type:        &Coding{System: coding.System, Version: coding.Version, Code: coding.Code, Display: coding.Display},
 			Action:      "E",
 			DateTime:    time.Now().UTC().Format(time.RFC3339),
 			Outcome:     outcomeCode,
