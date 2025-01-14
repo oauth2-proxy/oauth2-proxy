@@ -8,6 +8,8 @@
 
 ## Changes since v7.8.0
 
+- [#2920](https://github.com/oauth2-proxy/oauth2-proxy/pull/2920) fix: setting version during docker built
+
 # V7.8.0
 
 ## Release Highlights
