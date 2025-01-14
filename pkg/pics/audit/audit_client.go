@@ -66,7 +66,7 @@ func (c *Client) CreateFailedLoginAuditEntry(ss *sessions.SessionState, appURL s
 
 func (c *Client) CreateSuccessfulLogoutAuditEntry(ss *sessions.SessionState, appURL string, tenantID string) {
 	coding := Coding{
-		System: "http://hl7.org/fhir/ValueSet/audit-event-type", Version: "1", Code: "110123", Display: "Logout", UserSelected: "All Sessions"}
+		System: "http://hl7.org/fhir/ValueSet/audit-event-type", Version: "1", Code: "110114", Display: "Logout", UserSelected: "All Sessions"}
 	c.createAuditEntry(ss, appURL, tenantID, "0", "Success", &coding)
 }
 
