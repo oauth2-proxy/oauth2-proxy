@@ -12,6 +12,8 @@
 
 ## Release Highlights
 
+- 🐛 Two bugs have been squashed
+
 ## Important Notes
 
 ## Breaking Changes
