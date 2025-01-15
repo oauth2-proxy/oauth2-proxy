@@ -6,6 +6,18 @@
 
 ## Breaking Changes
 
+## Changes since v7.8.1
+
+# V7.8.1
+
+## Release Highlights
+
+- 🐛 Two bugs have been squashed
+
+## Important Notes
+
+## Breaking Changes
+
 ## Changes since v7.8.0
 
 - [#2887](https://github.com/oauth2-proxy/oauth2-proxy/issues/2887) fix: jwt regex validation error during skip-jwt-bearer-tokens flow
