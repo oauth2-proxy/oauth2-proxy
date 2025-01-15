@@ -23,6 +23,7 @@ COPY . .
 #  sources have changed.
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
+ARG VERSION
 
 # Build binary and make sure there is at least an empty key file.
 #  This is useful for GCP App Engine custom runtime builds, because
