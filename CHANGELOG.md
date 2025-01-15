@@ -8,6 +8,8 @@
 
 ## Changes since v7.8.1
 
+- [#2918](https://github.com/oauth2-proxy/oauth2-proxy/issues/2918) feat: add --deny-invalid-bearer-tokens (@carillonator)
+
 # V7.8.1
 
 ## Release Highlights
