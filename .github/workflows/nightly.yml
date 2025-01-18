@@ -34,8 +34,8 @@ jobs:
 
     - name: Build images
       run: |
-        make docker-nightly-build
+        make nightly-build
 
     - name: Push images
       run: |
-        make docker-nightly-push
+        make nightly-push
