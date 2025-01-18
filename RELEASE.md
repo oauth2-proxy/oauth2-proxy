@@ -41,8 +41,8 @@ Note this uses `v4.1.0` as an example release number.
 10. Publish release in Github
 11. Make and push docker images to Quay
   ```
-  make docker-all
-  make docker-push-all
+  make build-docker-all
+  make push-docker-all
   ```
   Note: Ensure the docker tags don't include `-dirty`. This means you have uncommitted changes.
 
