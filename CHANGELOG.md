@@ -8,6 +8,7 @@
 
 ## Changes since v7.8.1
 
+- [#2927](https://github.com/oauth2-proxy/oauth2-proxy/pull/2927) chore(deps/build): bump golang to 1.23 and use go.mod as single point of truth for all build files (@tuunit)
 - [#2918](https://github.com/oauth2-proxy/oauth2-proxy/issues/2918) feat: add --deny-invalid-bearer-tokens (@carillonator)
 
 # V7.8.1
