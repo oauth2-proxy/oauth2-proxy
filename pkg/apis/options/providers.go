@@ -166,6 +166,10 @@ type MicrosoftEntraIDOptions struct {
 	// When not specified, all tenants are allowed. Redundant for single-tenant apps
 	// (regular ID token validation matches the issuer).
 	AllowedTenants []string `json:"allowedTenants,omitempty"`
+
+	// FederatedTokenAuth enable oAuth2 client authentication with federated token projected
+	// by Entra Workload Identity plugin, instead of client secret.
+	FederatedTokenAuth bool `json:"federatedTokenAuth,omitempty"`
 }
 
 type ADFSOptions struct {
@@ -238,6 +242,9 @@ type OIDCOptions struct {
 	// JwksURL is the OpenID Connect JWKS URL
 	// eg: https://www.googleapis.com/oauth2/v3/certs
 	JwksURL string `json:"jwksURL,omitempty"`
+	// PublicKeyFiles is a list of paths pointing to public key files in PEM format to use
+	// for verifying JWT tokens
+	PublicKeyFiles []string `json:"publicKeyFiles,omitempty"`
 	// EmailClaim indicates which claim contains the user email,
 	// default set to 'email'
 	EmailClaim string `json:"emailClaim,omitempty"`
