@@ -158,7 +158,7 @@ func ClearExtraCsrfCookies(opts *options.Cookie, rw http.ResponseWriter, req *ht
 		return
 	}
 	cookies := req.Cookies()
-	//determine how many csrf cookies we have
+	// determine how many csrf cookies we have
 	existingCsrfCookies := []*http.Cookie{}
 	startsWith := fmt.Sprintf("%v_", opts.Name)
 	for _, cookie := range cookies {
@@ -166,7 +166,7 @@ func ClearExtraCsrfCookies(opts *options.Cookie, rw http.ResponseWriter, req *ht
 			existingCsrfCookies = append(existingCsrfCookies, cookie)
 		}
 	}
-	//short circuit return
+	// short circuit return
 	if len(existingCsrfCookies) <= opts.CSRFPerRequestLimit {
 		return
 	}
@@ -178,7 +178,7 @@ func ClearExtraCsrfCookies(opts *options.Cookie, rw http.ResponseWriter, req *ht
 		}
 		decodedCookies = append(decodedCookies, decodedCookie)
 	}
-	//delete the X oldest cookies
+	// delete the X oldest cookies
 	slices.SortStableFunc(decodedCookies, func(a, b *csrf) int {
 		return a.time.Now().Compare(b.time.Now())
 	})
