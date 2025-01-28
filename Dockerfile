@@ -1,13 +1,18 @@
-# This ARG has to be at the top, otherwise the docker daemon does not known what to do with FROM ${RUNTIME_IMAGE}
-ARG RUNTIME_IMAGE=gcr.io/distroless/static:nonroot
-# version is shared between mutiple buildstages
+# The image ARGs have to be at the top, otherwise the docker daemon cannot validate
+# the FROM statements and overall Dockerfile
+#
+# Argument for setting the build image
+ARG BUILD_IMAGE=placeholder
+# Argument for setting the runtime image
+ARG RUNTIME_IMAGE=placeholder
+# Argument for setting the oauth2-proxy build version
 ARG VERSION
 
 # All builds should be done using the platform native to the build node to allow
 #  cache sharing of the go mod download step.
 # Go cross compilation is also faster than emulation the go compilation across
 #  multiple platforms.
-FROM --platform=${BUILDPLATFORM} docker.io/library/golang:1.22-bookworm AS builder
+FROM --platform=${BUILDPLATFORM} ${BUILD_IMAGE} AS builder
 
 # Copy sources
 WORKDIR $GOPATH/src/github.com/oauth2-proxy/oauth2-proxy
@@ -19,10 +24,13 @@ RUN go mod download
 # Now pull in our code
 COPY . .
 
-# Arguments go here so that the previous steps can be cached if no external
-#  sources have changed.
+# Arguments go here so that the previous steps can be cached if no external sources
+# have changed. These arguments are automatically set by the docker engine.
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
+
+# Reload version argument
+ARG VERSION
 
 # Build binary and make sure there is at least an empty key file.
 #  This is useful for GCP App Engine custom runtime builds, because
@@ -45,8 +53,11 @@ RUN case ${TARGETPLATFORM} in \
     printf "Building OAuth2 Proxy for arch ${GOARCH}\n" && \
     GOARCH=${GOARCH} VERSION=${VERSION} make build && touch jwt_signing_key.pem
 
+# Reload runtime image
+ARG RUNTIME_IMAGE
 # Copy binary to runtime image
 FROM ${RUNTIME_IMAGE}
+# Reload version
 ARG VERSION
 
 COPY --from=builder /go/src/github.com/oauth2-proxy/oauth2-proxy/oauth2-proxy /bin/oauth2-proxy
