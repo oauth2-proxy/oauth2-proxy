@@ -192,6 +192,6 @@ client_id="<client-id>"
 client_secret="<client-secret>"
 insecure_oidc_skip_issuer_verification=true
 scope="openid profile email User.Read"
-entra_id_allowed_tenant=["9188040d-6c67-4c5b-b112-36a304b66dad","<my-tenant-id>"] # Allow only <my-tenant-id> and Personal MS Accounts tenant 
+entra_id_allowed_tenants=["9188040d-6c67-4c5b-b112-36a304b66dad","<my-tenant-id>"] # Allow only <my-tenant-id> and Personal MS Accounts tenant 
 email_domains="*"
 ```
