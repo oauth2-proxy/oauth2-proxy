@@ -70,7 +70,7 @@ func main() {
 func loadConfiguration(config, yamlConfig string, extraFlags *pflag.FlagSet, args []string) (*options.Options, error) {
 	opts, err := loadLegacyOptions(config, extraFlags, args)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("couldn't load legacy options: %w", err)
 	}
 
 	if yamlConfig != "" {
