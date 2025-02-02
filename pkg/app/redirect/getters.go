@@ -20,6 +20,24 @@ func (a *appDirector) getRdQuerystringRedirect(req *http.Request) string {
 	)
 }
 
+// getCustomRedirectHeader uses the configured custom header as the redirect
+// path, along with the query parameters from the original request, if present.
+func (a *appDirector) getCustomRedirect(req *http.Request) string {
+	if h := a.customRedirectHeader; h != "" {
+		if r := req.Header.Get(h); r != "" {
+			query := ""
+			if q := req.URL.RawQuery; q != "" {
+				query = "?" + q
+			}
+			return a.validateRedirect(
+				r+query,
+				fmt.Sprintf("Invalid redirect generated from %s header: %%s", h),
+			)
+		}
+	}
+	return ""
+}
+
 // getXAuthRequestRedirect handles this getAppRedirect strategy:
 // - `X-Auth-Request-Redirect` Header
 func (a *appDirector) getXAuthRequestRedirect(req *http.Request) string {
