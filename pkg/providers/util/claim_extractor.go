@@ -10,9 +10,25 @@ import (
 	"strings"
 
 	"github.com/bitly/go-simplejson"
+	"github.com/jmespath/go-jmespath"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 	"github.com/spf13/cast"
 )
+
+// All claims starting with @. are interpreted as JMESPath
+const jmesPathPrefix = "@."
+
+// Valide ClaimPath format - used at configuration time to log potential errors
+func IsClaimPathInvalid(claim string) error {
+	if strings.HasPrefix(claim, jmesPathPrefix) {
+		if _, err := jmespath.Compile(claim); err != nil {
+			return fmt.Errorf("invalid JMESPath format, %v", err)
+		}
+	}
+
+	// assume plain json path are always valid
+	return nil
+}
 
 // ClaimExtractor is used to extract claim values from an ID Token, or, if not
 // present, from the profile URL.
@@ -145,6 +161,13 @@ func getClaimFrom(claim string, src *simplejson.Json) interface{} {
 	if value, ok := src.CheckGet(claim); ok {
 		return value.Interface()
 	}
+
+	if strings.HasPrefix(claim, jmesPathPrefix) {
+		if value, err := jmespath.Search(claim, src.Interface()); err == nil {
+			return value
+		}
+	}
+
 	claimParts := strings.Split(claim, ".")
 	return src.GetPath(claimParts...).Interface()
 }
