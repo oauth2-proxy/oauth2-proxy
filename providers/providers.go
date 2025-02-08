@@ -29,6 +29,7 @@ type Provider interface {
 	ValidateSession(ctx context.Context, s *sessions.SessionState) bool
 	RefreshSession(ctx context.Context, s *sessions.SessionState) (bool, error)
 	CreateSessionFromToken(ctx context.Context, token string) (*sessions.SessionState, error)
+	CreateSessionFromIntrospectedToken(ctx context.Context, token string) (*sessions.SessionState, error)
 }
 
 func NewProvider(providerConfig options.Provider) (Provider, error) {
@@ -105,6 +106,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 			// Use the discovered values rather than any specified values
 			endpoints := pv.Provider().Endpoints()
 			pkce := pv.Provider().PKCE()
+			providerConfig.IntrospectionURL = endpoints.IntrospectionURL
 			providerConfig.LoginURL = endpoints.AuthURL
 			providerConfig.RedeemURL = endpoints.TokenURL
 			providerConfig.ProfileURL = endpoints.UserInfoURL
@@ -118,11 +120,12 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 		dst **url.URL
 		raw string
 	}{
-		"login":    {dst: &p.LoginURL, raw: providerConfig.LoginURL},
-		"redeem":   {dst: &p.RedeemURL, raw: providerConfig.RedeemURL},
-		"profile":  {dst: &p.ProfileURL, raw: providerConfig.ProfileURL},
-		"validate": {dst: &p.ValidateURL, raw: providerConfig.ValidateURL},
-		"resource": {dst: &p.ProtectedResource, raw: providerConfig.ProtectedResource},
+		"introspect": {dst: &p.IntrospectionURL, raw: providerConfig.IntrospectionURL},
+		"login":      {dst: &p.LoginURL, raw: providerConfig.LoginURL},
+		"redeem":     {dst: &p.RedeemURL, raw: providerConfig.RedeemURL},
+		"profile":    {dst: &p.ProfileURL, raw: providerConfig.ProfileURL},
+		"validate":   {dst: &p.ValidateURL, raw: providerConfig.ValidateURL},
+		"resource":   {dst: &p.ProtectedResource, raw: providerConfig.ProtectedResource},
 	} {
 		var err error
 		*u.dst, err = url.Parse(u.raw)

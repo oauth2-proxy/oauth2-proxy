@@ -146,3 +146,8 @@ func (p *ProviderData) CreateSessionFromToken(ctx context.Context, token string)
 	}
 	return nil, ErrNotImplemented
 }
+
+// CreateSessionFromIntrospectedToken converts Bearer Tokens into sessions after valified using introspection endpoint
+func (p *ProviderData) CreateSessionFromIntrospectedToken(_ context.Context, _ string) (*sessions.SessionState, error) {
+	return nil, ErrNotImplemented
+}

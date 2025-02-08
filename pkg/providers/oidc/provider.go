@@ -11,11 +11,13 @@ import (
 
 // providerJSON represents the information we need from an OIDC discovery
 type providerJSON struct {
-	Issuer               string   `json:"issuer"`
-	AuthURL              string   `json:"authorization_endpoint"`
-	TokenURL             string   `json:"token_endpoint"`
-	JWKsURL              string   `json:"jwks_uri"`
-	UserInfoURL          string   `json:"userinfo_endpoint"`
+	Issuer           string `json:"issuer"`
+	AuthURL          string `json:"authorization_endpoint"`
+	TokenURL         string `json:"token_endpoint"`
+	JWKsURL          string `json:"jwks_uri"`
+	UserInfoURL      string `json:"userinfo_endpoint"`
+	IntrospectionURL string `json:"introspection_endpoint"`
+
 	CodeChallengeAlgs    []string `json:"code_challenge_methods_supported"`
 	SupportedSigningAlgs []string `json:"id_token_signing_alg_values_supported"`
 }
@@ -23,10 +25,11 @@ type providerJSON struct {
 // Endpoints represents the endpoints discovered as part of the OIDC discovery process
 // that will be used by the authentication providers.
 type Endpoints struct {
-	AuthURL     string
-	TokenURL    string
-	JWKsURL     string
-	UserInfoURL string
+	AuthURL          string
+	TokenURL         string
+	JWKsURL          string
+	UserInfoURL      string
+	IntrospectionURL string
 }
 
 // PKCE holds information relevant to the PKCE (code challenge) support of the
@@ -69,6 +72,7 @@ func NewProvider(ctx context.Context, issuerURL string, skipIssuerVerification b
 		tokenURL:             p.TokenURL,
 		jwksURL:              p.JWKsURL,
 		userInfoURL:          p.UserInfoURL,
+		introspectionURL:     p.IntrospectionURL,
 		codeChallengeAlgs:    p.CodeChallengeAlgs,
 		supportedSigningAlgs: p.SupportedSigningAlgs,
 	}, nil
@@ -77,6 +81,7 @@ func NewProvider(ctx context.Context, issuerURL string, skipIssuerVerification b
 // discoveryProvider holds the discovered endpoints
 type discoveryProvider struct {
 	authURL              string
+	introspectionURL     string
 	tokenURL             string
 	jwksURL              string
 	userInfoURL          string
@@ -87,10 +92,11 @@ type discoveryProvider struct {
 // Endpoints returns the discovered endpoints needed for an authentication provider.
 func (p *discoveryProvider) Endpoints() Endpoints {
 	return Endpoints{
-		AuthURL:     p.authURL,
-		TokenURL:    p.tokenURL,
-		JWKsURL:     p.jwksURL,
-		UserInfoURL: p.userInfoURL,
+		AuthURL:          p.authURL,
+		TokenURL:         p.tokenURL,
+		JWKsURL:          p.jwksURL,
+		UserInfoURL:      p.userInfoURL,
+		IntrospectionURL: p.introspectionURL,
 	}
 }
 

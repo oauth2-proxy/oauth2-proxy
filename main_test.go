@@ -86,6 +86,7 @@ providers:
   - name: approval_prompt
     default:
     - force
+  introspectionHeader: X-Oauth2-Proxy-Introspect-Token
 `
 
 	const testCoreConfig = `
@@ -166,6 +167,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 				LoginURLParameters: []options.LoginURLParameter{
 					{Name: "approval_prompt", Default: []string{"force"}},
 				},
+				IntrospectionHeader: "X-Oauth2-Proxy-Introspect-Token",
 			},
 		}
 		return opts
