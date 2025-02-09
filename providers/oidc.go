@@ -283,17 +283,13 @@ func (p *OIDCProvider) verifyIntrospectedToken(ctx context.Context, payload *sim
 	verifyEmail := (p.EmailClaim == options.OIDCEmailClaim) && !p.AllowUnverifiedEmail
 
 	if verifyEmail {
-		var verified bool
-		exists, err := extractor.GetClaimInto("email_verified", &verified)
-		if err != nil {
-			return err
-		}
-
-		if exists && !verified {
-			return fmt.Errorf("email in id_token (%s) isn't verified", ss.Email)
+		var exists, verified bool
+		exists, err = extractor.GetClaimInto("email_verified", &verified)
+		if err == nil && exists && !verified {
+			err = fmt.Errorf("email in id_token (%s) isn't verified", ss.Email)
 		}
 	}
-	return nil
+	return err
 }
 
 func (p *OIDCProvider) introspectToken(ctx context.Context, ss *sessions.SessionState) error {
