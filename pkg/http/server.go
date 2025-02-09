@@ -308,7 +308,7 @@ func (t *tlsLoader) LoadCert() error {
 	return nil
 }
 
-func (t *tlsLoader) GetCertificate(info *tls.ClientHelloInfo) (*tls.Certificate, error) {
+func (t *tlsLoader) GetCertificate(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
 	if t.cert == nil {
 		return nil, fmt.Errorf("no certificate")
 	}
