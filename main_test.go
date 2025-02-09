@@ -2,9 +2,7 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -256,7 +254,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 			configContent:      testCoreConfig,
 			alphaConfigContent: testAlphaConfig + ":",
 			expectedOptions:    func() *options.Options { return nil },
-			expectedErr:        fmt.Errorf("failed to load alpha options: error unmarshalling config: error converting YAML to JSON: yaml: line %d: did not find expected key", strings.Count(testAlphaConfig, "\n")),
+			expectedErr:        errors.New("failed to load alpha options: error unmarshalling config: yaml: line 1: did not find expected key"),
 		}),
 		Entry("with alpha configuration and bad core configuration", loadConfigurationTableInput{
 			configContent:      testCoreConfig + "unknown_field=\"something\"",

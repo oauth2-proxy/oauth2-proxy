@@ -7,7 +7,7 @@ import (
 
 func TestDecode(t *testing.T) {
 	type result struct {
-		Duration time.Duration `json:"duration"`
+		Duration time.Duration `yaml:"duration"`
 	}
 
 	tests := []struct {
@@ -64,7 +64,7 @@ func TestDecode(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var result struct {
-				Duration time.Duration `json:"duration"`
+				Duration time.Duration `yaml:"duration"`
 			}
 
 			err := Decode(tt.input, &result)

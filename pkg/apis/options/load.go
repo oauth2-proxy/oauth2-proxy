@@ -9,10 +9,10 @@ import (
 	"strings"
 
 	"github.com/a8m/envsubst"
-	"github.com/ghodss/yaml"
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	"gopkg.in/yaml.v3"
 )
 
 // Load reads in the config file at the path given, then merges in environment
@@ -92,7 +92,7 @@ func Decode(input interface{}, result interface{}) error {
 		DecodeHook:           mapstructure.ComposeDecodeHookFunc(toDurationHookFunc()),
 		Metadata:             nil,    // Don't track any metadata
 		Result:               result, // Decode the result into the prefilled options
-		TagName:              "json", // Parse all fields that use the json tag
+		TagName:              "yaml", // Parse all fields that use the json tag
 		ZeroFields:           false,  // Don't clean the default values from the result map (options)
 		ErrorUnused:          true,   // Throw an error if keys have been used that aren't mapped to any struct fields
 		IgnoreUntaggedFields: true,   // Ignore fields in structures that aren't tagged with json
