@@ -48,6 +48,14 @@ type StoredSessionLoaderOptions struct {
 	// If the sesssion is older than `RefreshPeriod` but the provider doesn't
 	// refresh it, we must re-validate using this validation.
 	ValidateSession func(context.Context, *sessionsapi.SessionState) bool
+
+	// Request based session introspection.
+	// Controls if request headers should be parsed
+	ParseIntrospectionHeader bool
+	// The header which is parsed to know if the request should be introspected
+	IntrospectionHeader string
+	// Should all requests be introspected
+	AlwaysIntrospectToken bool
 }
 
 // NewStoredSessionLoader creates a new storedSessionLoader which loads
@@ -56,21 +64,29 @@ type StoredSessionLoaderOptions struct {
 // If a session was loader by a previous handler, it will not be replaced.
 func NewStoredSessionLoader(opts *StoredSessionLoaderOptions) alice.Constructor {
 	ss := &storedSessionLoader{
-		store:            opts.SessionStore,
-		refreshPeriod:    opts.RefreshPeriod,
-		sessionRefresher: opts.RefreshSession,
-		sessionValidator: opts.ValidateSession,
+		store:                 opts.SessionStore,
+		refreshPeriod:         opts.RefreshPeriod,
+		sessionRefresher:      opts.RefreshSession,
+		sessionValidator:      opts.ValidateSession,
+		alwaysIntrospectToken: opts.AlwaysIntrospectToken,
 	}
+
+	if opts.ParseIntrospectionHeader {
+		ss.introspectionHeader = opts.IntrospectionHeader
+	}
+
 	return ss.loadSession
 }
 
 // storedSessionLoader is responsible for loading sessions from cookie
 // identified sessions in the session store.
 type storedSessionLoader struct {
-	store            sessionsapi.SessionStore
-	refreshPeriod    time.Duration
-	sessionRefresher func(context.Context, *sessionsapi.SessionState) (bool, error)
-	sessionValidator func(context.Context, *sessionsapi.SessionState) bool
+	store                 sessionsapi.SessionStore
+	refreshPeriod         time.Duration
+	sessionRefresher      func(context.Context, *sessionsapi.SessionState) (bool, error)
+	sessionValidator      func(context.Context, *sessionsapi.SessionState) bool
+	introspectionHeader   string
+	alwaysIntrospectToken bool
 }
 
 // loadSession attempts to load a session as identified by the request cookies.
@@ -113,12 +129,26 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
 		return nil, err
 	}
 
+	err = s.introspectTokenIfRequested(req, session)
+	if err != nil {
+		return nil, fmt.Errorf("error inspecting token for session (%s): %v", session, err)
+	}
+
 	err = s.refreshSessionIfNeeded(rw, req, session)
 	if err != nil {
 		return nil, fmt.Errorf("error refreshing access token for session (%s): %v", session, err)
 	}
 
 	return session, nil
+}
+
+func (s *storedSessionLoader) introspectTokenIfRequested(req *http.Request, session *sessionsapi.SessionState) error {
+	if (s.introspectionHeader != "" && req.Header.Get(s.introspectionHeader) != "") || s.alwaysIntrospectToken {
+		session.IntrospectToken = true
+		return s.validateSession(req.Context(), session)
+	}
+
+	return nil
 }
 
 // refreshSessionIfNeeded will attempt to refresh a session if the session

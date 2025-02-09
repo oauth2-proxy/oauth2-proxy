@@ -24,6 +24,15 @@ type ClaimExtractor interface {
 	GetClaimInto(claim string, dst interface{}) (bool, error)
 }
 
+func NewAccessTokenClaimExtractor(ctx context.Context, payload *simplejson.Json, profileURL *url.URL, profileRequestHeaders http.Header) (ClaimExtractor, error) {
+	return &claimExtractor{
+		ctx:            ctx,
+		profileURL:     profileURL,
+		requestHeaders: profileRequestHeaders,
+		tokenClaims:    payload,
+	}, nil
+}
+
 // NewClaimExtractor constructs a new ClaimExtractor from the raw ID Token.
 // If needed, it will use the profile URL to look up a claim if it isn't present
 // within the ID Token.
