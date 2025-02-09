@@ -355,15 +355,15 @@ var _ = Describe("Load", func() {
 var _ = Describe("LoadYAML", func() {
 	Context("with a testOptions structure", func() {
 		type TestOptionSubStruct struct {
-			StringSliceOption []string `json:"stringSliceOption,omitempty"`
+			StringSliceOption []string `yaml:"stringSliceOption,omitempty"`
 		}
 
 		type TestOptions struct {
-			StringOption string              `json:"stringOption,omitempty"`
-			Sub          TestOptionSubStruct `json:"sub,omitempty"`
+			StringOption string              `yaml:"stringOption,omitempty"`
+			Sub          TestOptionSubStruct `yaml:"sub,omitempty"`
 
 			// Check that embedded fields can be unmarshalled
-			TestOptionSubStruct `json:",inline,squash"`
+			TestOptionSubStruct `yaml:",inline,squash"`
 		}
 
 		var testOptionsConfigBytesFull = []byte(`
@@ -445,7 +445,7 @@ sub:
 				configFile:     []byte("\tfoo: bar"),
 				input:          &TestOptions{},
 				expectedOutput: &TestOptions{},
-				expectedErr:    errors.New("error unmarshalling config: error converting YAML to JSON: yaml: found character that cannot start any token"),
+				expectedErr:    errors.New("error unmarshalling config: yaml: found character that cannot start any token"),
 			}),
 			Entry("with extra fields in the YAML", loadYAMLTableInput{
 				configFile: append(testOptionsConfigBytesFull, []byte("foo: bar\n")...),
