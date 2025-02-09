@@ -69,16 +69,25 @@ func LoadYAML(configFileName string, opts interface{}) error {
 		return fmt.Errorf("error unmarshalling config: %w", err)
 	}
 
-	return Decode(intermediate, opts)
-}
-
-func Decode(input interface{}, result interface{}) error {
 	// Using mapstructure to decode arbitrary yaml structure into options and
 	// merge with existing values instead of overwriting everything. This is especially
 	// important as we have a lot of default values for boolean which are supposed to be
 	// true by default. Normally by just parsing through yaml all booleans that aren't
 	// referenced in the config file would be parsed as false and we cannot identify after
 	// the fact if they have been explicitly set to false or have not been referenced.
+	return Decode(intermediate, opts)
+}
+
+// Decode processes an input map and decodes it into a given struct while preserving default values.
+// It ensures proper conversion of duration values from strings, floats, and int64 into time.Duration.
+//
+// Parameters:
+// - input: A map[string]interface{} representing the input data.
+// - result: A pointer to a struct where the decoded values will be stored.
+//
+// Returns:
+// - An error if decoding fails or if there are unmapped keys.
+func Decode(input interface{}, result interface{}) error {
 	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 		DecodeHook:           mapstructure.ComposeDecodeHookFunc(toDurationHookFunc()),
 		Metadata:             nil,    // Don't track any metadata
