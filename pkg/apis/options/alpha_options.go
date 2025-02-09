@@ -12,13 +12,13 @@ type AlphaOptions struct {
 	// UpstreamConfig is used to configure upstream servers.
 	// Once a user is authenticated, requests to the server will be proxied to
 	// these upstream servers based on the path mappings defined in this list.
-	UpstreamConfig UpstreamConfig `json:"upstreamConfig,omitempty"`
+	UpstreamConfig UpstreamConfig `yaml:"upstreamConfig,omitempty"`
 
 	// InjectRequestHeaders is used to configure headers that should be added
 	// to requests to upstream servers.
 	// Headers may source values from either the authenticated user's session
 	// or from a static secret value.
-	InjectRequestHeaders []Header `json:"injectRequestHeaders,omitempty"`
+	InjectRequestHeaders []Header `yaml:"injectRequestHeaders,omitempty"`
 
 	// InjectResponseHeaders is used to configure headers that should be added
 	// to responses from the proxy.
@@ -27,22 +27,22 @@ type AlphaOptions struct {
 	// auth_request module.
 	// Headers may source values from either the authenticated user's session
 	// or from a static secret value.
-	InjectResponseHeaders []Header `json:"injectResponseHeaders,omitempty"`
+	InjectResponseHeaders []Header `yaml:"injectResponseHeaders,omitempty"`
 
 	// Server is used to configure the HTTP(S) server for the proxy application.
 	// You may choose to run both HTTP and HTTPS servers simultaneously.
 	// This can be done by setting the BindAddress and the SecureBindAddress simultaneously.
 	// To use the secure server you must configure a TLS certificate and key.
-	Server Server `json:"server,omitempty"`
+	Server Server `yaml:"server,omitempty"`
 
 	// MetricsServer is used to configure the HTTP(S) server for metrics.
 	// You may choose to run both HTTP and HTTPS servers simultaneously.
 	// This can be done by setting the BindAddress and the SecureBindAddress simultaneously.
 	// To use the secure server you must configure a TLS certificate and key.
-	MetricsServer Server `json:"metricsServer,omitempty"`
+	MetricsServer Server `yaml:"metricsServer,omitempty"`
 
 	// Providers is used to configure multiple providers.
-	Providers Providers `json:"providers,omitempty"`
+	Providers Providers `yaml:"providers,omitempty"`
 }
 
 // Initialize alpha options with default values and settings of the core options
