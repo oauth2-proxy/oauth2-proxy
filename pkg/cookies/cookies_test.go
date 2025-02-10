@@ -87,7 +87,7 @@ var _ = Describe("Cookie Tests", func() {
 			opts           options.Cookie
 			expiration     time.Duration
 			now            time.Time
-			expectedOutput time.Time
+			expectedOutput int
 		}
 
 		validName := "_oauth2_proxy"
@@ -95,7 +95,7 @@ var _ = Describe("Cookie Tests", func() {
 		domains := []string{"www.cookies.test"}
 
 		now := time.Now()
-		var expectedExpires time.Time
+		var expectedMaxAge int
 
 		DescribeTable("should return cookies with or without expiration",
 			func(in makeCookieFromOptionsTableInput) {
@@ -106,7 +106,7 @@ var _ = Describe("Cookie Tests", func() {
 				)
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(MakeCookieFromOptions(req, in.name, in.value, &in.opts, in.expiration, in.now).Expires).To(Equal(in.expectedOutput))
+				Expect(MakeCookieFromOptions(req, in.name, in.value, &in.opts, in.expiration).MaxAge).To(Equal(in.expectedOutput))
 			},
 			Entry("persistent cookie", makeCookieFromOptionsTableInput{
 				host:  "www.cookies.test",
@@ -125,7 +125,26 @@ var _ = Describe("Cookie Tests", func() {
 				},
 				expiration:     15 * time.Minute,
 				now:            now,
-				expectedOutput: now.Add(15 * time.Minute),
+				expectedOutput: int((15 * time.Minute).Seconds()),
+			}),
+			Entry("persistent cookie to be cleared", makeCookieFromOptionsTableInput{
+				host:  "www.cookies.test",
+				name:  validName,
+				value: "1",
+				opts: options.Cookie{
+					Name:     validName,
+					Secret:   validSecret,
+					Domains:  domains,
+					Path:     "",
+					Expire:   time.Hour * -1,
+					Refresh:  15 * time.Minute,
+					Secure:   true,
+					HTTPOnly: false,
+					SameSite: "",
+				},
+				expiration:     time.Hour * -1,
+				now:            now,
+				expectedOutput: -1,
 			}),
 			Entry("session cookie", makeCookieFromOptionsTableInput{
 				host:  "www.cookies.test",
@@ -144,7 +163,7 @@ var _ = Describe("Cookie Tests", func() {
 				},
 				expiration:     0,
 				now:            now,
-				expectedOutput: expectedExpires,
+				expectedOutput: expectedMaxAge,
 			}),
 		)
 	})
