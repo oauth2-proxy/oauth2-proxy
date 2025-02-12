@@ -5,6 +5,7 @@ type SessionOptions struct {
 	Type   string             `flag:"session-store-type" cfg:"session_store_type"`
 	Cookie CookieStoreOptions `cfg:",squash"`
 	Redis  RedisStoreOptions  `cfg:",squash"`
+	File   string             `cfg:",squash"`
 }
 
 // CookieSessionStoreType is used to indicate the CookieSessionStore should be
@@ -14,6 +15,10 @@ var CookieSessionStoreType = "cookie"
 // RedisSessionStoreType is used to indicate the RedisSessionStore should be
 // used for storing sessions.
 var RedisSessionStoreType = "redis"
+
+// FileSessionStoreType defines the session store type as "file"
+// typically used for file-based session management.
+var FileSessionStoreType = "file"
 
 // CookieStoreOptions contains configuration options for the CookieSessionStore.
 type CookieStoreOptions struct {
