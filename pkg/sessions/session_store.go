@@ -6,7 +6,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/cookie"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/file"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/memory"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/redis"
 )
 
@@ -17,8 +17,8 @@ func NewSessionStore(opts *options.SessionOptions, cookieOpts *options.Cookie) (
 		return cookie.NewCookieSessionStore(opts, cookieOpts)
 	case options.RedisSessionStoreType:
 		return redis.NewRedisSessionStore(opts, cookieOpts)
-	case options.FileSessionStoreType:
-		return file.NewFileSessionStore(opts.File)
+	case options.InMemorySessionStoreType:
+		return memory.NewInMemoryStore(opts, cookieOpts)
 	default:
 		return nil, fmt.Errorf("unknown session store type '%s'", opts.Type)
 	}
