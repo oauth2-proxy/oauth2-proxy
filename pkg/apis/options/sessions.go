@@ -16,7 +16,7 @@ var CookieSessionStoreType = "cookie"
 var RedisSessionStoreType = "redis"
 
 // InMemorySessionStoreType defines the session store type as "memory"
-// typically used for file-based session management.
+// typically used for memory-based session management.
 var InMemorySessionStoreType = "memory"
 
 // CookieStoreOptions contains configuration options for the CookieSessionStore.
