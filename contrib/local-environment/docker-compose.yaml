@@ -9,13 +9,19 @@
 #    make <command> (eg. make up, make down)
 #
 # Access http://oauth2-proxy.localtest.me:4180 to initiate a login cycle
-version: '3.0'
 services:
   oauth2-proxy:
     container_name: oauth2-proxy
     image: quay.io/oauth2-proxy/oauth2-proxy:v7.8.1
     command: --config /oauth2-proxy.cfg
     hostname: oauth2-proxy
+    build:
+      context: ../../
+      dockerfile: Dockerfile
+      args:
+        BUILD_IMAGE: "docker.io/library/golang:1.23"
+        RUNTIME_IMAGE: "gcr.io/distroless/static:nonroot"
+        BUILDPLATFORM: "linux/arm64"
     volumes:
       - "./oauth2-proxy.cfg:/oauth2-proxy.cfg"
     restart: unless-stopped
@@ -36,7 +42,7 @@ services:
       - "./dex.yaml:/dex.yaml"
     restart: unless-stopped
     ports:
-      - 4190:4190/tcp
+      - 4195:4195/tcp
     networks:
       dex:
         aliases:
