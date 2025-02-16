@@ -72,19 +72,23 @@ func providerRequiresClientSecret(provider options.Provider) bool {
 		return false
 	}
 
+	if provider.Type == "oidc" && provider.CodeChallengeMethod == "S256" {
+		// PKCE with S256 doesn't require client secret
+		return false
+	}
+
 	return true
 }
 
 func validateClientSecret(provider options.Provider) []string {
 	msgs := []string{}
-
 	if provider.ClientSecret == "" && provider.ClientSecretFile == "" {
 		msgs = append(msgs, "missing setting: client-secret or client-secret-file")
-	}
-	if provider.ClientSecret == "" && provider.ClientSecretFile != "" {
-		_, err := os.ReadFile(provider.ClientSecretFile)
-		if err != nil {
-			msgs = append(msgs, "could not read client secret file: "+provider.ClientSecretFile)
+		if provider.ClientSecret == "" && provider.ClientSecretFile != "" {
+			_, err := os.ReadFile(provider.ClientSecretFile)
+			if err != nil {
+				msgs = append(msgs, "could not read client secret file: "+provider.ClientSecretFile)
+			}
 		}
 	}
 
