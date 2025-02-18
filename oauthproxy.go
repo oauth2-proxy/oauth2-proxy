@@ -133,7 +133,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		}
 	}
 
-	provider, err := providers.NewProvider(opts.Providers[0])
+	provider, err := providers.NewProvider(opts, opts.Providers[0])
 	if err != nil {
 		return nil, fmt.Errorf("error initialising provider: %v", err)
 	}
