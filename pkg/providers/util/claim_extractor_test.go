@@ -63,6 +63,11 @@ const (
         }
       ]
     }`
+	jmesPathConflictingPayload = `{
+		"@": {
+			"invalid-group": ["reader", "writer"]
+		}
+	}`
 )
 
 var _ = Describe("Claim Extractor Suite", func() {
@@ -255,6 +260,54 @@ var _ = Describe("Claim Extractor Suite", func() {
 				claim:         "nested-groups-claim-containing-hyphen.groups",
 				expectExists:  true,
 				expectedValue: []interface{}{"nestedClaimContainingHypenGroup1", "nestedClaimContainingHypenGroup2"},
+				expectedError: nil,
+			}),
+			Entry("retrieves a string claim from a JMES Path", getClaimTableInput{
+				testClaimExtractorOpts: testClaimExtractorOpts{
+					idTokenPayload:        nestedClaimPayload,
+					setProfileURL:         true,
+					profileRequestHeaders: newAuthorizedHeader(),
+					profileRequestHandler: shouldNotBeRequestedProfileHandler,
+				},
+				claim:         "@.auth.user.username",
+				expectExists:  true,
+				expectedValue: "nestedUser",
+				expectedError: nil,
+			}),
+			Entry("concatenate arrays from a complex JMES Path", getClaimTableInput{
+				testClaimExtractorOpts: testClaimExtractorOpts{
+					idTokenPayload:        complexGroupsPayload,
+					setProfileURL:         true,
+					profileRequestHeaders: newAuthorizedHeader(),
+					profileRequestHandler: shouldNotBeRequestedProfileHandler,
+				},
+				claim:         "@.groups[].roles[]",
+				expectExists:  true,
+				expectedValue: []interface{}{"admin", "user", "employee"},
+				expectedError: nil,
+			}),
+			Entry("when claim is the found by JMES Path (with no profile Headers)", getClaimTableInput{
+				testClaimExtractorOpts: testClaimExtractorOpts{
+					idTokenPayload:        basicIDTokenPayload,
+					setProfileURL:         true,
+					profileRequestHeaders: nil,
+					profileRequestHandler: shouldNotBeRequestedProfileHandler,
+				},
+				claim:         "@.not_found",
+				expectExists:  false,
+				expectedValue: nil,
+				expectedError: nil,
+			}),
+			Entry("retrieves claim with basic path when JMES Path is invalid", getClaimTableInput{
+				testClaimExtractorOpts: testClaimExtractorOpts{
+					idTokenPayload:        jmesPathConflictingPayload,
+					setProfileURL:         true,
+					profileRequestHeaders: newAuthorizedHeader(),
+					profileRequestHandler: shouldNotBeRequestedProfileHandler,
+				},
+				claim:         "@.invalid-group",
+				expectExists:  true,
+				expectedValue: []interface{}{"reader", "writer"},
 				expectedError: nil,
 			}),
 		)
@@ -497,6 +550,22 @@ var _ = Describe("Claim Extractor Suite", func() {
 			expectedDst: stringPointer("{\"foo\":[\"bar\",\"baz\"]}"),
 		}),
 	)
+
+	It("Claim path should always be valid when not starting with JMES Path prefix", func() {
+		Expect(IsClaimPathInvalid("")).ToNot(HaveOccurred())
+		Expect(IsClaimPathInvalid("i_am_valid")).ToNot(HaveOccurred())
+		Expect(IsClaimPathInvalid("even with space")).ToNot(HaveOccurred())
+		Expect(IsClaimPathInvalid("or.with-strange~chrs: #[{#[~{#")).ToNot(HaveOccurred())
+	})
+
+	It("Valid JMES path should be valid Claim path", func() {
+		Expect(IsClaimPathInvalid("@.field")).ToNot(HaveOccurred())
+		Expect(IsClaimPathInvalid("@.nested_array[?resource == 'me'].group[] | sort(@)")).ToNot(HaveOccurred())
+	})
+
+	It("Invalid JMES path should be reported when validating Claim path", func() {
+		Expect(IsClaimPathInvalid("@.invalid-field")).To(MatchError(ContainSubstring("invalid JMESPath format")))
+	})
 })
 
 // ******************************************
