@@ -141,6 +141,9 @@ const (
 
 	// OIDCProvider is the provider type for OIDC
 	OIDCProvider ProviderType = "oidc"
+
+	// SourceHutProvider is the provider type for SourceHut
+	SourceHutProvider ProviderType = "sourcehut"
 )
 
 type KeycloakOptions struct {
