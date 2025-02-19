@@ -58,6 +58,7 @@ func NewLegacyOptions() *LegacyOptions {
 			OIDCAudienceClaims:    []string{"aud"},
 			OIDCExtraAudiences:    []string{},
 			InsecureOIDCSkipNonce: true,
+			IntrospectionHeader:   "X-Oauth2-Proxy-Introspect-Token",
 		},
 
 		Options: *NewOptions(),
@@ -529,13 +530,18 @@ type LegacyProvider struct {
 	SkipClaimsFromProfileURL           bool     `flag:"skip-claims-from-profile-url" cfg:"skip_claims_from_profile_url"`
 	ProtectedResource                  string   `flag:"resource" cfg:"resource"`
 	ValidateURL                        string   `flag:"validate-url" cfg:"validate_url"`
-	Scope                              string   `flag:"scope" cfg:"scope"`
-	Prompt                             string   `flag:"prompt" cfg:"prompt"`
-	ApprovalPrompt                     string   `flag:"approval-prompt" cfg:"approval_prompt"` // Deprecated by OIDC 1.0
-	UserIDClaim                        string   `flag:"user-id-claim" cfg:"user_id_claim"`
-	AllowedGroups                      []string `flag:"allowed-group" cfg:"allowed_groups"`
-	AllowedRoles                       []string `flag:"allowed-role" cfg:"allowed_roles"`
-	BackendLogoutURL                   string   `flag:"backend-logout-url" cfg:"backend_logout_url"`
+	IntrospectionURL                   string   `flag:"introspection-url" cfg:"introspection_url"`
+	IntrospectToken                    bool     `flag:"introspect-token" cfg:"introspect_token"`
+	ParseIntrospectionHeader           bool     `flag:"parse-introspection-header" cfg:"parse_introspection_header"`
+	IntrospectionHeader                string   `flag:"introspection-header" cfg:"introspection_header"`
+
+	Scope            string   `flag:"scope" cfg:"scope"`
+	Prompt           string   `flag:"prompt" cfg:"prompt"`
+	ApprovalPrompt   string   `flag:"approval-prompt" cfg:"approval_prompt"` // Deprecated by OIDC 1.0
+	UserIDClaim      string   `flag:"user-id-claim" cfg:"user_id_claim"`
+	AllowedGroups    []string `flag:"allowed-group" cfg:"allowed_groups"`
+	AllowedRoles     []string `flag:"allowed-role" cfg:"allowed_roles"`
+	BackendLogoutURL string   `flag:"backend-logout-url" cfg:"backend_logout_url"`
 
 	AcrValues  string `flag:"acr-values" cfg:"acr_values"`
 	JWTKey     string `flag:"jwt-key" cfg:"jwt_key"`
@@ -549,6 +555,9 @@ type LegacyProvider struct {
 
 func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet := pflag.NewFlagSet("provider", pflag.ExitOnError)
+
+	addCredentialsFlag(flagSet)
+	addEndpointsFlag(flagSet)
 
 	flagSet.StringSlice("keycloak-group", []string{}, "restrict logins to members of these groups (may be given multiple times)")
 	flagSet.String("azure-tenant", "common", "go to a tenant-specific or common (tenant-independent) endpoint.")
@@ -564,9 +573,9 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.StringSlice("github-user", []string{}, "allow users with these usernames to login even if they do not belong to the specified org and team or collaborators (may be given multiple times)")
 	flagSet.StringSlice("gitlab-group", []string{}, "restrict logins to members of this group (may be given multiple times)")
 	flagSet.StringSlice("gitlab-project", []string{}, "restrict logins to members of this project (may be given multiple times) (eg `group/project=accesslevel`). Access level should be a value matching Gitlab access levels (see https://docs.gitlab.com/ee/api/members.html#valid-access-levels), defaulted to 20 if absent")
-	flagSet.String("client-id", "", "the OAuth Client ID: ie: \"123456.apps.googleusercontent.com\"")
-	flagSet.String("client-secret", "", "the OAuth Client Secret")
-	flagSet.String("client-secret-file", "", "the file with OAuth Client Secret")
+
+	flagSet.Bool("parse-introspection-header", false, "Reads headers to know if it should introspect the session token")
+	flagSet.String("introspection-header", "X-Oauth2-Proxy-Introspect-Token", "Header to read from to know if it should introspect the session token")
 
 	flagSet.String("provider", "google", "OAuth provider")
 	flagSet.String("provider-display-name", "", "Provider display name")
@@ -583,12 +592,9 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.StringSlice("oidc-audience-claim", OIDCAudienceClaims, "which OIDC claims are used as audience to verify against client id")
 	flagSet.StringSlice("oidc-extra-audience", []string{}, "additional audiences allowed to pass audience verification")
 	flagSet.StringSlice("oidc-public-key-file", []string{}, "path to public key file in PEM format to use for verifying JWT tokens (may be given multiple times)")
-	flagSet.String("login-url", "", "Authentication endpoint")
-	flagSet.String("redeem-url", "", "Token redemption endpoint")
-	flagSet.String("profile-url", "", "Profile access endpoint")
 	flagSet.Bool("skip-claims-from-profile-url", false, "Skip loading missing claims from profile URL")
 	flagSet.String("resource", "", "The resource that is protected (Azure AD only)")
-	flagSet.String("validate-url", "", "Access token validation endpoint")
+	flagSet.Bool("introspect-token", false, "Validate token with token introspection endpoint")
 	flagSet.String("scope", "", "OAuth scope specification")
 	flagSet.String("prompt", "", "OIDC prompt")
 	flagSet.String("approval-prompt", "force", "OAuth approval_prompt")
@@ -606,6 +612,20 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("backend-logout-url", "", "url to perform a backend logout, {id_token} can be used as placeholder for the id_token")
 
 	return flagSet
+}
+
+func addCredentialsFlag(flagSet *pflag.FlagSet) {
+	flagSet.String("client-id", "", "the OAuth Client ID: ie: \"123456.apps.googleusercontent.com\"")
+	flagSet.String("client-secret", "", "the OAuth Client Secret")
+	flagSet.String("client-secret-file", "", "the file with OAuth Client Secret")
+}
+
+func addEndpointsFlag(flagSet *pflag.FlagSet) {
+	flagSet.String("login-url", "", "Authentication endpoint")
+	flagSet.String("redeem-url", "", "Token redemption endpoint")
+	flagSet.String("profile-url", "", "Profile access endpoint")
+	flagSet.String("validate-url", "", "Access token validation endpoint")
+	flagSet.String("introspection-url", "", "Access token introspection endpoint")
 }
 
 func legacyGoogleFlagSet() *pflag.FlagSet {
@@ -680,6 +700,10 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		SkipClaimsFromProfileURL: l.SkipClaimsFromProfileURL,
 		ProtectedResource:        l.ProtectedResource,
 		ValidateURL:              l.ValidateURL,
+		IntrospectToken:          l.IntrospectToken,
+		IntrospectionURL:         l.IntrospectionURL,
+		IntrospectionHeader:      l.IntrospectionHeader,
+		ParseIntrospectionHeader: l.ParseIntrospectionHeader,
 		Scope:                    l.Scope,
 		AllowedGroups:            l.AllowedGroups,
 		CodeChallengeMethod:      l.CodeChallengeMethod,

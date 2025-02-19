@@ -1,16 +1,19 @@
 package providers
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"net/url"
 	"time"
 
+	"github.com/bitly/go-simplejson"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/util"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 	"golang.org/x/oauth2"
 )
@@ -33,12 +36,13 @@ func NewOIDCProvider(p *ProviderData, opts options.OIDCOptions) *OIDCProvider {
 	}
 
 	oidcProviderDefaults := providerDefaults{
-		name:        name,
-		loginURL:    nil,
-		redeemURL:   nil,
-		profileURL:  nil,
-		validateURL: nil,
-		scope:       oidcDefaultScope,
+		name:             name,
+		introspectionURL: nil,
+		loginURL:         nil,
+		redeemURL:        nil,
+		profileURL:       nil,
+		validateURL:      nil,
+		scope:            oidcDefaultScope,
 	}
 
 	if len(p.AllowedGroups) > 0 {
@@ -113,17 +117,21 @@ func (p *OIDCProvider) ValidateSession(ctx context.Context, s *sessions.SessionS
 		logger.Errorf("id_token verification failed: %v", err)
 		return false
 	}
-
+	if s.IntrospectToken {
+		if err := p.introspectToken(ctx, s); err != nil {
+			logger.Errorf("inspect token failed: %v", err)
+			return false
+		}
+	}
 	if p.SkipNonce {
 		return true
 	}
 	err = p.checkNonce(s)
 	if err != nil {
 		logger.Errorf("nonce verification failed: %v", err)
-		return false
 	}
 
-	return true
+	return err == nil
 }
 
 // RefreshSession uses the RefreshToken to fetch new Access and ID Tokens
@@ -247,4 +255,75 @@ func (p *OIDCProvider) createSession(ctx context.Context, token *oauth2.Token, r
 	ss.SetExpiresOn(token.Expiry)
 
 	return ss, nil
+}
+
+func (p *OIDCProvider) verifyIntrospectedToken(ctx context.Context, payload *simplejson.Json, ss *sessions.SessionState) error {
+	extractor, err := util.NewAccessTokenClaimExtractor(ctx, payload, p.ProfileURL, p.getAuthorizationHeader(ss.AccessToken))
+	if err != nil {
+		return fmt.Errorf("could not initialise claim extractor: %v", err)
+	}
+
+	for _, c := range []struct {
+		claim string
+		dst   interface{}
+	}{
+		{p.UserClaim, &ss.User},
+		{p.EmailClaim, &ss.Email},
+		{p.GroupsClaim, &ss.Groups},
+		// TODO (@NickMeves) Deprecate for dynamic claim to session mapping
+		{"preferred_username", &ss.PreferredUsername},
+	} {
+		if _, err := extractor.GetClaimInto(c.claim, c.dst); err != nil {
+			return err
+		}
+	}
+
+	// `email_verified` must be present and explicitly set to `false` to be
+	// considered unverified.
+	verifyEmail := (p.EmailClaim == options.OIDCEmailClaim) && !p.AllowUnverifiedEmail
+
+	if verifyEmail {
+		var exists, verified bool
+		exists, err = extractor.GetClaimInto("email_verified", &verified)
+		if err == nil && exists && !verified {
+			err = fmt.Errorf("email in id_token (%s) isn't verified", ss.Email)
+		}
+	}
+	return err
+}
+
+func (p *OIDCProvider) introspectToken(ctx context.Context, ss *sessions.SessionState) error {
+	body := url.Values{}
+	body.Add("token", ss.AccessToken)
+
+	if p.IntrospectionURL == nil {
+		return fmt.Errorf("IntrospectionURL was nil")
+	}
+
+	js, err := requests.New(p.IntrospectionURL.String()).
+		WithMethod("POST").
+		WithBody(bytes.NewBufferString(body.Encode())).
+		WithAuthorizationBasicBase64(p.ClientID, p.ClientSecret).
+		SetHeader("Content-Type", "application/x-www-form-urlencoded").
+		Do().
+		UnmarshalSimpleJSON()
+
+	if err != nil {
+		return err
+	}
+
+	active, err := js.Get("active").EncodePretty()
+	if err != nil {
+		return err
+	}
+
+	if string(active) != "true" {
+		err = fmt.Errorf("token status is inactive")
+	}
+
+	if err == nil {
+		err = p.verifyIntrospectedToken(ctx, js, ss)
+	}
+
+	return err
 }

@@ -163,6 +163,9 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		for _, issuer := range opts.ExtraJwtIssuers {
 			logger.Printf("Skipping JWT tokens from extra JWT issuer: %q", issuer)
 		}
+		if opts.IntrospectToken && provider.Data().IntrospectionURL.Path == "" {
+			return nil, fmt.Errorf("provider missing setting: introspection-url")
+		}
 	}
 	redirectURL := opts.GetRedirectURL()
 	if redirectURL.Path == "" {
@@ -392,10 +395,11 @@ func buildPreAuthChain(opts *options.Options, sessionStore sessionsapi.SessionSt
 func buildSessionChain(opts *options.Options, provider providers.Provider, sessionStore sessionsapi.SessionStore, validator basic.Validator) alice.Chain {
 	chain := alice.New()
 
-	if opts.SkipJwtBearerTokens {
-		sessionLoaders := []middlewareapi.TokenToSessionFunc{
-			provider.CreateSessionFromToken,
-		}
+	if opts.SkipJwtBearerTokens || opts.SkipBearerTokens {
+
+		sessionLoaders := []middlewareapi.TokenToSessionFunc{}
+
+		sessionLoaders = append(sessionLoaders, provider.CreateSessionFromToken)
 
 		for _, verifier := range opts.GetJWTBearerVerifiers() {
 			sessionLoaders = append(sessionLoaders,
@@ -410,10 +414,13 @@ func buildSessionChain(opts *options.Options, provider providers.Provider, sessi
 	}
 
 	chain = chain.Append(middleware.NewStoredSessionLoader(&middleware.StoredSessionLoaderOptions{
-		SessionStore:    sessionStore,
-		RefreshPeriod:   opts.Cookie.Refresh,
-		RefreshSession:  provider.RefreshSession,
-		ValidateSession: provider.ValidateSession,
+		SessionStore:             sessionStore,
+		RefreshPeriod:            opts.Cookie.Refresh,
+		RefreshSession:           provider.RefreshSession,
+		ValidateSession:          provider.ValidateSession,
+		ParseIntrospectionHeader: opts.ParseIntrospectionHeader,
+		IntrospectionHeader:      opts.IntrospectionHeader,
+		AlwaysIntrospectToken:    opts.IntrospectToken,
 	}))
 
 	return chain

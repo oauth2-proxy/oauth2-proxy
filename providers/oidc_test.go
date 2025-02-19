@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -17,6 +18,14 @@ import (
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
 	"github.com/stretchr/testify/assert"
 )
+
+type introspectionResponse struct {
+	Active   bool   `json:"active"`
+	Scope    string `json:"scope"`
+	ClientID string `json:"client_id"`
+	Username string `json:"username"`
+	Exp      int    `json:"exp"`
+}
 
 type redeemTokenResponse struct {
 	AccessToken  string `json:"access_token"`
@@ -35,6 +44,10 @@ func newOIDCProvider(serverURL *url.URL, skipNonce bool) *OIDCProvider {
 		ProviderName: "oidc",
 		ClientID:     oidcClientID,
 		ClientSecret: oidcSecret,
+		IntrospectionURL: &url.URL{
+			Scheme: serverURL.Scheme,
+			Host:   serverURL.Host,
+			Path:   "/login/oauth/introspect"},
 		LoginURL: &url.URL{
 			Scheme: serverURL.Scheme,
 			Host:   serverURL.Host,
@@ -78,10 +91,64 @@ func newOIDCServer(body []byte) (*url.URL, *httptest.Server) {
 	return u, s
 }
 
-func newTestOIDCSetup(body []byte) (*httptest.Server, *OIDCProvider) {
+func newTestOIDCSetup(body []byte, skipNonce bool) (*httptest.Server, *OIDCProvider) {
 	redeemURL, server := newOIDCServer(body)
-	provider := newOIDCProvider(redeemURL, false)
+	provider := newOIDCProvider(redeemURL, skipNonce)
 	return server, provider
+}
+
+func TestOIDCProviderIntrospectionActive(t *testing.T) {
+	idToken, _ := newSignedTestIDToken(defaultIDToken)
+	body, _ := json.Marshal(introspectionResponse{
+		Active:   true,
+		Scope:    "openid email",
+		ClientID: oidcClientID,
+		Username: "11223344",
+		Exp:      int(time.Now().Add(10 * time.Second).Unix()),
+	})
+
+	server, provider := newTestOIDCSetup(body, true)
+	defer server.Close()
+
+	existingSession := &sessions.SessionState{
+		AccessToken:     accessToken,
+		IDToken:         idToken,
+		CreatedAt:       nil,
+		ExpiresOn:       nil,
+		Email:           "janedoe@example.com",
+		User:            "11223344",
+		IntrospectToken: true,
+	}
+
+	ok := provider.ValidateSession(context.Background(), existingSession)
+	assert.Equal(t, true, ok)
+}
+
+func TestOIDCProviderIntrospectionInactive(t *testing.T) {
+	idToken, _ := newSignedTestIDToken(defaultIDToken)
+	body, _ := json.Marshal(introspectionResponse{
+		Active:   false,
+		Scope:    "openid email",
+		ClientID: oidcClientID,
+		Username: "11223344",
+		Exp:      int(time.Now().Add(10 * time.Second).Unix()),
+	})
+
+	server, provider := newTestOIDCSetup(body, true)
+	defer server.Close()
+
+	existingSession := &sessions.SessionState{
+		AccessToken:     accessToken,
+		IDToken:         idToken,
+		CreatedAt:       nil,
+		ExpiresOn:       nil,
+		Email:           "janedoe@example.com",
+		User:            "11223344",
+		IntrospectToken: true,
+	}
+
+	ok := provider.ValidateSession(context.Background(), existingSession)
+	assert.Equal(t, false, ok)
 }
 
 func TestOIDCProviderGetLoginURL(t *testing.T) {
@@ -116,7 +183,7 @@ func TestOIDCProviderRedeem(t *testing.T) {
 		IDToken:      idToken,
 	})
 
-	server, provider := newTestOIDCSetup(body)
+	server, provider := newTestOIDCSetup(body, false)
 	defer server.Close()
 
 	session, err := provider.Redeem(context.Background(), provider.RedeemURL.String(), "code1234", "")
@@ -138,7 +205,7 @@ func TestOIDCProviderRedeem_custom_userid(t *testing.T) {
 		IDToken:      idToken,
 	})
 
-	server, provider := newTestOIDCSetup(body)
+	server, provider := newTestOIDCSetup(body, false)
 	provider.EmailClaim = "phone_number"
 	defer server.Close()
 
@@ -157,7 +224,7 @@ func TestOIDCProviderRefreshSessionIfNeededWithoutIdToken(t *testing.T) {
 		RefreshToken: refreshToken,
 	})
 
-	server, provider := newTestOIDCSetup(body)
+	server, provider := newTestOIDCSetup(body, false)
 	defer server.Close()
 
 	existingSession := &sessions.SessionState{
@@ -191,7 +258,7 @@ func TestOIDCProviderRefreshSessionIfNeededWithIdToken(t *testing.T) {
 		IDToken:      idToken,
 	})
 
-	server, provider := newTestOIDCSetup(body)
+	server, provider := newTestOIDCSetup(body, false)
 	defer server.Close()
 
 	existingSession := &sessions.SessionState{
@@ -256,7 +323,7 @@ func TestOIDCProviderCreateSessionFromToken(t *testing.T) {
 	}
 	for testName, tc := range testCases {
 		t.Run(testName, func(t *testing.T) {
-			server, provider := newTestOIDCSetup([]byte(`{}`))
+			server, provider := newTestOIDCSetup([]byte(`{}`), false)
 			provider.GroupsClaim = tc.GroupsClaim
 			defer server.Close()
 
