@@ -133,8 +133,8 @@ func (l *LegacyUpstreams) convert() (UpstreamConfig, error) {
 			u.Path = "/"
 		}
 
-		flushInterval := Duration(l.FlushInterval)
-		timeout := Duration(l.Timeout)
+		flushInterval := l.FlushInterval
+		timeout := l.Timeout
 		upstream := Upstream{
 			ID:                    u.Path,
 			Path:                  u.Path,
@@ -289,7 +289,7 @@ func getBasicAuthHeader(preferEmailToUser bool, basicAuthPassword string) Header
 					Claim:  claim,
 					Prefix: "Basic ",
 					BasicAuthPassword: &SecretSource{
-						Value: []byte(basicAuthPassword),
+						Value: basicAuthPassword,
 					},
 				},
 			},
