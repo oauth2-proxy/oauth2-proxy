@@ -24,7 +24,9 @@ func CreateTokenToSessionFunc(verify VerifyFunc) TokenToSessionFunc {
 			Email             string   `json:"email"`
 			Verified          *bool    `json:"email_verified"`
 			PreferredUsername string   `json:"preferred_username"`
+			Name              string   `json:"name"`
 			Groups            []string `json:"groups"`
+			Scopes            []string `json:"scopes"`
 		}
 
 		idToken, err := verify(ctx, token)
@@ -49,6 +51,8 @@ func CreateTokenToSessionFunc(verify VerifyFunc) TokenToSessionFunc {
 			User:              claims.Subject,
 			Groups:            claims.Groups,
 			PreferredUsername: claims.PreferredUsername,
+			Name:              claims.Name,
+			Scopes:            claims.Scopes,
 			AccessToken:       token,
 			IDToken:           token,
 			RefreshToken:      "",
