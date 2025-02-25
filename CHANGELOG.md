@@ -58,6 +58,8 @@
 - [#2620](https://github.com/oauth2-proxy/oauth2-proxy/pull/2620) fix: update code_verifier to use recommended method (@vishvananda)
 - [#2376](https://github.com/oauth2-proxy/oauth2-proxy/pull/2376) feat: static public keys file support for oidc provider (@axel7083 / @jjlakis)
 - [#2392](https://github.com/oauth2-proxy/oauth2-proxy/pull/2392) chore: extend test cases for oidc provider and documentation regarding implicit setting of the groups scope when no scope was specified in the config (@jjlakis / @tuunit)
+- [#1916](https://github.com/oauth2-proxy/oauth2-proxy/pull/1916) Keycloak OIDC provider was using access token instead of id token. After upgrade, it may raise errors on login for people using provider "keycloak-oidc" (not "keycloak") and having customized their tokens in keycloak configuration.
+
 
 # V7.7.1
 
