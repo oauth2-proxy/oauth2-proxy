@@ -29,6 +29,7 @@ var _ = Describe("Basic Auth Session Suite", func() {
 			sessionGroups       []string
 			existingSession     *sessionsapi.SessionState
 			expectedSession     *sessionsapi.SessionState
+			expectedAuthMethod  string
 		}
 
 		DescribeTable("with an authorization header",
@@ -55,74 +56,89 @@ var _ = Describe("Basic Auth Session Suite", func() {
 				// Create the handler with a next handler that will capture the session
 				// from the scope
 				var gotSession *sessionsapi.SessionState
+				var gotAuthMethod string
 				handler := NewBasicAuthSessionLoader(validator, in.sessionGroups, in.preferEmail)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					gotSession = middlewareapi.GetRequestScope(r).Session
+					gotAuthMethod = middlewareapi.GetRequestScope(r).AuthMethod
 				}))
 				handler.ServeHTTP(rw, req)
 
 				Expect(gotSession).To(Equal(in.expectedSession))
+				Expect(gotAuthMethod).To(Equal(in.expectedAuthMethod))
 			},
 			Entry("<no value>", basicAuthSessionLoaderTableInput{
 				authorizationHeader: "",
 				existingSession:     nil,
 				expectedSession:     nil,
+				expectedAuthMethod:  "",
 			}),
 			Entry("abcdef", basicAuthSessionLoaderTableInput{
 				authorizationHeader: "abcdef",
 				existingSession:     nil,
 				expectedSession:     nil,
+				expectedAuthMethod:  "",
 			}),
 			Entry("abcdef (with existing session)", basicAuthSessionLoaderTableInput{
 				authorizationHeader: "abcdef",
 				existingSession:     &sessionsapi.SessionState{User: "user"},
 				expectedSession:     &sessionsapi.SessionState{User: "user"},
+				expectedAuthMethod:  "",
 			}),
 			Entry("Bearer <password>", basicAuthSessionLoaderTableInput{
 				authorizationHeader: fmt.Sprintf("Bearer %s", adminPassword),
 				existingSession:     nil,
 				expectedSession:     nil,
+				expectedAuthMethod:  "",
 			}),
 			Entry("Basic <password>", basicAuthSessionLoaderTableInput{
 				authorizationHeader: fmt.Sprintf("Basic %s", adminPassword),
 				existingSession:     nil,
 				expectedSession:     nil,
+				expectedAuthMethod:  "",
 			}),
 			Entry("Basic Base64(:<password>) (with existing session)", basicAuthSessionLoaderTableInput{
 				authorizationHeader: "Basic OlVzRXJPbjNQNDU1",
 				existingSession:     &sessionsapi.SessionState{User: "user"},
 				expectedSession:     &sessionsapi.SessionState{User: "user"},
+				expectedAuthMethod:  "",
 			}),
 			Entry("Basic Base64(user1:<user1Password>)", basicAuthSessionLoaderTableInput{
 				authorizationHeader: "Basic dXNlcjE6VXNFck9uM1A0NTU=",
 				existingSession:     nil,
 				expectedSession:     &sessionsapi.SessionState{User: "user1"},
+				expectedAuthMethod:  "header",
 			}),
 			Entry("Basic Base64(user2:<user1Password>)", basicAuthSessionLoaderTableInput{
 				authorizationHeader: "Basic dXNlcjI6VXNFck9uM1A0NTU=",
 				existingSession:     nil,
 				expectedSession:     nil,
+				expectedAuthMethod:  "",
 			}),
 			Entry("Basic Base64(user2:<user2Password>)", basicAuthSessionLoaderTableInput{
 				authorizationHeader: "Basic dXNlcjI6dXMzcjJQNDU1VzBSZCE=",
 				existingSession:     nil,
 				expectedSession:     &sessionsapi.SessionState{User: "user2"},
+				expectedAuthMethod:  "header",
 			}),
 			Entry("Basic Base64(admin:<adminPassword>)", basicAuthSessionLoaderTableInput{
 				authorizationHeader: "Basic YWRtaW46QWRtMW4xc3RyJHQwcg==",
 				existingSession:     nil,
 				expectedSession:     &sessionsapi.SessionState{User: "admin"},
+				expectedAuthMethod:  "header",
 			}),
 			Entry("Basic with groups", basicAuthSessionLoaderTableInput{
 				authorizationHeader: "Basic YWRtaW46QWRtMW4xc3RyJHQwcg==",
 				sessionGroups:       []string{"a", "b"},
 				existingSession:     nil,
 				expectedSession:     &sessionsapi.SessionState{User: "admin", Groups: []string{"a", "b"}},
+				expectedAuthMethod:  "header",
 			}),
 			Entry("Basic Base64(user1:<user1Password>) (with PreferEmailToUser)", basicAuthSessionLoaderTableInput{
 				authorizationHeader: "Basic dXNlcjE6VXNFck9uM1A0NTU=",
 				preferEmail:         true,
 				existingSession:     nil,
 				expectedSession:     &sessionsapi.SessionState{User: "user1", Email: "user1"},
+				expectedAuthMethod:  "header",
 			}),
 		)
 	})

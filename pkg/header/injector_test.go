@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 
+	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	. "github.com/onsi/ginkgo/v2"
@@ -16,7 +17,7 @@ var _ = Describe("Injector Suite", func() {
 		type newInjectorTableInput struct {
 			headers         []options.Header
 			initialHeaders  http.Header
-			session         *sessionsapi.SessionState
+			scope           *middlewareapi.RequestScope
 			expectedHeaders http.Header
 			expectedErr     error
 		}
@@ -34,7 +35,7 @@ var _ = Describe("Injector Suite", func() {
 				Expect(injector).ToNot(BeNil())
 
 				headers := in.initialHeaders.Clone()
-				injector.Inject(headers, in.session)
+				injector.Inject(headers, in.scope)
 				Expect(headers).To(Equal(in.expectedHeaders))
 			},
 			Entry("with no configured headers", newInjectorTableInput{
@@ -42,7 +43,9 @@ var _ = Describe("Injector Suite", func() {
 				initialHeaders: http.Header{
 					"foo": []string{"bar", "baz"},
 				},
-				session: &sessionsapi.SessionState{},
+				scope: &middlewareapi.RequestScope{
+					Session: &sessionsapi.SessionState{},
+				},
 				expectedHeaders: http.Header{
 					"foo": []string{"bar", "baz"},
 				},
@@ -64,7 +67,9 @@ var _ = Describe("Injector Suite", func() {
 				initialHeaders: http.Header{
 					"foo": []string{"bar", "baz"},
 				},
-				session: &sessionsapi.SessionState{},
+				scope: &middlewareapi.RequestScope{
+					Session: &sessionsapi.SessionState{},
+				},
 				expectedHeaders: http.Header{
 					"foo":    []string{"bar", "baz"},
 					"Secret": []string{"super-secret"},
@@ -87,7 +92,9 @@ var _ = Describe("Injector Suite", func() {
 				initialHeaders: http.Header{
 					"foo": []string{"bar", "baz"},
 				},
-				session: &sessionsapi.SessionState{},
+				scope: &middlewareapi.RequestScope{
+					Session: &sessionsapi.SessionState{},
+				},
 				expectedHeaders: http.Header{
 					"foo":    []string{"bar", "baz"},
 					"Secret": []string{"super-secret-env"},
@@ -110,8 +117,10 @@ var _ = Describe("Injector Suite", func() {
 				initialHeaders: http.Header{
 					"foo": []string{"bar", "baz"},
 				},
-				session: &sessionsapi.SessionState{
-					IDToken: "IDToken-1234",
+				scope: &middlewareapi.RequestScope{
+					Session: &sessionsapi.SessionState{
+						IDToken: "IDToken-1234",
+					},
 				},
 				expectedHeaders: http.Header{
 					"foo":   []string{"bar", "baz"},
@@ -135,7 +144,7 @@ var _ = Describe("Injector Suite", func() {
 				initialHeaders: http.Header{
 					"foo": []string{"bar", "baz"},
 				},
-				session: nil,
+				scope: &middlewareapi.RequestScope{},
 				expectedHeaders: http.Header{
 					"foo": []string{"bar", "baz"},
 				},
@@ -158,8 +167,10 @@ var _ = Describe("Injector Suite", func() {
 				initialHeaders: http.Header{
 					"foo": []string{"bar", "baz"},
 				},
-				session: &sessionsapi.SessionState{
-					IDToken: "IDToken-1234",
+				scope: &middlewareapi.RequestScope{
+					Session: &sessionsapi.SessionState{
+						IDToken: "IDToken-1234",
+					},
 				},
 				expectedHeaders: http.Header{
 					"foo":   []string{"bar", "baz"},
@@ -184,7 +195,9 @@ var _ = Describe("Injector Suite", func() {
 				initialHeaders: http.Header{
 					"foo": []string{"bar", "baz"},
 				},
-				session: &sessionsapi.SessionState{},
+				scope: &middlewareapi.RequestScope{
+					Session: &sessionsapi.SessionState{},
+				},
 				expectedHeaders: http.Header{
 					"foo": []string{"bar", "baz"},
 				},
@@ -209,8 +222,10 @@ var _ = Describe("Injector Suite", func() {
 				initialHeaders: http.Header{
 					"foo": []string{"bar", "baz"},
 				},
-				session: &sessionsapi.SessionState{
-					User: "user-123",
+				scope: &middlewareapi.RequestScope{
+					Session: &sessionsapi.SessionState{
+						User: "user-123",
+					},
 				},
 				expectedHeaders: http.Header{
 					"foo":                          []string{"bar", "baz"},
@@ -237,7 +252,9 @@ var _ = Describe("Injector Suite", func() {
 				initialHeaders: http.Header{
 					"foo": []string{"bar", "baz"},
 				},
-				session: &sessionsapi.SessionState{},
+				scope: &middlewareapi.RequestScope{
+					Session: &sessionsapi.SessionState{},
+				},
 				expectedHeaders: http.Header{
 					"foo": []string{"bar", "baz"},
 				},
@@ -259,8 +276,10 @@ var _ = Describe("Injector Suite", func() {
 				initialHeaders: http.Header{
 					"X-Auth-Request-User": []string{"user"},
 				},
-				session: &sessionsapi.SessionState{
-					User: "user-123",
+				scope: &middlewareapi.RequestScope{
+					Session: &sessionsapi.SessionState{
+						User: "user-123",
+					},
 				},
 				expectedHeaders: http.Header{
 					"X-Auth-Request-User": []string{"user", "user-123"},
@@ -286,8 +305,10 @@ var _ = Describe("Injector Suite", func() {
 				initialHeaders: http.Header{
 					"foo": []string{"bar", "baz"},
 				},
-				session: &sessionsapi.SessionState{
-					IDToken: "IDToken-1234",
+				scope: &middlewareapi.RequestScope{
+					Session: &sessionsapi.SessionState{
+						IDToken: "IDToken-1234",
+					},
 				},
 				expectedHeaders: nil,
 				expectedErr:     errors.New("error building injector for header \"Claim\": header \"Claim\" value has multiple entries: only one entry per value is allowed"),
@@ -309,7 +330,9 @@ var _ = Describe("Injector Suite", func() {
 				initialHeaders: http.Header{
 					"foo": []string{"bar", "baz"},
 				},
-				session:         &sessionsapi.SessionState{},
+				scope: &middlewareapi.RequestScope{
+					Session: &sessionsapi.SessionState{},
+				},
 				expectedHeaders: nil,
 				expectedErr:     errors.New("error building injector for header \"Secret\": error getting secret value: secret source is invalid: exactly one entry required, specify either value, fromEnv or fromFile"),
 			}),
@@ -333,8 +356,10 @@ var _ = Describe("Injector Suite", func() {
 				initialHeaders: http.Header{
 					"foo": []string{"bar", "baz"},
 				},
-				session: &sessionsapi.SessionState{
-					User: "user-123",
+				scope: &middlewareapi.RequestScope{
+					Session: &sessionsapi.SessionState{
+						User: "user-123",
+					},
 				},
 				expectedHeaders: nil,
 				expectedErr:     errors.New("error building injector for header \"X-Auth-Request-Authorization\": error loading basicAuthPassword: secret source is invalid: exactly one entry required, specify either value, fromEnv or fromFile"),
@@ -398,9 +423,11 @@ var _ = Describe("Injector Suite", func() {
 				initialHeaders: http.Header{
 					"foo": []string{"bar", "baz"},
 				},
-				session: &sessionsapi.SessionState{
-					User:  "user-123",
-					Email: "user@example.com",
+				scope: &middlewareapi.RequestScope{
+					Session: &sessionsapi.SessionState{
+						User:  "user-123",
+						Email: "user@example.com",
+					},
 				},
 				expectedHeaders: http.Header{
 					"foo":                          []string{"bar", "baz"},
