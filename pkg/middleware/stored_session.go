@@ -64,6 +64,10 @@ func NewStoredSessionLoader(opts *StoredSessionLoaderOptions) alice.Constructor 
 	return ss.loadSession
 }
 
+// NewStoredSessionRefresher creates a new storedSessionLoader which allows for the
+// refresh of sessions from the session store on demand.
+// If no session is found, the request will be passed to the nex handler.
+// If a session was loader by a previous handler, it will not be replaced.
 func NewStoredSessionRefresher(opts *StoredSessionLoaderOptions) alice.Constructor {
 	sr := &storedSessionLoader{
 		store:            opts.SessionStore,
