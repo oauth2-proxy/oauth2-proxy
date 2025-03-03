@@ -17,6 +17,7 @@ c.out
 # Folders
 _obj
 _test
+.DS_Store
 .idea/
 .vscode/*
 !/.vscode/tasks.json
