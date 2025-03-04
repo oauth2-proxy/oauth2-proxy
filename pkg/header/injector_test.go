@@ -55,7 +55,7 @@ var _ = Describe("Injector Suite", func() {
 						Values: []options.HeaderValue{
 							{
 								SecretSource: &options.SecretSource{
-									Value: []byte("super-secret"),
+									Value: "super-secret",
 								},
 							},
 						},
@@ -199,7 +199,7 @@ var _ = Describe("Injector Suite", func() {
 								ClaimSource: &options.ClaimSource{
 									Claim: "user",
 									BasicAuthPassword: &options.SecretSource{
-										Value: []byte("basic-password"),
+										Value: "basic-password",
 									},
 								},
 							},
@@ -227,7 +227,7 @@ var _ = Describe("Injector Suite", func() {
 								ClaimSource: &options.ClaimSource{
 									Claim: "user",
 									BasicAuthPassword: &options.SecretSource{
-										Value: []byte(base64.StdEncoding.EncodeToString([]byte("basic-password"))),
+										Value: base64.StdEncoding.EncodeToString([]byte("basic-password")),
 									},
 								},
 							},
@@ -322,7 +322,7 @@ var _ = Describe("Injector Suite", func() {
 								ClaimSource: &options.ClaimSource{
 									Claim: "user",
 									BasicAuthPassword: &options.SecretSource{
-										Value:   []byte(base64.StdEncoding.EncodeToString([]byte("basic-password"))),
+										Value:   base64.StdEncoding.EncodeToString([]byte("basic-password")),
 										FromEnv: "SECRET_ENV",
 									},
 								},
@@ -348,7 +348,7 @@ var _ = Describe("Injector Suite", func() {
 								ClaimSource: &options.ClaimSource{
 									Claim: "user",
 									BasicAuthPassword: &options.SecretSource{
-										Value: []byte("basic-password"),
+										Value: "basic-password",
 									},
 								},
 							},
@@ -379,17 +379,17 @@ var _ = Describe("Injector Suite", func() {
 						Values: []options.HeaderValue{
 							{
 								SecretSource: &options.SecretSource{
-									Value: []byte("major=1"),
+									Value: "major=1",
 								},
 							},
 							{
 								SecretSource: &options.SecretSource{
-									Value: []byte("minor=2"),
+									Value: "minor=2",
 								},
 							},
 							{
 								SecretSource: &options.SecretSource{
-									Value: []byte("patch=3"),
+									Value: "patch=3",
 								},
 							},
 						},
