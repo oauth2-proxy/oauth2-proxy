@@ -36,6 +36,7 @@ type Options struct {
 	HtpasswdUserGroups      []string `flag:"htpasswd-user-group" cfg:"htpasswd_user_groups"`
 
 	Cookie    Cookie         `cfg:",squash"`
+	CSRFToken CSRFToken      `cfg:",squash"`
 	Session   SessionOptions `cfg:",squash"`
 	Logging   Logging        `cfg:",squash"`
 	Templates Templates      `cfg:",squash"`
@@ -63,6 +64,7 @@ type Options struct {
 	ForceJSONErrors       bool     `flag:"force-json-errors" cfg:"force_json_errors"`
 	EncodeState           bool     `flag:"encode-state" cfg:"encode_state"`
 	AllowQuerySemicolons  bool     `flag:"allow-query-semicolons" cfg:"allow_query_semicolons"`
+	SkipCSRFRoutes        []string `flag:"skip-csrftoken-route" cfg:"skip_csrftoken_route"`
 
 	SignatureKey    string `flag:"signature-key" cfg:"signature_key"`
 	GCPHealthChecks bool   `flag:"gcp-healthchecks" cfg:"gcp_healthchecks"`
@@ -104,6 +106,7 @@ func NewOptions() *Options {
 		RealClientIPHeader: "X-Real-IP",
 		ForceHTTPS:         false,
 		Cookie:             cookieDefaults(),
+		CSRFToken:          CSRFTokenDefaults(),
 		Session:            sessionOptionsDefaults(),
 		Templates:          templatesDefaults(),
 		SkipAuthPreflight:  false,
@@ -132,6 +135,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Bool("encode-state", false, "will encode oauth state with base64")
 	flagSet.Bool("allow-query-semicolons", false, "allow the use of semicolons in query args")
 	flagSet.StringSlice("extra-jwt-issuers", []string{}, "if skip-jwt-bearer-tokens is set, a list of extra JWT issuer=audience pairs (where the issuer URL has a .well-known/openid-configuration or a .well-known/jwks.json)")
+	flagSet.StringSlice("skip-csrftoken-route", []string{}, "bypass CSRF token validation for requests that match the method and path. Format: method=path_regex OR method!=path_regex. For all methods: path_regex OR !=path_regex")
 
 	flagSet.StringSlice("email-domain", []string{}, "authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email")
 	flagSet.StringSlice("whitelist-domain", []string{}, "allowed domains for redirection after authentication. Prefix domain with a . or a *. to allow subdomains (eg .example.com, *.example.com)")
@@ -160,6 +164,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
 
 	flagSet.AddFlagSet(cookieFlagSet())
+	flagSet.AddFlagSet(csrfTokenFlagSet())
 	flagSet.AddFlagSet(loggingFlagSet())
 	flagSet.AddFlagSet(templatesFlagSet())
 

@@ -437,6 +437,46 @@ func (patTest *PassAccessTokenTest) getCallbackEndpoint() (httpCode int, cookie 
 	return rw.Code, cookie
 }
 
+func (patTest *PassAccessTokenTest) getCallbackEndpointWithCSRFTokenCookie() (httpCode int, cookie http.Header) {
+	rw := httptest.NewRecorder()
+
+	csrf, err := cookies.NewCSRF(patTest.proxy.CookieOptions, "")
+	if err != nil {
+		panic(err)
+	}
+
+	req, err := http.NewRequest(
+		http.MethodGet,
+		fmt.Sprintf(
+			"/oauth2/callback?code=callback_code&state=%s",
+			encodeState(csrf.HashOAuthState(), "%2F", false),
+		),
+		strings.NewReader(""),
+	)
+	if err != nil {
+		return 0, nil
+	}
+
+	// rw is a dummy here, we just want the csrfCookie to add to our req
+	csrfCookie, err := csrf.SetCookie(httptest.NewRecorder(), req)
+	if err != nil {
+		panic(err)
+	}
+	req.AddCookie(csrfCookie)
+
+	csrfTokenOpts := options.CSRFTokenDefaults()
+	csrfToken := "abcdef1234567890abcdef1234567890"
+	cookies.CSRFTokenCookieForSession(rw, req, &csrfTokenOpts, csrfToken)
+
+	patTest.proxy.ServeHTTP(rw, req)
+
+	if len(rw.Header().Values("Set-Cookie")) >= 3 {
+		cookie = rw.Header().Clone()
+	}
+
+	return rw.Code, cookie
+}
+
 // getEndpointWithCookie makes a requests againt the oauthproxy with passed requestPath
 // and cookie and returns body and status code.
 func (patTest *PassAccessTokenTest) getEndpointWithCookie(cookie string, endpoint string) (httpCode int, accessToken string) {
@@ -567,6 +607,33 @@ func TestSessionValidationFailure(t *testing.T) {
 	code, cookie := patTest.getCallbackEndpoint()
 	assert.Equal(t, http.StatusForbidden, code)
 	assert.Equal(t, "", cookie)
+}
+
+func TestCSRFTokenCallbackSetCookie(t *testing.T) {
+	patTest, err := NewPassAccessTokenTest(PassAccessTokenTestOptions{
+		PassAccessToken: true,
+		ValidToken:      true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(patTest.Close)
+
+	code, cookie := patTest.getCallbackEndpointWithCSRFTokenCookie()
+	if code != 302 {
+		t.Fatalf("expected 302; got %d", code)
+	}
+
+	cookies := cookie["Set-Cookie"]
+	assert.Condition(t, func() bool {
+		for _, v := range cookies {
+			if strings.Contains(v, "_oauth2_proxy_csrftoken") {
+				return true
+			}
+		}
+		return false
+	},
+		true)
 }
 
 type SignInPageTest struct {
@@ -1058,6 +1125,259 @@ func TestUserInfoEndpointUnauthorizedOnNoCookieSetError(t *testing.T) {
 
 	test.proxy.ServeHTTP(test.rw, test.req)
 	assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
+}
+
+func NewCSRFTokenEndpointTest() (*ProcessCookieTest, error) {
+	pcTest, err := NewProcessCookieTestWithOptionsModifiers(func(opts *options.Options) {
+		opts.CSRFToken.CSRFToken = true
+	})
+	if err != nil {
+		return nil, err
+	}
+	pcTest.req, _ = http.NewRequest("GET", pcTest.opts.ProxyPrefix+"/csrftoken", nil)
+
+	return pcTest, nil
+}
+
+func TestCSRFTokenEndpointAccepted(t *testing.T) {
+	testCases := []struct {
+		name             string
+		session          *sessions.SessionState
+		expectedResponse string
+	}{
+		{
+			name: "Full session",
+			session: &sessions.SessionState{
+				User:        "john.doe",
+				Email:       "john.doe@example.com",
+				Groups:      []string{"example", "groups"},
+				AccessToken: "my_access_token",
+				CSRFToken:   "abcdef1234567890abcdef1234567890",
+			},
+			expectedResponse: "{\"csrfToken\":\"abcdef1234567890abcdef1234567890\"}\n",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			test, err := NewCSRFTokenEndpointTest()
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = test.SaveSession(tc.session)
+			assert.NoError(t, err)
+
+			test.proxy.ServeHTTP(test.rw, test.req)
+			assert.Equal(t, http.StatusOK, test.rw.Code)
+			bodyBytes, _ := io.ReadAll(test.rw.Body)
+			assert.Equal(t, tc.expectedResponse, string(bodyBytes))
+		})
+	}
+}
+
+func TestCSRFTokenEndpointUnauthorizedOnNoCookieSetError(t *testing.T) {
+	test, err := NewCSRFTokenEndpointTest()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	test.proxy.ServeHTTP(test.rw, test.req)
+	assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
+}
+
+func NewCSRFTokenEndpointDisabledTest() (*ProcessCookieTest, error) {
+	pcTest, err := NewProcessCookieTestWithDefaults()
+	if err != nil {
+		return nil, err
+	}
+	pcTest.req, _ = http.NewRequest("GET", pcTest.opts.ProxyPrefix+"/csrftoken", nil)
+
+	return pcTest, nil
+}
+
+func TestCSRFTokenEndpointNotFound(t *testing.T) {
+	test, err := NewCSRFTokenEndpointDisabledTest()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	test.proxy.ServeHTTP(test.rw, test.req)
+	assert.Equal(t, http.StatusNotFound, test.rw.Code)
+}
+
+func TestReturnCSRFTokenHeader(t *testing.T) {
+	opts := baseTestOptions()
+	opts.CSRFToken.CSRFToken = true
+	opts.InjectRequestHeaders = []options.Header{
+		{
+			Name: "X-CSRF-Token",
+			Values: []options.HeaderValue{
+				{
+					ClaimSource: &options.ClaimSource{
+						Claim: "csrf_token",
+					},
+				},
+			},
+		},
+	}
+
+	err := validation.Validate(opts)
+	assert.NoError(t, err)
+
+	const emailAddress = "john.doe@example.com"
+	const userName = "9fcab5c9b889a557"
+	created := time.Now()
+	session := &sessions.SessionState{
+		User:        userName,
+		Email:       emailAddress,
+		AccessToken: "oauth_token",
+		CreatedAt:   &created,
+		CSRFToken:   "abcdef1234567890abcdef1234567890",
+	}
+
+	proxy, err := NewOAuthProxy(opts, func(email string) bool {
+		return email == emailAddress
+	})
+	assert.NoError(t, err)
+
+	// Save the required session
+	rw := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/", nil)
+	err = proxy.sessionStore.Save(rw, req, session)
+	assert.NoError(t, err)
+
+	// Extract the cookie value to inject into the test request
+	cookie := rw.Header().Values("Set-Cookie")[0]
+
+	req, _ = http.NewRequest("GET", "/", nil)
+	req.Header.Set("Cookie", cookie)
+	rw = httptest.NewRecorder()
+	proxy.ServeHTTP(rw, req)
+
+	assert.Equal(t, "abcdef1234567890abcdef1234567890", req.Header.Get("X-CSRF-Token"))
+
+	// Now set the --csrftoken-response-header to empty string to disable it
+	// Default injected headers for legacy configuration
+	opts.InjectResponseHeaders = []options.Header{}
+
+	proxy, err = NewOAuthProxy(opts, func(email string) bool {
+		return email == emailAddress
+	})
+	assert.NoError(t, err)
+
+	// Save the required session
+	rw = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/", nil)
+	err = proxy.sessionStore.Save(rw, req, session)
+	assert.NoError(t, err)
+
+	// Extract the cookie value to inject into the test request
+	cookie = rw.Header().Values("Set-Cookie")[0]
+
+	req, _ = http.NewRequest("GET", "/", nil)
+	req.Header.Set("Cookie", cookie)
+	rw = httptest.NewRecorder()
+	proxy.ServeHTTP(rw, req)
+
+	assert.NotContains(t, rw.Header(), rw.Header().Get("X-CSRF-Token"))
+}
+
+func TestCSRFValidation(t *testing.T) {
+	upstreamServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(201)
+		_, err := w.Write([]byte("response"))
+		if err != nil {
+			t.Fatal(err)
+		}
+	}))
+	t.Cleanup(upstreamServer.Close)
+
+	opts := baseTestOptions()
+	opts.UpstreamServers = options.UpstreamConfig{
+		Upstreams: []options.Upstream{
+			{
+				ID:   upstreamServer.URL,
+				Path: "/",
+				URI:  upstreamServer.URL,
+			},
+		},
+	}
+	opts.CSRFToken.CSRFToken = true
+	// Return CSRF token as header
+	opts.InjectResponseHeaders = []options.Header{
+		{
+			Name: "X-CSRF-Token",
+			Values: []options.HeaderValue{
+				{
+					ClaimSource: &options.ClaimSource{
+						Claim: "csrf_token",
+					},
+				},
+			},
+		},
+	}
+	err := validation.Validate(opts)
+	assert.NoError(t, err)
+
+	upstreamURL, _ := url.Parse(upstreamServer.URL)
+
+	proxy, err := NewOAuthProxy(opts, func(_ string) bool { return true })
+	if err != nil {
+		t.Fatal(err)
+	}
+	proxy.provider = NewTestProvider(upstreamURL, "")
+
+	const emailAddress = "john.doe@example.com"
+	const userName = "9fcab5c9b889a557"
+	created := time.Now()
+	session := &sessions.SessionState{
+		User:        userName,
+		Email:       emailAddress,
+		AccessToken: "oauth_token",
+		CreatedAt:   &created,
+		CSRFToken:   "abcdef1234567890abcdef1234567890",
+	}
+
+	// Save the required session
+	rw := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/", nil)
+	err = proxy.sessionStore.Save(rw, req, session)
+	assert.NoError(t, err)
+
+	// Extract the cookie value to inject into the test request
+	cookie := rw.Header().Values("Set-Cookie")[0]
+
+	// Make another request to get the CSRF token in response header
+	req, _ = http.NewRequest("GET", "/", nil)
+	req.Header.Set("Cookie", cookie)
+	proxy.ServeHTTP(rw, req)
+	csrfToken := rw.Header().Get("X-CSRF-Token")
+
+	// Test valid request: Construct request with CSRF token
+	req, _ = http.NewRequest("POST", "/", nil)
+	req.Header.Set("Cookie", cookie)
+	req.Header.Set(opts.CSRFToken.RequestHeader, csrfToken)
+	rw = httptest.NewRecorder()
+	proxy.ServeHTTP(rw, req)
+
+	assert.Equal(t, http.StatusCreated, rw.Code)
+
+	// Test invalid CSRF token header
+	req, _ = http.NewRequest("POST", "/", nil)
+	req.Header.Set("Cookie", cookie)
+	req.Header.Set(opts.CSRFToken.RequestHeader, "invalid")
+	rw = httptest.NewRecorder()
+	proxy.ServeHTTP(rw, req)
+
+	assert.Equal(t, http.StatusForbidden, rw.Code)
+
+	// Test missing CSRF token header
+	req, _ = http.NewRequest("POST", "/", nil)
+	req.Header.Set("Cookie", cookie)
+	rw = httptest.NewRecorder()
+	proxy.ServeHTTP(rw, req)
+
+	assert.Equal(t, http.StatusForbidden, rw.Code)
 }
 
 func TestEncodedUrlsStayEncoded(t *testing.T) {
@@ -1728,7 +2048,7 @@ func TestClearSplitCookie(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	p := OAuthProxy{CookieOptions: &opts.Cookie, sessionStore: store}
+	p := OAuthProxy{CookieOptions: &opts.Cookie, CSRFTokenOptions: &opts.CSRFToken, sessionStore: store}
 	var rw = httptest.NewRecorder()
 	req := httptest.NewRequest("get", "/", nil)
 
@@ -1761,7 +2081,7 @@ func TestClearSingleCookie(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	p := OAuthProxy{CookieOptions: &opts.Cookie, sessionStore: store}
+	p := OAuthProxy{CookieOptions: &opts.Cookie, CSRFTokenOptions: &opts.CSRFToken, sessionStore: store}
 	var rw = httptest.NewRecorder()
 	req := httptest.NewRequest("get", "/", nil)
 
@@ -2034,6 +2354,7 @@ func baseTestOptions() *options.Options {
 	opts.Providers[0].ClientID = clientID
 	opts.Providers[0].ClientSecret = clientSecret
 	opts.EmailDomains = []string{"*"}
+	opts.CSRFToken.CSRFToken = false
 
 	// Default injected headers for legacy configuration
 	opts.InjectRequestHeaders = []options.Header{
@@ -2926,6 +3247,136 @@ func TestAllowedRequestNegateWithMethod(t *testing.T) {
 			if tc.allowed {
 				assert.Equal(t, 200, rw.Code)
 				assert.Equal(t, "Allowed Request", rw.Body.String())
+			} else {
+				assert.Equal(t, 403, rw.Code)
+			}
+		})
+	}
+}
+
+func TestSkipCSRFRequest(t *testing.T) {
+	upstreamServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+		_, err := w.Write([]byte("Allowed Request"))
+		if err != nil {
+			t.Fatal(err)
+		}
+	}))
+	t.Cleanup(upstreamServer.Close)
+
+	opts := baseTestOptions()
+	opts.UpstreamServers = options.UpstreamConfig{
+		Upstreams: []options.Upstream{
+			{
+				ID:   upstreamServer.URL,
+				Path: "/",
+				URI:  upstreamServer.URL,
+			},
+		},
+	}
+
+	opts.CSRFToken.CSRFToken = true
+	opts.InjectResponseHeaders = []options.Header{
+		{
+			Name: "X-CSRF-Token",
+			Values: []options.HeaderValue{
+				{
+					ClaimSource: &options.ClaimSource{
+						Claim: "csrf_token",
+					},
+				},
+			},
+		},
+	}
+	opts.SkipCSRFRoutes = []string{
+		"POST=^/skip/csrf/routes",
+	}
+	err := validation.Validate(opts)
+	assert.NoError(t, err)
+	proxy, err := NewOAuthProxy(opts, func(_ string) bool { return true })
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	upstreamURL, _ := url.Parse(upstreamServer.URL)
+	proxy.provider = NewTestProvider(upstreamURL, "")
+	const emailAddress = "john.doe@example.com"
+	const userName = "9fcab5c9b889a557"
+	created := time.Now()
+	session := &sessions.SessionState{
+		User:        userName,
+		Email:       emailAddress,
+		AccessToken: "oauth_token",
+		CreatedAt:   &created,
+		CSRFToken:   "abcdef1234567890abcdef1234567890",
+	}
+
+	// Save the required session
+	rw := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/", nil)
+	err = proxy.sessionStore.Save(rw, req, session)
+	assert.NoError(t, err)
+
+	// Extract the cookie value to inject into the test request
+	cookie := rw.Header().Values("Set-Cookie")[0]
+
+	// Make another request to get the CSRF token in response header
+	req, _ = http.NewRequest("GET", "/", nil)
+	req.Header.Set("Cookie", cookie)
+	proxy.ServeHTTP(rw, req)
+	csrfToken := rw.Header().Get("X-CSRF-Token")
+
+	testCases := []struct {
+		name    string
+		method  string
+		token   bool
+		url     string
+		allowed bool
+	}{
+		{
+			name:    "Route POST allowed",
+			method:  "POST",
+			token:   false,
+			url:     "/skip/csrf/routes",
+			allowed: true,
+		},
+		{
+			name:    "Route PUT denied",
+			method:  "PUT",
+			token:   false,
+			url:     "/skip/csrf/routes",
+			allowed: false,
+		},
+		{
+			name:    "Route DELETE allowed with token",
+			method:  "DELETE",
+			token:   true,
+			url:     "/skip/csrf/routes",
+			allowed: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req, err := http.NewRequest(tc.method, tc.url, nil)
+			assert.NoError(t, err)
+			assert.Equal(t, tc.allowed, proxy.isAllowedCSRFRoute(req))
+
+			req.Header.Set("Cookie", cookie)
+			if tc.token {
+				req.Header.Set(proxy.CSRFTokenOptions.RequestHeader, csrfToken)
+			}
+
+			rw := httptest.NewRecorder()
+			proxy.ServeHTTP(rw, req)
+
+			if tc.allowed {
+				assert.Equal(t, 200, rw.Code)
+				assert.Equal(t, "Allowed Request", rw.Body.String())
+			} else if tc.token {
+				// If request is not allowed without CSRF token but token
+				// exists, it will succeed.
+				assert.Equal(t, 200, rw.Code)
 			} else {
 				assert.Equal(t, 403, rw.Code)
 			}
