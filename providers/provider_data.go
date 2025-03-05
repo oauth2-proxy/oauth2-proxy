@@ -48,6 +48,7 @@ type ProviderData struct {
 	EmailClaim               string
 	GroupsClaim              string
 	Verifier                 internaloidc.IDTokenVerifier
+	AdditionalClaims         []string `json:"additionalClaims,omitempty"`
 	SkipClaimsFromProfileURL bool
 
 	// Universal Group authorization data structure
@@ -266,6 +267,11 @@ func (p *ProviderData) buildSessionFromClaims(rawIDToken, accessToken string) (*
 		}
 	}
 
+	// Extract additional claims
+	if p.AdditionalClaims != nil {
+		p.extractAdditionalClaims(extractor, ss)
+	}
+
 	// `email_verified` must be present and explicitly set to `false` to be
 	// considered unverified.
 	verifyEmail := (p.EmailClaim == options.OIDCEmailClaim) && !p.AllowUnverifiedEmail
@@ -297,6 +303,17 @@ func (p *ProviderData) getClaimExtractor(rawIDToken, accessToken string) (util.C
 	}
 
 	return extractor, nil
+}
+
+func (p *ProviderData) extractAdditionalClaims(extractor util.ClaimExtractor, ss *sessions.SessionState) {
+	if ss.AdditionalClaims == nil {
+		ss.AdditionalClaims = make(map[string]interface{})
+	}
+	for _, claim := range p.AdditionalClaims {
+		if value, exists, err := extractor.GetClaim(claim); err == nil && exists {
+			ss.AdditionalClaims[claim] = value
+		}
+	}
 }
 
 // checkNonce compares the session's nonce with the IDToken's nonce claim
