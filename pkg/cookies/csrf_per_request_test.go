@@ -166,10 +166,10 @@ var _ = Describe("CSRF Cookie with non-fixed name Tests", func() {
 				))
 				Expect(rw.Header().Get("Set-Cookie")).To(ContainSubstring(
 					fmt.Sprintf(
-						"; Path=%s; Domain=%s; Expires=%s; HttpOnly; Secure",
+						"; Path=%s; Domain=%s; Max-Age=%d; HttpOnly; Secure",
 						cookiePath,
 						cookieDomainTemplate,
-						testCookieExpires(testNow.Add(cookieOpts.CSRFExpire)),
+						int(cookieOpts.CSRFExpire.Seconds()),
 					),
 				))
 			})
@@ -182,11 +182,10 @@ var _ = Describe("CSRF Cookie with non-fixed name Tests", func() {
 				publicCSRF.ClearCookie(rw, req)
 				Expect(rw.Header().Get("Set-Cookie")).To(Equal(
 					fmt.Sprintf(
-						"%s=; Path=%s; Domain=%s; Expires=%s; HttpOnly; Secure",
+						"%s=; Path=%s; Domain=%s; Max-Age=0; HttpOnly; Secure",
 						privateCSRF.cookieName(ctx),
 						cookiePath,
 						cookieDomainTemplate,
-						testCookieExpires(testNow.Add(time.Hour*-1)),
 					),
 				))
 			})

@@ -2,8 +2,12 @@ package oidc
 
 import (
 	"context"
+	"crypto"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	k8serrors "k8s.io/apimachinery/pkg/util/errors"
@@ -37,6 +41,10 @@ type ProviderVerifierOptions struct {
 	// eg: https://www.googleapis.com/oauth2/v3/certs
 	JWKsURL string
 
+	// PublicKeyFiles is a list of paths pointing to public key files in PEM format to use
+	// for verifying JWT tokens
+	PublicKeyFiles []string
+
 	// SkipDiscovery allows to skip OIDC discovery and use manually supplied Endpoints
 	SkipDiscovery bool
 
@@ -58,8 +66,12 @@ func (p ProviderVerifierOptions) validate() error {
 		errs = append(errs, errors.New("missing required setting: issuer-url"))
 	}
 
-	if p.SkipDiscovery && p.JWKsURL == "" {
-		errs = append(errs, errors.New("missing required setting: jwks-url"))
+	if p.SkipDiscovery && p.JWKsURL == "" && len(p.PublicKeyFiles) == 0 {
+		errs = append(errs, errors.New("missing required setting: jwks-url or public-key-files"))
+	}
+
+	if p.JWKsURL != "" && len(p.PublicKeyFiles) > 0 {
+		errs = append(errs, errors.New("mutually exclusive settings: jwks-url and public-key-files"))
 	}
 
 	if len(errs) > 0 {
@@ -90,12 +102,12 @@ func (p ProviderVerifierOptions) toOIDCConfig() *oidc.Config {
 // NewProviderVerifier constructs a ProviderVerifier from the options given.
 func NewProviderVerifier(ctx context.Context, opts ProviderVerifierOptions) (ProviderVerifier, error) {
 	if err := opts.validate(); err != nil {
-		return nil, fmt.Errorf("invalid provider verifier options: %v", err)
+		return nil, fmt.Errorf("invalid provider verifier options: %w", err)
 	}
 
 	verifierBuilder, provider, err := getVerifierBuilder(ctx, opts)
 	if err != nil {
-		return nil, fmt.Errorf("could not get verifier builder: %v", err)
+		return nil, fmt.Errorf("could not get verifier builder: %w", err)
 	}
 	verifier := NewVerifier(verifierBuilder(opts.toOIDCConfig()), opts.toVerificationOptions())
 
@@ -116,21 +128,78 @@ type verifierBuilder func(*oidc.Config) *oidc.IDTokenVerifier
 
 func getVerifierBuilder(ctx context.Context, opts ProviderVerifierOptions) (verifierBuilder, DiscoveryProvider, error) {
 	if opts.SkipDiscovery {
-		// Instead of discovering the JWKs URK, it needs to be specified in the opts already
-		return newVerifierBuilder(ctx, opts.IssuerURL, opts.JWKsURL, opts.SupportedSigningAlgs), nil, nil
+		var keySet oidc.KeySet
+		var err error
+
+		if opts.JWKsURL != "" {
+			keySet = oidc.NewRemoteKeySet(ctx, opts.JWKsURL)
+		} else {
+			keySet, err = newKeySetFromStatic(opts.PublicKeyFiles)
+			if err != nil {
+				return nil, nil, fmt.Errorf("error while parsing public keys: %w", err)
+			}
+		}
+		// Instead of discovering the JWKs URL, it needs to be specified in the opts already
+		return newVerifierBuilder(
+			opts.IssuerURL,
+			keySet,
+			opts.SupportedSigningAlgs,
+		), nil, nil
 	}
 
 	provider, err := NewProvider(ctx, opts.IssuerURL, opts.SkipIssuerVerification)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error while discovery OIDC configuration: %v", err)
+		return nil, nil, fmt.Errorf("error while discovery OIDC configuration: %w", err)
 	}
-	verifierBuilder := newVerifierBuilder(ctx, opts.IssuerURL, provider.Endpoints().JWKsURL, provider.SupportedSigningAlgs())
-	return verifierBuilder, provider, nil
+
+	return newVerifierBuilder(
+		opts.IssuerURL,
+		oidc.NewRemoteKeySet(ctx, provider.Endpoints().JWKsURL),
+		provider.SupportedSigningAlgs(),
+	), provider, nil
+}
+
+// GetPublicKeyFromBytes parses a PEM-encoded public key from a byte array
+// and returns a crypto.PublicKey object.
+func getPublicKeyFromBytes(bytes []byte) (crypto.PublicKey, error) {
+	block, _ := pem.Decode(bytes)
+	if block == nil {
+		return nil, errors.New("failed to parse PEM block containing the public key")
+	}
+	publicKey, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse public key: %w", err)
+	}
+
+	cryptoPublicKey, ok := publicKey.(crypto.PublicKey)
+	if !ok {
+		return nil, errors.New("failed to cast public key to crypto.PublicKey")
+	}
+
+	return cryptoPublicKey, nil
+}
+
+// newKeySetFromStatic create a StaticKeySet from a set of files
+func newKeySetFromStatic(keys []string) (*oidc.StaticKeySet, error) {
+	keySet := []crypto.PublicKey{}
+	for _, keyFile := range keys {
+		bytes, err := os.ReadFile(keyFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read file: %w", err)
+		}
+
+		publicKey, err := getPublicKeyFromBytes(bytes)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create keys: %w", err)
+		}
+		keySet = append(keySet, publicKey)
+	}
+
+	return &oidc.StaticKeySet{PublicKeys: keySet}, nil
 }
 
 // newVerifierBuilder returns a function to create a IDToken verifier from an OIDC config.
-func newVerifierBuilder(ctx context.Context, issuerURL, jwksURL string, supportedSigningAlgs []string) verifierBuilder {
-	keySet := oidc.NewRemoteKeySet(ctx, jwksURL)
+func newVerifierBuilder(issuerURL string, keySet oidc.KeySet, supportedSigningAlgs []string) verifierBuilder {
 	return func(oidcConfig *oidc.Config) *oidc.IDTokenVerifier {
 		if len(supportedSigningAlgs) > 0 {
 			oidcConfig.SupportedSigningAlgs = supportedSigningAlgs

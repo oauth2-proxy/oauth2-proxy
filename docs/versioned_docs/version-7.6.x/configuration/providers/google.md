@@ -3,6 +3,18 @@ id: google
 title: Google (default)
 ---
 
+## Config Options
+
+| Flag                                           | Toml Field                                   | Type   | Description                                                                                      | Default                                            |
+| ---------------------------------------------- | -------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------ | -------------------------------------------------- |
+| `--google-admin-email`                         | `google_admin_email`                         | string | the google admin to impersonate for api calls                                                    |                                                    |
+| `--google-group`                               | `google_groups`                              | string | restrict logins to members of this google group (may be given multiple times).                   |                                                    |
+| `--google-service-account-json`                | `google_service_account_json`                | string | the path to the service account json credentials                                                 |                                                    |
+| `--google-use-application-default-credentials` | `google_use_application_default_credentials` | bool   | use application default credentials instead of service account json (i.e. GKE Workload Identity) |                                                    |
+| `--google-target-principal`                    | `google_target_principal`                    | bool   | the target principal to impersonate when using ADC                                               | defaults to the service account configured for ADC |
+
+## Usage
+
 For Google, the registration steps are:
 
 1.  Create a new project: https://console.developers.google.com/project
@@ -31,7 +43,7 @@ account is still authorized.
 2.  Make note of the Client ID for a future step.
 3.  Under "APIs & Auth", choose APIs.
 4.  Click on Admin SDK and then Enable API.
-5.  Follow the steps on https://developers.google.com/workspace/guides/create-credentials#optional_set_up_domain-wide_delegation_for_a_service_account 
+5.  Follow the steps on https://developers.google.com/admin-sdk/directory/v1/guides/delegation#delegate_domain-wide_authority_to_your_service_account 
     and give the client id from step 2 the following oauth scopes:
 
     ```
@@ -47,6 +59,7 @@ account is still authorized.
     of this flag with different groups and the user will be checked against all the provided groups.
 
 (Only if using a JSON file (see step 1))
+
 9.  Lock down the permissions on the json file downloaded from step 1 so only oauth2-proxy is able to read the file and 
     set the path to the file in the `google-service-account-json` flag.
 10. Restart oauth2-proxy.

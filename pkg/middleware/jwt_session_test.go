@@ -17,8 +17,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	k8serrors "k8s.io/apimachinery/pkg/util/errors"
 )
@@ -72,6 +71,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 	// validToken will pass the token regex so can be used to check token fetching
 	// is valid. It will not pass the OIDC Verifier however.
 	const validToken = "eyJfoobar.eyJfoobar.12345asdf"
+	const validTokenWithSpace = "eyAidHlwIjogIkpXVCIsICJraWQiOiAiRTJlWW5ZMWR1eGttTkpiVGdCRzd4MkVpNVJZPSIsICJhbGciOiAiUlMyNTYiIH0K.eyJfoobar.12345asdf"
 
 	Context("JwtSessionLoader", func() {
 		var verifier middlewareapi.VerifyFunc
@@ -294,6 +294,11 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				header:        fmt.Sprintf("Bearer %s", validToken),
 				expectedErr:   nil,
 				expectedToken: validToken,
+			}),
+			Entry("Bearer <valid-token-with-whitespace>", findBearerTokenFromHeaderTableInput{
+				header:        fmt.Sprintf("Bearer %s", validTokenWithSpace),
+				expectedErr:   nil,
+				expectedToken: validTokenWithSpace,
 			}),
 			Entry("Basic invalid-base64", findBearerTokenFromHeaderTableInput{
 				header:        "Basic invalid-base64",

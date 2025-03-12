@@ -30,7 +30,7 @@ func CookieName(ctx context.Context, opts *options.Cookie) string {
 
 // MakeCookieFromOptions constructs a cookie based on the given *options.CookieOptions,
 // value and creation time
-func MakeCookieFromOptions(req *http.Request, name string, value string, opts *options.Cookie, expiration time.Duration, now time.Time) *http.Cookie {
+func MakeCookieFromOptions(req *http.Request, name string, value string, opts *options.Cookie, expiration time.Duration) *http.Cookie {
 	providerID := utils.ProviderIDFromContext(req.Context())
 	cookieDomains := opts.Domains(providerID)
 	domain := GetCookieDomain(req, cookieDomains)
@@ -53,8 +53,10 @@ func MakeCookieFromOptions(req *http.Request, name string, value string, opts *o
 		SameSite: ParseSameSite(opts.SameSite),
 	}
 
-	if expiration != time.Duration(0) {
-		c.Expires = now.Add(expiration)
+	if expiration > time.Duration(0) {
+		c.MaxAge = int(expiration.Seconds())
+	} else if expiration < time.Duration(0) {
+		c.MaxAge = -1
 	}
 
 	warnInvalidDomain(c, req)

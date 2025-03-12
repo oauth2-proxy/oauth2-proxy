@@ -6,9 +6,106 @@
 
 ## Breaking Changes
 
+## Changes since v7.8.1
+
+- [#2927](https://github.com/oauth2-proxy/oauth2-proxy/pull/2927) chore(deps/build): bump golang to 1.23 and use go.mod as single point of truth for all build files (@tuunit)
+- [#2697](https://github.com/oauth2-proxy/oauth2-proxy/pull/2697) Use `Max-Age` instead of `Expires` for cookie expiration (@matpen-wi)
+- [#2969](https://github.com/oauth2-proxy/oauth2-proxy/pull/2969) Update golang.org/x/oauth2 to v0.27.0 to address CVE-2025-22868 (@dsymonds)
+- [#2977](https://github.com/oauth2-proxy/oauth2-proxy/pull/2977) Update golang.org/x/net to v0.36.0 to address CVE-2025-22870 (@dsymonds)
+
+# V7.8.1
+
+## Release Highlights
+
+- 🐛 Two bugs have been squashed
+
+## Important Notes
+
+## Breaking Changes
+
+## Changes since v7.8.0
+
+- [#2887](https://github.com/oauth2-proxy/oauth2-proxy/issues/2887) fix: jwt regex validation error during skip-jwt-bearer-tokens flow
+- [#2920](https://github.com/oauth2-proxy/oauth2-proxy/pull/2920) fix: missing oauth2-proxy version for docker builds
+
+# V7.8.0
+
+## Release Highlights
+
+- ☁️ Introducing support for Microsoft Entra ID
+  - Including Support for Azure Workload Identity as well
+  - Including full e2e testing using Azure Credits from MS sponsoring
+  - Deprecated old Azure AD provider
+- 🪪 Static local JWKS file support
+- Support for systemd sockets
+- 🐛 Several bugs have been squashed
+- 🕵️‍♀️ Vulnerabilities have been addressed
+  - CVE-2024-45338
+
+## Important Notes
+
+## Breaking Changes
+
+## Changes since v7.7.1
+
+- [#2390](https://github.com/oauth2-proxy/oauth2-proxy/pull/2390) feat: add Microsoft Entra ID provider (@jjlakis / @tuunit)
+- [#2902](https://github.com/oauth2-proxy/oauth2-proxy/pull/2902) feat(entra): add Workload Identity support for Entra ID (@jjlakis)
+- [#2800](https://github.com/oauth2-proxy/oauth2-proxy/pull/2800) doc: add some opencontainer labels to docker image (@halkeye)
+- [#2755](https://github.com/oauth2-proxy/oauth2-proxy/pull/2755) feat: add X-Envoy-External-Address as supported header (@bjencks)
+- [#1985](https://github.com/oauth2-proxy/oauth2-proxy/pull/1985) feat: add support for systemd socket (@isodude)
+- [#2916](https://github.com/oauth2-proxy/oauth2-proxy/pull/2916) fix: systemd socket support build handling for windows (@tuunit)
+- [#2300](https://github.com/oauth2-proxy/oauth2-proxy/pull/2300) fix: add fix for websocket path rewrite (@rekup)
+- [#2821](https://github.com/oauth2-proxy/oauth2-proxy/pull/2821) feat: add CF-Connecting-IP as supported real ip header (@ondrejsika)
+- [#2620](https://github.com/oauth2-proxy/oauth2-proxy/pull/2620) fix: update code_verifier to use recommended method (@vishvananda)
+- [#2376](https://github.com/oauth2-proxy/oauth2-proxy/pull/2376) feat: static public keys file support for oidc provider (@axel7083 / @jjlakis)
+- [#2392](https://github.com/oauth2-proxy/oauth2-proxy/pull/2392) chore: extend test cases for oidc provider and documentation regarding implicit setting of the groups scope when no scope was specified in the config (@jjlakis / @tuunit)
+
+# V7.7.1
+
+## Release Highlights
+
+- 🐛 Several bugs have been squashed
+
+## Important Notes
+
+## Breaking Changes
+
+## Changes since v7.7.0
+
+- [#2803](https://github.com/oauth2-proxy/oauth2-proxy/pull/2803) fix: self signed certificate handling in v7.7.0 (@tuunit)
+- [#2619](https://github.com/oauth2-proxy/oauth2-proxy/pull/2619) fix: unable to use hyphen in JSON path for oidc-groups-claim option (@rd-danny-fleer)
+- [#2311](https://github.com/oauth2-proxy/oauth2-proxy/pull/2311) fix: runtime error: index out of range (0) with length 0 (@miguelborges99 / @tuunit)
+
+# V7.7.0
+
+## Release Highlights
+
+- 🌐 Custom user agent "oauth2-proxy/<version>"
+- 💾 Added s390x architecture support
+- 🕵️‍♀️ Vulnerabilities have been addressed
+  - CVE-2024-24786
+  - CVE-2024-24791
+  - CVE-2024-24790
+  - CVE-2024-24784
+- 📖 Improved docs
+
+## Important Notes
+- Remove support of arm/v6 for distroless image runtime. Alpine tags still support arm/v6.
+
+## Breaking Changes
+
 ## Changes since v7.6.0
 
 - [#2539](https://github.com/oauth2-proxy/oauth2-proxy/pull/2539) pkg/http: Fix leaky test (@isodude)
+- [#4917](https://github.com/oauth2-proxy/oauth2-proxy/pull/4917) Upgraded all modules to the latest version (@pierluigilenoci)
+- [#2570](https://github.com/oauth2-proxy/oauth2-proxy/pull/2570) Set default user agent to oauth2-proxy/$version (from default Golang one)
+- [#2674](https://github.com/oauth2-proxy/oauth2-proxy/pull/2674) docs: additional notes about available claims for HeaderValue (@vegetablest)
+- [#2459](https://github.com/oauth2-proxy/oauth2-proxy/pull/2459) chore(deps): Updated to ginkgo v2 (@kvanzuijlen, @tuunit)
+- [#2112](https://github.com/oauth2-proxy/oauth2-proxy/pull/2112) docs: update list of providers which support refresh tokens (@mikefab-msf)
+- [#2734](https://github.com/oauth2-proxy/oauth2-proxy/pull/2734) Added s390x architecture option support (@priby05)
+- [#2589](https://github.com/oauth2-proxy/oauth2-proxy/pull/2589) Added support for regex path matching and rewriting when using a static `file:` upstream (@ianroberts)
+- [#2790](https://github.com/oauth2-proxy/oauth2-proxy/pull/2790) chore(deps): update all golang dependencies (@tuunit)
+- [#2607](https://github.com/oauth2-proxy/oauth2-proxy/pull/2607) fix(csrf): fix possible infinite loop (@Primexz)
 
 # V7.6.0
 

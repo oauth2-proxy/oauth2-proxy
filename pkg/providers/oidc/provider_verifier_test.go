@@ -2,14 +2,46 @@ package oidc
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/oauth2-proxy/mockoidc"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
+
+var tempDir string
+var invalidPublicKeyFilePath string
+var validPublicKeyFilePath string
+
+var _ = BeforeSuite(func() {
+	var err error
+
+	// Create a temporary directory and public key file
+	tempDir, err = os.MkdirTemp("/tmp", "provider-verifier-test")
+	Expect(err).ToNot(HaveOccurred())
+
+	invalidPublicKeyFilePath = filepath.Join(tempDir, "invalid.key")
+	validPublicKeyFilePath = filepath.Join(tempDir, "valid.key")
+
+	invalidKeyContents := []byte(`-----BEGIN INVALID KEY-----
+ThisIsNotAValidKey
+-----END INVALID KEY-----`)
+	Expect(os.WriteFile(invalidPublicKeyFilePath, invalidKeyContents, 0644)).To(Succeed())
+
+	validKeyContents := []byte(`-----BEGIN PUBLIC KEY-----
+MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBALBJK+8qU+aQu2bHxJ8E95AIu2NINztM
+NmX9R2zI9xlXN8wGQG8kWLYoRLbyiZwY9kdzOBGvYci64wHIjtFswHcCAwEAAQ==
+-----END PUBLIC KEY-----`)
+	Expect(os.WriteFile(validPublicKeyFilePath, validKeyContents, 0644)).To(Succeed())
+})
+
+var _ = AfterSuite(func() {
+	// Clean up temporary directory
+	Expect(os.RemoveAll(tempDir)).To(Succeed())
+})
 
 var _ = Describe("ProviderVerifier", func() {
 	var m *mockoidc.MockOIDC
@@ -78,13 +110,41 @@ var _ = Describe("ProviderVerifier", func() {
 				p.SkipDiscovery = true
 				p.JWKsURL = ""
 			},
-			expectedError: "invalid provider verifier options: missing required setting: jwks-url",
+			expectedError: "invalid provider verifier options: missing required setting: jwks-url or public-key-files",
 		}),
-		Entry("should be succesfful when skipping discovery with the JWKs URL specified", &newProviderVerifierTableInput{
+		Entry("with skip discovery, the JWKs URL not empty and len(PublicKeyFiles) is greater than 0", &newProviderVerifierTableInput{
+			modifyOpts: func(p *ProviderVerifierOptions) {
+				p.SkipDiscovery = true
+				p.JWKsURL = "notEmpty"
+				p.PublicKeyFiles = []string{"notEmpty"}
+			},
+			expectedError: "invalid provider verifier options: mutually exclusive settings: jwks-url and public-key-files",
+		}),
+		Entry("should be successful when skipping discovery with the JWKs URL specified", &newProviderVerifierTableInput{
 			modifyOpts: func(p *ProviderVerifierOptions) {
 				p.SkipDiscovery = true
 				p.JWKsURL = m.JWKSEndpoint()
 			},
+		}),
+		Entry("should pass when the key is valid", &newProviderVerifierTableInput{
+			modifyOpts: func(p *ProviderVerifierOptions) {
+				p.SkipDiscovery = true
+				p.PublicKeyFiles = []string{validPublicKeyFilePath}
+			},
+		}),
+		Entry("should fail when the key is invalid", &newProviderVerifierTableInput{
+			modifyOpts: func(p *ProviderVerifierOptions) {
+				p.SkipDiscovery = true
+				p.PublicKeyFiles = []string{invalidPublicKeyFilePath}
+			},
+			expectedError: "could not get verifier builder: error while parsing public keys",
+		}),
+		Entry("should fail when the key file is not found", &newProviderVerifierTableInput{
+			modifyOpts: func(p *ProviderVerifierOptions) {
+				p.SkipDiscovery = true
+				p.PublicKeyFiles = []string{"non-existing"}
+			},
+			expectedError: "could not get verifier builder: error while parsing public keys: failed to read file",
 		}),
 	)
 

@@ -623,8 +623,11 @@ type SignInPageTest struct {
 	signInProviderRegexp *regexp.Regexp
 }
 
-const signInRedirectPattern = `<input type="hidden" name="rd" value="(.*)">`
-const signInSkipProvider = `>Found<`
+const (
+	signInRedirectPattern = `<input type="hidden" name="rd" value="(.*)">`
+	signInSkipProvider    = `>Found<`
+	patternNotFound       = "Did not find pattern in body: "
+)
 
 func NewSignInPageTest(skipProvider bool) (*SignInPageTest, error) {
 	var sipTest SignInPageTest
@@ -779,7 +782,7 @@ func TestSignInPageIncludesTargetRedirect(t *testing.T) {
 
 	match := sipTest.signInRegexp.FindStringSubmatch(body)
 	if match == nil {
-		t.Fatal("Did not find pattern in body: " +
+		t.Fatal(patternNotFound +
 			signInRedirectPattern + "\nBody:\n" + body)
 	}
 	if match[1] != endpoint {
@@ -809,7 +812,7 @@ func TestSignInPageDirectAccessRedirectsToRoot(t *testing.T) {
 
 	match := sipTest.signInRegexp.FindStringSubmatch(body)
 	if match == nil {
-		t.Fatal("Did not find pattern in body: " +
+		t.Fatal(patternNotFound +
 			signInRedirectPattern + "\nBody:\n" + body)
 	}
 	if match[1] != "/" {
@@ -830,7 +833,7 @@ func TestSignInPageSkipProvider(t *testing.T) {
 
 	match := sipTest.signInProviderRegexp.FindStringSubmatch(body)
 	if match == nil {
-		t.Fatal("Did not find pattern in body: " +
+		t.Fatal(patternNotFound +
 			signInSkipProvider + "\nBody:\n" + body)
 	}
 }
@@ -848,7 +851,7 @@ func TestSignInPageSkipProviderDirect(t *testing.T) {
 
 	match := sipTest.signInProviderRegexp.FindStringSubmatch(body)
 	if match == nil {
-		t.Fatal("Did not find pattern in body: " +
+		t.Fatal(patternNotFound +
 			signInSkipProvider + "\nBody:\n" + body)
 	}
 }
@@ -1288,7 +1291,7 @@ func TestAuthOnlyEndpointSetXAuthRequestHeaders(t *testing.T) {
 
 	pcTest.rw = httptest.NewRecorder()
 	pcTest.req, _ = http.NewRequest("GET",
-		pcTest.opts.ProxyPrefix+"/auth", nil)
+		pcTest.opts.ProxyPrefix+authOnlyPath, nil)
 
 	created := time.Now()
 	startSession := &sessions.SessionState{
@@ -1390,7 +1393,7 @@ func TestAuthOnlyEndpointSetBasicAuthTrueRequestHeaders(t *testing.T) {
 
 	pcTest.rw = httptest.NewRecorder()
 	pcTest.req, _ = http.NewRequest("GET",
-		pcTest.opts.ProxyPrefix+"/auth", nil)
+		pcTest.opts.ProxyPrefix+authOnlyPath, nil)
 
 	created := time.Now()
 	startSession := &sessions.SessionState{
@@ -1479,7 +1482,7 @@ func TestAuthOnlyEndpointSetBasicAuthFalseRequestHeaders(t *testing.T) {
 
 	pcTest.rw = httptest.NewRecorder()
 	pcTest.req, _ = http.NewRequest("GET",
-		pcTest.opts.ProxyPrefix+"/auth", nil)
+		pcTest.opts.ProxyPrefix+authOnlyPath, nil)
 
 	created := time.Now()
 	startSession := &sessions.SessionState{
