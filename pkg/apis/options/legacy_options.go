@@ -85,6 +85,10 @@ func (l *LegacyOptions) ToOptions() (*Options, error) {
 
 	l.Options.InjectRequestHeaders, l.Options.InjectResponseHeaders = l.LegacyHeaders.convert()
 
+	if l.LegacyHeaders.SkipAuthStripHeaders {
+		l.Options.InjectRequestHeaders = append(l.Options.InjectRequestHeaders, stripCSRFHeader(l.Options.CSRFToken.RequestHeader))
+	}
+
 	l.Options.Server, l.Options.MetricsServer = l.LegacyServer.convert()
 
 	l.Options.LegacyPreferEmailToUser = l.LegacyHeaders.PreferEmailToUser
@@ -199,6 +203,9 @@ type LegacyHeaders struct {
 	PreferEmailToUser    bool   `flag:"prefer-email-to-user" cfg:"prefer_email_to_user"`
 	BasicAuthPassword    string `flag:"basic-auth-password" cfg:"basic_auth_password"`
 	SkipAuthStripHeaders bool   `flag:"skip-auth-strip-headers" cfg:"skip_auth_strip_headers"`
+
+	CSRFTokenResponseHeader string `flag:"csrftoken-response-header" cfg:"csrftoken_response_header"`
+	AuthMethodHeader        string `flag:"auth-method-header" cfg:"auth_method_header"`
 }
 
 func legacyHeadersFlagSet() *pflag.FlagSet {
@@ -216,6 +223,9 @@ func legacyHeadersFlagSet() *pflag.FlagSet {
 	flagSet.Bool("prefer-email-to-user", false, "Prefer to use the Email address as the Username when passing information to upstream. Will only use Username if Email is unavailable, eg. htaccess authentication. Used in conjunction with -pass-basic-auth and -pass-user-headers")
 	flagSet.String("basic-auth-password", "", "the password to set when passing the HTTP Basic Auth header")
 	flagSet.Bool("skip-auth-strip-headers", true, "strips X-Forwarded-* style authentication headers & Authorization header if they would be set by oauth2-proxy")
+
+	flagSet.String("csrftoken-response-header", "X-CSRF-Token", "The name of the actual CSRF token header to return to client. If set to empty string, no CSRF token header will be set by oauth2-proxy")
+	flagSet.String("auth-method-header", "AuthMethod", "The name of the authentication method header. Auth methods are [cookie, header].")
 
 	return flagSet
 }
@@ -251,6 +261,10 @@ func (l *LegacyHeaders) getRequestHeaders() []Header {
 		requestHeaders[i].PreserveRequestValue = !l.SkipAuthStripHeaders
 	}
 
+	if l.AuthMethodHeader != "" {
+		requestHeaders = append(requestHeaders, getAuthMethodHeader(l.AuthMethodHeader))
+	}
+
 	return requestHeaders
 }
 
@@ -270,6 +284,14 @@ func (l *LegacyHeaders) getResponseHeaders() []Header {
 
 	if l.SetAuthorization {
 		responseHeaders = append(responseHeaders, getAuthorizationHeader())
+	}
+
+	if l.CSRFTokenResponseHeader != "" {
+		responseHeaders = append(responseHeaders, getCSRFTokenHeader(l.CSRFTokenResponseHeader))
+	}
+
+	if l.AuthMethodHeader != "" {
+		responseHeaders = append(responseHeaders, getAuthMethodHeader(l.AuthMethodHeader))
 	}
 
 	return responseHeaders
@@ -363,6 +385,20 @@ func getPassAccessTokenHeader() Header {
 	}
 }
 
+func getCSRFTokenHeader(name string) Header {
+	return Header{
+		Name:                 name,
+		PreserveRequestValue: true,
+		Values: []HeaderValue{
+			{
+				ClaimSource: &ClaimSource{
+					Claim: "csrf_token",
+				},
+			},
+		},
+	}
+}
+
 func getAuthorizationHeader() Header {
 	return Header{
 		Name: "Authorization",
@@ -447,6 +483,27 @@ func getXAuthRequestAccessTokenHeader() Header {
 				},
 			},
 		},
+	}
+}
+
+func getAuthMethodHeader(name string) Header {
+	return Header{
+		Name: name,
+		Values: []HeaderValue{
+			{
+				ScopeSource: &ScopeSource{
+					Field: "AuthMethod",
+				},
+			},
+		},
+	}
+}
+
+func stripCSRFHeader(name string) Header {
+	return Header{
+		Name:                 name,
+		PreserveRequestValue: false,
+		Values:               []HeaderValue{},
 	}
 }
 

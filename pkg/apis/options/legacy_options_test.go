@@ -109,6 +109,11 @@ var _ = Describe("Legacy Options", func() {
 						},
 					},
 				},
+				{
+					Name:                 "X-CSRF-Token",
+					PreserveRequestValue: false,
+					Values:               []HeaderValue{},
+				},
 			}
 
 			opts.InjectResponseHeaders = []Header{}
@@ -478,6 +483,30 @@ var _ = Describe("Legacy Options", func() {
 			},
 		}
 
+		csrfResponseHeader := Header{
+			Name:                 "X-CSRF-Token",
+			PreserveRequestValue: true,
+			Values: []HeaderValue{
+				{
+					ClaimSource: &ClaimSource{
+						Claim: "csrf_token",
+					},
+				},
+			},
+		}
+
+		authMethodHeader := Header{
+			Name:                 "AuthMethod",
+			PreserveRequestValue: false,
+			Values: []HeaderValue{
+				{
+					ScopeSource: &ScopeSource{
+						Field: "AuthMethod",
+					},
+				},
+			},
+		}
+
 		DescribeTable("should convert to injectRequestHeaders",
 			func(in legacyHeadersTableInput) {
 				requestHeaders, responseHeaders := in.legacyHeaders.convert()
@@ -782,6 +811,53 @@ var _ = Describe("Legacy Options", func() {
 				},
 				expectedResponseHeaders: []Header{
 					authorizationHeader,
+				},
+			}),
+			Entry("with passAccessToken and CSRF response header", legacyHeadersTableInput{
+				legacyHeaders: &LegacyHeaders{
+					PassBasicAuth:     false,
+					PassAccessToken:   true,
+					PassUserHeaders:   false,
+					PassAuthorization: false,
+
+					SetBasicAuth:     false,
+					SetXAuthRequest:  false,
+					SetAuthorization: false,
+
+					PreferEmailToUser:       false,
+					BasicAuthPassword:       "",
+					SkipAuthStripHeaders:    true,
+					CSRFTokenResponseHeader: "X-CSRF-Token",
+				},
+				expectedRequestHeaders: []Header{
+					xForwardedAccessToken,
+				},
+				expectedResponseHeaders: []Header{
+					csrfResponseHeader,
+				},
+			}),
+			Entry("with AuthMethod header", legacyHeadersTableInput{
+				legacyHeaders: &LegacyHeaders{
+					PassBasicAuth:     false,
+					PassAccessToken:   true,
+					PassUserHeaders:   false,
+					PassAuthorization: false,
+
+					SetBasicAuth:     false,
+					SetXAuthRequest:  false,
+					SetAuthorization: false,
+
+					PreferEmailToUser:    false,
+					BasicAuthPassword:    "",
+					SkipAuthStripHeaders: true,
+					AuthMethodHeader:     "AuthMethod",
+				},
+				expectedRequestHeaders: []Header{
+					xForwardedAccessToken,
+					authMethodHeader,
+				},
+				expectedResponseHeaders: []Header{
+					authMethodHeader,
 				},
 			}),
 		)
