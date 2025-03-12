@@ -31,8 +31,8 @@ type Provider interface {
 	CreateSessionFromToken(ctx context.Context, token string) (*sessions.SessionState, error)
 }
 
-func NewProvider(providerConfig options.Provider) (Provider, error) {
-	providerData, err := newProviderDataFromConfig(providerConfig)
+func NewProvider(opts *options.Options, providerConfig options.Provider) (Provider, error) {
+	providerData, err := newProviderDataFromConfig(opts, providerConfig)
 	if err != nil {
 		return nil, fmt.Errorf("could not create provider data: %v", err)
 	}
@@ -72,7 +72,7 @@ func NewProvider(providerConfig options.Provider) (Provider, error) {
 	}
 }
 
-func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, error) {
+func newProviderDataFromConfig(opts *options.Options, providerConfig options.Provider) (*ProviderData, error) {
 	p := &ProviderData{
 		Scope:            providerConfig.Scope,
 		ClientID:         providerConfig.ClientID,
@@ -101,6 +101,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 		}
 
 		p.Verifier = pv.Verifier()
+		p.JWTVerifiers = opts.GetJWTBearerVerifiers()
 		if pv.DiscoveryEnabled() {
 			// Use the discovered values rather than any specified values
 			endpoints := pv.Provider().Endpoints()
