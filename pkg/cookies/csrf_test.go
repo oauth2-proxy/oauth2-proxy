@@ -2,7 +2,6 @@ package cookies
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -41,6 +40,17 @@ var _ = Describe("CSRF Cookie Tests", func() {
 		var err error
 		ctx := context.Background()
 		ctx = utils.AppendProviderIDToContext(ctx, "dummy")
+		req := &http.Request{
+			Method: http.MethodGet,
+			Proto:  "HTTP/1.1",
+			Host:   cookieDomainTemplate,
+
+			URL: &url.URL{
+				Scheme: "https",
+				Host:   cookieDomainTemplate,
+				Path:   cookiePath,
+			},
+		}
 
 		err = cookieOpts.Init()
 		Expect(err).ToNot(HaveOccurred())
@@ -49,7 +59,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		privateCSRF = publicCSRF.(*csrf)
-		csrfName = GenerateCookieName(cookieOpts, csrfNonce)
+		csrfName = GenerateCookieName(req, cookieOpts, csrfNonce)
 	})
 
 	Context("NewCSRF", func() {
@@ -132,8 +142,8 @@ var _ = Describe("CSRF Cookie Tests", func() {
 
 			req.Header = http.Header{}
 			req.AddCookie(cookie)
-			_, err = LoadCSRFCookie(req, cookieOpts)
-			Expect(err).To(Equal(errors.New("providerID in request does not match providerID in csrf cookie")))
+			_, err = LoadCSRFCookie(req, cookie.Name, cookieOpts)
+			Expect(err).To(Equal(fmt.Errorf("CSRF cookie with name '%s' was not found or providerID in cookie is not same as in the context", cookie.Name)))
 		})
 
 		It("with same providerID", func(c SpecContext) {
@@ -152,7 +162,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 			newReq := req.WithContext(ctx)
 			newReq.Header = http.Header{}
 			newReq.AddCookie(cookie)
-			_, err = LoadCSRFCookie(newReq, cookieOpts)
+			_, err = LoadCSRFCookie(newReq, cookie.Name, cookieOpts)
 			Expect(err).ToNot(HaveOccurred())
 
 		})
@@ -251,24 +261,30 @@ var _ = Describe("CSRF Cookie Tests", func() {
 			})
 
 			It("should find one valid cookie", func() {
+				ctx := context.Background()
+				ctx = utils.AppendProviderIDToContext(ctx, "dummy")
+
+				newReq := req.WithContext(ctx)
 				privateCSRF.OAuthState = []byte(csrfState)
 				privateCSRF.OIDCNonce = []byte(csrfNonce)
-				encoded, err := privateCSRF.encodeCookie()
+				encoded, err := privateCSRF.encodeCookie(req.Context())
 				Expect(err).ToNot(HaveOccurred())
 
-				req.AddCookie(&http.Cookie{
-					Name:  privateCSRF.cookieName(),
+				cookie := &http.Cookie{
+					Name:  privateCSRF.cookieName(req.Context()),
 					Value: encoded,
-				})
+				}
 
-				csrf, err := LoadCSRFCookie(req, csrfName, cookieOpts)
+				newReq.AddCookie(cookie)
+
+				csrf, err := LoadCSRFCookie(newReq, cookie.Name, cookieOpts)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(csrf).ToNot(BeNil())
 			})
 
 			It("should return error when one invalid cookie is set", func() {
 				req.AddCookie(&http.Cookie{
-					Name:  privateCSRF.cookieName(),
+					Name:  privateCSRF.cookieName(req.Context()),
 					Value: "invalid",
 				})
 
@@ -280,20 +296,25 @@ var _ = Describe("CSRF Cookie Tests", func() {
 			It("should be able to handle two cookie with one invalid", func() {
 				privateCSRF.OAuthState = []byte(csrfState)
 				privateCSRF.OIDCNonce = []byte(csrfNonce)
-				encoded, err := privateCSRF.encodeCookie()
+				encoded, err := privateCSRF.encodeCookie(req.Context())
 				Expect(err).ToNot(HaveOccurred())
 
-				req.AddCookie(&http.Cookie{
-					Name:  privateCSRF.cookieName(),
+				ctx := context.Background()
+				ctx = utils.AppendProviderIDToContext(ctx, "dummy")
+
+				newReq := req.WithContext(ctx)
+
+				newReq.AddCookie(&http.Cookie{
+					Name:  privateCSRF.cookieName(req.Context()),
 					Value: "invalid",
 				})
 
-				req.AddCookie(&http.Cookie{
-					Name:  privateCSRF.cookieName(),
+				newReq.AddCookie(&http.Cookie{
+					Name:  privateCSRF.cookieName(req.Context()),
 					Value: encoded,
 				})
 
-				csrf, err := LoadCSRFCookie(req, csrfName, cookieOpts)
+				csrf, err := LoadCSRFCookie(newReq, csrfName, cookieOpts)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(csrf).ToNot(BeNil())
 			})

@@ -66,7 +66,7 @@ func Test_encryptOrDecryptClientSecret(t *testing.T) {
 			"with no error ",
 			[]byte("{\"id\":\"xxx'\", \"provider\":\"keycloak\", \"clientSecret\": \"secret\"}"),
 			f.Encrypt,
-			[]byte(`{"clientSecret":"secret","keycloakConfig":{},"azureConfig":{},"ADFSConfig":{},"bitbucketConfig":{},"githubConfig":{},"gitlabConfig":{},"googleConfig":{},"oidcConfig":{},"loginGovConfig":{},"id":"xxx'","provider":"keycloak","backendLogoutURL":""}`),
+			[]byte(`{"clientSecret":"secret","keycloakConfig":{},"azureConfig":{},"microsoftEntraIDConfig":{},"ADFSConfig":{},"bitbucketConfig":{},"githubConfig":{},"gitlabConfig":{},"googleConfig":{},"oidcConfig":{},"loginGovConfig":{},"id":"xxx'","provider":"keycloak","backendLogoutURL":""}`),
 			false,
 		},
 	}
@@ -184,7 +184,7 @@ func Test_Get(t *testing.T) {
 			func(ctx context.Context, id string) (string, error) {
 				return "{\"id\":\"xxx'\", \"provider\":\"keycloak\", \"clientSecret\":\"4yxujcK/Hg2N7Cr81lLScLV2Lh6r7T9viwB2AYUVT4ujwl4M3g==\" }", nil
 			},
-			`{"clientSecret":"hf39jrh93uhd93wjd4iwj","keycloakConfig":{},"azureConfig":{},"ADFSConfig":{},"bitbucketConfig":{},"githubConfig":{},"gitlabConfig":{},"googleConfig":{},"oidcConfig":{},"loginGovConfig":{},"id":"xxx'","provider":"keycloak","backendLogoutURL":""}`,
+			`{"clientSecret":"hf39jrh93uhd93wjd4iwj","keycloakConfig":{},"azureConfig":{},"microsoftEntraIDConfig":{},"ADFSConfig":{},"bitbucketConfig":{},"githubConfig":{},"gitlabConfig":{},"googleConfig":{},"oidcConfig":{},"loginGovConfig":{},"id":"xxx'","provider":"keycloak","backendLogoutURL":""}`,
 			false,
 		},
 	}

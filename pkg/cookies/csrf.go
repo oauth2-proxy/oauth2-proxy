@@ -101,7 +101,7 @@ func LoadCSRFCookie(req *http.Request, cookieName string, opts *options.Cookie) 
 		return csrf, nil
 	}
 
-	return nil, fmt.Errorf("CSRF cookie with name '%v' was not found or providerID in cookie is not same as in the context", cookieName)
+	return nil, fmt.Errorf("CSRF cookie with name '%s' was not found or providerID in cookie is not same as in the context", cookieName)
 }
 
 // GenerateCookieName in case cookie options state that CSRF cookie has fixed name then set fixed name, otherwise

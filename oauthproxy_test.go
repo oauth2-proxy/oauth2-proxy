@@ -3446,7 +3446,9 @@ func Test_t(t *testing.T) {
 
 	s := encodeState(nonce, redirect, providerID, true)
 
-	t.Error(s)
+	if s == "" {
+		t.Errorf("encodeState returned an empty string")
+	}
 }
 
 func TestStateEncodesCorrectly(t *testing.T) {
