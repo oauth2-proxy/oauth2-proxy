@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"sync"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/clock"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/providers/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -23,6 +25,68 @@ type testLock struct {
 	obtainAttempts  int
 	obtainError     error
 }
+
+type TestProvider struct {
+	*providers.ProviderData
+	EmailAddress   string
+	ValidToken     bool
+	GroupValidator func(string) bool
+	RefreshFunc    func(_ context.Context, _ *sessionsapi.SessionState) (bool, error)
+	ValidateFunc   func(ctx context.Context, ss *sessionsapi.SessionState) bool
+}
+
+var _ providers.Provider = (*TestProvider)(nil)
+
+func NewTestProvider(providerURL *url.URL, emailAddress string) *TestProvider {
+	return &TestProvider{
+		ProviderData: &providers.ProviderData{
+			ProviderName: "Test Provider",
+			LoginURL: &url.URL{
+				Scheme: "http",
+				Host:   providerURL.Host,
+				Path:   "/oauth/authorize",
+			},
+			RedeemURL: &url.URL{
+				Scheme: "http",
+				Host:   providerURL.Host,
+				Path:   "/oauth/token",
+			},
+			ProfileURL: &url.URL{
+				Scheme: "http",
+				Host:   providerURL.Host,
+				Path:   "/api/v1/profile",
+			},
+			Scope: "profile.email",
+		},
+		EmailAddress: emailAddress,
+		GroupValidator: func(s string) bool {
+			return true
+		},
+		ValidToken: true,
+	}
+}
+
+func (tp *TestProvider) GetEmailAddress(_ context.Context, _ *sessionsapi.SessionState) (string, error) {
+	return tp.EmailAddress, nil
+}
+
+func (tp *TestProvider) ValidateSession(ctx context.Context, ss *sessionsapi.SessionState) bool {
+	if tp.ValidateFunc != nil {
+		return tp.ValidateFunc(ctx, ss)
+	}
+	return tp.ValidToken
+}
+
+func (tp *TestProvider) RefreshSession(ctx context.Context, ss *sessionsapi.SessionState) (bool, error) {
+	if tp.RefreshFunc != nil {
+		return tp.RefreshFunc(ctx, ss)
+	}
+	return false, nil
+}
+
+const (
+	providerEmail = "provider@example.com"
+)
 
 func (l *testLock) Obtain(_ context.Context, _ time.Duration) error {
 	l.obtainAttempts++
@@ -186,15 +250,19 @@ var _ = Describe("Stored Session Suite", func() {
 				rw := httptest.NewRecorder()
 
 				opts := &StoredSessionLoaderOptions{
-					SessionStore:    in.store,
-					RefreshPeriod:   in.refreshPeriod,
-					RefreshSession:  in.refreshSession,
-					ValidateSession: in.validateSession,
+					SessionStore:  in.store,
+					RefreshPeriod: in.refreshPeriod,
 				}
 
 				// Create the handler with a next handler that will capture the session
 				// from the scope
 				var gotSession *sessionsapi.SessionState
+				tp := NewTestProvider(&url.URL{Host: "www.example.com"}, providerEmail)
+				tp.RefreshFunc = in.refreshSession
+				tp.ValidateFunc = in.validateSession
+
+				req = req.WithContext(utils.AppendProviderToContext(req.Context(), tp))
+
 				handler := NewStoredSessionLoader(opts)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					gotSession = middlewareapi.GetRequestScope(r).Session
 				}))
@@ -377,18 +445,22 @@ var _ = Describe("Stored Session Suite", func() {
 						rw := httptest.NewRecorder()
 
 						sessionRefreshed := false
+						tp := NewTestProvider(&url.URL{Host: "www.example.com"}, providerEmail)
+						tp.RefreshFunc = func(ctx context.Context, s *sessionsapi.SessionState) (bool, error) {
+							time.Sleep(10 * time.Millisecond)
+							sessionRefreshed = true
+							return true, nil
+						}
+						tp.ValidateFunc = func(context.Context, *sessionsapi.SessionState) bool {
+							return true
+						}
 						opts := &StoredSessionLoaderOptions{
 							SessionStore:  store,
 							RefreshPeriod: in.refreshPeriod,
-							RefreshSession: func(ctx context.Context, s *sessionsapi.SessionState) (bool, error) {
-								time.Sleep(10 * time.Millisecond)
-								sessionRefreshed = true
-								return true, nil
-							},
-							ValidateSession: func(context.Context, *sessionsapi.SessionState) bool {
-								return true
-							},
 						}
+
+						ctx := utils.AppendProviderToContext(req.Context(), tp)
+						req = req.WithContext(ctx)
 
 						handler := NewStoredSessionLoader(opts)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 						handler.ServeHTTP(rw, req)
@@ -476,27 +548,28 @@ var _ = Describe("Stored Session Suite", func() {
 				s := &storedSessionLoader{
 					refreshPeriod: in.refreshPeriod,
 					store:         store,
-					sessionRefresher: func(_ context.Context, ss *sessionsapi.SessionState) (bool, error) {
-						refreshed = true
-						switch ss.RefreshToken {
-						case refresh:
-							return true, nil
-						case noRefresh:
-							return false, nil
-						case notImplemented:
-							return false, providers.ErrNotImplemented
-						default:
-							return false, errors.New("error refreshing session")
-						}
-					},
-					sessionValidator: func(_ context.Context, ss *sessionsapi.SessionState) bool {
-						validated = true
-						return ss.AccessToken != "Invalid"
-					},
 				}
 
+				provider := NewTestProvider(&url.URL{Host: "www.example.com"}, providerEmail)
+				provider.RefreshFunc = func(_ context.Context, ss *sessionsapi.SessionState) (bool, error) {
+					refreshed = true
+					switch ss.RefreshToken {
+					case refresh:
+						return true, nil
+					case noRefresh:
+						return false, nil
+					case notImplemented:
+						return false, providers.ErrNotImplemented
+					default:
+						return false, errors.New("error refreshing session")
+					}
+				}
+				provider.ValidateFunc = func(_ context.Context, ss *sessionsapi.SessionState) bool {
+					validated = true
+					return ss.AccessToken != "Invalid"
+				}
 				req := httptest.NewRequest("", "/", nil)
-				err := s.refreshSessionIfNeeded(nil, req, in.session)
+				err := s.refreshSessionIfNeeded(nil, req, provider, in.session)
 				if in.expectedErr != nil {
 					Expect(err).To(MatchError(in.expectedErr))
 				} else {
@@ -654,23 +727,25 @@ var _ = Describe("Stored Session Suite", func() {
 							return nil
 						},
 					},
-					sessionRefresher: func(_ context.Context, ss *sessionsapi.SessionState) (bool, error) {
-						switch ss.RefreshToken {
-						case refresh:
-							return true, nil
-						case noRefresh:
-							return false, nil
-						case notImplemented:
-							return false, providers.ErrNotImplemented
-						default:
-							return false, errors.New("error refreshing session")
-						}
-					},
 				}
 
 				req := httptest.NewRequest("", "/", nil)
 				req = middlewareapi.AddRequestScope(req, &middlewareapi.RequestScope{})
-				err := s.refreshSession(nil, req, in.session)
+
+				provider := NewTestProvider(&url.URL{Host: "www.example.com"}, providerEmail)
+				provider.RefreshFunc = func(_ context.Context, ss *sessionsapi.SessionState) (bool, error) {
+					switch ss.RefreshToken {
+					case refresh:
+						return true, nil
+					case noRefresh:
+						return false, nil
+					case notImplemented:
+						return false, providers.ErrNotImplemented
+					default:
+						return false, errors.New("error refreshing session")
+					}
+				}
+				err := s.refreshSession(nil, req, provider, in.session)
 				if in.expectedErr != nil {
 					Expect(err).To(MatchError(in.expectedErr))
 				} else {
@@ -721,12 +796,13 @@ var _ = Describe("Stored Session Suite", func() {
 
 	Context("validateSession", func() {
 		var s *storedSessionLoader
+		var provider *TestProvider
 
 		BeforeEach(func() {
-			s = &storedSessionLoader{
-				sessionValidator: func(_ context.Context, ss *sessionsapi.SessionState) bool {
-					return ss.AccessToken == "Valid"
-				},
+			s = &storedSessionLoader{}
+			provider = NewTestProvider(&url.URL{Host: "www.example.com"}, providerEmail)
+			provider.ValidateFunc = func(_ context.Context, ss *sessionsapi.SessionState) bool {
+				return ss.AccessToken == "Valid"
 			}
 		})
 
@@ -737,7 +813,7 @@ var _ = Describe("Stored Session Suite", func() {
 					AccessToken: "Valid",
 					ExpiresOn:   &expires,
 				}
-				Expect(s.validateSession(ctx, session)).To(Succeed())
+				Expect(s.validateSession(ctx, provider, session)).To(Succeed())
 			})
 		})
 
@@ -750,7 +826,7 @@ var _ = Describe("Stored Session Suite", func() {
 					CreatedAt:   &created,
 					ExpiresOn:   &expires,
 				}
-				Expect(s.validateSession(ctx, session)).To(MatchError("session is expired"))
+				Expect(s.validateSession(ctx, provider, session)).To(MatchError("session is expired"))
 			})
 		})
 
@@ -761,7 +837,7 @@ var _ = Describe("Stored Session Suite", func() {
 					AccessToken: "Invalid",
 					ExpiresOn:   &expires,
 				}
-				Expect(s.validateSession(ctx, session)).To(MatchError("session is invalid"))
+				Expect(s.validateSession(ctx, provider, session)).To(MatchError("session is invalid"))
 			})
 		})
 	})

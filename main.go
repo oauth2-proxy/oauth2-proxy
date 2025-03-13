@@ -58,6 +58,10 @@ func main() {
 	if err != nil {
 		logger.Fatalf("ERROR: Failed to initialise OAuth2 Proxy: %v", err)
 	}
+	err = oauthproxy.Init(opts)
+	if err != nil {
+		logger.Fatalf("ERROR: Failed to initialise OAuth2 Proxy: %v", err)
+	}
 
 	if err := oauthproxy.Start(); err != nil {
 		logger.Fatalf("ERROR: Failed to start OAuth2 Proxy: %v", err)
@@ -129,6 +133,10 @@ func loadOptions(config string, extraFlags *pflag.FlagSet, args []string) (*opti
 	opts := options.NewOptions()
 	if err := options.Load(config, optionsFlagSet, opts); err != nil {
 		return nil, fmt.Errorf("failed to load config: %v", err)
+	}
+
+	if err := opts.Init(); err != nil {
+		return nil, fmt.Errorf("failed to initialize config: %v", err)
 	}
 
 	return opts, nil

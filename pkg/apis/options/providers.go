@@ -271,7 +271,7 @@ type LoginGovOptions struct {
 	PubJWKURL string `json:"pubjwkURL,omitempty"`
 }
 
-func providerDefaults() Providers {
+func ProviderDefaults() Providers {
 	providers := Providers{
 		{
 			Type: "google",

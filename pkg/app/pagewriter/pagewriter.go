@@ -1,6 +1,7 @@
 package pagewriter
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 )
@@ -9,9 +10,10 @@ import (
 // error pages.
 // It can also be used to write errors for the http.ReverseProxy used in the
 // upstream package.
+// ProxyErrorHandler takes context input to extract provider-ID.
 type Writer interface {
 	WriteSignInPage(rw http.ResponseWriter, req *http.Request, redirectURL string, statusCode int)
-	WriteErrorPage(rw http.ResponseWriter, opts ErrorPageOpts)
+	WriteErrorPage(ctx context.Context, rw http.ResponseWriter, opts ErrorPageOpts)
 	ProxyErrorHandler(rw http.ResponseWriter, req *http.Request, proxyErr error)
 	WriteRobotsTxt(rw http.ResponseWriter, req *http.Request)
 }
@@ -45,9 +47,6 @@ type Opts struct {
 
 	// DisplayLoginForm determines whether or not the basic auth password form is displayed on the sign-in page.
 	DisplayLoginForm bool
-
-	// ProviderName is the name of the provider that should be displayed on the login button.
-	ProviderName string
 
 	// SignInMessage is the messge displayed above the login button.
 	SignInMessage string
@@ -83,7 +82,6 @@ func NewWriter(opts Opts) (Writer, error) {
 		template:         templates.Lookup("sign_in.html"),
 		errorPageWriter:  errorPage,
 		proxyPrefix:      opts.ProxyPrefix,
-		providerName:     opts.ProviderName,
 		signInMessage:    opts.SignInMessage,
 		footer:           opts.Footer,
 		version:          opts.Version,
@@ -106,10 +104,9 @@ func NewWriter(opts Opts) (Writer, error) {
 // WriterFuncs is an implementation of the PageWriter interface based
 // on override functions.
 // If any of the funcs are not provided, a default implementation will be used.
-// This is primarily for us in testing.
 type WriterFuncs struct {
 	SignInPageFunc func(rw http.ResponseWriter, req *http.Request, redirectURL string, statusCode int)
-	ErrorPageFunc  func(rw http.ResponseWriter, opts ErrorPageOpts)
+	ErrorPageFunc  func(ctx context.Context, rw http.ResponseWriter, opts ErrorPageOpts) // context.Context is used since request is not needed here
 	ProxyErrorFunc func(rw http.ResponseWriter, req *http.Request, proxyErr error)
 	RobotsTxtfunc  func(rw http.ResponseWriter, req *http.Request)
 }
@@ -131,9 +128,11 @@ func (w *WriterFuncs) WriteSignInPage(rw http.ResponseWriter, req *http.Request,
 // WriteErrorPage implements the Writer interface.
 // If the ErrorPageFunc is provided, this will be used, else a default
 // implementation will be used.
-func (w *WriterFuncs) WriteErrorPage(rw http.ResponseWriter, opts ErrorPageOpts) {
+// Context is added to extract provider-ID from incoming request's context.
+func (w *WriterFuncs) WriteErrorPage(ctx context.Context, rw http.ResponseWriter, opts ErrorPageOpts) {
 	if w.ErrorPageFunc != nil {
-		w.ErrorPageFunc(rw, opts)
+		// The context is further passed to ErrorPage Func
+		w.ErrorPageFunc(ctx, rw, opts)
 		return
 	}
 
@@ -153,7 +152,8 @@ func (w *WriterFuncs) ProxyErrorHandler(rw http.ResponseWriter, req *http.Reques
 		return
 	}
 
-	w.WriteErrorPage(rw, ErrorPageOpts{
+	// Request Context is passed to error page writer.
+	w.WriteErrorPage(req.Context(), rw, ErrorPageOpts{
 		Status:   http.StatusBadGateway,
 		AppError: proxyErr.Error(),
 	})
