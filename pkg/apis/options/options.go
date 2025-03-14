@@ -57,6 +57,7 @@ type Options struct {
 	SkipAuthRoutes        []string `flag:"skip-auth-route" cfg:"skip_auth_routes"`
 	SkipJwtBearerTokens   bool     `flag:"skip-jwt-bearer-tokens" cfg:"skip_jwt_bearer_tokens"`
 	ExtraJwtIssuers       []string `flag:"extra-jwt-issuers" cfg:"extra_jwt_issuers"`
+	ExtraJwtHeaders       []string `flag:"extra-jwt-headers" cfg:"extra_jwt_headers"`
 	SkipProviderButton    bool     `flag:"skip-provider-button" cfg:"skip_provider_button"`
 	SSLInsecureSkipVerify bool     `flag:"ssl-insecure-skip-verify" cfg:"ssl_insecure_skip_verify"`
 	SkipAuthPreflight     bool     `flag:"skip-auth-preflight" cfg:"skip_auth_preflight"`
@@ -132,6 +133,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Bool("encode-state", false, "will encode oauth state with base64")
 	flagSet.Bool("allow-query-semicolons", false, "allow the use of semicolons in query args")
 	flagSet.StringSlice("extra-jwt-issuers", []string{}, "if skip-jwt-bearer-tokens is set, a list of extra JWT issuer=audience pairs (where the issuer URL has a .well-known/openid-configuration or a .well-known/jwks.json)")
+	flagSet.StringSlice("extra-jwt-headers", []string{}, "if skip-jwt-bearer-tokens is set, a list of additional headers to look for a JWT bearer token")
 
 	flagSet.StringSlice("email-domain", []string{}, "authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email")
 	flagSet.StringSlice("whitelist-domain", []string{}, "allowed domains for redirection after authentication. Prefix domain with a . or a *. to allow subdomains (eg .example.com, *.example.com)")
