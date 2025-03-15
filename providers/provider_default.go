@@ -146,3 +146,7 @@ func (p *ProviderData) CreateSessionFromToken(ctx context.Context, token string)
 	}
 	return nil, ErrNotImplemented
 }
+
+func (p *ProviderData) ValidateCallback(_ *sessions.SessionState) bool {
+	return true
+}

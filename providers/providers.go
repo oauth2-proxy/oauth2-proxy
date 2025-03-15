@@ -27,6 +27,7 @@ type Provider interface {
 	EnrichSession(ctx context.Context, s *sessions.SessionState) error
 	Authorize(ctx context.Context, s *sessions.SessionState) (bool, error)
 	ValidateSession(ctx context.Context, s *sessions.SessionState) bool
+	ValidateCallback(s *sessions.SessionState) bool
 	RefreshSession(ctx context.Context, s *sessions.SessionState) (bool, error)
 	CreateSessionFromToken(ctx context.Context, token string) (*sessions.SessionState, error)
 }

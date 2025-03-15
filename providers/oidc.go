@@ -114,10 +114,16 @@ func (p *OIDCProvider) ValidateSession(ctx context.Context, s *sessions.SessionS
 		return false
 	}
 
+	return true
+}
+
+// ValidateSession checks that the session's callback response is valid
+func (p *OIDCProvider) ValidateCallback(s *sessions.SessionState) bool {
 	if p.SkipNonce {
 		return true
 	}
-	err = p.checkNonce(s)
+
+	err := p.checkNonce(s)
 	if err != nil {
 		logger.Errorf("nonce verification failed: %v", err)
 		return false
