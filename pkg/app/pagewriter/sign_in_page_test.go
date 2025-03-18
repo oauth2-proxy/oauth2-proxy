@@ -12,6 +12,9 @@ import (
 	"strings"
 
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/providers/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -21,28 +24,48 @@ var _ = Describe("SignIn Page", func() {
 	Context("SignIn Page Writer", func() {
 		var request *http.Request
 		var signInPage *signInPageWriter
+		var pd providers.Provider
 
 		BeforeEach(func() {
-			errorTmpl, err := template.New("").Parse("{{.Title}} | {{.RequestID}}")
+			errorTmpl, err := template.New("").Parse("{{.Title}} | {{.RequestID}} | {{.ProviderID}}")
 			Expect(err).ToNot(HaveOccurred())
 			errorPage := &errorPageWriter{
 				template: errorTmpl,
 			}
 
-			tmpl, err := template.New("").Parse("{{.ProxyPrefix}} {{.ProviderName}} {{.SignInMessage}} {{.Footer}} {{.Version}} {{.Redirect}} {{.CustomLogin}} {{.LogoData}}")
+			tmpl, err := template.New("").Parse("{{.ProxyPrefix}} {{.ProviderName}} {{.SignInMessage}} {{.Footer}} {{.Version}} {{.Redirect}} {{.ProviderID}} {{.CustomLogin}} {{.LogoData}}")
 			Expect(err).ToNot(HaveOccurred())
 
 			signInPage = &signInPageWriter{
 				template:         tmpl,
 				errorPageWriter:  errorPage,
 				proxyPrefix:      "/prefix/",
-				providerName:     "My Provider",
 				signInMessage:    "Sign In Here",
 				footer:           "Custom Footer Text",
 				version:          "v0.0.0-test",
 				displayLoginForm: true,
 				logoData:         "Logo Data",
 			}
+
+			msIssuerURL := "https://login.microsoftonline.com/fabrikamb2c.onmicrosoft.com/v2.0/"
+			msKeysURL := "https://login.microsoftonline.com/fabrikamb2c.onmicrosoft.com/discovery/v2.0/keys"
+
+			request = httptest.NewRequest("", "http://127.0.0.1/", nil)
+			providerConfig := options.Provider{
+				ID:               "id",
+				Type:             options.OIDCProvider,
+				ClientID:         "xyz",
+				ClientSecretFile: "abc",
+				Scope:            "openid email profile groups",
+				OIDCConfig: options.OIDCOptions{
+					IssuerURL:     msIssuerURL,
+					SkipDiscovery: true,
+					JwksURL:       msKeysURL,
+				},
+			}
+
+			pd, err = providers.NewProvider(providerConfig)
+			Expect(err).ToNot(HaveOccurred())
 
 			request = httptest.NewRequest("", "http://127.0.0.1/", nil)
 			request = middlewareapi.AddRequestScope(request, &middlewareapi.RequestScope{
@@ -53,11 +76,13 @@ var _ = Describe("SignIn Page", func() {
 		Context("WriteSignInPage", func() {
 			It("Writes the template to the response writer", func() {
 				recorder := httptest.NewRecorder()
-				signInPage.WriteSignInPage(recorder, request, "/redirect", http.StatusOK)
+
+				request2 := request.WithContext(utils.AppendProviderToContext(request.Context(), pd))
+				signInPage.WriteSignInPage(recorder, request2, "/redirect", http.StatusOK)
 
 				body, err := io.ReadAll(recorder.Result().Body)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(string(body)).To(Equal("/prefix/ My Provider Sign In Here Custom Footer Text v0.0.0-test /redirect true Logo Data"))
+				Expect(string(body)).To(Equal("/prefix/ OpenID Connect Sign In Here Custom Footer Text v0.0.0-test /redirect  true Logo Data"))
 			})
 
 			It("Writes an error if the template can't be rendered", func() {
@@ -67,11 +92,12 @@ var _ = Describe("SignIn Page", func() {
 				signInPage.template = tmpl
 
 				recorder := httptest.NewRecorder()
-				signInPage.WriteSignInPage(recorder, request, "/redirect", http.StatusOK)
+				request2 := request.WithContext(utils.AppendProviderToContext(request.Context(), pd))
+				signInPage.WriteSignInPage(recorder, request2, "/redirect", http.StatusOK)
 
 				body, err := io.ReadAll(recorder.Result().Body)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(string(body)).To(Equal(fmt.Sprintf("Internal Server Error | %s", testRequestID)))
+				Expect(string(body)).To(Equal(fmt.Sprintf("Internal Server Error | %s | ", testRequestID)))
 			})
 		})
 	})

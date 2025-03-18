@@ -1,6 +1,7 @@
 package cookies
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -23,19 +24,24 @@ var _ = Describe("CSRF Cookie with non-fixed name Tests", func() {
 
 	BeforeEach(func() {
 		cookieOpts = &options.Cookie{
-			Name:           cookieName,
-			Secret:         cookieSecret,
-			Domains:        []string{cookieDomain},
-			Path:           cookiePath,
-			Expire:         time.Hour,
-			Secure:         true,
-			HTTPOnly:       true,
-			CSRFPerRequest: true,
-			CSRFExpire:     time.Duration(5) * time.Minute,
+			NamePrefix:      cookieName,
+			Secret:          cookieSecret,
+			DomainTemplates: []string{cookieDomainTemplate},
+			Path:            cookiePath,
+			Expire:          time.Hour,
+			Secure:          true,
+			HTTPOnly:        true,
+			CSRFPerRequest:  true,
+			CSRFExpire:      time.Duration(5) * time.Minute,
 		}
 
 		var err error
-		publicCSRF, err = NewCSRF(cookieOpts, "verifier")
+		ctx := context.Background()
+
+		err = cookieOpts.Init()
+		Expect(err).ToNot(HaveOccurred())
+
+		publicCSRF, err = NewCSRF(ctx, cookieOpts, "verifier")
 		Expect(err).ToNot(HaveOccurred())
 
 		privateCSRF = publicCSRF.(*csrf)
@@ -50,7 +56,8 @@ var _ = Describe("CSRF Cookie with non-fixed name Tests", func() {
 		})
 
 		It("makes unique nonces between multiple CSRFs", func() {
-			other, err := NewCSRF(cookieOpts, "verifier")
+			ctx := context.Background()
+			other, err := NewCSRF(ctx, cookieOpts, "verifier")
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(privateCSRF.OAuthState).ToNot(Equal(other.(*csrf).OAuthState))
@@ -89,15 +96,15 @@ var _ = Describe("CSRF Cookie with non-fixed name Tests", func() {
 	})
 
 	Context("encodeCookie and decodeCSRFCookie", func() {
-		It("encodes and decodes to the same nonces", func() {
+		It("encodes and decodes to the same nonces", func(ctx SpecContext) {
 			privateCSRF.OAuthState = []byte(csrfState)
 			privateCSRF.OIDCNonce = []byte(csrfNonce)
 
-			encoded, err := privateCSRF.encodeCookie()
+			encoded, err := privateCSRF.encodeCookie(ctx)
 			Expect(err).ToNot(HaveOccurred())
 
 			cookie := &http.Cookie{
-				Name:  privateCSRF.cookieName(),
+				Name:  privateCSRF.cookieName(ctx),
 				Value: encoded,
 			}
 			decoded, err := decodeCSRFCookie(cookie, cookieOpts)
@@ -108,12 +115,12 @@ var _ = Describe("CSRF Cookie with non-fixed name Tests", func() {
 			Expect(decoded.OIDCNonce).To(Equal([]byte(csrfNonce)))
 		})
 
-		It("signs the encoded cookie value", func() {
-			encoded, err := privateCSRF.encodeCookie()
+		It("signs the encoded cookie value", func(ctx SpecContext) {
+			encoded, err := privateCSRF.encodeCookie(ctx)
 			Expect(err).ToNot(HaveOccurred())
 
 			cookie := &http.Cookie{
-				Name:  privateCSRF.cookieName(),
+				Name:  privateCSRF.cookieName(ctx),
 				Value: encoded,
 			}
 
@@ -133,11 +140,11 @@ var _ = Describe("CSRF Cookie with non-fixed name Tests", func() {
 			req = &http.Request{
 				Method: http.MethodGet,
 				Proto:  "HTTP/1.1",
-				Host:   cookieDomain,
+				Host:   cookieDomainTemplate,
 
 				URL: &url.URL{
 					Scheme: "https",
-					Host:   cookieDomain,
+					Host:   cookieDomainTemplate,
 					Path:   cookiePath,
 				},
 			}
@@ -148,20 +155,20 @@ var _ = Describe("CSRF Cookie with non-fixed name Tests", func() {
 		})
 
 		Context("SetCookie", func() {
-			It("adds the encoded CSRF cookie to a ResponseWriter", func() {
+			It("adds the encoded CSRF cookie to a ResponseWriter", func(ctx SpecContext) {
 				rw := httptest.NewRecorder()
 
 				_, err := publicCSRF.SetCookie(rw, req)
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(rw.Header().Get("Set-Cookie")).To(ContainSubstring(
-					fmt.Sprintf("%s=", privateCSRF.cookieName()),
+					fmt.Sprintf("%s=", privateCSRF.cookieName(ctx)),
 				))
 				Expect(rw.Header().Get("Set-Cookie")).To(ContainSubstring(
 					fmt.Sprintf(
 						"; Path=%s; Domain=%s; Max-Age=%d; HttpOnly; Secure",
 						cookiePath,
-						cookieDomain,
+						cookieDomainTemplate,
 						int(cookieOpts.CSRFExpire.Seconds()),
 					),
 				))
@@ -169,25 +176,24 @@ var _ = Describe("CSRF Cookie with non-fixed name Tests", func() {
 		})
 
 		Context("ClearCookie", func() {
-			It("sets a cookie with an empty value in the past", func() {
+			It("sets a cookie with an empty value in the past", func(ctx SpecContext) {
 				rw := httptest.NewRecorder()
 
 				publicCSRF.ClearCookie(rw, req)
-
 				Expect(rw.Header().Get("Set-Cookie")).To(Equal(
 					fmt.Sprintf(
 						"%s=; Path=%s; Domain=%s; Max-Age=0; HttpOnly; Secure",
-						privateCSRF.cookieName(),
+						privateCSRF.cookieName(ctx),
 						cookiePath,
-						cookieDomain,
+						cookieDomainTemplate,
 					),
 				))
 			})
 		})
 
 		Context("cookieName", func() {
-			It("has the cookie options name as a base", func() {
-				Expect(privateCSRF.cookieName()).To(ContainSubstring(cookieName))
+			It("has the cookie options name as a base", func(ctx SpecContext) {
+				Expect(privateCSRF.cookieName(ctx)).To(ContainSubstring(cookieName))
 			})
 		})
 	})

@@ -1,12 +1,14 @@
 package pagewriter
 
 import (
+	"context"
 	"fmt"
 	"html/template"
 	"net/http"
 
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/providers/utils"
 )
 
 // errorMessages are default error messages for each of the different
@@ -55,27 +57,31 @@ type ErrorPageOpts struct {
 // WriteErrorPage writes an error page to the given response writer.
 // It uses the passed redirectURL to give users the option to go back to where
 // they originally came from or try signing in again.
-func (e *errorPageWriter) WriteErrorPage(rw http.ResponseWriter, opts ErrorPageOpts) {
+func (e *errorPageWriter) WriteErrorPage(ctx context.Context, rw http.ResponseWriter, opts ErrorPageOpts) {
 	rw.WriteHeader(opts.Status)
 
 	data := struct {
-		Title       string
-		Message     string
-		ProxyPrefix string
-		StatusCode  int
-		Redirect    string
-		RequestID   string
-		Footer      template.HTML
-		Version     string
+		ProviderIDInputName string
+		ProviderID          string
+		Title               string
+		Message             string
+		ProxyPrefix         string
+		StatusCode          int
+		Redirect            string
+		RequestID           string
+		Footer              template.HTML
+		Version             string
 	}{
-		Title:       http.StatusText(opts.Status),
-		Message:     e.getMessage(opts.Status, opts.AppError, opts.Messages...),
-		ProxyPrefix: e.proxyPrefix,
-		StatusCode:  opts.Status,
-		Redirect:    opts.RedirectURL,
-		RequestID:   opts.RequestID,
-		Footer:      template.HTML(e.footer), // #nosec G203 -- We allow unescaped template.HTML since it is user configured options
-		Version:     e.version,
+		ProviderIDInputName: utils.DefaultProviderIDQueryParam,
+		ProviderID:          utils.ProviderIDFromContext(ctx),
+		Title:               http.StatusText(opts.Status),
+		Message:             e.getMessage(opts.Status, opts.AppError, opts.Messages...),
+		ProxyPrefix:         e.proxyPrefix,
+		StatusCode:          opts.Status,
+		Redirect:            opts.RedirectURL,
+		RequestID:           opts.RequestID,
+		Footer:              template.HTML(e.footer), // #nosec G203 -- We allow unescaped template.HTML since it is user configured options
+		Version:             e.version,
 	}
 
 	if err := e.template.Execute(rw, data); err != nil {
@@ -90,7 +96,7 @@ func (e *errorPageWriter) WriteErrorPage(rw http.ResponseWriter, opts ErrorPageO
 func (e *errorPageWriter) ProxyErrorHandler(rw http.ResponseWriter, req *http.Request, proxyErr error) {
 	logger.Errorf("Error proxying to upstream server: %v", proxyErr)
 	scope := middlewareapi.GetRequestScope(req)
-	e.WriteErrorPage(rw, ErrorPageOpts{
+	e.WriteErrorPage(req.Context(), rw, ErrorPageOpts{
 		Status:      http.StatusBadGateway,
 		RedirectURL: "", // The user is already logged in and has hit an upstream error. Makes no sense to redirect in this case.
 		RequestID:   scope.RequestID,

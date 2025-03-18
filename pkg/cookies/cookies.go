@@ -1,6 +1,8 @@
 package cookies
 
 import (
+	"context"
+	"crypto/sha256"
 	"fmt"
 	"net"
 	"net/http"
@@ -10,19 +12,35 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	requestutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/providers/utils"
 )
+
+func CookieName(ctx context.Context, opts *options.Cookie) string {
+	providerID := utils.ProviderIDFromContext(ctx)
+	if providerID == "" {
+		return opts.NamePrefix
+	}
+
+	// appending hex format of sha256 sum of providerid
+	// sha256 to keep the length of cookie name constant and deterministic
+	// hex for alphanumeric characters only
+	suffix := fmt.Sprintf("%x", sha256.Sum256([]byte(providerID)))
+	return fmt.Sprintf("%s_%s", opts.NamePrefix, suffix)
+}
 
 // MakeCookieFromOptions constructs a cookie based on the given *options.CookieOptions,
 // value and creation time
 func MakeCookieFromOptions(req *http.Request, name string, value string, opts *options.Cookie, expiration time.Duration) *http.Cookie {
-	domain := GetCookieDomain(req, opts.Domains)
+	providerID := utils.ProviderIDFromContext(req.Context())
+	cookieDomains := opts.Domains(providerID)
+	domain := GetCookieDomain(req, cookieDomains)
 	// If nothing matches, create the cookie with the shortest domain
-	if domain == "" && len(opts.Domains) > 0 {
+	if domain == "" && len(cookieDomains) > 0 {
 		logger.Errorf("Warning: request host %q did not match any of the specific cookie domains of %q",
 			requestutil.GetRequestHost(req),
-			strings.Join(opts.Domains, ","),
+			strings.Join(cookieDomains, ","),
 		)
-		domain = opts.Domains[len(opts.Domains)-1]
+		domain = cookieDomains[len(cookieDomains)-1]
 	}
 
 	c := &http.Cookie{

@@ -1,6 +1,10 @@
 package options
 
 import (
+	"bytes"
+	"fmt"
+	"sort"
+	"text/template"
 	"time"
 
 	"github.com/spf13/pflag"
@@ -8,17 +12,57 @@ import (
 
 // Cookie contains configuration options relating to Cookie configuration
 type Cookie struct {
-	Name           string        `flag:"cookie-name" cfg:"cookie_name"`
-	Secret         string        `flag:"cookie-secret" cfg:"cookie_secret"`
-	Domains        []string      `flag:"cookie-domain" cfg:"cookie_domains"`
-	Path           string        `flag:"cookie-path" cfg:"cookie_path"`
-	Expire         time.Duration `flag:"cookie-expire" cfg:"cookie_expire"`
-	Refresh        time.Duration `flag:"cookie-refresh" cfg:"cookie_refresh"`
-	Secure         bool          `flag:"cookie-secure" cfg:"cookie_secure"`
-	HTTPOnly       bool          `flag:"cookie-httponly" cfg:"cookie_httponly"`
-	SameSite       string        `flag:"cookie-samesite" cfg:"cookie_samesite"`
-	CSRFPerRequest bool          `flag:"cookie-csrf-per-request" cfg:"cookie_csrf_per_request"`
-	CSRFExpire     time.Duration `flag:"cookie-csrf-expire" cfg:"cookie_csrf_expire"`
+	NamePrefix      string        `flag:"cookie-name" cfg:"cookie_name"`
+	Secret          string        `flag:"cookie-secret" cfg:"cookie_secret"`
+	DomainTemplates []string      `flag:"cookie-domain" cfg:"cookie_domains"`
+	Path            string        `flag:"cookie-path" cfg:"cookie_path"`
+	Expire          time.Duration `flag:"cookie-expire" cfg:"cookie_expire"`
+	Refresh         time.Duration `flag:"cookie-refresh" cfg:"cookie_refresh"`
+	Secure          bool          `flag:"cookie-secure" cfg:"cookie_secure"`
+	HTTPOnly        bool          `flag:"cookie-httponly" cfg:"cookie_httponly"`
+	SameSite        string        `flag:"cookie-samesite" cfg:"cookie_samesite"`
+	CSRFPerRequest  bool          `flag:"cookie-csrf-per-request" cfg:"cookie_csrf_per_request"`
+	CSRFExpire      time.Duration `flag:"cookie-csrf-expire" cfg:"cookie_csrf_expire"`
+
+	domainTpls []*template.Template
+}
+
+func (c *Cookie) Domains(providerID string) []string {
+	domains := []string{}
+	for i, tpl := range c.domainTpls {
+		buf := bytes.NewBufferString("")
+		err := tpl.Execute(buf, map[string]any{
+			"ProviderID": providerID,
+		})
+		if err != nil {
+			panic(fmt.Errorf("unable to apply domain template '%s': %w", c.DomainTemplates[i], err))
+		}
+		domains = append(domains, buf.String())
+	}
+
+	// Sort cookie domains by length, so that we try longer (and more specific) domains first
+	sort.Slice(domains, func(i, j int) bool {
+		return len(domains[i]) > len(domains[j])
+	})
+
+	return domains
+}
+
+func (c *Cookie) Init() error {
+
+	tpls := make([]*template.Template, len(c.DomainTemplates))
+
+	for i, domain := range c.DomainTemplates {
+		tpl, err := template.New("").Parse(domain)
+		if err != nil {
+			return fmt.Errorf("invalid domain template '%s': %w", domain, err)
+		}
+		tpls[i] = tpl
+	}
+
+	c.domainTpls = tpls
+
+	return nil
 }
 
 func cookieFlagSet() *pflag.FlagSet {
@@ -41,16 +85,18 @@ func cookieFlagSet() *pflag.FlagSet {
 // cookieDefaults creates a Cookie populating each field with its default value
 func cookieDefaults() Cookie {
 	return Cookie{
-		Name:           "_oauth2_proxy",
-		Secret:         "",
-		Domains:        nil,
-		Path:           "/",
-		Expire:         time.Duration(168) * time.Hour,
-		Refresh:        time.Duration(0),
-		Secure:         true,
-		HTTPOnly:       true,
-		SameSite:       "",
-		CSRFPerRequest: false,
-		CSRFExpire:     time.Duration(15) * time.Minute,
+		NamePrefix:      "_oauth2_proxy",
+		Secret:          "",
+		DomainTemplates: nil,
+		Path:            "/",
+		Expire:          time.Duration(168) * time.Hour,
+		Refresh:         time.Duration(0),
+		Secure:          true,
+		HTTPOnly:        true,
+		SameSite:        "",
+		CSRFPerRequest:  false,
+		CSRFExpire:      time.Duration(15) * time.Minute,
+
+		domainTpls: nil,
 	}
 }

@@ -1,6 +1,7 @@
 package persistence
 
 import (
+	"context"
 	"crypto/aes"
 	"crypto/rand"
 	"encoding/base64"
@@ -45,13 +46,13 @@ type ticket struct {
 
 // newTicket creates a new ticket. The ID & secret will be randomly created
 // with 16 byte sizes. The ID will be prefixed & hex encoded.
-func newTicket(cookieOpts *options.Cookie) (*ticket, error) {
+func newTicket(ctx context.Context, cookieOpts *options.Cookie) (*ticket, error) {
 	rawID := make([]byte, 16)
 	if _, err := io.ReadFull(rand.Reader, rawID); err != nil {
 		return nil, fmt.Errorf("failed to create new ticket ID: %v", err)
 	}
 	// ticketID is hex encoded
-	ticketID := fmt.Sprintf("%s-%s", cookieOpts.Name, hex.EncodeToString(rawID))
+	ticketID := fmt.Sprintf("%s-%s", cookies.CookieName(ctx, cookieOpts), hex.EncodeToString(rawID))
 
 	secret := make([]byte, aes.BlockSize)
 	if _, err := io.ReadFull(rand.Reader, secret); err != nil {
@@ -139,7 +140,7 @@ func decodeTicket(encTicket string, cookieOpts *options.Cookie) (*ticket, error)
 // decodeTicketFromRequest retrieves a potential ticket cookie from a request
 // and decodes it to a ticket.
 func decodeTicketFromRequest(req *http.Request, cookieOpts *options.Cookie) (*ticket, error) {
-	requestCookie, err := req.Cookie(cookieOpts.Name)
+	requestCookie, err := req.Cookie(cookies.CookieName(req.Context(), cookieOpts))
 	if err != nil {
 		// Don't wrap this error to allow `err == http.ErrNoCookie` checks
 		return nil, err
@@ -219,7 +220,7 @@ func (t *ticket) setCookie(rw http.ResponseWriter, req *http.Request, s *session
 func (t *ticket) clearCookie(rw http.ResponseWriter, req *http.Request) {
 	http.SetCookie(rw, cookies.MakeCookieFromOptions(
 		req,
-		t.options.Name,
+		cookies.CookieName(req.Context(), t.options),
 		"",
 		t.options,
 		time.Hour*-1,
@@ -230,14 +231,14 @@ func (t *ticket) clearCookie(rw http.ResponseWriter, req *http.Request) {
 func (t *ticket) makeCookie(req *http.Request, value string, expires time.Duration, now time.Time) (*http.Cookie, error) {
 	if value != "" {
 		var err error
-		value, err = encryption.SignedValue(t.options.Secret, t.options.Name, []byte(value), now)
+		value, err = encryption.SignedValue(t.options.Secret, cookies.CookieName(req.Context(), t.options), []byte(value), now)
 		if err != nil {
 			return nil, err
 		}
 	}
 	return cookies.MakeCookieFromOptions(
 		req,
-		t.options.Name,
+		cookies.CookieName(req.Context(), t.options),
 		value,
 		t.options,
 		expires,

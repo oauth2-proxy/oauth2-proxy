@@ -39,14 +39,14 @@ var _ = Describe("NewSessionStore", func() {
 
 		// Set default options in CookieOptions
 		cookieOpts = &options.Cookie{
-			Name:     "_oauth2_proxy",
-			Secret:   base64.URLEncoding.EncodeToString(secret),
-			Path:     "/",
-			Expire:   time.Duration(168) * time.Hour,
-			Refresh:  time.Duration(1) * time.Hour,
-			Secure:   true,
-			HTTPOnly: true,
-			SameSite: "",
+			NamePrefix: "_oauth2_proxy",
+			Secret:     base64.URLEncoding.EncodeToString(secret),
+			Path:       "/",
+			Expire:     time.Duration(168) * time.Hour,
+			Refresh:    time.Duration(1) * time.Hour,
+			Secure:     true,
+			HTTPOnly:   true,
+			SameSite:   "",
 		}
 	})
 
