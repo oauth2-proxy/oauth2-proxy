@@ -237,6 +237,30 @@ func (p *ProviderData) buildSessionFromClaims(rawIDToken, accessToken string) (*
 		return ss, nil
 	}
 
+	extractor, err := p.getClaimExtractor(rawIDToken, accessToken)
+	if err != nil {
+		return nil, err
+	}
+
+	// Use a slice of a struct (vs map) here in case the same claim is used twice
+	nickName := ""
+	for _, c := range []struct {
+		claim string
+		dst   interface{}
+	}{
+		{p.UserClaim, &ss.User},
+		{p.EmailClaim, &ss.Email},
+		{p.GroupsClaim, &ss.Groups},
+		{"preferred_username", &ss.PreferredUsername},
+		{"nickname", &nickName},
+	} {
+		if _, err := extractor.GetClaimInto(c.claim, c.dst); err != nil {
+			return nil, err
+		}
+	}
+	if ss.PreferredUsername == "" && nickName != "" {
+		ss.PreferredUsername = nickName
+	}
 	return ss, nil
 }
 

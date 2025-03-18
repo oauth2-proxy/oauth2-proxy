@@ -36,7 +36,6 @@ func NewClaimExtractor(idToken string, profileURL *url.URL, profileRequestHeader
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse ID Token payload: %v", err)
 	}
-
 	return &claimExtractor{
 		profileURL:     profileURL,
 		requestHeaders: profileRequestHeaders,

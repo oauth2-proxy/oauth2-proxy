@@ -2,6 +2,7 @@ package oidc
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -37,6 +38,7 @@ const (
 	oauthStartPath    = "/start"
 	oauthCallbackPath = "/callback"
 	signOutPath       = "/sign_out"
+	userInfoPath      = "/userinfo"
 )
 
 var (
@@ -185,6 +187,8 @@ func (p *OAuthProxy) buildProxySubRouter(s *mux.Router) {
 	s.Path(oauthCallbackPath).HandlerFunc(p.OAuthCallback)
 
 	s.Path(signOutPath).Handler(p.sessionChain.ThenFunc(p.SignOut))
+
+	s.Path(userInfoPath).Handler(p.sessionChain.ThenFunc(p.UserInfo))
 }
 
 // buildPreAuthChain constructs a chain that should process every request before
@@ -446,6 +450,43 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		util.SendError(fmt.Sprintf("Error redeeming code during OAuth2 callback: %v", err), rw, http.StatusInternalServerError)
 		return
 	}
+}
+
+// UserInfo endpoint outputs session email and preferred username in JSON format
+func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
+	session, err := p.getAuthenticatedSession(rw, req)
+	if err != nil {
+		util.SendError(fmt.Sprintf("Error getting authenticated session: %v", err), rw, http.StatusUnauthorized)
+		return
+	}
+
+	rw.Header().Set("Content-Type", "application/json")
+	rw.WriteHeader(http.StatusOK)
+	if session == nil {
+		if _, err := rw.Write([]byte("{}")); err != nil {
+			util.SendError(fmt.Sprintf("Error encoding empty user info: %v", err), rw, http.StatusInternalServerError)
+		}
+		return
+	}
+	util.Logger.Infof("UserInfo: %+v", session)
+	userInfo := struct {
+		User              string   `json:"user"`
+		Email             string   `json:"email"`
+		Groups            []string `json:"groups,omitempty"`
+		PreferredUsername string   `json:"preferredUsername,omitempty"`
+	}{
+		User:              session.User,
+		Email:             session.Email,
+		Groups:            session.Groups,
+		PreferredUsername: session.PreferredUsername,
+	}
+
+	userInfoJson, err := json.Marshal(userInfo)
+	if err != nil {
+		util.SendError(fmt.Sprintf("Error encoding user info: %v", err), rw, http.StatusInternalServerError)
+		return
+	}
+	proxywasm.SendHttpResponse(http.StatusOK, [][2]string{{"Content-Type", "application/json"}}, userInfoJson, -1)
 }
 
 // Proxy proxies the user request if the user is authenticated else it prompts
