@@ -5,6 +5,7 @@ title: Endpoints
 
 OAuth2 Proxy responds directly to the following endpoints. All other endpoints will be proxied upstream when authenticated. The `/oauth2` prefix can be changed with the `--proxy-prefix` config variable.
 
+- / - the proxy endpoint provides authentication and returns the appropriate 40x error if not authenticated or authorized then passes the request upstream.
 - /robots.txt - returns a 200 OK response that disallows all User-agents from all paths; see [robotstxt.org](http://www.robotstxt.org/) for more info
 - /ping - returns a 200 OK response, which is intended for use with health checks
 - /ready - returns a 200 OK response if all the underlying connections (e.g., Redis store) are connected
@@ -40,6 +41,17 @@ BEWARE that the domain you want to redirect to (`my-oidc-provider.example.com` i
 ### Auth
 
 This endpoint returns 202 Accepted response or a 401 Unauthorized response.
+
+It can be configured using the following query parameters:
+- `allowed_groups`: comma separated list of allowed groups
+- `allowed_email_domains`: comma separated list of allowed email domains
+- `allowed_emails`: comma separated list of allowed emails
+
+### Proxy (/)
+
+This endpoint returns the upstream response if authenticated.
+If unauthenticated it returns a 401 Unauthorized. If the authenticatd user
+is not in one of the allowed groups, or emails then it returns a 403 forbidden
 
 It can be configured using the following query parameters:
 - `allowed_groups`: comma separated list of allowed groups
