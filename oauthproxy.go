@@ -915,6 +915,11 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	csrf.SetSessionNonce(session)
+	if !p.provider.ValidateCallback(session) {
+		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Session callback validation failed: %s", session)
+		p.ErrorPage(rw, req, http.StatusForbidden, "Session callback validation failed")
+		return
+	}
 	if !p.provider.ValidateSession(req.Context(), session) {
 		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Session validation failed: %s", session)
 		p.ErrorPage(rw, req, http.StatusForbidden, "Session validation failed")
