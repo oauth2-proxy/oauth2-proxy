@@ -15,10 +15,11 @@ import (
 
 const jwtRegexFormat = `^ey[a-zA-Z0-9_-]*\.ey[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]+$`
 
-func NewJwtSessionLoader(sessionLoaders []middlewareapi.TokenToSessionFunc) alice.Constructor {
+func NewJwtSessionLoader(sessionLoaders []middlewareapi.TokenToSessionFunc, denyInvalidJwts bool) alice.Constructor {
 	js := &jwtSessionLoader{
-		jwtRegex:       regexp.MustCompile(jwtRegexFormat),
-		sessionLoaders: sessionLoaders,
+		jwtRegex:        regexp.MustCompile(jwtRegexFormat),
+		sessionLoaders:  sessionLoaders,
+		denyInvalidJwts: denyInvalidJwts,
 	}
 	return js.loadSession
 }
@@ -26,8 +27,9 @@ func NewJwtSessionLoader(sessionLoaders []middlewareapi.TokenToSessionFunc) alic
 // jwtSessionLoader is responsible for loading sessions from JWTs in
 // Authorization headers.
 type jwtSessionLoader struct {
-	jwtRegex       *regexp.Regexp
-	sessionLoaders []middlewareapi.TokenToSessionFunc
+	jwtRegex        *regexp.Regexp
+	sessionLoaders  []middlewareapi.TokenToSessionFunc
+	denyInvalidJwts bool
 }
 
 // loadSession attempts to load a session from a JWT stored in an Authorization
@@ -49,6 +51,10 @@ func (j *jwtSessionLoader) loadSession(next http.Handler) http.Handler {
 		session, err := j.getJwtSession(req)
 		if err != nil {
 			logger.Errorf("Error retrieving session from token in Authorization header: %v", err)
+			if j.denyInvalidJwts {
+				http.Error(rw, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+				return
+			}
 		}
 
 		// Add the session to the scope if it was found
@@ -58,7 +64,7 @@ func (j *jwtSessionLoader) loadSession(next http.Handler) http.Handler {
 }
 
 // getJwtSession loads a session based on a JWT token in the authorization header.
-// (see the config options skip-jwt-bearer-tokens and extra-jwt-issuers)
+// (see the config options skip-jwt-bearer-tokens, extra-jwt-issuers, and deny-invalid-bearer-tokens)
 func (j *jwtSessionLoader) getJwtSession(req *http.Request) (*sessionsapi.SessionState, error) {
 	auth := req.Header.Get("Authorization")
 	if auth == "" {
