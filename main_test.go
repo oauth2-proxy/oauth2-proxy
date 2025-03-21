@@ -13,6 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/format"
 	"github.com/spf13/pflag"
+	"golang.org/x/exp/slices"
 )
 
 var _ = Describe("Configuration Loading Suite", func() {
@@ -27,6 +28,8 @@ set_basic_auth="true"
 basic_auth_password="super-secret-password"
 client_id="oauth2-proxy"
 client_secret="b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK"
+csrftoken_response_header="X-CSRF-Token"
+auth_method_header="AuthMethod"
 `
 
 	const testAlphaConfig = `
@@ -59,6 +62,7 @@ injectRequestHeaders:
 - name: X-Forwarded-Preferred-Username
   values:
   - claim: preferred_username
+- name: X-CSRF-Token
 injectResponseHeaders:
 - name: Authorization
   values:
@@ -92,6 +96,15 @@ providers:
 cookie_secret="OQINaROshtE9TcZkNAm-5Zs2Pv3xaWytBmc5W7sPX7w="
 email_domains="example.com"
 cookie_secure="false"
+
+redirect_url="http://localhost:4180/oauth2/callback"
+`
+
+	const testCoreConfigCSRF = `
+cookie_secret="OQINaROshtE9TcZkNAm-5Zs2Pv3xaWytBmc5W7sPX7w="
+email_domains="example.com"
+cookie_secure="false"
+csrftoken="true"
 
 redirect_url="http://localhost:4180/oauth2/callback"
 `
@@ -171,6 +184,43 @@ redirect_url="http://localhost:4180/oauth2/callback"
 		return opts
 	}
 
+	testExpectedOptionsCSRF := func() *options.Options {
+		opts := testExpectedOptions()
+
+		opts.CSRFToken.CSRFToken = true
+		csrfResponseHeader := options.Header{
+			Name: "X-CSRF-Token",
+			Values: []options.HeaderValue{
+				{
+					ClaimSource: &options.ClaimSource{
+						Claim: "csrf_token",
+					},
+				},
+			},
+			PreserveRequestValue: true,
+		}
+
+		authMethodHeader := options.Header{
+			Name: "AuthMethod",
+			Values: []options.HeaderValue{
+				{
+					ScopeSource: &options.ScopeSource{
+						Field: "AuthMethod",
+					},
+				},
+			},
+		}
+
+		// Normally, the InjectRequestHeaders slice is created and afterwards the X-CSRF-Token
+		// header is appended if SkipAuthStripHeaders==true. Here, InjectRequestHeaders is
+		// converted from options without specifying AuthMethod, so it is not included in the
+		// slice, so the last header is X-CSRF-Token. Append the AuthMethod header as second
+		// to last element in the slice, to imitate the expected outcome of ToOptions() function.
+		opts.InjectRequestHeaders = slices.Insert(opts.InjectRequestHeaders, len(opts.InjectRequestHeaders)-1, authMethodHeader)
+		opts.InjectResponseHeaders = append(opts.InjectResponseHeaders, csrfResponseHeader, authMethodHeader)
+		return opts
+	}
+
 	type loadConfigurationTableInput struct {
 		configContent      string
 		alphaConfigContent string
@@ -234,8 +284,8 @@ redirect_url="http://localhost:4180/oauth2/callback"
 			Expect(opts).To(EqualOpts(in.expectedOptions()))
 		},
 		Entry("with legacy configuration", loadConfigurationTableInput{
-			configContent:   testCoreConfig + testLegacyConfig,
-			expectedOptions: testExpectedOptions,
+			configContent:   testCoreConfigCSRF + testLegacyConfig,
+			expectedOptions: testExpectedOptionsCSRF,
 		}),
 		Entry("with alpha configuration", loadConfigurationTableInput{
 			configContent:      testCoreConfig,
