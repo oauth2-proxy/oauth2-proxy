@@ -67,9 +67,16 @@ func (p *OIDCProvider) GetLoginURL(redirectURI, state, nonce string, extraParams
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
 func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code, codeVerifier string) (*sessions.SessionState, error) {
-	clientSecret, err := p.GetClientSecret()
-	if err != nil {
-		return nil, err
+	var clientSecret string
+
+	if p.CodeChallengeMethod != "S256" {
+		var err error
+		clientSecret, err = p.GetClientSecret()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		clientSecret = ""
 	}
 
 	var opts []oauth2.AuthCodeOption
@@ -78,12 +85,15 @@ func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code, codeVerifi
 	}
 
 	c := oauth2.Config{
-		ClientID:     p.ClientID,
-		ClientSecret: clientSecret,
+		ClientID: p.ClientID,
 		Endpoint: oauth2.Endpoint{
 			TokenURL: p.RedeemURL.String(),
 		},
 		RedirectURL: redirectURL,
+	}
+	// Don't need a client secret for PKCE, so only set it if it's there.
+	if clientSecret != "" {
+		c.ClientSecret = clientSecret
 	}
 
 	ctx = oidc.ClientContext(ctx, requests.DefaultHTTPClient)
