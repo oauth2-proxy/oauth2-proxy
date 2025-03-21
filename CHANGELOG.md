@@ -12,6 +12,7 @@
 - [#2697](https://github.com/oauth2-proxy/oauth2-proxy/pull/2697) Use `Max-Age` instead of `Expires` for cookie expiration (@matpen-wi)
 - [#2969](https://github.com/oauth2-proxy/oauth2-proxy/pull/2969) Update golang.org/x/oauth2 to v0.27.0 to address CVE-2025-22868 (@dsymonds)
 - [#2977](https://github.com/oauth2-proxy/oauth2-proxy/pull/2977) Update golang.org/x/net to v0.36.0 to address CVE-2025-22870 (@dsymonds)
+- [#2982](https://github.com/oauth2-proxy/oauth2-proxy/pull/2982) chore(deps): remove go:generate tool from go.mod
 - [#3001](https://github.com/oauth2-proxy/oauth2-proxy/pull/3001) Allow to set non-default authorization request response mode (@stieler-it)
 
 # V7.8.1
