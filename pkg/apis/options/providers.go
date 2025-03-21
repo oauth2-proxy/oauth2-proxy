@@ -68,6 +68,8 @@ type Provider struct {
 	LoginURL string `json:"loginURL,omitempty"`
 	// LoginURLParameters defines the parameters that can be passed from the start URL to the IdP login URL
 	LoginURLParameters []LoginURLParameter `json:"loginURLParameters,omitempty"`
+	// AuthRequestResponseMode defines the response mode to request during authorization request
+	AuthRequestResponseMode string `json:"authRequestResponseMode,omitempty"`
 	// RedeemURL is the token redemption endpoint
 	RedeemURL string `json:"redeemURL,omitempty"`
 	// ProfileURL is the profile access endpoint
