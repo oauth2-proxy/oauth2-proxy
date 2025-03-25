@@ -8,9 +8,9 @@
 
 ## Changes since v7.8.2
 
-# V7.8.2
-
 - [#3001](https://github.com/oauth2-proxy/oauth2-proxy/pull/3001) Allow to set non-default authorization request response mode (@stieler-it)
+
+# V7.8.2
 
 ## Release Highlights
 - 🐛 Cookie Expiration bug has been squashed
