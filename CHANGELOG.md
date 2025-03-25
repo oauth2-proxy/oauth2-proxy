@@ -11,6 +11,18 @@
 # V7.8.2
 
 ## Release Highlights
+- 🐛 Cookie Expiration bug has been squashed
+- 🔵 Golang version upgrade to v1.23.7
+- 🕵️‍♀️ Vulnerabilities have been addressed
+  - CVE-2025-30204
+  - CVE-2025-27144
+  - CVE-2024-45336
+  - CVE-2025-22866
+  - CVE-2025-22870
+  - CVE-2024-45341
+  - CVE-2025-29923
+  - CVE-2025-22866
+  - CVE-2024-34156
 
 ## Important Notes
 
