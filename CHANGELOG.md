@@ -6,6 +6,28 @@
 
 ## Breaking Changes
 
+## Changes since v7.8.2
+
+# V7.8.2
+
+## Release Highlights
+- 🐛 Cookie Expiration bug has been squashed
+- 🔵 Golang version upgrade to v1.23.7
+- 🕵️‍♀️ Vulnerabilities have been addressed
+  - CVE-2025-30204
+  - CVE-2025-27144
+  - CVE-2024-45336
+  - CVE-2025-22866
+  - CVE-2025-22870
+  - CVE-2024-45341
+  - CVE-2025-29923
+  - CVE-2025-22866
+  - CVE-2024-34156
+
+## Important Notes
+
+## Breaking Changes
+
 ## Changes since v7.8.1
 
 - [#2927](https://github.com/oauth2-proxy/oauth2-proxy/pull/2927) chore(deps/build): bump golang to 1.23 and use go.mod as single point of truth for all build files (@tuunit)
