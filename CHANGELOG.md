@@ -13,6 +13,7 @@
 - [#2969](https://github.com/oauth2-proxy/oauth2-proxy/pull/2969) Update golang.org/x/oauth2 to v0.27.0 to address CVE-2025-22868 (@dsymonds)
 - [#2977](https://github.com/oauth2-proxy/oauth2-proxy/pull/2977) Update golang.org/x/net to v0.36.0 to address CVE-2025-22870 (@dsymonds)
 - [#2982](https://github.com/oauth2-proxy/oauth2-proxy/pull/2982) chore(deps): remove go:generate tool from go.mod
+- [#3009](https://github.com/oauth2-proxy/oauth2-proxy/pull/3009) Update github.com/spf13/viper to v1.20.0 (@jachym-tousek-keboola)
 
 # V7.8.1
 
