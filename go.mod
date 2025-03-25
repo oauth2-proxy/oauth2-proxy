@@ -5,7 +5,7 @@ go 1.23.0
 require (
 	cloud.google.com/go/compute/metadata v0.6.0
 	github.com/Bose/minisentinel v0.0.0-20200130220412-917c5a9223bb
-	github.com/a8m/envsubst v1.4.2
+	github.com/a8m/envsubst v1.4.3
 	github.com/alicebob/miniredis/v2 v2.34.0
 	github.com/benbjohnson/clock v1.3.5
 	github.com/bitly/go-simplejson v0.5.1
@@ -23,14 +23,14 @@ require (
 	github.com/mbland/hmacauth v0.0.0-20170912233209-44256dfd4bfa
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/oauth2-proxy/mockoidc v0.0.0-20240214162133-caebfff84d25
-	github.com/onsi/ginkgo/v2 v2.23.1
-	github.com/onsi/gomega v1.36.2
+	github.com/onsi/ginkgo/v2 v2.23.3
+	github.com/onsi/gomega v1.36.3
 	github.com/pierrec/lz4/v4 v4.1.22
 	github.com/prometheus/client_golang v1.21.1
 	github.com/redis/go-redis/v9 v9.7.1
 	github.com/spf13/cast v1.7.1
 	github.com/spf13/pflag v1.0.6
-	github.com/spf13/viper v1.19.0
+	github.com/spf13/viper v1.20.0
 	github.com/stretchr/testify v1.10.0
 	github.com/vmihailenco/msgpack/v5 v5.4.1
 	golang.org/x/crypto v0.36.0
@@ -38,7 +38,7 @@ require (
 	golang.org/x/net v0.37.0
 	golang.org/x/oauth2 v0.28.0
 	golang.org/x/sync v0.12.0
-	google.golang.org/api v0.226.0
+	google.golang.org/api v0.228.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	k8s.io/apimachinery v0.32.3
 )
