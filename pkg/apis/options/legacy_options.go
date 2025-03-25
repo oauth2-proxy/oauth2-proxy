@@ -524,7 +524,7 @@ type LegacyProvider struct {
 	OIDCExtraAudiences                 []string `flag:"oidc-extra-audience" cfg:"oidc_extra_audiences"`
 	OIDCPublicKeyFiles                 []string `flag:"oidc-public-key-file" cfg:"oidc_public_key_files"`
 	LoginURL                           string   `flag:"login-url" cfg:"login_url"`
-	AuthRequestResponseMode            string   `flag:"auth-request-response-mode" cfg:"auth-request_response_mode"`
+	AuthRequestResponseMode            string   `flag:"auth-request-response-mode" cfg:"auth_request_response_mode"`
 	RedeemURL                          string   `flag:"redeem-url" cfg:"redeem_url"`
 	ProfileURL                         string   `flag:"profile-url" cfg:"profile_url"`
 	SkipClaimsFromProfileURL           bool     `flag:"skip-claims-from-profile-url" cfg:"skip_claims_from_profile_url"`
