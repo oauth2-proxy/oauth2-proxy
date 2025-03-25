@@ -23,6 +23,6 @@ description on how you utilize oauth2-proxy.
 
 This list is sorted in the order that organizations were added to it.
 
-| Organization | Contact | Description of Use |
-| ------------ | ------- | ------------------ |
-|              |         |                    |
+| Organization | Contact                | Description of Use                                                                                                                                                                                                                                                                  |
+|--------------|------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Keboola      | developers@keboola.com | For our [use-case](https://github.com/keboola/keboola-as-code/blob/main/docs/apps-proxy/overview.md) we needed to use `oauth2-proxy` as a library rather than as CLI tool. So we're maintaining our own [fork](https://github.com/keboola/go-oauth2-proxy) with some modifications. |
