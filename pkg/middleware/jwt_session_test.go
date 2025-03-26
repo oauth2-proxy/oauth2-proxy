@@ -115,7 +115,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				// Create the handler with a next handler that will capture the session
 				// from the scope
 				var gotSession *sessionsapi.SessionState
-				handler := NewJwtSessionLoader(sessionLoaders, false)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				handler := NewJwtSessionLoader(sessionLoaders, true)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					gotSession = middlewareapi.GetRequestScope(r).Session
 				}))
 				handler.ServeHTTP(rw, req)
@@ -165,7 +165,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 			}),
 		)
 
-		DescribeTable("with an authorization header, denyInvalidJwts",
+		DescribeTable("with an authorization header, denyInvalidJWTs",
 			func(in jwtSessionLoaderTableInput) {
 				scope := &middlewareapi.RequestScope{
 					Session: in.existingSession,
@@ -185,7 +185,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				// Create the handler with a next handler that will capture the session
 				// from the scope
 				var gotSession *sessionsapi.SessionState
-				handler := NewJwtSessionLoader(sessionLoaders, true)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				handler := NewJwtSessionLoader(sessionLoaders, false)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					gotSession = middlewareapi.GetRequestScope(r).Session
 				}))
 				handler.ServeHTTP(rw, req)

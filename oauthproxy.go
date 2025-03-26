@@ -163,7 +163,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		for _, issuer := range opts.ExtraJwtIssuers {
 			logger.Printf("Skipping JWT tokens from extra JWT issuer: %q", issuer)
 		}
-		if opts.DenyInvalidBearerTokens {
+		if !opts.BearerTokenLoginFallback {
 			logger.Println("Denying requests with invalid JWT tokens")
 		}
 
@@ -406,7 +406,7 @@ func buildSessionChain(opts *options.Options, provider providers.Provider, sessi
 				middlewareapi.CreateTokenToSessionFunc(verifier.Verify))
 		}
 
-		chain = chain.Append(middleware.NewJwtSessionLoader(sessionLoaders, opts.DenyInvalidBearerTokens))
+		chain = chain.Append(middleware.NewJwtSessionLoader(sessionLoaders, opts.BearerTokenLoginFallback))
 	}
 
 	if validator != nil {
