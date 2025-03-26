@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
 	"regexp"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
@@ -16,6 +18,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
 	"github.com/spf13/cast"
 	"golang.org/x/oauth2"
+	k8serrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
 // MicrosoftEntraIDProvider represents provider for Azure Entra Authentication V2 endpoint
@@ -60,6 +63,10 @@ func (p *MicrosoftEntraIDProvider) EnrichSession(ctx context.Context, session *s
 		return fmt.Errorf("unable to enrich session: %v", err)
 	}
 
+	return p.enrichSessionWithGroups(ctx, session)
+}
+
+func (p *MicrosoftEntraIDProvider) enrichSessionWithGroups(ctx context.Context, session *sessions.SessionState) error {
 	hasGroupOverage, err := p.checkGroupOverage(session)
 	if err != nil {
 		return fmt.Errorf("unable to check token: %v", err)
@@ -71,7 +78,6 @@ func (p *MicrosoftEntraIDProvider) EnrichSession(ctx context.Context, session *s
 			return fmt.Errorf("unable to enrich session: %v", err)
 		}
 	}
-
 	return nil
 }
 
@@ -102,6 +108,44 @@ func (p *MicrosoftEntraIDProvider) Redeem(ctx context.Context, redirectURL, code
 	}
 
 	return p.OIDCProvider.Redeem(ctx, redirectURL, code, codeVerifier)
+}
+
+func (p *MicrosoftEntraIDProvider) CreateSessionFromToken(ctx context.Context, token string) (*sessions.SessionState, error) {
+	if p.Verifier == nil && len(p.OIDCProvider.JWTVerifiers) == 0 {
+		return nil, ErrNotImplemented
+	}
+
+	// As MS Entra ID need an extra group collection after session load, we need to
+	// reproduce the logic from oauthproxy to get the session state
+	errs := []error{errors.New("unable to verify bearer token from MS Entra ID provider")}
+	if p.Verifier != nil {
+		session, err := p.createSessionFromToken(ctx, token, p.Verifier.Verify)
+		if err != nil {
+			errs = append(errs, err)
+		} else {
+			return session, nil
+		}
+	}
+	for _, verifier := range p.OIDCProvider.JWTVerifiers {
+		session, err := p.createSessionFromToken(ctx, token, verifier.Verify)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		} else {
+			return session, nil
+		}
+	}
+
+	return nil, k8serrors.NewAggregate(errs)
+}
+
+func (p *MicrosoftEntraIDProvider) createSessionFromToken(ctx context.Context, token string, verify middleware.VerifyFunc) (*sessions.SessionState, error) {
+	session, err := middleware.CreateTokenToSessionFunc(verify)(ctx, token)
+	if err != nil {
+		return nil, err
+	}
+	err = p.enrichSessionWithGroups(ctx, session)
+	return session, err
 }
 
 // redeemWithFederatedToken performs custom token exchange with federated token instead of client secret
