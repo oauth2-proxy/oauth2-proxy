@@ -74,10 +74,11 @@ func NewProvider(providerConfig options.Provider) (Provider, error) {
 
 func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, error) {
 	p := &ProviderData{
-		Scope:            providerConfig.Scope,
-		ClientID:         providerConfig.ClientID,
-		ClientSecret:     providerConfig.ClientSecret,
-		ClientSecretFile: providerConfig.ClientSecretFile,
+		Scope:                   providerConfig.Scope,
+		ClientID:                providerConfig.ClientID,
+		ClientSecret:            providerConfig.ClientSecret,
+		ClientSecretFile:        providerConfig.ClientSecretFile,
+		AuthRequestResponseMode: providerConfig.AuthRequestResponseMode,
 	}
 
 	needsVerifier, err := providerRequiresOIDCProviderVerifier(providerConfig.Type)

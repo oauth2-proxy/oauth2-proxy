@@ -119,3 +119,30 @@ func TestProviderDataAuthorize(t *testing.T) {
 		})
 	}
 }
+
+func TestResponseModeConfigured(t *testing.T) {
+	p := &ProviderData{
+		LoginURL: &url.URL{
+			Scheme: "http",
+			Host:   "my.test.idp",
+			Path:   "/oauth/authorize",
+		},
+		AuthRequestResponseMode: "form_post",
+	}
+
+	result := p.GetLoginURL("https://my.test.app/oauth", "", "", url.Values{})
+	assert.Contains(t, result, "response_mode=form_post")
+}
+
+func TestResponseModeNotConfigured(t *testing.T) {
+	p := &ProviderData{
+		LoginURL: &url.URL{
+			Scheme: "http",
+			Host:   "my.test.idp",
+			Path:   "/oauth/authorize",
+		},
+	}
+
+	result := p.GetLoginURL("https://my.test.app/oauth", "", "", url.Values{})
+	assert.NotContains(t, result, "response_mode")
+}
