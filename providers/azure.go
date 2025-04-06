@@ -161,7 +161,7 @@ func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code, codeVerif
 	var jsonResponse struct {
 		AccessToken  string `json:"access_token"`
 		RefreshToken string `json:"refresh_token"`
-		ExpiresOn    int64  `json:"expires_on,string"`
+		ExpiresIn    int64  `json:"expires_in"`
 		IDToken      string `json:"id_token"`
 	}
 
@@ -182,7 +182,7 @@ func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code, codeVerif
 		RefreshToken: jsonResponse.RefreshToken,
 	}
 	session.CreatedAtNow()
-	session.SetExpiresOn(time.Unix(jsonResponse.ExpiresOn, 0))
+	session.ExpiresIn(time.Duration(jsonResponse.ExpiresIn) * time.Second)
 
 	err = p.extractClaimsIntoSession(ctx, session)
 
@@ -329,7 +329,7 @@ func (p *AzureProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sess
 	var jsonResponse struct {
 		AccessToken  string `json:"access_token"`
 		RefreshToken string `json:"refresh_token"`
-		ExpiresOn    int64  `json:"expires_on,string"`
+		ExpiresIn    int64  `json:"expires_in"`
 		IDToken      string `json:"id_token"`
 	}
 
@@ -349,7 +349,7 @@ func (p *AzureProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sess
 	s.RefreshToken = jsonResponse.RefreshToken
 
 	s.CreatedAtNow()
-	s.SetExpiresOn(time.Unix(jsonResponse.ExpiresOn, 0))
+	s.ExpiresIn(time.Duration(jsonResponse.ExpiresIn) * time.Second)
 
 	err = p.extractClaimsIntoSession(ctx, s)
 
