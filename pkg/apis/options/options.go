@@ -67,6 +67,8 @@ type Options struct {
 	SignatureKey    string `flag:"signature-key" cfg:"signature_key"`
 	GCPHealthChecks bool   `flag:"gcp-healthchecks" cfg:"gcp_healthchecks"`
 
+	MaskSessionPII bool `flag:"mask-session-pii" cfg:"mask_session_pii"`
+
 	// This is used for backwards compatibility for basic auth users
 	LegacyPreferEmailToUser bool `cfg:",internal"`
 
@@ -107,6 +109,7 @@ func NewOptions() *Options {
 		Session:            sessionOptionsDefaults(),
 		Templates:          templatesDefaults(),
 		SkipAuthPreflight:  false,
+		MaskSessionPII:     false,
 		Logging:            loggingDefaults(),
 	}
 }
@@ -158,6 +161,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Int("redis-connection-idle-timeout", 0, "Redis connection idle timeout seconds, if Redis timeout option is non-zero, the --redis-connection-idle-timeout must be less then Redis timeout option")
 	flagSet.String("signature-key", "", "GAP-Signature request signature key (algorithm:secretkey)")
 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
+	flagSet.Bool("mask-session-pii", false, "Disable logging of PII when logging out session information")
 
 	flagSet.AddFlagSet(cookieFlagSet())
 	flagSet.AddFlagSet(loggingFlagSet())
