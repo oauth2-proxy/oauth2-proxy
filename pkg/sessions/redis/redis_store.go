@@ -12,6 +12,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/persistence"
+	awsAuth "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/redis/aws-iam"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -173,10 +174,32 @@ func buildStandaloneClient(opts options.RedisStoreOptions) (Client, error) {
 		return nil, err
 	}
 
+	if err := setupAWSIAMAuth(opts, opt); err != nil {
+		return nil, err
+	}
+
 	opt.ConnMaxIdleTime = time.Duration(opts.IdleTimeout) * time.Second
 
 	client := redis.NewClient(opt)
 	return newClient(client), nil
+}
+
+func setupAWSIAMAuth(opts options.RedisStoreOptions, opt *redis.Options) error {
+	if opts.AWSServiceName != "elasticache" && opts.AWSServiceName != "memorydb" {
+		return fmt.Errorf("AWS IAM auth is only supported for elasticache and memorydb")
+	}
+	generator, err := awsAuth.New(opts.AWSServiceName, opts.AWSClusterName, opts.AWSUsername)
+	if err != nil {
+		return fmt.Errorf("error creating AWS IAM auth token generator: %v", err)
+	}
+	opt.CredentialsProvider = func() (username string, password string) {
+		token, err := generator.Generate()
+		if err != nil {
+			logger.Errorf("error generating AWS IAM auth token: %v", err)
+		}
+		return opts.AWSUsername, token
+	}
+	return nil
 }
 
 // setupTLSConfig sets the TLSConfig if the TLS option is given in redis.Options
