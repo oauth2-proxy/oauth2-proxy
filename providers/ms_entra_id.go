@@ -127,7 +127,11 @@ func (p *MicrosoftEntraIDProvider) redeemWithFederatedToken(ctx context.Context,
 	params.Add("code", code)
 	params.Add("grant_type", "authorization_code")
 
-	token := p.fetchToken(ctx, params)
+	token, err := p.fetchToken(ctx, params)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching token: %w", err)
+	}
+
 	return p.OIDCProvider.createSession(ctx, token, false)
 }
 
@@ -169,7 +173,11 @@ func (p *MicrosoftEntraIDProvider) redeemRefreshTokenWithFederatedToken(ctx cont
 	params.Add("grant_type", "refresh_token")
 	params.Add("expiry", time.Now().Add(-time.Hour).Format(time.RFC3339))
 
-	token := p.fetchToken(ctx, params)
+	token, err := p.fetchToken(ctx, params)
+	if err != nil {
+		return fmt.Errorf("error fetching token: %w", err)
+	}
+
 	newSession, err := p.OIDCProvider.createSession(ctx, token, true)
 	if err != nil {
 		return fmt.Errorf("unable create new session state from response: %v", err)
@@ -290,7 +298,7 @@ func (p *MicrosoftEntraIDProvider) checkTenantMatchesTenantList(tenant string, a
 	return false
 }
 
-func (p *MicrosoftEntraIDProvider) fetchToken(ctx context.Context, params url.Values) *oauth2.Token {
+func (p *MicrosoftEntraIDProvider) fetchToken(ctx context.Context, params url.Values) (*oauth2.Token, error) {
 	// perform exchange
 	resp := requests.New(p.RedeemURL.String()).
 		WithContext(ctx).
@@ -305,13 +313,13 @@ func (p *MicrosoftEntraIDProvider) fetchToken(ctx context.Context, params url.Va
 
 	body := resp.Body()
 	if err := json.Unmarshal(body, &rawResponse); err != nil {
-		return nil
+		return nil, fmt.Errorf("unable to unmarshal raw response body: %w", err)
 	}
 
 	if err := json.Unmarshal(body, &token); err != nil {
-		return nil
+		return nil, fmt.Errorf("unable to unmarshal token response body: %w", err)
 	}
 
 	// create session using new token and generic OIDC provider
-	return token.WithExtra(rawResponse)
+	return token.WithExtra(rawResponse), nil
 }
