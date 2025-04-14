@@ -8,7 +8,9 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"time"
 
+	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
@@ -54,7 +56,7 @@ func NewMicrosoftEntraIDProvider(p *ProviderData, opts options.Provider) *Micros
 	}
 }
 
-// EnrichSession checks for group overage after calling generic EnrichSession
+// // EnrichSession checks for group overage after calling generic EnrichSession
 func (p *MicrosoftEntraIDProvider) EnrichSession(ctx context.Context, session *sessions.SessionState) error {
 	if err := p.OIDCProvider.EnrichSession(ctx, session); err != nil {
 		return fmt.Errorf("unable to enrich session: %v", err)
@@ -125,29 +127,71 @@ func (p *MicrosoftEntraIDProvider) redeemWithFederatedToken(ctx context.Context,
 	params.Add("code", code)
 	params.Add("grant_type", "authorization_code")
 
-	// perform exchange
-	resp := requests.New(p.RedeemURL.String()).
-		WithContext(ctx).
-		WithMethod("POST").
-		WithBody(bytes.NewBufferString(params.Encode())).
-		SetHeader("Content-Type", "application/x-www-form-urlencoded").
-		Do()
+	token := p.fetchToken(ctx, params)
+	return p.OIDCProvider.createSession(ctx, token, false)
+}
 
-	// prepare token of type *oauth2.Token
-	var token *oauth2.Token
-	var rawResponse interface{}
-
-	body := resp.Body()
-	if err := json.Unmarshal(body, &rawResponse); err != nil {
-		return nil, err
+// RefreshSession uses the RefreshToken to fetch new Access and ID Tokens
+func (p *MicrosoftEntraIDProvider) RefreshSession(ctx context.Context, s *sessions.SessionState) (bool, error) {
+	if s == nil || s.RefreshToken == "" {
+		return false, nil
 	}
 
-	if err := json.Unmarshal(body, &token); err != nil {
-		return nil, err
+	var err error
+	ctx = oidc.ClientContext(ctx, requests.DefaultHTTPClient)
+	if p.federatedTokenAuth {
+		err = p.redeemRefreshTokenWithFederatedToken(ctx, s)
+	} else {
+		err = p.redeemRefreshToken(ctx, s)
 	}
 
-	// create session using new token and generic OIDC provider
-	return p.OIDCProvider.createSession(ctx, token.WithExtra(rawResponse), false)
+	if err != nil {
+		return false, fmt.Errorf("unable to redeem refresh token: %v", err)
+	}
+
+	return true, nil
+}
+
+// redeemRefreshTokenWithFederatedToken uses a RefreshToken and federacted credentials with the RedeemURL to refresh the
+// Access Token and (probably) the ID Token.
+func (p *MicrosoftEntraIDProvider) redeemRefreshTokenWithFederatedToken(ctx context.Context, s *sessions.SessionState) error {
+	federatedTokenPath := os.Getenv("AZURE_FEDERATED_TOKEN_FILE")
+	federatedToken, err := os.ReadFile(federatedTokenPath)
+	if err != nil {
+		return fmt.Errorf("error reading federated token file %s: %s", federatedTokenPath, err)
+	}
+
+	params := url.Values{}
+	params.Add("client_id", p.ClientID)
+	params.Add("client_assertion", string(federatedToken))
+	params.Add("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
+	params.Add("refresh_token", s.RefreshToken)
+	params.Add("grant_type", "refresh_token")
+	params.Add("expiry", time.Now().Add(-time.Hour).Format(time.RFC3339))
+
+	token := p.fetchToken(ctx, params)
+	newSession, err := p.OIDCProvider.createSession(ctx, token, true)
+	if err != nil {
+		return fmt.Errorf("unable create new session state from response: %v", err)
+	}
+
+	// It's possible that if the refresh token isn't in the token response the
+	// session will not contain an id token.
+	// If it doesn't it's probably better to retain the old one
+	if newSession.IDToken != "" {
+		s.IDToken = newSession.IDToken
+		s.Email = newSession.Email
+		s.User = newSession.User
+		s.Groups = newSession.Groups
+		s.PreferredUsername = newSession.PreferredUsername
+	}
+
+	s.AccessToken = newSession.AccessToken
+	s.RefreshToken = newSession.RefreshToken
+	s.CreatedAt = newSession.CreatedAt
+	s.ExpiresOn = newSession.ExpiresOn
+
+	return nil
 }
 
 // checkGroupOverage checks ID token's group membership claims for the group overage
@@ -244,4 +288,30 @@ func (p *MicrosoftEntraIDProvider) checkTenantMatchesTenantList(tenant string, a
 		}
 	}
 	return false
+}
+
+func (p *MicrosoftEntraIDProvider) fetchToken(ctx context.Context, params url.Values) *oauth2.Token {
+	// perform exchange
+	resp := requests.New(p.RedeemURL.String()).
+		WithContext(ctx).
+		WithMethod("POST").
+		WithBody(bytes.NewBufferString(params.Encode())).
+		SetHeader("Content-Type", "application/x-www-form-urlencoded").
+		Do()
+
+	// prepare token of type *oauth2.Token
+	var token *oauth2.Token
+	var rawResponse interface{}
+
+	body := resp.Body()
+	if err := json.Unmarshal(body, &rawResponse); err != nil {
+		return nil
+	}
+
+	if err := json.Unmarshal(body, &token); err != nil {
+		return nil
+	}
+
+	// create session using new token and generic OIDC provider
+	return token.WithExtra(rawResponse)
 }
