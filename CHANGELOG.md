@@ -8,6 +8,7 @@
 
 ## Changes since v7.8.2
 
+- [#3032](https://github.com/oauth2-proxy/oauth2-proxy/pull/3032) Allow empty client secrets in Refresh Token Flow. Fixes [#3028](https://github.com/oauth2-proxy/oauth2-proxy/issues/3028) (@Richard87)
 - [#3001](https://github.com/oauth2-proxy/oauth2-proxy/pull/3001) Allow to set non-default authorization request response mode (@stieler-it)
 
 # V7.8.2
