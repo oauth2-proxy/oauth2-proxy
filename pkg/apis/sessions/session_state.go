@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/clock"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/config"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	"github.com/pierrec/lz4/v4"
 	"github.com/vmihailenco/msgpack/v5"
@@ -101,7 +102,13 @@ func (s *SessionState) Age() time.Duration {
 
 // String constructs a summary of the session state
 func (s *SessionState) String() string {
-	o := fmt.Sprintf("Session{email:%s user:%s PreferredUsername:%s", s.Email, s.User, s.PreferredUsername)
+	var o string
+
+	if config.GetMaskSessionPII() {
+		o = fmt.Sprintf("Session{user:%s", s.User)
+	} else {
+		o = fmt.Sprintf("Session{email:%s user:%s PreferredUsername:%s", s.Email, s.User, s.PreferredUsername)
+	}
 	if s.AccessToken != "" {
 		o += " token:true"
 	}

@@ -10,6 +10,7 @@ import (
 
 	"github.com/mbland/hmacauth"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/config"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
@@ -28,6 +29,8 @@ func Validate(o *options.Options) error {
 	msgs = append(msgs, validateProviders(o)...)
 	msgs = append(msgs, validateAPIRoutes(o)...)
 	msgs = configureLogger(o.Logging, msgs)
+
+	config.SetMaskSessionPII(o.MaskSessionPII)
 	msgs = parseSignatureKey(o, msgs)
 
 	if o.SSLInsecureSkipVerify {
