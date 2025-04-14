@@ -144,9 +144,14 @@ func (p *OIDCProvider) RefreshSession(ctx context.Context, s *sessions.SessionSt
 // redeemRefreshToken uses a RefreshToken with the RedeemURL to refresh the
 // Access Token and (probably) the ID Token.
 func (p *OIDCProvider) redeemRefreshToken(ctx context.Context, s *sessions.SessionState) error {
-	clientSecret, err := p.GetClientSecret()
-	if err != nil {
-		return err
+	var clientSecret string
+
+	if p.HasClientSecret() {
+		tmpSecret, err := p.GetClientSecret()
+		if err != nil {
+			return err
+		}
+		clientSecret = tmpSecret
 	}
 
 	c := oauth2.Config{

@@ -66,6 +66,10 @@ type ProviderData struct {
 // Data returns the ProviderData
 func (p *ProviderData) Data() *ProviderData { return p }
 
+func (p *ProviderData) HasClientSecret() bool {
+	return p.ClientSecret != "" && p.ClientSecretFile != ""
+}
+
 func (p *ProviderData) GetClientSecret() (clientSecret string, err error) {
 	if p.ClientSecret != "" || p.ClientSecretFile == "" {
 		return p.ClientSecret, nil
