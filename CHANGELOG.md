@@ -8,6 +8,8 @@
 
 ## Changes since v7.8.2
 
+- [#3001](https://github.com/oauth2-proxy/oauth2-proxy/pull/3001) Allow to set non-default authorization request response mode (@stieler-it)
+
 # V7.8.2
 
 ## Release Highlights
@@ -36,6 +38,7 @@
 - [#2977](https://github.com/oauth2-proxy/oauth2-proxy/pull/2977) Update golang.org/x/net to v0.36.0 to address CVE-2025-22870 (@dsymonds)
 - [#2982](https://github.com/oauth2-proxy/oauth2-proxy/pull/2982) chore(deps): remove go:generate tool from go.mod (@dolmen)
 - [#3011](https://github.com/oauth2-proxy/oauth2-proxy/pull/3011) chore(deps): update golang dependencies and pin to latest golang v1.23.x release (@tuunit)
+- [#2967](https://github.com/oauth2-proxy/oauth2-proxy/pull/2967) Update HashNonce to use crypto/sha256 (@egibs)
 
 # V7.8.1
 
