@@ -39,6 +39,8 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/upstream"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
+
+	"golang.org/x/exp/slices"
 )
 
 const (
@@ -54,6 +56,7 @@ const (
 	authOnlyPath      = "/auth"
 	userInfoPath      = "/userinfo"
 	staticPathPrefix  = "/static/"
+	csrfTokenPath     = "/csrftoken"
 )
 
 var (
@@ -78,14 +81,30 @@ type apiRoute struct {
 	pathRegex *regexp.Regexp
 }
 
+const (
+	MethodGet     = "GET"
+	MethodHead    = "HEAD"
+	MethodOptions = "OPTIONS"
+	MethodTrace   = "TRACE"
+)
+
+var SafeMethods = []string{
+	MethodGet,
+	MethodHead,
+	MethodOptions,
+	MethodTrace,
+}
+
 // OAuthProxy is the main authentication proxy
 type OAuthProxy struct {
-	CookieOptions *options.Cookie
-	Validator     func(string) bool
+	CookieOptions    *options.Cookie
+	CSRFTokenOptions *options.CSRFToken
+	Validator        func(string) bool
 
 	SignInPath string
 
 	allowedRoutes        []allowedRoute
+	allowedCSRFRoutes    []allowedRoute
 	apiRoutes            []apiRoute
 	redirectURL          *url.URL // the url to receive requests at
 	relativeRedirectURL  bool
@@ -196,6 +215,11 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		return nil, err
 	}
 
+	allowedCSRFRoutes, err := buildAllowedRoutes(opts.SkipCSRFRoutes)
+	if err != nil {
+		return nil, err
+	}
+
 	preAuthChain, err := buildPreAuthChain(opts, sessionStore)
 	if err != nil {
 		return nil, fmt.Errorf("could not build pre-auth chain: %v", err)
@@ -213,8 +237,9 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 	})
 
 	p := &OAuthProxy{
-		CookieOptions: &opts.Cookie,
-		Validator:     validator,
+		CookieOptions:    &opts.Cookie,
+		CSRFTokenOptions: &opts.CSRFToken,
+		Validator:        validator,
 
 		SignInPath: fmt.Sprintf("%s/sign_in", opts.ProxyPrefix),
 
@@ -225,6 +250,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		relativeRedirectURL:  opts.RelativeRedirectURL,
 		apiRoutes:            apiRoutes,
 		allowedRoutes:        allowedRoutes,
+		allowedCSRFRoutes:    allowedCSRFRoutes,
 		whitelistDomains:     opts.WhitelistDomains,
 		skipAuthPreflight:    opts.SkipAuthPreflight,
 		skipJwtBearerTokens:  opts.SkipJwtBearerTokens,
@@ -342,6 +368,7 @@ func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
 	s.PathPrefix(staticPathPrefix).Handler(http.StripPrefix(p.ProxyPrefix, http.FileServer(http.FS(staticFiles))))
 
 	// The userinfo and logout endpoints needs to load sessions before handling the request
+	s.Path(csrfTokenPath).Handler(p.sessionChain.ThenFunc(p.CSRFToken))
 	s.Path(userInfoPath).Handler(p.sessionChain.ThenFunc(p.UserInfo))
 	s.Path(signOutPath).Handler(p.sessionChain.ThenFunc(p.SignOut))
 }
@@ -476,33 +503,11 @@ func buildRoutesAllowlist(opts *options.Options) ([]allowedRoute, error) {
 		})
 	}
 
-	for _, methodPath := range opts.SkipAuthRoutes {
-		var (
-			method string
-			path   string
-			negate = strings.Contains(methodPath, "!=")
-		)
-
-		parts := regexp.MustCompile("!?=").Split(methodPath, 2)
-		if len(parts) == 1 {
-			method = ""
-			path = parts[0]
-		} else {
-			method = strings.ToUpper(parts[0])
-			path = parts[1]
-		}
-
-		compiledRegex, err := regexp.Compile(path)
-		if err != nil {
-			return nil, err
-		}
-		logger.Printf("Skipping auth - Method: %s | Path: %s", method, path)
-		routes = append(routes, allowedRoute{
-			method:    method,
-			negate:    negate,
-			pathRegex: compiledRegex,
-		})
+	allowedSkipAuthRoutes, err := buildAllowedRoutes(opts.SkipAuthRoutes)
+	if err != nil {
+		return nil, err
 	}
+	routes = append(routes, allowedSkipAuthRoutes...)
 
 	return routes, nil
 }
@@ -525,9 +530,45 @@ func buildAPIRoutes(opts *options.Options) ([]apiRoute, error) {
 	return routes, nil
 }
 
+func buildAllowedRoutes(routes []string) ([]allowedRoute, error) {
+	allowedRoutes := make([]allowedRoute, 0, len(routes))
+	for _, methodPath := range routes {
+		var (
+			method string
+			path   string
+			negate = strings.Contains(methodPath, "!=")
+		)
+
+		parts := regexp.MustCompile("!?=").Split(methodPath, 2)
+		if len(parts) == 1 {
+			method = ""
+			path = parts[0]
+		} else {
+			method = strings.ToUpper(parts[0])
+			path = parts[1]
+		}
+
+		compiledRegex, err := regexp.Compile(path)
+		if err != nil {
+			return nil, err
+		}
+		logger.Printf("Skipping auth - Method: %s | Path: %s", method, path)
+		allowedRoutes = append(allowedRoutes, allowedRoute{
+			method:    method,
+			negate:    negate,
+			pathRegex: compiledRegex,
+		})
+	}
+	return allowedRoutes, nil
+}
+
 // ClearSessionCookie creates a cookie to unset the user's authentication cookie
 // stored in the user's session
 func (p *OAuthProxy) ClearSessionCookie(rw http.ResponseWriter, req *http.Request) error {
+	if p.CSRFTokenOptions.CSRFToken && p.CSRFTokenOptions.CookieName != "" {
+		clearCookie := cookies.MakeCSRFTokenCookieFromOptions(req, p.CSRFTokenOptions.CookieName, "", nil, time.Hour*-1, time.Now())
+		http.SetCookie(rw, clearCookie)
+	}
 	return p.sessionStore.Clear(rw, req)
 }
 
@@ -575,6 +616,10 @@ func isAllowedMethod(req *http.Request, route allowedRoute) bool {
 	return route.method == "" || req.Method == route.method
 }
 
+func isSafeMethod(req *http.Request) bool {
+	return slices.Contains(SafeMethods, req.Method)
+}
+
 func isAllowedPath(req *http.Request, route allowedRoute) bool {
 	matches := route.pathRegex.MatchString(requestutil.GetRequestURI(req))
 
@@ -588,6 +633,16 @@ func isAllowedPath(req *http.Request, route allowedRoute) bool {
 // IsAllowedRoute is used to check if the request method & path is allowed without auth
 func (p *OAuthProxy) isAllowedRoute(req *http.Request) bool {
 	for _, route := range p.allowedRoutes {
+		if isAllowedMethod(req, route) && isAllowedPath(req, route) {
+			return true
+		}
+	}
+	return false
+}
+
+// IsAllowedCSRFRoute is used to check if the request method & path is allowed without CSRF validation
+func (p *OAuthProxy) isAllowedCSRFRoute(req *http.Request) bool {
+	for _, route := range p.allowedCSRFRoutes {
 		if isAllowedMethod(req, route) && isAllowedPath(req, route) {
 			return true
 		}
@@ -696,6 +751,38 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 			// TODO - should we pass on /oauth2/sign_in query params to /oauth2/start?
 			p.SignInPage(rw, req, statusCode)
 		}
+	}
+}
+
+func (p *OAuthProxy) CSRFToken(rw http.ResponseWriter, req *http.Request) {
+	if !p.CSRFTokenOptions.CSRFToken {
+		http.Error(rw, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+		return
+	}
+
+	session, err := p.getAuthenticatedSession(rw, req)
+	if err != nil {
+		http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	if session == nil {
+		errMsg := "Error obtaining session: session is empty"
+		logger.Printf(errMsg)
+		p.ErrorPage(rw, req, http.StatusInternalServerError, errMsg)
+		return
+	}
+
+	rw.Header().Set("Content-Type", "application/json")
+	rw.WriteHeader(http.StatusOK)
+	csrfToken := struct {
+		CSRFToken string `json:"csrfToken"`
+	}{
+		CSRFToken: session.CSRFToken,
+	}
+	if err := json.NewEncoder(rw).Encode(csrfToken); err != nil {
+		logger.Printf("Error encoding csrf response: %v", err)
+		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 	}
 }
 
@@ -906,6 +993,13 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	err = p.createCSRFToken(session)
+	if err != nil {
+		logger.Errorf("Error creating CSRF token for session during OAuth2 callback: %v", err)
+		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+		return
+	}
+
 	csrf.ClearCookie(rw, req)
 
 	if !csrf.CheckOAuthState(nonce) {
@@ -937,6 +1031,9 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 			logger.Errorf("Error saving session state for %s: %v", remoteAddr, err)
 			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 			return
+		}
+		if p.CSRFTokenOptions.CSRFToken && p.CSRFTokenOptions.CookieName != "" {
+			p.setCSRFTokenCookie(rw, req, session)
 		}
 		http.Redirect(rw, req, appRedirect, http.StatusFound)
 	} else {
@@ -980,6 +1077,22 @@ func (p *OAuthProxy) enrichSessionState(ctx context.Context, s *sessionsapi.Sess
 	}
 
 	return p.provider.EnrichSession(ctx, s)
+}
+
+func (p *OAuthProxy) createCSRFToken(s *sessionsapi.SessionState) error {
+	// Set the CSRF token if necessary
+	if p.CSRFTokenOptions.CSRFToken {
+		csrfToken, err := sessionsapi.GenerateCSRFToken()
+		if err != nil {
+			return err
+		}
+		s.SetCSRFToken(csrfToken)
+	}
+	return nil
+}
+
+func (p *OAuthProxy) setCSRFTokenCookie(rw http.ResponseWriter, req *http.Request, s *sessionsapi.SessionState) {
+	cookies.CSRFTokenCookieForSession(rw, req, p.CSRFTokenOptions, s.CSRFToken)
 }
 
 // AuthOnly checks whether the user is currently logged in (both authentication
@@ -1103,6 +1216,7 @@ func (p *OAuthProxy) getOAuthRedirectURI(req *http.Request) string {
 // Set-Cookie headers may be set on the response as a side-effect of calling this method.
 func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.Request) (*sessionsapi.SessionState, error) {
 	session := middlewareapi.GetRequestScope(req).Session
+	authMethod := middlewareapi.GetRequestScope(req).AuthMethod
 
 	// Check this after loading the session so that if a valid session exists, we can add headers from it
 	if p.IsAllowedRequest(req) {
@@ -1111,6 +1225,12 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 
 	if session == nil {
 		return nil, ErrNeedsLogin
+	}
+
+	if authMethod == "cookie" && p.CSRFTokenOptions.CSRFToken && !isSafeMethod(req) && !p.isAllowedCSRFRoute(req) {
+		if !p.isValidCSRFToken(req, session) {
+			return nil, ErrAccessDenied
+		}
 	}
 
 	invalidEmail := session.Email != "" && !p.Validator(session.Email)
@@ -1275,6 +1395,11 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, session *sess
 	} else {
 		rw.Header().Set("GAP-Auth", session.Email)
 	}
+}
+
+func (p *OAuthProxy) isValidCSRFToken(req *http.Request, s *sessionsapi.SessionState) bool {
+	csrfHeader := req.Header.Get(p.CSRFTokenOptions.RequestHeader)
+	return csrfHeader == s.CSRFToken
 }
 
 // isAjax checks if a request is an ajax request

@@ -5,22 +5,22 @@ import (
 	"fmt"
 	"net/http"
 
+	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options/util"
-	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 )
 
 type Injector interface {
-	Inject(http.Header, *sessionsapi.SessionState)
+	Inject(http.Header, *middlewareapi.RequestScope)
 }
 
 type injector struct {
 	valueInjectors []valueInjector
 }
 
-func (i injector) Inject(header http.Header, session *sessionsapi.SessionState) {
+func (i injector) Inject(header http.Header, scope *middlewareapi.RequestScope) {
 	for _, injector := range i.valueInjectors {
-		injector.inject(header, session)
+		injector.inject(header, scope)
 	}
 }
 
@@ -40,7 +40,7 @@ func NewInjector(headers []options.Header) (Injector, error) {
 }
 
 type valueInjector interface {
-	inject(http.Header, *sessionsapi.SessionState)
+	inject(http.Header, *middlewareapi.RequestScope)
 }
 
 func newValueinjector(name string, value options.HeaderValue) (valueInjector, error) {
@@ -49,20 +49,22 @@ func newValueinjector(name string, value options.HeaderValue) (valueInjector, er
 		return newSecretInjector(name, value.SecretSource)
 	case value.SecretSource == nil && value.ClaimSource != nil:
 		return newClaimInjector(name, value.ClaimSource)
+	case value.ScopeSource != nil && value.ClaimSource == nil && value.SecretSource == nil:
+		return newScopeInjector(name, value.ScopeSource)
 	default:
 		return nil, fmt.Errorf("header %q value has multiple entries: only one entry per value is allowed", name)
 	}
 }
 
 type injectorFunc struct {
-	injectFunc func(http.Header, *sessionsapi.SessionState)
+	injectFunc func(http.Header, *middlewareapi.RequestScope)
 }
 
-func (i *injectorFunc) inject(header http.Header, session *sessionsapi.SessionState) {
-	i.injectFunc(header, session)
+func (i *injectorFunc) inject(header http.Header, scope *middlewareapi.RequestScope) {
+	i.injectFunc(header, scope)
 }
 
-func newInjectorFunc(injectFunc func(header http.Header, session *sessionsapi.SessionState)) valueInjector {
+func newInjectorFunc(injectFunc func(header http.Header, scope *middlewareapi.RequestScope)) valueInjector {
 	return &injectorFunc{injectFunc: injectFunc}
 }
 
@@ -72,7 +74,7 @@ func newSecretInjector(name string, source *options.SecretSource) (valueInjector
 		return nil, fmt.Errorf("error getting secret value: %v", err)
 	}
 
-	return newInjectorFunc(func(header http.Header, _ *sessionsapi.SessionState) {
+	return newInjectorFunc(func(header http.Header, _ *middlewareapi.RequestScope) {
 		header.Add(name, string(value))
 	}), nil
 }
@@ -84,7 +86,8 @@ func newClaimInjector(name string, source *options.ClaimSource) (valueInjector, 
 		if err != nil {
 			return nil, fmt.Errorf("error loading basicAuthPassword: %v", err)
 		}
-		return newInjectorFunc(func(header http.Header, session *sessionsapi.SessionState) {
+		return newInjectorFunc(func(header http.Header, scope *middlewareapi.RequestScope) {
+			session := scope.Session
 			claimValues := session.GetClaim(source.Claim)
 			for _, claim := range claimValues {
 				if claim == "" {
@@ -95,7 +98,8 @@ func newClaimInjector(name string, source *options.ClaimSource) (valueInjector, 
 			}
 		}), nil
 	case source.Prefix != "":
-		return newInjectorFunc(func(header http.Header, session *sessionsapi.SessionState) {
+		return newInjectorFunc(func(header http.Header, scope *middlewareapi.RequestScope) {
+			session := scope.Session
 			claimValues := session.GetClaim(source.Claim)
 			for _, claim := range claimValues {
 				if claim == "" {
@@ -105,7 +109,8 @@ func newClaimInjector(name string, source *options.ClaimSource) (valueInjector, 
 			}
 		}), nil
 	default:
-		return newInjectorFunc(func(header http.Header, session *sessionsapi.SessionState) {
+		return newInjectorFunc(func(header http.Header, scope *middlewareapi.RequestScope) {
+			session := scope.Session
 			claimValues := session.GetClaim(source.Claim)
 			for _, claim := range claimValues {
 				if claim == "" {
@@ -115,4 +120,11 @@ func newClaimInjector(name string, source *options.ClaimSource) (valueInjector, 
 			}
 		}), nil
 	}
+}
+
+func newScopeInjector(name string, source *options.ScopeSource) (valueInjector, error) {
+	return newInjectorFunc(func(header http.Header, scope *middlewareapi.RequestScope) {
+		value := scope.GetRequestScopeField(source.Field)
+		header.Add(name, value)
+	}), nil
 }

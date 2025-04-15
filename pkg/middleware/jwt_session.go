@@ -53,6 +53,10 @@ func (j *jwtSessionLoader) loadSession(next http.Handler) http.Handler {
 
 		// Add the session to the scope if it was found
 		scope.Session = session
+		// Add the AuthMethod=header if session was retrieved by authorization header
+		if scope.Session != nil {
+			scope.AuthMethod = "header"
+		}
 		next.ServeHTTP(rw, req)
 	})
 }
