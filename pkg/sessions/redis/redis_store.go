@@ -199,6 +199,8 @@ func setupAWSIAMAuth(opts options.RedisStoreOptions, opt *redis.Options) error {
 		}
 		return opts.AWSUsername, token
 	}
+	// AWS services has a max connection lifetime of 12 hours. This is set to 11 hours to give some buffer time
+	opt.ConnMaxLifetime = 11 * time.Hour
 	return nil
 }
 
