@@ -185,6 +185,9 @@ func buildStandaloneClient(opts options.RedisStoreOptions) (Client, error) {
 }
 
 func setupAWSIAMAuth(opts options.RedisStoreOptions, opt *redis.Options) error {
+	if !opts.UseAWSIAMAuth {
+		return nil
+	}
 	if opts.AWSServiceName != "elasticache" && opts.AWSServiceName != "memorydb" {
 		return fmt.Errorf("AWS IAM auth is only supported for elasticache and memorydb")
 	}
