@@ -32,8 +32,8 @@ type AuthTokenGenerator struct {
 	region      string
 	req         *http.Request
 
-	credentials aws.Credentials
-	signer      *v4.Signer
+	credentialsProvider aws.CredentialsProvider
+	signer              *v4.Signer
 }
 
 func New(serviceName, clusterName, userName string) (*AuthTokenGenerator, error) {
@@ -44,17 +44,6 @@ func New(serviceName, clusterName, userName string) (*AuthTokenGenerator, error)
 	if err != nil {
 		return nil, err
 	}
-
-	credentials, err := cfg.Credentials.Retrieve(ctx)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if credentials.AccessKeyID == "" || credentials.SecretAccessKey == "" {
-		return nil, fmt.Errorf("AccessKeyID or SecretAccessKey is empty")
-	}
-
 	queryParams := url.Values{
 		"Action":        {connectAction},
 		"User":          {userName},
@@ -75,19 +64,23 @@ func New(serviceName, clusterName, userName string) (*AuthTokenGenerator, error)
 	}
 
 	return &AuthTokenGenerator{
-		serviceName: serviceName,
-		region:      cfg.Region,
-		req:         req,
-		credentials: credentials,
-		signer:      v4.NewSigner(),
+		serviceName:         serviceName,
+		region:              cfg.Region,
+		req:                 req,
+		credentialsProvider: cfg.Credentials,
+		signer:              v4.NewSigner(),
 	}, nil
 }
 
 func (atg AuthTokenGenerator) Generate() (string, error) {
-
+	ctx := context.Background()
+	credentials, err := atg.credentialsProvider.Retrieve(ctx)
+	if err != nil {
+		return "", fmt.Errorf("AWS IAM credentials retrieval failed - %v", err)
+	}
 	signedURL, _, err := atg.signer.PresignHTTP(
-		context.Background(),
-		atg.credentials,
+		ctx,
+		credentials,
 		atg.req,
 		hexEncodedSHA256EmptyString,
 		atg.serviceName,
