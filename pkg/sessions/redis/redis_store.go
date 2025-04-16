@@ -12,7 +12,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/persistence"
-	awsAuth "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/redis/aws-iam"
+	auth "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/redis/aws-iam"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -188,7 +188,7 @@ func setupAWSIAMAuth(opts options.RedisStoreOptions, opt *redis.Options) error {
 	if opts.AWSServiceName != "elasticache" && opts.AWSServiceName != "memorydb" {
 		return fmt.Errorf("AWS IAM auth is only supported for elasticache and memorydb")
 	}
-	generator, err := awsAuth.New(opts.AWSServiceName, opts.AWSClusterName, opts.AWSUsername)
+	generator, err := auth.New(opts.AWSServiceName, opts.AWSClusterName, opts.AWSUsername)
 	if err != nil {
 		return fmt.Errorf("error creating AWS IAM auth token generator: %v", err)
 	}

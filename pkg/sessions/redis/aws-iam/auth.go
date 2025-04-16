@@ -27,7 +27,7 @@ const (
 	hexEncodedSHA256EmptyString = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 )
 
-type AuthTokenGenerator struct {
+type IAMTokenGenerator struct {
 	serviceName string
 	region      string
 	req         *http.Request
@@ -36,7 +36,7 @@ type AuthTokenGenerator struct {
 	signer              *v4.Signer
 }
 
-func New(serviceName, clusterName, userName string) (*AuthTokenGenerator, error) {
+func New(serviceName, clusterName, userName string) (*IAMTokenGenerator, error) {
 
 	ctx := context.Background()
 	cfg, err := config.LoadDefaultConfig(ctx)
@@ -63,7 +63,7 @@ func New(serviceName, clusterName, userName string) (*AuthTokenGenerator, error)
 		return nil, err
 	}
 
-	return &AuthTokenGenerator{
+	return &IAMTokenGenerator{
 		serviceName:         serviceName,
 		region:              cfg.Region,
 		req:                 req,
@@ -72,7 +72,7 @@ func New(serviceName, clusterName, userName string) (*AuthTokenGenerator, error)
 	}, nil
 }
 
-func (atg AuthTokenGenerator) Generate() (string, error) {
+func (atg IAMTokenGenerator) Generate() (string, error) {
 	ctx := context.Background()
 	credentials, err := atg.credentialsProvider.Retrieve(ctx)
 	if err != nil {
