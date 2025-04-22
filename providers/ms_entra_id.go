@@ -133,6 +133,10 @@ func (p *MicrosoftEntraIDProvider) redeemWithFederatedToken(ctx context.Context,
 		SetHeader("Content-Type", "application/x-www-form-urlencoded").
 		Do()
 
+	if err := resp.Error(); err != nil {
+		return nil, fmt.Errorf("error redeeming token: %v", err)
+	}
+
 	// prepare token of type *oauth2.Token
 	var token *oauth2.Token
 	var rawResponse interface{}
@@ -144,6 +148,12 @@ func (p *MicrosoftEntraIDProvider) redeemWithFederatedToken(ctx context.Context,
 
 	if err := json.Unmarshal(body, &token); err != nil {
 		return nil, err
+	}
+
+	if raw, ok := rawResponse.(map[string]interface{}); ok {
+		if raw["error_description"] != nil {
+			return nil, fmt.Errorf("error redeeming token: %s", raw["error_description"])
+		}
 	}
 
 	// create session using new token and generic OIDC provider
