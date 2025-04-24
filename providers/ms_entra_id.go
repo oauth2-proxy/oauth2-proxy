@@ -56,7 +56,7 @@ func NewMicrosoftEntraIDProvider(p *ProviderData, opts options.Provider) *Micros
 	}
 }
 
-// // EnrichSession checks for group overage after calling generic EnrichSession
+// EnrichSession checks for group overage after calling generic EnrichSession
 func (p *MicrosoftEntraIDProvider) EnrichSession(ctx context.Context, session *sessions.SessionState) error {
 	if err := p.OIDCProvider.EnrichSession(ctx, session); err != nil {
 		return fmt.Errorf("unable to enrich session: %v", err)
@@ -156,7 +156,7 @@ func (p *MicrosoftEntraIDProvider) RefreshSession(ctx context.Context, s *sessio
 	return true, nil
 }
 
-// redeemRefreshTokenWithFederatedToken uses a RefreshToken and federacted credentials with the RedeemURL to refresh the
+// redeemRefreshTokenWithFederatedToken uses a RefreshToken and federated credentials with the RedeemURL to refresh the
 // Access Token and (probably) the ID Token.
 func (p *MicrosoftEntraIDProvider) redeemRefreshTokenWithFederatedToken(ctx context.Context, s *sessions.SessionState) error {
 	federatedTokenPath := os.Getenv("AZURE_FEDERATED_TOKEN_FILE")
@@ -183,9 +183,8 @@ func (p *MicrosoftEntraIDProvider) redeemRefreshTokenWithFederatedToken(ctx cont
 		return fmt.Errorf("unable create new session state from response: %v", err)
 	}
 
-	// It's possible that if the refresh token isn't in the token response the
-	// session will not contain an id token.
-	// If it doesn't it's probably better to retain the old one
+	// Optionally update the ID Token if it's returned
+	// ref. https://openid.net/specs/openid-connect-core-1_0.html#RefreshTokenResponse
 	if newSession.IDToken != "" {
 		s.IDToken = newSession.IDToken
 		s.Email = newSession.Email
