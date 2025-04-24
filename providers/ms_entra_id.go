@@ -157,7 +157,7 @@ func (p *MicrosoftEntraIDProvider) RefreshSession(ctx context.Context, s *sessio
 }
 
 // redeemRefreshTokenWithFederatedToken uses a RefreshToken and federated credentials with the RedeemURL to refresh the
-// Access Token and (probably) the ID Token.
+// Refresh Token, Access Token and (probably) the ID Token.
 func (p *MicrosoftEntraIDProvider) redeemRefreshTokenWithFederatedToken(ctx context.Context, s *sessions.SessionState) error {
 	federatedTokenPath := os.Getenv("AZURE_FEDERATED_TOKEN_FILE")
 	federatedToken, err := os.ReadFile(federatedTokenPath)
