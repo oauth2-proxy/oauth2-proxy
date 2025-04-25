@@ -116,7 +116,8 @@ func (p *MicrosoftEntraIDProvider) redeemWithFederatedToken(ctx context.Context,
 
 	params := url.Values{}
 
-	// create custom exchange parameters
+	// Exchange parameters for token federation
+	// https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow#request-an-access-token-with-a-certificate-credential
 	if codeVerifier != "" {
 		params.Add("code_verifier", codeVerifier)
 	}
@@ -157,7 +158,7 @@ func (p *MicrosoftEntraIDProvider) RefreshSession(ctx context.Context, s *sessio
 }
 
 // redeemRefreshTokenWithFederatedToken uses a RefreshToken and federated credentials with the RedeemURL to refresh the
-// Refresh Token, Access Token and (probably) the ID Token.
+// Refresh Token, Access Token and ID Token
 func (p *MicrosoftEntraIDProvider) redeemRefreshTokenWithFederatedToken(ctx context.Context, s *sessions.SessionState) error {
 	federatedTokenPath := os.Getenv("AZURE_FEDERATED_TOKEN_FILE")
 	federatedToken, err := os.ReadFile(federatedTokenPath)
@@ -183,7 +184,7 @@ func (p *MicrosoftEntraIDProvider) redeemRefreshTokenWithFederatedToken(ctx cont
 		return fmt.Errorf("unable create new session state from response: %v", err)
 	}
 
-	// Optionally update the ID Token if it's returned
+	// Update the ID Token and user details if returned as part of the refresh response
 	// ref. https://openid.net/specs/openid-connect-core-1_0.html#RefreshTokenResponse
 	if newSession.IDToken != "" {
 		s.IDToken = newSession.IDToken
@@ -298,7 +299,6 @@ func (p *MicrosoftEntraIDProvider) checkTenantMatchesTenantList(tenant string, a
 }
 
 func (p *MicrosoftEntraIDProvider) fetchToken(ctx context.Context, params url.Values) (*oauth2.Token, error) {
-	// perform exchange
 	resp := requests.New(p.RedeemURL.String()).
 		WithContext(ctx).
 		WithMethod("POST").
@@ -306,7 +306,6 @@ func (p *MicrosoftEntraIDProvider) fetchToken(ctx context.Context, params url.Va
 		SetHeader("Content-Type", "application/x-www-form-urlencoded").
 		Do()
 
-	// prepare token of type *oauth2.Token
 	var token *oauth2.Token
 	var rawResponse interface{}
 
@@ -319,6 +318,5 @@ func (p *MicrosoftEntraIDProvider) fetchToken(ctx context.Context, params url.Va
 		return nil, fmt.Errorf("unable to unmarshal token response body: %w", err)
 	}
 
-	// create session using new token and generic OIDC provider
 	return token.WithExtra(rawResponse), nil
 }
