@@ -122,8 +122,8 @@ jobs:
 
     - name: Build images
       run: |
-        make docker-all
+        make build-docker-all
     
     - name: Push images
       run: |
-        make docker-push-all
+        make push-docker-all

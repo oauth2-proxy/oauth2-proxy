@@ -72,10 +72,10 @@ jobs:
     - name: Docker Build
       if: (!startsWith(github.head_ref, 'release'))
       run: |
-        make docker
+        make build-docker
 
     # For release testing
     - name: Docker Build All
       if: github.base_ref == 'master' && startsWith(github.head_ref, 'release')
       run: |
-        make docker-all
+        make build-docker-all
