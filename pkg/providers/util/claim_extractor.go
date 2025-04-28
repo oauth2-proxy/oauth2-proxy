@@ -101,7 +101,7 @@ func (c *claimExtractor) loadProfileClaims() (*simplejson.Json, error) {
 		Do()
 
 	// We first check if the result is a JWT token
-	// i.e. `application/jwt; charset=utf-8` mime-type
+	// https://openid.net/specs/openid-connect-core-1_0-final.html#UserInfoResponse
 	mediaType, _, parseErr := mime.ParseMediaType(builder.Headers().Get("Content-Type"))
 
 	if parseErr == nil && mediaType == "application/jwt" {
