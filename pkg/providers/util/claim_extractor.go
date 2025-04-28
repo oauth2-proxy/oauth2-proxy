@@ -105,7 +105,7 @@ func (c *claimExtractor) loadProfileClaims() (*simplejson.Json, error) {
 	mediaType, _, parseErr := mime.ParseMediaType(builder.Headers().Get("Content-Type"))
 
 	if parseErr == nil && mediaType == "application/jwt" {
-		// Decode and use JWT payload as profile claims 
+		// Decode and use JWT payload as profile claims
 		if pl, err := parseJWT(string(builder.Body())); err == nil {
 			return simplejson.NewJson(pl)
 		}
