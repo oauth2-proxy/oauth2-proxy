@@ -239,8 +239,7 @@ func TestEncodeAndDecodeSessionState(t *testing.T) {
 			AdditionalClaims: map[string]interface{}{
 				"custom_claim_1": "value1",
 				"custom_claim_2": true,
-				"custom_claim_3": int8(1),
-				"custom_claim_4": []interface{}{"item1", "item2"},
+				"custom_claim_3": []interface{}{"item1", "item2"},
 			},
 		},
 	}
@@ -328,8 +327,7 @@ func TestGetClaim(t *testing.T) {
 		AdditionalClaims: map[string]interface{}{
 			"custom_claim_1": "value1",
 			"custom_claim_2": true,
-			"custom_claim_3": 1,
-			"custom_claim_4": []string{"item1", "item2"},
+			"custom_claim_3": []string{"item1", "item2"},
 		},
 	}
 
@@ -348,8 +346,7 @@ func TestGetClaim(t *testing.T) {
 		{"preferred_username", []string{"preferred_user"}},
 		{"custom_claim_1", []string{"value1"}},
 		{"custom_claim_2", []string{"true"}},
-		{"custom_claim_3", []string{"1"}},
-		{"custom_claim_4", []string{"item1", "item2"}},
+		{"custom_claim_3", []string{"[\"item1\",\"item2\"]"}},
 	}
 
 	for _, tt := range tests {

@@ -451,53 +451,6 @@ var _ = Describe("Claim Extractor Suite", func() {
 		}),
 	)
 
-	type coerceClaimTableInput struct {
-		value         interface{}
-		dst           interface{}
-		expectedDst   interface{}
-		expectedError error
-	}
-
-	DescribeTable("coerceClaim",
-		func(in coerceClaimTableInput) {
-			err := coerceClaim(in.value, in.dst)
-			if in.expectedError != nil {
-				Expect(err).To(MatchError(in.expectedError))
-				return
-			}
-
-			Expect(err).ToNot(HaveOccurred())
-			Expect(in.dst).To(Equal(in.expectedDst))
-		},
-		Entry("coerces a string to a string", coerceClaimTableInput{
-			value:       "some_string",
-			dst:         stringPointer(""),
-			expectedDst: stringPointer("some_string"),
-		}),
-		Entry("coerces a slice to a string slice", coerceClaimTableInput{
-			value:       []interface{}{"a", "b"},
-			dst:         stringSlicePointer([]string{}),
-			expectedDst: stringSlicePointer([]string{"a", "b"}),
-		}),
-		Entry("coerces a bool to a bool", coerceClaimTableInput{
-			value:       true,
-			dst:         boolPointer(false),
-			expectedDst: boolPointer(true),
-		}),
-		Entry("coerces a string to a bool", coerceClaimTableInput{
-			value:       "true",
-			dst:         boolPointer(false),
-			expectedDst: boolPointer(true),
-		}),
-		Entry("coerces a map to a string", coerceClaimTableInput{
-			value: map[string]interface{}{
-				"foo": []interface{}{"bar", "baz"},
-			},
-			dst:         stringPointer(""),
-			expectedDst: stringPointer("{\"foo\":[\"bar\",\"baz\"]}"),
-		}),
-	)
-
 	It("should extract claims from a JWT response", func() {
 		jwtResponsePayload := `{
 			"user": "jwtUser",
@@ -602,10 +555,6 @@ func stringPointer(in string) *string {
 }
 
 func stringSlicePointer(in []string) *[]string {
-	return &in
-}
-
-func boolPointer(in bool) *bool {
 	return &in
 }
 

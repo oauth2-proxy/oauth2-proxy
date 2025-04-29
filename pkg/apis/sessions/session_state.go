@@ -9,6 +9,7 @@ import (
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/clock"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
 	"github.com/pierrec/lz4/v4"
 	"github.com/vmihailenco/msgpack/v5"
 )
@@ -158,23 +159,9 @@ func (s *SessionState) GetClaim(claim string) []string {
 
 func (s *SessionState) getAdditionalClaim(claim string) []string {
 	if value, ok := s.AdditionalClaims[claim]; ok {
-		switch v := value.(type) {
-		case string:
-			return []string{v}
-		case []string:
-			return v
-		case []interface{}:
-			result := make([]string, len(v))
-			for i, item := range v {
-				if str, ok := item.(string); ok {
-					result[i] = str
-				} else {
-					result[i] = fmt.Sprintf("%v", item)
-				}
-			}
+		var result []string
+		if err := util.CoerceClaim(value, &result); err == nil {
 			return result
-		default:
-			return []string{fmt.Sprintf("%v", value)}
 		}
 	}
 	return []string{}
