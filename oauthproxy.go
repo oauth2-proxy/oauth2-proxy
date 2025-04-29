@@ -722,15 +722,17 @@ func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	userInfo := struct {
-		User              string   `json:"user"`
-		Email             string   `json:"email"`
-		Groups            []string `json:"groups,omitempty"`
-		PreferredUsername string   `json:"preferredUsername,omitempty"`
+		User              string                 `json:"user"`
+		Email             string                 `json:"email"`
+		Groups            []string               `json:"groups,omitempty"`
+		PreferredUsername string                 `json:"preferredUsername,omitempty"`
+		AdditionalClaims  map[string]interface{} `json:"additionalClaims,omitempty"`
 	}{
 		User:              session.User,
 		Email:             session.Email,
 		Groups:            session.Groups,
 		PreferredUsername: session.PreferredUsername,
+		AdditionalClaims:  session.AdditionalClaims,
 	}
 
 	if err := json.NewEncoder(rw).Encode(userInfo); err != nil {

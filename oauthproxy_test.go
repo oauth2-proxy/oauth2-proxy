@@ -1031,6 +1031,20 @@ func TestUserInfoEndpointAccepted(t *testing.T) {
 			},
 			expectedResponse: "{\"user\":\"john.doe\",\"email\":\"john.doe@example.com\",\"groups\":[\"example\",\"groups\"],\"preferredUsername\":\"john\"}\n",
 		},
+		{
+			name: "With Additional Claim",
+			session: &sessions.SessionState{
+				User:              "john.doe",
+				PreferredUsername: "john",
+				Email:             "john.doe@example.com",
+				Groups:            []string{"example", "groups"},
+				AccessToken:       "my_access_token",
+				AdditionalClaims: map[string]interface{}{
+					"foo": "bar",
+				},
+			},
+			expectedResponse: "{\"user\":\"john.doe\",\"email\":\"john.doe@example.com\",\"groups\":[\"example\",\"groups\"],\"preferredUsername\":\"john\",\"additionalClaims\":{\"foo\":\"bar\"}}\n",
+		},
 	}
 
 	for _, tc := range testCases {
