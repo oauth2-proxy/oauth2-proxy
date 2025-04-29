@@ -92,7 +92,7 @@ type Provider struct {
 	// The code challenge method
 	CodeChallengeMethod string `json:"code_challenge_method,omitempty"`
 
-	// Additional claims to be obtained from the `id_token`.
+	// Additional claims to be obtained from the upstream IDP, either from the id_token or from the userinfo endpoint if configured.
 	AdditionalClaims []string `json:"additionalClaims,omitempty"`
 
 	// URL to call to perform backend logout, `{id_token}` would be replaced by the actual `id_token` if available in the session
