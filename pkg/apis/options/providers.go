@@ -40,6 +40,8 @@ type Provider struct {
 	ADFSConfig ADFSOptions `json:"ADFSConfig,omitempty"`
 	// BitbucketConfig holds all configurations for Bitbucket provider.
 	BitbucketConfig BitbucketOptions `json:"bitbucketConfig,omitempty"`
+	// DiscordConfig holds all configurations for Discord provider.
+	DiscordConfig DiscordOptions `json:"discordConfig,omitempty"`
 	// GitHubConfig holds all configurations for GitHubC provider.
 	GitHubConfig GitHubOptions `json:"githubConfig,omitempty"`
 	// GitLabConfig holds all configurations for GitLab provider.
@@ -118,6 +120,9 @@ const (
 	// DigitalOceanProvider is the provider type for DigitalOcean
 	DigitalOceanProvider ProviderType = "digitalocean"
 
+	// DiscordProvider is the provider type for Discord
+	DiscordProvider ProviderType = "discord"
+
 	// FacebookProvider is the provider type for Facebook
 	FacebookProvider ProviderType = "facebook"
 
@@ -189,6 +194,11 @@ type BitbucketOptions struct {
 	Team string `json:"team,omitempty"`
 	// Repository sets restrict logins to user with access to this repository
 	Repository string `json:"repository,omitempty"`
+}
+
+// DiscordOptions holds configuration options for Discord provider
+type DiscordOptions struct {
+	RestrictedUserIDs []string `json:"restricted_user_ids,omitempty"`
 }
 
 type GitHubOptions struct {

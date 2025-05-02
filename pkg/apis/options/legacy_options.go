@@ -492,6 +492,7 @@ type LegacyProvider struct {
 	EntraIDFederatedTokenAuth              bool     `flag:"entra-id-federated-token-auth" cfg:"entra_id_federated_token_auth"`
 	BitbucketTeam                          string   `flag:"bitbucket-team" cfg:"bitbucket_team"`
 	BitbucketRepository                    string   `flag:"bitbucket-repository" cfg:"bitbucket_repository"`
+	DiscordRestrictedUserIDs               []string `flag:"discord-restricted-user-id" cfg:"discord_restricted_user_ids"`
 	GitHubOrg                              string   `flag:"github-org" cfg:"github_org"`
 	GitHubTeam                             string   `flag:"github-team" cfg:"github_team"`
 	GitHubRepo                             string   `flag:"github-repo" cfg:"github_repo"`
@@ -558,6 +559,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.Bool("entra-id-federated-token-auth", false, "enable oAuth client authentication with federated token projected by Azure Workload Identity plugin, instead of client secret.")
 	flagSet.String("bitbucket-team", "", "restrict logins to members of this team")
 	flagSet.String("bitbucket-repository", "", "restrict logins to user with access to this repository")
+	flagSet.StringSlice("discord-restricted-user-id", []string{}, "restrict login to a list of discord user identifiers")
 	flagSet.String("github-org", "", "restrict logins to members of this organisation")
 	flagSet.String("github-team", "", "restrict logins to members of this team")
 	flagSet.String("github-repo", "", "restrict logins to collaborators of this repository")
@@ -718,6 +720,10 @@ func (l *LegacyProvider) convert() (Providers, error) {
 	}
 
 	switch provider.Type {
+	case "discord":
+		provider.DiscordConfig = DiscordOptions{
+			RestrictedUserIDs: l.DiscordRestrictedUserIDs,
+		}
 	case "github":
 		provider.GitHubConfig = GitHubOptions{
 			Org:   l.GitHubOrg,
