@@ -61,8 +61,8 @@ func TestNewDiscordProvider(t *testing.T) {
 	g.Expect(providerData.ProviderName).To(Equal("Discord"))
 	g.Expect(providerData.LoginURL.String()).To(Equal("https://discord.com/api/oauth2/authorize"))
 	g.Expect(providerData.RedeemURL.String()).To(Equal("https://discord.com/api/oauth2/token"))
-	g.Expect(providerData.ProfileURL.String()).To(Equal("https://discord.com/api/oauth2/@me"))
-	g.Expect(providerData.ValidateURL.String()).To(Equal("https://discord.com/api/oauth2/@me"))
+	g.Expect(providerData.ProfileURL.String()).To(Equal("https://discord.com/api/users/@me"))
+	g.Expect(providerData.ValidateURL.String()).To(Equal("https://discord.com/api/users/@me"))
 	g.Expect(providerData.Scope).To(Equal("identify"))
 }
 
@@ -100,36 +100,76 @@ func TestDiscordProviderOverrides(t *testing.T) {
 	assert.Equal(t, "profile", p.Data().Scope)
 }
 
-func TestDiscordProviderGetTokenInfo(t *testing.T) {
-	b := testDiscordBackend(`{"user":{"id":"1234","username":"john"}}`)
-	defer b.Close()
+func TestDiscordProviderGetUserInfo(t *testing.T) {
+	for _, testCase := range []struct {
+		Name            string
+		ResponsePayload string
+		ExpectedEmail   string
+	}{
+		{
+			Name:            "no email in response payload",
+			ResponsePayload: `{"id":"1234","username":"john"}`,
+			ExpectedEmail:   "",
+		},
+		{
+			Name:            "email in response payload",
+			ResponsePayload: `{"id":"1234","username":"john","email":"john@discord.com"}`,
+			ExpectedEmail:   "john@discord.com",
+		},
+	} {
+		t.Run(testCase.Name, func(t *testing.T) {
+			b := testDiscordBackend(testCase.ResponsePayload)
+			defer b.Close()
 
-	bURL, _ := url.Parse(b.URL)
-	p := testDiscordProvider(t, bURL.Host, []string{})
+			bURL, _ := url.Parse(b.URL)
+			p := testDiscordProvider(t, bURL.Host, []string{})
 
-	session := CreateAuthorizedSession()
-	token, err := p.getTokenInfo(context.Background(), session)
-	assert.NoError(t, err)
-	assert.Equal(t, "1234", token.User.ID)
-	assert.Equal(t, "john", token.User.Username)
+			session := CreateAuthorizedSession()
+			user, err := p.getUserInfo(context.Background(), session)
+			assert.NoError(t, err)
+			assert.Equal(t, "1234", user.ID)
+			assert.Equal(t, "john", user.Username)
+			assert.Equal(t, testCase.ExpectedEmail, user.Email)
+		})
+	}
 }
 
 func TestDiscordProviderEnrichSession(t *testing.T) {
-	b := testDiscordBackend(`{"user":{"id":"1234","username":"john"}}`)
-	defer b.Close()
+	for _, testCase := range []struct {
+		Name            string
+		ResponsePayload string
+		ExpectedEmail   string
+	}{
+		{
+			Name:            "no email in response payload",
+			ResponsePayload: `{"id":"1234","username":"john"}`,
+			ExpectedEmail:   "1234@users.discord.com",
+		},
+		{
+			Name:            "email in response payload",
+			ResponsePayload: `{"id":"1234","username":"john","email":"john@discord.com"}`,
+			ExpectedEmail:   "john@discord.com",
+		},
+	} {
+		t.Run(testCase.Name, func(t *testing.T) {
+			b := testDiscordBackend(testCase.ResponsePayload)
+			defer b.Close()
 
-	bURL, _ := url.Parse(b.URL)
-	p := testDiscordProvider(t, bURL.Host, []string{})
+			bURL, _ := url.Parse(b.URL)
+			p := testDiscordProvider(t, bURL.Host, []string{})
 
-	session := CreateAuthorizedSession()
-	assert.NoError(t, p.EnrichSession(context.Background(), session))
-	assert.Equal(t, "1234", session.User)
-	assert.Equal(t, "john", session.PreferredUsername)
+			session := CreateAuthorizedSession()
+			assert.NoError(t, p.EnrichSession(context.Background(), session))
+			assert.Equal(t, "1234", session.User)
+			assert.Equal(t, "john", session.PreferredUsername)
+			assert.Equal(t, testCase.ExpectedEmail, session.Email)
+		})
+	}
 }
 
 func TestDiscordProviderValidateUserID(t *testing.T) {
 	userID := "1234"
-	b := testDiscordBackend(`{"user":{"id":"` + userID + `","username":"john"}}`)
+	b := testDiscordBackend(`{"id":"` + userID + `","username":"john"}`)
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
@@ -175,7 +215,7 @@ func TestDiscordProviderTokenInfoFailedRequest(t *testing.T) {
 	// token. Alternatively, we could allow the parsing of the payload as
 	// JSON to fail.
 	session := &sessions.SessionState{AccessToken: "unexpected_access_token"}
-	token, err := p.getTokenInfo(context.Background(), session)
+	user, err := p.getUserInfo(context.Background(), session)
 	assert.Error(t, err)
-	assert.Nil(t, token)
+	assert.Nil(t, user)
 }

@@ -41,11 +41,11 @@ var (
 	}
 
 	// Profile URL for Discord.
-	// Pre-parsed URL of https://discord.com/api/oauth2/@me
+	// Pre-parsed URL of https://discord.com/api/users/@me
 	discordDefaultProfileURL = &url.URL{
 		Scheme: "https",
 		Host:   "discord.com",
-		Path:   "/api/oauth2/@me",
+		Path:   "/api/users/@me",
 	}
 )
 
@@ -97,33 +97,38 @@ func (p *DiscordProvider) ValidateSession(ctx context.Context, s *sessions.Sessi
 
 // EnrichSession enriches the session with user information
 func (p *DiscordProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
-	token, err := p.getTokenInfo(ctx, s)
+	user, err := p.getUserInfo(ctx, s)
 	if err != nil {
 		return err
 	}
-	s.User = token.User.ID
-	s.PreferredUsername = token.User.Username
+	s.User = user.ID
+	s.PreferredUsername = user.Username
+	if user.Email != "" {
+		s.Email = user.Email
+	} else {
+		// when going for "identify" only, discord API does not return an email
+		s.Email = s.User + "@users.discord.com"
+	}
 	return nil
 }
 
-type discordTokenInfo struct {
-	User struct {
-		ID       string `json:"id"`
-		Username string `json:"username"`
-	} `json:"user"`
+type discordUser struct {
+	ID       string `json:"id"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
 }
 
-// Retrieve current token Info
-// https://discord.com/developers/docs/topics/oauth2#get-current-authorization-information
-func (p *DiscordProvider) getTokenInfo(ctx context.Context, s *sessions.SessionState) (*discordTokenInfo, error) {
-	var tokenInfo discordTokenInfo
+// Retrieve current user Info
+// https://discord.com/developers/docs/resources/user#get-current-user
+func (p *DiscordProvider) getUserInfo(ctx context.Context, s *sessions.SessionState) (*discordUser, error) {
+	var tokenInfo discordUser
 	err := requests.New(discordDefaultProfileURL.String()).
 		WithContext(ctx).
 		SetHeader("Authorization", "Bearer "+s.AccessToken).
 		Do().
 		UnmarshalInto(&tokenInfo)
 	if err != nil {
-		return nil, fmt.Errorf("error getting token info: %w", err)
+		return nil, fmt.Errorf("error getting user info: %w", err)
 	}
 
 	return &tokenInfo, nil

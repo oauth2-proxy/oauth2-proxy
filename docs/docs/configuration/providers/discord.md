@@ -22,6 +22,12 @@ title: Discord
 
 To find a user's Discord ID (including your own), right-click their profile picture and select Copy ID.
 
+***Scopes***
+
+Scopes are defined on [Discord's OAuth2 documentation page](https://discord.com/developers/docs/topics/oauth2#shared-resources).
+The default scope is **identify**, meaning you will only ensure the user is a valid Discord user, and will receive its ID only.
+If you require any other information, you will need to parametrized the scope used.
+
 ***Using the provider***
 
 To use the provider, pass the following options:
@@ -35,3 +41,7 @@ To use the provider, pass the following options:
 
 The `--discord-restricted-user-id` arg can be specified multiple times with different guild IDs to allow multiple guilds 
 to authenticate.
+
+Note: by default, the email retrieved and forwarded by oauth2-proxy will be a dummy email. A valid email can be retrieved
+using discord, but requires a specific scope. Please refer to
+[Discord's oauth2 documentation](https://discord.com/developers/docs/topics/oauth2#shared-resources) for more details.
