@@ -20,7 +20,8 @@ title: Discord
 
 ***Finding discord user identifiers***
 
-To find a user's Discord ID (including your own), right-click their profile picture and select Copy ID.
+To find a user's Discord ID (including your own), first activate the developer mode,
+then right-click their profile picture and select Copy ID.
 
 ***Scopes***
 
