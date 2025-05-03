@@ -174,7 +174,7 @@ Provider specific options can be found on their respective subpages.
 | flag: `--custom-sign-in-logo`<br/>toml: `custom_sign_in_logo`     | string | path or a URL to an custom image for the sign_in page logo. Use `"-"` to disable default logo.                              |
 | flag: `--custom-templates-dir`<br/>toml: `custom_templates_dir`   | string | path to custom html templates                                                                                               |         |
 | flag: `--display-htpasswd-form`<br/>toml: `display_htpasswd_form` | bool   | display username / password login form if an htpasswd file is provided                                                      | true    |
-| flag: `--footer`<br/>toml: `footer`                               | string | custom (html) footer string. Use `"-"` to disable default footer.                                                           |         |
+| flag: `--footer`<br/>toml: `footer`                               | string | custom (html) footer string. Use `"-"` to disable default footer. (Can be used to obfuscate the version)                    |         |
 | flag: `--show-debug-on-error`<br/>toml: `show_debug_on_error`     | bool   | show detailed error information on error pages (WARNING: this may contain sensitive information - do not use in production) | false   |
 
 ### Probe Options
