@@ -8,6 +8,8 @@
 
 ## Changes since v7.9.0
 
+- [#2947](https://github.com/oauth2-proxy/oauth2-proxy/pull/2947) feat: custom app redirect path header
+
 # V7.9.0
 
 ## Release Highlights

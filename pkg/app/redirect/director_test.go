@@ -9,6 +9,7 @@ import (
 )
 
 const testProxyPrefix = "/oauth2"
+const testAppRedirectHeader = "X-Oauth2-Proxy-Redirect"
 
 var _ = Describe("Director Suite", func() {
 	type getRedirectTableInput struct {
@@ -23,8 +24,9 @@ var _ = Describe("Director Suite", func() {
 	DescribeTable("GetRedirect",
 		func(in getRedirectTableInput) {
 			appDirector := NewAppDirector(AppDirectorOpts{
-				ProxyPrefix: testProxyPrefix,
-				Validator:   in.validator,
+				ProxyPrefix:          testProxyPrefix,
+				Validator:            in.validator,
+				CustomRedirectHeader: testAppRedirectHeader,
 			})
 
 			req, _ := http.NewRequest("GET", in.requestURL, nil)
@@ -54,6 +56,33 @@ var _ = Describe("Director Suite", func() {
 			reverseProxy:     false,
 			validator:        testValidator(true),
 			expectedRedirect: "/foo?bar",
+		}),
+		Entry("Request with valid custom redirect header, uses the header value", getRedirectTableInput{
+			requestURL: "/foo",
+			headers: map[string]string{
+				testAppRedirectHeader: "/subpath/foo",
+			},
+			reverseProxy:     false,
+			validator:        testValidator(true),
+			expectedRedirect: "/subpath/foo",
+		}),
+		Entry("Request with valid custom redirect header and original query param, uses the header value with query", getRedirectTableInput{
+			requestURL: "/foo?bar",
+			headers: map[string]string{
+				testAppRedirectHeader: "/subpath/foo",
+			},
+			reverseProxy:     false,
+			validator:        testValidator(true),
+			expectedRedirect: "/subpath/foo?bar",
+		}),
+		Entry("Request with invalid custom redirect header, redirects to root", getRedirectTableInput{
+			requestURL: "/foo?bar",
+			headers: map[string]string{
+				testAppRedirectHeader: "****",
+			},
+			reverseProxy:     false,
+			validator:        testValidator(false, "/allowed"),
+			expectedRedirect: "/",
 		}),
 		Entry("Request under the proxy prefix, redirects to root", getRedirectTableInput{
 			requestURL:       testProxyPrefix + fooBar,

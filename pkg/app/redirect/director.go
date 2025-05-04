@@ -16,8 +16,9 @@ type AppDirector interface {
 
 // AppDirectorOpts are the requirements for constructing a new AppDirector.
 type AppDirectorOpts struct {
-	ProxyPrefix string
-	Validator   Validator
+	ProxyPrefix          string
+	Validator            Validator
+	CustomRedirectHeader string
 }
 
 // NewAppDirector constructs a new AppDirector for getting the application
@@ -29,15 +30,17 @@ func NewAppDirector(opts AppDirectorOpts) AppDirector {
 	}
 
 	return &appDirector{
-		proxyPrefix: prefix,
-		validator:   opts.Validator,
+		proxyPrefix:          prefix,
+		validator:            opts.Validator,
+		customRedirectHeader: opts.CustomRedirectHeader,
 	}
 }
 
 // appDirector implements the AppDirector interface.
 type appDirector struct {
-	proxyPrefix string
-	validator   Validator
+	proxyPrefix          string
+	validator            Validator
+	customRedirectHeader string
 }
 
 // GetRedirect determines the full URL or URI path to redirect clients to once
@@ -59,6 +62,7 @@ func (a *appDirector) GetRedirect(req *http.Request) (string, error) {
 	// These redirect getter functions are strategies ordered by priority
 	// for figuring out the redirect URL.
 	for _, rdGetter := range []redirectGetter{
+		a.getCustomHeaderRedirect,
 		a.getRdQuerystringRedirect,
 		a.getXAuthRequestRedirect,
 		a.getXForwardedHeadersRedirect,
