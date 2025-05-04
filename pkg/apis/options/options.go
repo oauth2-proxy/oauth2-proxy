@@ -28,6 +28,7 @@ type Options struct {
 	ForceHTTPS          bool     `flag:"force-https" cfg:"force_https"`
 	RawRedirectURL      string   `flag:"redirect-url" cfg:"redirect_url"`
 	RelativeRedirectURL bool     `flag:"relative-redirect-url" cfg:"relative_redirect_url"`
+	AppRedirectHeader   string   `flag:"app-redirect-header" cfg:"app_redirect_header"`
 
 	AuthenticatedEmailsFile string   `flag:"authenticated-emails-file" cfg:"authenticated_emails_file"`
 	EmailDomains            []string `flag:"email-domain" cfg:"email_domains"`
@@ -123,6 +124,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Bool("force-https", false, "force HTTPS redirect for HTTP requests")
 	flagSet.String("redirect-url", "", "the OAuth Redirect URL. ie: \"https://internalapp.yourcompany.com/oauth2/callback\"")
 	flagSet.Bool("relative-redirect-url", false, "allow relative OAuth Redirect URL.")
+	flagSet.String("app-redirect-header", "", "custom header for the app redirect path")
 	flagSet.StringSlice("skip-auth-regex", []string{}, "(DEPRECATED for --skip-auth-route) bypass authentication for requests path's that match (may be given multiple times)")
 	flagSet.StringSlice("skip-auth-route", []string{}, "bypass authentication for requests that match the method & path. Format: method=path_regex OR method!=path_regex. For all methods: path_regex OR !=path_regex")
 	flagSet.StringSlice("api-route", []string{}, "return HTTP 401 instead of redirecting to authentication server if token is not valid. Format: path_regex")
