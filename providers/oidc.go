@@ -46,6 +46,7 @@ func NewOIDCProvider(p *ProviderData, opts options.OIDCOptions) *OIDCProvider {
 	}
 
 	p.setProviderDefaults(oidcProviderDefaults)
+	p.setAllowedACR(opts.ACRs)
 	p.getAuthorizationHeaderFunc = makeOIDCHeader
 
 	return &OIDCProvider{
