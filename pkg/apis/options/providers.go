@@ -91,6 +91,9 @@ type Provider struct {
 
 	// URL to call to perform backend logout, `{user_id}` would be replaced by the actual `user_id` if available in the session IntrospectClaims
 	BackendLogoutAllSessionsURL string `json:"backendLogoutAllSessionsURL"`
+
+	// URL to call to perform backend revoke token
+	BackendRevokeAccessTokenURL string `json:"backendRevokeAccessTokenURL"`
 }
 
 // ProviderType is used to enumerate the different provider type options
