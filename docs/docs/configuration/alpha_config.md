@@ -446,6 +446,7 @@ Provider holds all configuration for a single provider
 | `code_challenge_method` | _string_ | The code challenge method |
 | `backendLogoutURL` | _string_ | URL to call to perform backend logout, `{id_token}` would be replaced by the actual `id_token` if available in the session |
 | `backendLogoutAllSessionsURL` | _string_ | URL to call to perform backend logout, `{user_id}` would be replaced by the actual `user_id` if available in the session IntrospectClaims |
+| `backendRevokeAccessTokenURL` | _string_ | URL to call to perform backend revoke token |
 
 ### ProviderType
 #### (`string` alias)
