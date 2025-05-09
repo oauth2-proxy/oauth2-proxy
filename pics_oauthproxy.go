@@ -29,10 +29,30 @@ func PicsSignOutAllSessions(backendLogoutAllSessionsURL string, introspectClaims
 		Do()
 
 	if resp.Error() != nil {
-		return nil, fmt.Errorf("error logging out from IAM: %v", err)
+		return nil, fmt.Errorf("error logging out from IAM: %v", resp.Error())
 	}
 
 	return resp, err
+}
+
+func PicsRevokeAcessToken(backendRevokeURL string, accessToken string, clientID string, clientSecret string) (resp requests.Result, err error) {
+	authHeader := "Basic " + base64.StdEncoding.EncodeToString([]byte(clientID+":"+clientSecret))
+	body := "token=" + accessToken
+
+	resp = requests.New(backendRevokeURL).
+		WithMethod("POST").
+		SetHeader("Authorization", authHeader).
+		SetHeader("api-version", "2").
+		SetHeader("Content-Type", "application/x-www-form-urlencoded").
+		SetHeader("Accept", "application/json").
+		WithBody(strings.NewReader(body)).
+		Do()
+
+	if resp.Error() != nil {
+		return nil, fmt.Errorf("error revoking access token: %v", resp.Error())
+	}
+
+	return resp, nil
 }
 
 func getUserID(introspectClaims string) (string, error) {

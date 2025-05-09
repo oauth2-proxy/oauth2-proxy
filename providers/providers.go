@@ -164,6 +164,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 
 	p.BackendLogoutURL = providerConfig.BackendLogoutURL
 	p.BackendLogoutAllSessionsURL = providerConfig.BackendLogoutAllSessionsURL
+	p.BackendRevokeAccessTokenURL = providerConfig.BackendRevokeAccessTokenURL
 
 	return p, nil
 }

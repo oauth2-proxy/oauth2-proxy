@@ -62,6 +62,7 @@ type ProviderData struct {
 	BackendLogoutURL string
 
 	BackendLogoutAllSessionsURL string
+	BackendRevokeAccessTokenURL string
 }
 
 // Data returns the ProviderData

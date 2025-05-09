@@ -798,7 +798,6 @@ func (p *OAuthProxy) backendLogout(rw http.ResponseWriter, req *http.Request, si
 	}
 
 	providerData := p.provider.Data()
-	var resp *http.Response
 	if signOutAllSessions {
 		if providerData.BackendLogoutAllSessionsURL == "" {
 			return
@@ -815,6 +814,19 @@ func (p *OAuthProxy) backendLogout(rw http.ResponseWriter, req *http.Request, si
 		}
 		p.picsAuditClient.CreateSuccessfulLogoutAuditEntry(session, req.RequestURI, req.Header.Get("edisp-org-id"))
 	} else {
+		if providerData.BackendRevokeAccessTokenURL != "" {
+			resp, err := PicsRevokeAcessToken(providerData.BackendRevokeAccessTokenURL, session.AccessToken, providerData.ClientID, providerData.ClientSecret)
+			if err != nil {
+				logger.Errorf("error while calling backend revoke access token: %v", err)
+				return
+			}
+
+			if resp.StatusCode() != 200 {
+				logger.Errorf("error while calling backend revoke acess token url, returned error code %v", resp.StatusCode())
+			}
+			p.picsAuditClient.CreateSuccessfulRevokeAccessTokenAuditEntry(session, req.RequestURI, req.Header.Get("edisp-org-id"))
+		}
+
 		if providerData.BackendLogoutURL == "" {
 			return
 		}
@@ -822,7 +834,7 @@ func (p *OAuthProxy) backendLogout(rw http.ResponseWriter, req *http.Request, si
 		backendLogoutURL := strings.ReplaceAll(providerData.BackendLogoutURL, "{id_token}", session.IDToken)
 		// security exception because URL is dynamic ({id_token} replacement) but
 		// base is not end-user provided but comes from configuration somewhat secure
-		resp, err = http.Get(backendLogoutURL) // #nosec G107
+		resp, err := http.Get(backendLogoutURL) // #nosec G107
 		if err != nil {
 			logger.Errorf("error while calling backend logout: %v", err)
 			return
