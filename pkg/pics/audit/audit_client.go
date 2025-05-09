@@ -70,6 +70,12 @@ func (c *Client) CreateSuccessfulLogoutAuditEntry(ss *sessions.SessionState, app
 	c.createAuditEntry(ss, appURL, tenantID, "0", "Success", &coding)
 }
 
+func (c *Client) CreateSuccessfulRevokeAccessTokenAuditEntry(ss *sessions.SessionState, appURL string, tenantID string) {
+	coding := Coding{
+		System: "http://hl7.org/fhir/ValueSet/audit-event-type", Version: "1", Code: "110123", Display: "User revoked access token"}
+	c.createAuditEntry(ss, appURL, tenantID, "0", "Success", &coding)
+}
+
 func (c *Client) createAuditEntry(ss *sessions.SessionState, appURL string, tenantID string, outcomeCode string, outcomeDesc string, coding *Coding) {
 	if !c.enabled {
 		return
