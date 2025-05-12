@@ -24,6 +24,10 @@ linters:
     - revive
   disable-all: true
 issues:
+  exclude:
+    # To ease migration to golangci-lint v2.1
+    # https://staticcheck.dev/docs/checks/#QF1008
+    - QF1008
   exclude-rules:
     - path: _test\.go
       linters:
