@@ -10,7 +10,6 @@ import (
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
-	k8serrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
 const jwtRegexFormat = `^ey[a-zA-Z0-9_-]*\.ey[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]+$`
@@ -89,7 +88,7 @@ func (j *jwtSessionLoader) getJwtSession(req *http.Request) (*sessionsapi.Sessio
 		return session, nil
 	}
 
-	return nil, k8serrors.NewAggregate(errs)
+	return nil, errors.Join(errs...)
 }
 
 // findTokenFromHeader finds a valid JWT token from the Authorization header of a given request.
