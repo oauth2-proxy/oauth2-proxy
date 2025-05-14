@@ -115,6 +115,8 @@ jobs:
 
       - name: Build images
         run: make build-docker-all
+        env:
+          REGISTRY: ${{ vars.ECR_REGISTRY }}
 
       - name: Push images
         run: make push-docker-all
