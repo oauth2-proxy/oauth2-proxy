@@ -16,13 +16,13 @@ type Verifiable interface {
 
 // NewReadynessCheck returns a middleware that performs deep health checks
 // (verifies the connection to any underlying store) on a specific `path`
-func NewReadynessCheck(path string, verifiable Verifiable, ctx context.Context) alice.Constructor {
+func NewReadynessCheck(ctx context.Context, path string, verifiable Verifiable) alice.Constructor {
 	return func(next http.Handler) http.Handler {
-		return readynessCheck(path, verifiable, next, ctx)
+		return readynessCheck(ctx, path, verifiable, next)
 	}
 }
 
-func readynessCheck(path string, verifiable Verifiable, next http.Handler, ctx context.Context) http.Handler {
+func readynessCheck(ctx context.Context, path string, verifiable Verifiable, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		if ctx.Err() != nil {
 			rw.WriteHeader(http.StatusServiceUnavailable)
