@@ -10,11 +10,8 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
-	"os/signal"
 	"regexp"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -113,14 +110,11 @@ type OAuthProxy struct {
 	redirectValidator redirect.Validator
 	appDirector       redirect.AppDirector
 
-	cancelFunc context.CancelFunc
-	cancelCtx  context.Context
-
 	encodeState bool
 }
 
 // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
-func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthProxy, error) {
+func NewOAuthProxy(ctx context.Context, opts *options.Options, validator func(string) bool) (*OAuthProxy, error) {
 	sessionStore, err := sessions.NewSessionStore(&opts.Session, &opts.Cookie)
 	if err != nil {
 		return nil, fmt.Errorf("error initialising session store: %v", err)
@@ -203,9 +197,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		return nil, err
 	}
 
-	cancelCtx, cancelFunc := context.WithCancel(context.Background())
-
-	preAuthChain, err := buildPreAuthChain(opts, sessionStore, cancelCtx)
+	preAuthChain, err := buildPreAuthChain(ctx, opts, sessionStore)
 	if err != nil {
 		return nil, fmt.Errorf("could not build pre-auth chain: %v", err)
 	}
@@ -253,8 +245,6 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		redirectValidator:  redirectValidator,
 		appDirector:        appDirector,
 		encodeState:        opts.EncodeState,
-		cancelFunc:         cancelFunc,
-		cancelCtx:          cancelCtx,
 	}
 	p.buildServeMux(opts.ProxyPrefix)
 
@@ -265,22 +255,14 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 	return p, nil
 }
 
-func (p *OAuthProxy) Start() error {
+func (p *OAuthProxy) Start(ctx context.Context) error {
 	if p.server == nil {
 		// We have to call setupServer before Start is called.
 		// If this doesn't happen it's a programming error.
 		panic("server has not been initialised")
 	}
 
-	// Observe signals in background goroutine.
-	go func() {
-		sigint := make(chan os.Signal, 1)
-		signal.Notify(sigint, os.Interrupt, syscall.SIGTERM)
-		<-sigint
-		p.cancelFunc() // cancel the context
-	}()
-
-	return p.server.Start(p.cancelCtx)
+	return p.server.Start(ctx)
 }
 
 func (p *OAuthProxy) setupServer(opts *options.Options) error {
@@ -359,7 +341,7 @@ func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
 // buildPreAuthChain constructs a chain that should process every request before
 // the OAuth2 Proxy authentication logic kicks in.
 // For example forcing HTTPS or health checks.
-func buildPreAuthChain(opts *options.Options, sessionStore sessionsapi.SessionStore, ctx context.Context) (alice.Chain, error) {
+func buildPreAuthChain(ctx context.Context, opts *options.Options, sessionStore sessionsapi.SessionStore) (alice.Chain, error) {
 	chain := alice.New(middleware.NewScope(opts.ReverseProxy, opts.Logging.RequestIDHeader))
 
 	if opts.ForceHTTPS {
@@ -380,7 +362,7 @@ func buildPreAuthChain(opts *options.Options, sessionStore sessionsapi.SessionSt
 
 	// To silence logging of health checks, register the health check handler before
 	// the logging handler
-	readinessCheck := middleware.NewReadynessCheck(opts.ReadyPath, sessionStore, ctx)
+	readinessCheck := middleware.NewReadynessCheck(ctx, opts.ReadyPath, sessionStore)
 	if opts.Logging.SilencePing {
 		chain = chain.Append(
 			middleware.NewHealthCheck(healthCheckPaths, healthCheckUserAgents),
