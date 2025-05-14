@@ -27,7 +27,7 @@ var _ = Describe("ReadynessCheck suite", func() {
 
 			ctx := context.Background()
 
-			handler := NewReadynessCheck(in.readyPath, in.healthVerifiable, ctx)(http.NotFoundHandler())
+			handler := NewReadynessCheck(ctx, in.readyPath, in.healthVerifiable)(http.NotFoundHandler())
 			handler.ServeHTTP(rw, req)
 
 			Expect(rw.Code).To(Equal(in.expectedStatus))

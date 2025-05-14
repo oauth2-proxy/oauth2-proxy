@@ -1,9 +1,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"os/signal"
 	"runtime"
+	"syscall"
 
 	"github.com/ghodss/yaml"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -55,12 +58,22 @@ func main() {
 
 	validator := NewValidator(opts.EmailDomains, opts.AuthenticatedEmailsFile)
 
-	oauthproxy, err := NewOAuthProxy(opts, validator)
+	ctx, cancelFunc := context.WithCancel(context.Background())
+
+	// Observe signals in background goroutine.
+	go func() {
+		sigint := make(chan os.Signal, 1)
+		signal.Notify(sigint, os.Interrupt, syscall.SIGTERM)
+		<-sigint
+		cancelFunc() // cancel the context
+	}()
+
+	oauthproxy, err := NewOAuthProxy(ctx, opts, validator)
 	if err != nil {
 		logger.Fatalf("ERROR: Failed to initialise OAuth2 Proxy: %v", err)
 	}
 
-	if err := oauthproxy.Start(); err != nil {
+	if err := oauthproxy.Start(ctx); err != nil {
 		logger.Fatalf("ERROR: Failed to start OAuth2 Proxy: %v", err)
 	}
 }
