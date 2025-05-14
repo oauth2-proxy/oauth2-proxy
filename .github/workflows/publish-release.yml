@@ -120,3 +120,5 @@ jobs:
 
       - name: Push images
         run: make push-docker-all
+        env:
+          REGISTRY: ${{ vars.ECR_REGISTRY }}
