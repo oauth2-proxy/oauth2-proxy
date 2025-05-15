@@ -234,6 +234,11 @@ func (p *GitHubProvider) hasTeam(s *sessions.SessionState) error {
 	for _, ot := range teams {
 		allowed_teams := strings.Split(p.Team, ",")
 		for _, team := range allowed_teams {
+			if !strings.Contains(team, orgTeamSeparator) {
+				logger.Printf("Please use fully qualified team names (org:team-slug) if you omit the organisation. Current Team name: %s", team)
+				return errors.New("team name is invalid")
+			}			
+
 			if strings.EqualFold(strings.TrimSpace(team), ot) {
 				logger.Printf("Found Github Organization/Team:%s", ot)
 				return nil
