@@ -200,6 +200,7 @@ func (p *GitHubProvider) hasOrgAndTeam(s *sessions.SessionState) error {
 
 		if strings.EqualFold(p.Org, ot.Org) {
 			hasOrg = true
+			
 			teams := strings.Split(p.Team, ",")
 			for _, team := range teams {
 				if strings.EqualFold(strings.TrimSpace(team), ot.Team) {
@@ -218,6 +219,42 @@ func (p *GitHubProvider) hasOrgAndTeam(s *sessions.SessionState) error {
 
 	logger.Printf("Missing Organization:%q in %#v", p.Org, maps.Keys(presentOrgs))
 	return errors.New("user is missing required organization")
+}
+
+func (p *GitHubProvider) hasTeam(s *sessions.SessionState) error {
+	type orgTeam struct {
+		Org  string `json:"org"`
+		Team string `json:"team"`
+		OrgTeam string `json:"org-team"`
+	}
+
+	var presentOrgTeams []orgTeam
+
+	for _, group := range s.Groups {
+		if strings.Contains(group, orgTeamSeparator) {
+			ot := strings.Split(group, orgTeamSeparator)
+			presentOrgTeams = append(presentOrgTeams, orgTeam{ot[0], ot[1], group})
+		}
+	}
+
+	presentOrgs := make(map[string]bool)
+	var presentTeams []string
+
+	for _, ot := range presentOrgTeams {
+		presentOrgs[ot.Org] = true
+
+			teams := strings.Split(p.Team, ",")
+			for _, team := range teams {
+				if strings.EqualFold(strings.TrimSpace(team), ot.OrgTeam) {
+					logger.Printf("Found Github Organization/Team:%q/%q", ot.Org, ot.Team)
+					return nil
+				}
+			}
+			presentTeams = append(presentTeams, ot.OrgTeam)
+	}
+
+	logger.Printf("Missing Team:%q in teams: %v", p.Team, presentTeams)
+	return errors.New("user is missing required team")
 }
 
 func (p *GitHubProvider) hasRepoAccess(ctx context.Context, accessToken string) error {
@@ -415,6 +452,10 @@ func (p *GitHubProvider) hasOrgAndTeamAccess(s *sessions.SessionState) error {
 
 	if p.Org != "" {
 		return p.hasOrg(s)
+	}
+
+	if p.Team != "" {
+		return p.hasTeam(s)
 	}
 
 	return nil
