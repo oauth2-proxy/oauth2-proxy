@@ -222,35 +222,24 @@ func (p *GitHubProvider) hasOrgAndTeam(s *sessions.SessionState) error {
 }
 
 func (p *GitHubProvider) hasTeam(s *sessions.SessionState) error {
-	type orgTeam struct {
-		Org  string `json:"org"`
-		Team string `json:"team"`
-		OrgTeam string `json:"org-team"`
-	}
-
-	var presentOrgTeams []orgTeam
+	var teams []string
 
 	for _, group := range s.Groups {
 		if strings.Contains(group, orgTeamSeparator) {
-			ot := strings.Split(group, orgTeamSeparator)
-			presentOrgTeams = append(presentOrgTeams, orgTeam{ot[0], ot[1], group})
+			teams = append(teams, strings.TrimSpace(group))
 		}
 	}
-
-	presentOrgs := make(map[string]bool)
 	var presentTeams []string
 
-	for _, ot := range presentOrgTeams {
-		presentOrgs[ot.Org] = true
-
-			teams := strings.Split(p.Team, ",")
-			for _, team := range teams {
-				if strings.EqualFold(strings.TrimSpace(team), ot.OrgTeam) {
-					logger.Printf("Found Github Organization/Team:%q/%q", ot.Org, ot.Team)
-					return nil
-				}
+	for _, ot := range teams {
+		allowed_teams := strings.Split(p.Team, ",")
+		for _, team := range allowed_teams {
+			if strings.EqualFold(strings.TrimSpace(team), ot) {
+				logger.Printf("Found Github Organization/Team:%s", ot)
+				return nil
 			}
-			presentTeams = append(presentTeams, ot.OrgTeam)
+		}
+		presentTeams = append(presentTeams, ot)
 	}
 
 	logger.Printf("Missing Team:%q in teams: %v", p.Team, presentTeams)
