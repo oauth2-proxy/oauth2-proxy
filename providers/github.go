@@ -34,6 +34,10 @@ const (
 	githubProviderName = "GitHub"
 	githubDefaultScope = "user:email read:org"
 	orgTeamSeparator   = ":"
+
+	accessLevelOrg int = 1;
+	accessLevelOrgTeams int = 2;
+	accessLevelTeams int = 3;
 )
 
 var (
@@ -152,103 +156,104 @@ func (p *GitHubProvider) ValidateSession(ctx context.Context, s *sessions.Sessio
 	return validateToken(ctx, p, s.AccessToken, makeGitHubHeader(s.AccessToken))
 }
 
-func (p *GitHubProvider) hasOrg(s *sessions.SessionState) error {
-	// https://developer.github.com/v3/orgs/#list-your-organizations
-	var orgs []string
+func (p *GitHubProvider) hasAccess(accessLevel int, s *sessions.SessionState) error {
+	switch accessLevel {
+	case accessLevelOrg :
+		// https://developer.github.com/v3/orgs/#list-your-organizations
+		var orgs []string
 
-	for _, group := range s.Groups {
-		if !strings.Contains(group, ":") {
-			orgs = append(orgs, group)
+		for _, group := range s.Groups {
+			if !strings.Contains(group, ":") {
+				orgs = append(orgs, group)
+			}
 		}
-	}
 
-	presentOrgs := make([]string, 0, len(orgs))
-	for _, org := range orgs {
-		if p.Org == org {
-			logger.Printf("Found Github Organization:%q", org)
-			return nil
+		presentOrgs := make([]string, 0, len(orgs))
+		for _, org := range orgs {
+			if p.Org == org {
+				logger.Printf("Found Github Organization:%q", org)
+				return nil
+			}
+			presentOrgs = append(presentOrgs, org)
 		}
-		presentOrgs = append(presentOrgs, org)
-	}
 
-	logger.Printf("Missing Organization:%q in %v", p.Org, presentOrgs)
-	return errors.New("user is missing required organization")
-}
-
-func (p *GitHubProvider) hasOrgAndTeam(s *sessions.SessionState) error {
-	type orgTeam struct {
-		Org  string `json:"org"`
-		Team string `json:"team"`
-	}
-
-	var presentOrgTeams []orgTeam
-
-	for _, group := range s.Groups {
-		if strings.Contains(group, orgTeamSeparator) {
-			ot := strings.Split(group, orgTeamSeparator)
-			presentOrgTeams = append(presentOrgTeams, orgTeam{ot[0], ot[1]})
+		logger.Printf("Missing Organization:%q in %v", p.Org, presentOrgs)
+		return errors.New("user is missing required organization")
+	case accessLevelOrgTeams:
+		type orgTeam struct {
+			Org  string `json:"org"`
+			Team string `json:"team"`
 		}
-	}
 
-	var hasOrg bool
+		var presentOrgTeams []orgTeam
 
-	presentOrgs := make(map[string]bool)
-	var presentTeams []string
+		for _, group := range s.Groups {
+			if strings.Contains(group, orgTeamSeparator) {
+				ot := strings.Split(group, orgTeamSeparator)
+				presentOrgTeams = append(presentOrgTeams, orgTeam{ot[0], ot[1]})
+			}
+		}
 
-	for _, ot := range presentOrgTeams {
-		presentOrgs[ot.Org] = true
+		var hasOrg bool
 
-		if strings.EqualFold(p.Org, ot.Org) {
-			hasOrg = true
-			
-			teams := strings.Split(p.Team, ",")
-			for _, team := range teams {
-				if strings.EqualFold(strings.TrimSpace(team), ot.Team) {
-					logger.Printf("Found Github Organization/Team:%q/%q", ot.Org, ot.Team)
+		presentOrgs := make(map[string]bool)
+		var presentTeams []string
+
+		for _, ot := range presentOrgTeams {
+			presentOrgs[ot.Org] = true
+
+			if strings.EqualFold(p.Org, ot.Org) {
+				hasOrg = true
+				
+				teams := strings.Split(p.Team, ",")
+				for _, team := range teams {
+					if strings.EqualFold(strings.TrimSpace(team), ot.Team) {
+						logger.Printf("Found Github Organization/Team:%q/%q", ot.Org, ot.Team)
+						return nil
+					}
+				}
+				presentTeams = append(presentTeams, ot.Team)
+			}
+		}
+
+		if hasOrg {
+			logger.Printf("Missing Team:%q from Org:%q in teams: %v", p.Team, p.Org, presentTeams)
+			return errors.New("user is missing required team")
+		}
+
+		logger.Printf("Missing Organization:%q in %#v", p.Org, maps.Keys(presentOrgs))
+		return errors.New("user is missing required organization")
+	case accessLevelTeams:
+		var teams []string
+
+		for _, group := range s.Groups {
+			if strings.Contains(group, orgTeamSeparator) {
+				teams = append(teams, strings.TrimSpace(group))
+			}
+		}
+		var presentTeams []string
+
+		for _, ot := range teams {
+			allowed_teams := strings.Split(p.Team, ",")
+			for _, team := range allowed_teams {
+				if !strings.Contains(team, orgTeamSeparator) {
+					logger.Printf("Please use fully qualified team names (org:team-slug) if you omit the organisation. Current Team name: %s", team)
+					return errors.New("team name is invalid")
+				}			
+
+				if strings.EqualFold(strings.TrimSpace(team), ot) {
+					logger.Printf("Found Github Organization/Team:%s", ot)
 					return nil
 				}
 			}
-			presentTeams = append(presentTeams, ot.Team)
+			presentTeams = append(presentTeams, ot)
 		}
-	}
 
-	if hasOrg {
-		logger.Printf("Missing Team:%q from Org:%q in teams: %v", p.Team, p.Org, presentTeams)
+		logger.Printf("Missing Team:%q in teams: %v", p.Team, presentTeams)
 		return errors.New("user is missing required team")
 	}
 
-	logger.Printf("Missing Organization:%q in %#v", p.Org, maps.Keys(presentOrgs))
-	return errors.New("user is missing required organization")
-}
-
-func (p *GitHubProvider) hasTeam(s *sessions.SessionState) error {
-	var teams []string
-
-	for _, group := range s.Groups {
-		if strings.Contains(group, orgTeamSeparator) {
-			teams = append(teams, strings.TrimSpace(group))
-		}
-	}
-	var presentTeams []string
-
-	for _, ot := range teams {
-		allowed_teams := strings.Split(p.Team, ",")
-		for _, team := range allowed_teams {
-			if !strings.Contains(team, orgTeamSeparator) {
-				logger.Printf("Please use fully qualified team names (org:team-slug) if you omit the organisation. Current Team name: %s", team)
-				return errors.New("team name is invalid")
-			}			
-
-			if strings.EqualFold(strings.TrimSpace(team), ot) {
-				logger.Printf("Found Github Organization/Team:%s", ot)
-				return nil
-			}
-		}
-		presentTeams = append(presentTeams, ot)
-	}
-
-	logger.Printf("Missing Team:%q in teams: %v", p.Team, presentTeams)
-	return errors.New("user is missing required team")
+	return errors.New("no accesslevel chosen.")
 }
 
 func (p *GitHubProvider) hasRepoAccess(ctx context.Context, accessToken string) error {
@@ -441,15 +446,15 @@ func (p *GitHubProvider) checkUserRestriction(ctx context.Context, s *sessions.S
 
 func (p *GitHubProvider) hasOrgAndTeamAccess(s *sessions.SessionState) error {
 	if p.Org != "" && p.Team != "" {
-		return p.hasOrgAndTeam(s)
+		return p.hasAccess ( accessLevelOrgTeams, s )
 	}
 
 	if p.Org != "" {
-		return p.hasOrg(s)
+		return p.hasAccess ( accessLevelOrg, s )
 	}
 
 	if p.Team != "" {
-		return p.hasTeam(s)
+		return p.hasAccess ( accessLevelTeams, s )
 	}
 
 	return nil
