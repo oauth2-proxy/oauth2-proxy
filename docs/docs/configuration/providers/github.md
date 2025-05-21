@@ -39,7 +39,7 @@ To restrict within an organization to specific teams, include the following flag
 To restrict to teams within different organizations, just leave out the flag `--github-org` and use `--github-teams` alone:
 
 ```shell
-    --github-team=""  # restrict logins to members of any of these teams in any organization (format <org>:<slug>, like octo:team1), separated by a comma
+    --github-team=""  # restrict logins to members of any of these teams in any organization (format <org>:<slug> or <legacy team id>, like octo:team1 or octo:123456789), separated by a comma
 ```
 
 If you would rather restrict access to collaborators of a repository, those users must either have push access to a 

@@ -417,9 +417,11 @@ func (p *GitHubProvider) checkRestrictions(ctx context.Context, s *sessions.Sess
 	} else if p.Team != "" {
 		err = p.hasTeam(s)
 	}
+
 	if err != nil {
 		return err
 	}
+
 	if p.Org == "" && p.Repo != "" && p.Token == "" {
 		// If we have a token we'll do the collaborator check in GetUserName
 		return p.hasRepoAccess(ctx, s.AccessToken)
@@ -531,6 +533,7 @@ func (p *GitHubProvider) getTeams(ctx context.Context, s *sessions.SessionState)
 		for _, team := range teams {
 			logger.Printf("Member of Github Organization/Team:%q/%q", team.Org.Login, team.Slug)
 			s.Groups = append(s.Groups, team.Org.Login+orgTeamSeparator+team.Slug)
+			s.Groups = append(s.Groups, "group"+orgTeamSeparator+strconv.Itoa(team.Id))
 		}
 
 		pn++
