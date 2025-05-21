@@ -409,20 +409,17 @@ func (p *GitHubProvider) checkRestrictions(ctx context.Context, s *sessions.Sess
 		return err
 	}
 
+	var err error
 	if p.Org != "" && p.Team != "" {
-		if err := p.hasOrgAndTeam(s); err != nil {
-			return err
-		}
+		err = p.hasOrgAndTeam(s)
 	} else if p.Org != "" {
-		if err := p.hasOrg(s); err != nil {
-			return err
-		}
+		err = p.hasOrg(s)
 	} else if p.Team != "" {
-		if err := p.hasTeam(s); err != nil {
-			return err
-		}
+		err = p.hasTeam(s)
 	}
-
+	if err != nil {
+		return err
+	}
 	if p.Org == "" && p.Repo != "" && p.Token == "" {
 		// If we have a token we'll do the collaborator check in GetUserName
 		return p.hasRepoAccess(ctx, s.AccessToken)
