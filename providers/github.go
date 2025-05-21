@@ -409,8 +409,18 @@ func (p *GitHubProvider) checkRestrictions(ctx context.Context, s *sessions.Sess
 		return err
 	}
 
-	if err := p.hasOrgAndTeamAccess(s); err != nil {
-		return err
+	if p.Org != "" && p.Team != "" {
+		if err := p.hasOrgAndTeam(s); err != nil {
+			return err
+		}
+	} else if p.Org != "" {
+		if err := p.hasOrg(s); err != nil {
+			return err
+		}
+	} else if p.Team != "" {
+		if err := p.hasTeam(s); err != nil {
+			return err
+		}
 	}
 
 	if p.Org == "" && p.Repo != "" && p.Token == "" {
@@ -437,22 +447,6 @@ func (p *GitHubProvider) checkUserRestriction(ctx context.Context, s *sessions.S
 	}
 
 	return verifiedUser, nil
-}
-
-func (p *GitHubProvider) hasOrgAndTeamAccess(s *sessions.SessionState) error {
-	if p.Org != "" && p.Team != "" {
-		return p.hasOrgAndTeam(s)
-	}
-
-	if p.Org != "" {
-		return p.hasOrg(s)
-	}
-
-	if p.Team != "" {
-		return p.hasTeam(s)
-	}
-
-	return nil
 }
 
 func (p *GitHubProvider) getOrgAndTeam(ctx context.Context, s *sessions.SessionState) error {
