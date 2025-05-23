@@ -3,7 +3,6 @@ package util
 import (
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"mime"
 	"net/http"
@@ -12,7 +11,7 @@ import (
 
 	"github.com/bitly/go-simplejson"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
-	"github.com/spf13/cast"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
 )
 
 // ClaimExtractor is used to extract claim values from an ID Token, or, if not
@@ -132,7 +131,7 @@ func (c *claimExtractor) GetClaimInto(claim string, dst interface{}) (bool, erro
 	if !exists {
 		return false, nil
 	}
-	if err := coerceClaim(value, dst); err != nil {
+	if err := util.CoerceClaim(value, dst); err != nil {
 		return false, fmt.Errorf("could no coerce claim: %v", err)
 	}
 
@@ -162,67 +161,4 @@ func getClaimFrom(claim string, src *simplejson.Json) interface{} {
 	}
 	claimParts := strings.Split(claim, ".")
 	return src.GetPath(claimParts...).Interface()
-}
-
-// coerceClaim tries to convert the value into the destination interface type.
-// If it can convert the value, it will then store the value in the destination
-// interface.
-func coerceClaim(value, dst interface{}) error {
-	switch d := dst.(type) {
-	case *string:
-		str, err := toString(value)
-		if err != nil {
-			return fmt.Errorf("could not convert value to string: %v", err)
-		}
-		*d = str
-	case *[]string:
-		strSlice, err := toStringSlice(value)
-		if err != nil {
-			return fmt.Errorf("could not convert value to string slice: %v", err)
-		}
-		*d = strSlice
-	case *bool:
-		*d = cast.ToBool(value)
-	default:
-		return fmt.Errorf("unknown type for destination: %T", dst)
-	}
-	return nil
-}
-
-// toStringSlice converts an interface (either a slice or single value) into
-// a slice of strings.
-func toStringSlice(value interface{}) ([]string, error) {
-	var sliceValues []interface{}
-	switch v := value.(type) {
-	case []interface{}:
-		sliceValues = v
-	case interface{}:
-		sliceValues = []interface{}{v}
-	default:
-		sliceValues = cast.ToSlice(value)
-	}
-
-	out := []string{}
-	for _, v := range sliceValues {
-		str, err := toString(v)
-		if err != nil {
-			return nil, fmt.Errorf("could not convert slice entry to string %v: %v", v, err)
-		}
-		out = append(out, str)
-	}
-	return out, nil
-}
-
-// toString coerces a value into a string.
-// If it is non-string, marshal it into JSON.
-func toString(value interface{}) (string, error) {
-	if str, err := cast.ToStringE(value); err == nil {
-		return str, nil
-	}
-
-	jsonStr, err := json.Marshal(value)
-	if err != nil {
-		return "", err
-	}
-	return string(jsonStr), nil
 }

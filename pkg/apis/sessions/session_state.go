@@ -9,6 +9,7 @@ import (
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/clock"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
 	"github.com/pierrec/lz4/v4"
 	"github.com/vmihailenco/msgpack/v5"
 )
@@ -28,6 +29,9 @@ type SessionState struct {
 	User              string   `msgpack:"u,omitempty"`
 	Groups            []string `msgpack:"g,omitempty"`
 	PreferredUsername string   `msgpack:"pu,omitempty"`
+
+	// Additional claims
+	AdditionalClaims map[string]interface{} `msgpack:"ac,omitempty"`
 
 	// Internal helpers, not serialized
 	Clock clock.Clock `msgpack:"-"`
@@ -149,8 +153,18 @@ func (s *SessionState) GetClaim(claim string) []string {
 	case "preferred_username":
 		return []string{s.PreferredUsername}
 	default:
-		return []string{}
+		return s.getAdditionalClaim(claim)
 	}
+}
+
+func (s *SessionState) getAdditionalClaim(claim string) []string {
+	if value, ok := s.AdditionalClaims[claim]; ok {
+		var result []string
+		if err := util.CoerceClaim(value, &result); err == nil {
+			return result
+		}
+	}
+	return []string{}
 }
 
 // CheckNonce compares the Nonce against a potential hash of it

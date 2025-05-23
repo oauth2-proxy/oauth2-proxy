@@ -79,6 +79,8 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 		ClientSecret:            providerConfig.ClientSecret,
 		ClientSecretFile:        providerConfig.ClientSecretFile,
 		AuthRequestResponseMode: providerConfig.AuthRequestResponseMode,
+		// Additional claims to be obtained from the upstream IDP, either from the id_token or from the userinfo endpoint if configured.
+		AdditionalClaims: providerConfig.AdditionalClaims,
 	}
 
 	needsVerifier, err := providerRequiresOIDCProviderVerifier(providerConfig.Type)
