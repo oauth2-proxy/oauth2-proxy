@@ -535,8 +535,8 @@ func (p *GitHubProvider) getTeams(ctx context.Context, s *sessions.SessionState)
 
 		for _, team := range teams {
 			logger.Printf("Member of Github Organization/Team/ID:%q/%q/%d", team.Org.Login, team.Slug, team.ID)
-			s.Groups = append(s.Groups, team.Org.Login+orgTeamSeparator+team.Slug)
-			s.Groups = append(s.Groups, "group"+orgTeamSeparator+strconv.Itoa(team.ID))
+			s.Groups = append(s.Groups, fmt.Sprintf("%s%s%s", team.Org.Login, orgTeamSeparator, team.Slug))
+			s.Groups = append(s.Groups, fmt.Sprintf("group%s%d", orgTeamSeparator, team.ID))
 		}
 
 		pn++
