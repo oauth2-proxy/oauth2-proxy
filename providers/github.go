@@ -504,7 +504,6 @@ func (p *GitHubProvider) getTeams(ctx context.Context, s *sessions.SessionState)
 	type Team struct {
 		Name string `json:"name"`
 		Slug string `json:"slug"`
-		ID   int    `json:"id"`
 		Org  struct {
 			Login string `json:"login"`
 		} `json:"organization"`
@@ -534,9 +533,8 @@ func (p *GitHubProvider) getTeams(ctx context.Context, s *sessions.SessionState)
 		}
 
 		for _, team := range teams {
-			logger.Printf("Member of Github Organization/Team/ID:%q/%q/%d", team.Org.Login, team.Slug, team.ID)
+			logger.Printf("Member of Github Organization/Team/ID:%q/%q", team.Org.Login, team.Slug)
 			s.Groups = append(s.Groups, fmt.Sprintf("%s%s%s", team.Org.Login, orgTeamSeparator, team.Slug))
-			s.Groups = append(s.Groups, fmt.Sprintf("group%s%d", orgTeamSeparator, team.ID))
 		}
 
 		pn++

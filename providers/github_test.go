@@ -178,8 +178,8 @@ func TestGitHubProvider_checkRestrictionsOrg(t *testing.T) {
 			`[ ]`,
 		},
 		"/user/teams": {
-			`[ { "name":"test-team-1", "slug":"test-team-1", "id": 12345600, "organization": { "login": "test-org-1" } } ]`,
-			`[ { "name":"test-team-2", "slug":"test-team-2", "id": 12345601, "organization": { "login": "test-org-2" } } ]`,
+			`[ { "name":"test-team-1", "slug":"test-team-1", "organization": { "login": "test-org-1" } } ]`,
+			`[ { "name":"test-team-2", "slug":"test-team-2", "organization": { "login": "test-org-2" } } ]`,
 			`[ ]`,
 		},
 	})
@@ -220,8 +220,8 @@ func TestGitHubProvider_checkRestrictionsOrgTeam(t *testing.T) {
 			`[ ]`,
 		},
 		"/user/teams": {
-			`[ { "name":"test-team-1", "slug":"test-team-1", "id": 12345600, "organization": { "login": "test-org-1" } } ]`,
-			`[ { "name":"test-team-2", "slug":"test-team-2", "id": 12345601, "organization": { "login": "test-org-2" } } ]`,
+			`[ { "name":"test-team-1", "slug":"test-team-1", "organization": { "login": "test-org-1" } } ]`,
+			`[ { "name":"test-team-2", "slug":"test-team-2", "organization": { "login": "test-org-2" } } ]`,
 			`[ ]`,
 		},
 	})
@@ -264,8 +264,8 @@ func TestGitHubProvider_checkRestrictionsTeam(t *testing.T) {
 			`[ ]`,
 		},
 		"/user/teams": {
-			`[ { "name":"test-team-1", "slug":"test-team-1", "id": 12345600, "organization": { "login": "test-org-1" } } ]`,
-			`[ { "name":"test-team-2", "slug":"test-team-2", "id": 12345601, "organization": { "login": "test-org-2" } } ]`,
+			`[ { "name":"test-team-1", "slug":"test-team-1", "organization": { "login": "test-org-1" } } ]`,
+			`[ { "name":"test-team-2", "slug":"test-team-2", "organization": { "login": "test-org-2" } } ]`,
 			`[ ]`,
 		},
 	})
@@ -275,7 +275,7 @@ func TestGitHubProvider_checkRestrictionsTeam(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testGitHubProvider(bURL.Host,
 		options.GitHubOptions{
-			Team: "test-org-1:test-team-1, group:12345600",
+			Team: "test-org-1:test-team-1, test-org-2:test-team-2-fail",
 		},
 	)
 
@@ -286,20 +286,10 @@ func TestGitHubProvider_checkRestrictionsTeam(t *testing.T) {
 	err = p.checkRestrictions(context.Background(), session)
 	assert.NoError(t, err)
 
-	// This test should succeed, because of the valid org:id combination
-	p = testGitHubProvider(bURL.Host,
-		options.GitHubOptions{
-			Team: "group:12345600",
-		},
-	)
-
-	err = p.checkRestrictions(context.Background(), session)
-	assert.NoError(t, err)
-
 	// This part should fail, because user is not part of the organization:team combination
 	p = testGitHubProvider(bURL.Host,
 		options.GitHubOptions{
-			Team: "test-org-1-fail:test-team-1-fail, test-org-1-fail:12345600",
+			Team: "test-org-1-fail:test-team-1-fail, test-org-2-fail:test-team-2-fail",
 		},
 	)
 
