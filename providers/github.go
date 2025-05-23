@@ -200,7 +200,7 @@ func (p *GitHubProvider) hasOrgAndTeam(s *sessions.SessionState) error {
 
 		if strings.EqualFold(p.Org, ot.Org) {
 			hasOrg = true
-			
+
 			teams := strings.Split(p.Team, ",")
 			for _, team := range teams {
 				if strings.EqualFold(strings.TrimSpace(team), ot.Team) {
@@ -229,15 +229,16 @@ func (p *GitHubProvider) hasTeam(s *sessions.SessionState) error {
 			teams = append(teams, strings.TrimSpace(group))
 		}
 	}
-	var presentTeams []string
+
+	var presentTeams = make([]string, 0, len(teams))
 
 	for _, ot := range teams {
-		allowed_teams := strings.Split(p.Team, ",")
-		for _, team := range allowed_teams {
+		allowedTeams := strings.Split(p.Team, ",")
+		for _, team := range allowedTeams {
 			if !strings.Contains(team, orgTeamSeparator) {
 				logger.Printf("Please use fully qualified team names (org:team-slug) if you omit the organisation. Current Team name: %s", team)
 				return errors.New("team name is invalid")
-			}			
+			}
 
 			if strings.EqualFold(strings.TrimSpace(team), ot) {
 				logger.Printf("Found Github Organization/Team:%s", ot)
@@ -410,11 +411,12 @@ func (p *GitHubProvider) checkRestrictions(ctx context.Context, s *sessions.Sess
 	}
 
 	var err error
-	if p.Org != "" && p.Team != "" {
+	switch {
+	case p.Org != "" && p.Team != "":
 		err = p.hasOrgAndTeam(s)
-	} else if p.Org != "" {
+	case p.Org != "":
 		err = p.hasOrg(s)
-	} else if p.Team != "" {
+	case p.Team != "":
 		err = p.hasTeam(s)
 	}
 
@@ -502,6 +504,7 @@ func (p *GitHubProvider) getTeams(ctx context.Context, s *sessions.SessionState)
 	type Team struct {
 		Name string `json:"name"`
 		Slug string `json:"slug"`
+		ID   int    `json:"id"`
 		Org  struct {
 			Login string `json:"login"`
 		} `json:"organization"`
@@ -531,9 +534,9 @@ func (p *GitHubProvider) getTeams(ctx context.Context, s *sessions.SessionState)
 		}
 
 		for _, team := range teams {
-			logger.Printf("Member of Github Organization/Team:%q/%q", team.Org.Login, team.Slug)
+			logger.Printf("Member of Github Organization/Team/ID:%q/%q/%d", team.Org.Login, team.Slug, team.ID)
 			s.Groups = append(s.Groups, team.Org.Login+orgTeamSeparator+team.Slug)
-			s.Groups = append(s.Groups, "group"+orgTeamSeparator+strconv.Itoa(team.Id))
+			s.Groups = append(s.Groups, "group"+orgTeamSeparator+strconv.Itoa(team.ID))
 		}
 
 		pn++
