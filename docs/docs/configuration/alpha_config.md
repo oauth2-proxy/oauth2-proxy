@@ -148,7 +148,7 @@ You must remove these options before starting OAuth2 Proxy with `--alpha-config`
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `SkipScope` | _bool_ | Skip adding the scope parameter in login request<br/>Default value is 'false' |
+| `skipScope` | _bool_ | Skip adding the scope parameter in login request<br/>Default value is 'false' |
 
 ### AlphaOptions
 
@@ -163,12 +163,12 @@ They may change between releases without notice.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `UpstreamConfig` | _[UpstreamConfig](#upstreamconfig)_ | UpstreamConfig is used to configure upstream servers.<br/>Once a user is authenticated, requests to the server will be proxied to<br/>these upstream servers based on the path mappings defined in this list. |
-| `InjectRequestHeaders` | _[[]Header](#header)_ | InjectRequestHeaders is used to configure headers that should be added<br/>to requests to upstream servers.<br/>Headers may source values from either the authenticated user's session<br/>or from a static secret value. |
-| `InjectResponseHeaders` | _[[]Header](#header)_ | InjectResponseHeaders is used to configure headers that should be added<br/>to responses from the proxy.<br/>This is typically used when using the proxy as an external authentication<br/>provider in conjunction with another proxy such as NGINX and its<br/>auth_request module.<br/>Headers may source values from either the authenticated user's session<br/>or from a static secret value. |
-| `Server` | _[Server](#server)_ | Server is used to configure the HTTP(S) server for the proxy application.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
-| `MetricsServer` | _[Server](#server)_ | MetricsServer is used to configure the HTTP(S) server for metrics.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
-| `Providers` | _[Providers](#providers)_ | Providers is used to configure your provider. **Multiple-providers is not<br/>yet working.** [This feature is tracked in<br/>#925](https://github.com/oauth2-proxy/oauth2-proxy/issues/926) |
+| `upstreamConfig` | _[UpstreamConfig](#upstreamconfig)_ | UpstreamConfig is used to configure upstream servers.<br/>Once a user is authenticated, requests to the server will be proxied to<br/>these upstream servers based on the path mappings defined in this list. |
+| `injectRequestHeaders` | _[[]Header](#header)_ | InjectRequestHeaders is used to configure headers that should be added<br/>to requests to upstream servers.<br/>Headers may source values from either the authenticated user's session<br/>or from a static secret value. |
+| `injectResponseHeaders` | _[[]Header](#header)_ | InjectResponseHeaders is used to configure headers that should be added<br/>to responses from the proxy.<br/>This is typically used when using the proxy as an external authentication<br/>provider in conjunction with another proxy such as NGINX and its<br/>auth_request module.<br/>Headers may source values from either the authenticated user's session<br/>or from a static secret value. |
+| `server` | _[Server](#server)_ | Server is used to configure the HTTP(S) server for the proxy application.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
+| `metricsServer` | _[Server](#server)_ | MetricsServer is used to configure the HTTP(S) server for metrics.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
+| `providers` | _[Providers](#providers)_ | Providers is used to configure your provider. **Multiple-providers is not<br/>yet working.** [This feature is tracked in<br/>#925](https://github.com/oauth2-proxy/oauth2-proxy/issues/926) |
 
 ### AzureOptions
 
@@ -178,8 +178,8 @@ They may change between releases without notice.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `Tenant` | _string_ | Tenant directs to a tenant-specific or common (tenant-independent) endpoint<br/>Default value is 'common' |
-| `GraphGroupField` | _string_ | GraphGroupField configures the group field to be used when building the groups list from Microsoft Graph<br/>Default value is 'id' |
+| `tenant` | _string_ | Tenant directs to a tenant-specific or common (tenant-independent) endpoint<br/>Default value is 'common' |
+| `graphGroupField` | _string_ | GraphGroupField configures the group field to be used when building the groups list from Microsoft Graph<br/>Default value is 'id' |
 
 ### BitbucketOptions
 
@@ -189,8 +189,8 @@ They may change between releases without notice.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `Team` | _string_ | Team sets restrict logins to members of this team |
-| `Repository` | _string_ | Repository sets restrict logins to user with access to this repository |
+| `team` | _string_ | Team sets restrict logins to members of this team |
+| `repository` | _string_ | Repository sets restrict logins to user with access to this repository |
 
 ### ClaimSource
 
@@ -200,9 +200,9 @@ ClaimSource allows loading a header value from a claim within the session
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `Claim` | _string_ | Claim is the name of the claim in the session that the value should be<br/>loaded from. Available claims: `access_token` `id_token` `created_at`<br/>`expires_on` `refresh_token` `email` `user` `groups` `preferred_username`. |
-| `Prefix` | _string_ | Prefix is an optional prefix that will be prepended to the value of the<br/>claim if it is non-empty. |
-| `BasicAuthPassword` | _[SecretSource](#secretsource)_ | BasicAuthPassword converts this claim into a basic auth header.<br/>Note the value of claim will become the basic auth username and the<br/>basicAuthPassword will be used as the password value. |
+| `claim` | _string_ | Claim is the name of the claim in the session that the value should be<br/>loaded from. Available claims: `access_token` `id_token` `created_at`<br/>`expires_on` `refresh_token` `email` `user` `groups` `preferred_username`. |
+| `prefix` | _string_ | Prefix is an optional prefix that will be prepended to the value of the<br/>claim if it is non-empty. |
+| `basicAuthPassword` | _[SecretSource](#secretsource)_ | BasicAuthPassword converts this claim into a basic auth header.<br/>Note the value of claim will become the basic auth username and the<br/>basicAuthPassword will be used as the password value. |
 
 ### GitHubOptions
 
@@ -212,11 +212,11 @@ ClaimSource allows loading a header value from a claim within the session
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `Org` | _string_ | Org sets restrict logins to members of this organisation |
-| `Team` | _string_ | Team sets restrict logins to members of this team |
-| `Repo` | _string_ | Repo sets restrict logins to collaborators of this repository |
-| `Token` | _string_ | Token is the token to use when verifying repository collaborators<br/>it must have push access to the repository |
-| `Users` | _[]string_ | Users allows users with these usernames to login<br/>even if they do not belong to the specified org and team or collaborators |
+| `org` | _string_ | Org sets restrict logins to members of this organisation |
+| `team` | _string_ | Team sets restrict logins to members of this team |
+| `repo` | _string_ | Repo sets restrict logins to collaborators of this repository |
+| `token` | _string_ | Token is the token to use when verifying repository collaborators<br/>it must have push access to the repository |
+| `users` | _[]string_ | Users allows users with these usernames to login<br/>even if they do not belong to the specified org and team or collaborators |
 
 ### GitLabOptions
 
@@ -226,8 +226,8 @@ ClaimSource allows loading a header value from a claim within the session
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `Group` | _[]string_ | Group sets restrict logins to members of this group |
-| `Projects` | _[]string_ | Projects restricts logins to members of these projects |
+| `group` | _[]string_ | Group sets restrict logins to members of this group |
+| `projects` | _[]string_ | Projects restricts logins to members of these projects |
 
 ### GoogleOptions
 
@@ -237,11 +237,11 @@ ClaimSource allows loading a header value from a claim within the session
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `Groups` | _[]string_ | Groups sets restrict logins to members of this Google group |
-| `AdminEmail` | _string_ | AdminEmail is the Google admin to impersonate for api calls |
-| `ServiceAccountJSON` | _string_ | ServiceAccountJSON is the path to the service account json credentials |
-| `UseApplicationDefaultCredentials` | _bool_ | UseApplicationDefaultCredentials is a boolean whether to use Application Default Credentials instead of a ServiceAccountJSON |
-| `TargetPrincipal` | _string_ | TargetPrincipal is the Google Service Account used for Application Default Credentials |
+| `group` | _[]string_ | Groups sets restrict logins to members of this Google group |
+| `adminEmail` | _string_ | AdminEmail is the Google admin to impersonate for api calls |
+| `serviceAccountJson` | _string_ | ServiceAccountJSON is the path to the service account json credentials |
+| `useApplicationDefaultCredentials` | _bool_ | UseApplicationDefaultCredentials is a boolean whether to use Application Default Credentials instead of a ServiceAccountJSON |
+| `targetPrincipal` | _string_ | TargetPrincipal is the Google Service Account used for Application Default Credentials |
 
 ### Header
 
@@ -252,9 +252,9 @@ response header.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `Name` | _string_ | Name is the header name to be used for this set of values.<br/>Names should be unique within a list of Headers. |
-| `PreserveRequestValue` | _bool_ | PreserveRequestValue determines whether any values for this header<br/>should be preserved for the request to the upstream server.<br/>This option only applies to injected request headers.<br/>Defaults to false (headers that match this header will be stripped). |
-| `Values` | _[[]HeaderValue](#headervalue)_ | Values contains the desired values for this header |
+| `name` | _string_ | Name is the header name to be used for this set of values.<br/>Names should be unique within a list of Headers. |
+| `preserveRequestValue` | _bool_ | PreserveRequestValue determines whether any values for this header<br/>should be preserved for the request to the upstream server.<br/>This option only applies to injected request headers.<br/>Defaults to false (headers that match this header will be stripped). |
+| `values` | _[[]HeaderValue](#headervalue)_ | Values contains the desired values for this header |
 
 ### HeaderValue
 
@@ -265,12 +265,12 @@ make up the header value
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `Value` | _string_ | Value expects a base64 encoded string value. |
-| `FromEnv` | _string_ | FromEnv expects the name of an environment variable. |
-| `FromFile` | _string_ | FromFile expects a path to a file containing the secret value. |
-| `Claim` | _string_ | Claim is the name of the claim in the session that the value should be<br/>loaded from. Available claims: `access_token` `id_token` `created_at`<br/>`expires_on` `refresh_token` `email` `user` `groups` `preferred_username`. |
-| `Prefix` | _string_ | Prefix is an optional prefix that will be prepended to the value of the<br/>claim if it is non-empty. |
-| `BasicAuthPassword` | _[SecretSource](#secretsource)_ | BasicAuthPassword converts this claim into a basic auth header.<br/>Note the value of claim will become the basic auth username and the<br/>basicAuthPassword will be used as the password value. |
+| `value` | _string_ | Value expects a base64 encoded string value. |
+| `fromEnv` | _string_ | FromEnv expects the name of an environment variable. |
+| `fromFile` | _string_ | FromFile expects a path to a file containing the secret value. |
+| `claim` | _string_ | Claim is the name of the claim in the session that the value should be<br/>loaded from. Available claims: `access_token` `id_token` `created_at`<br/>`expires_on` `refresh_token` `email` `user` `groups` `preferred_username`. |
+| `prefix` | _string_ | Prefix is an optional prefix that will be prepended to the value of the<br/>claim if it is non-empty. |
+| `basicAuthPassword` | _[SecretSource](#secretsource)_ | BasicAuthPassword converts this claim into a basic auth header.<br/>Note the value of claim will become the basic auth username and the<br/>basicAuthPassword will be used as the password value. |
 
 ### KeycloakOptions
 
@@ -280,8 +280,8 @@ make up the header value
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `Groups` | _[]string_ | Group enables to restrict login to members of indicated group |
-| `Roles` | _[]string_ | Role enables to restrict login to users with role (only available when using the keycloak-oidc provider) |
+| `groups` | _[]string_ | Group enables to restrict login to members of indicated group |
+| `roles` | _[]string_ | Role enables to restrict login to users with role (only available when using the keycloak-oidc provider) |
 
 ### LoginGovOptions
 
@@ -291,9 +291,9 @@ make up the header value
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `JWTKey` | _string_ | JWTKey is a private key in PEM format used to sign JWT, |
-| `JWTKeyFile` | _string_ | JWTKeyFile is a path to the private key file in PEM format used to sign the JWT |
-| `PubJWKURL` | _string_ | PubJWKURL is the JWK pubkey access endpoint |
+| `jwtKey` | _string_ | JWTKey is a private key in PEM format used to sign JWT, |
+| `jwtKeyFile` | _string_ | JWTKeyFile is a path to the private key file in PEM format used to sign the JWT |
+| `pubjwkURL` | _string_ | PubJWKURL is the JWK pubkey access endpoint |
 
 ### LoginURLParameter
 
@@ -371,9 +371,9 @@ character.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `Name` | _string_ | Name specifies the name of the query parameter. |
-| `Default` | _[]string_ |  _(Optional)_ Default specifies a default value or values that will be<br/>passed to the IdP if not overridden. |
-| `Allow` | _[[]URLParameterRule](#urlparameterrule)_ |  _(Optional)_ Allow specifies rules about how the default (if any) may be<br/>overridden via the query string to `/oauth2/start`.  Only<br/>values that match one or more of the allow rules will be<br/>forwarded to the IdP. |
+| `name` | _string_ | Name specifies the name of the query parameter. |
+| `default` | _[]string_ |  _(Optional)_ Default specifies a default value or values that will be<br/>passed to the IdP if not overridden. |
+| `allow` | _[[]URLParameterRule](#urlparameterrule)_ |  _(Optional)_ Allow specifies rules about how the default (if any) may be<br/>overridden via the query string to `/oauth2/start`.  Only<br/>values that match one or more of the allow rules will be<br/>forwarded to the IdP. |
 
 ### MicrosoftEntraIDOptions
 
@@ -383,8 +383,8 @@ character.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `AllowedTenants` | _[]string_ | AllowedTenants is a list of allowed tenants. In case of multi-tenant apps, incoming tokens are<br/>issued by different issuers and OIDC issuer verification needs to be disabled.<br/>When not specified, all tenants are allowed. Redundant for single-tenant apps<br/>(regular ID token validation matches the issuer). |
-| `FederatedTokenAuth` | _bool_ | FederatedTokenAuth enable oAuth2 client authentication with federated token projected<br/>by Entra Workload Identity plugin, instead of client secret. |
+| `allowedTenants` | _[]string_ | AllowedTenants is a list of allowed tenants. In case of multi-tenant apps, incoming tokens are<br/>issued by different issuers and OIDC issuer verification needs to be disabled.<br/>When not specified, all tenants are allowed. Redundant for single-tenant apps<br/>(regular ID token validation matches the issuer). |
+| `federatedTokenAuth` | _bool_ | FederatedTokenAuth enable oAuth2 client authentication with federated token projected<br/>by Entra Workload Identity plugin, instead of client secret. |
 
 ### OIDCOptions
 
@@ -394,18 +394,18 @@ character.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `IssuerURL` | _string_ | IssuerURL is the OpenID Connect issuer URL<br/>eg: https://accounts.google.com |
-| `InsecureAllowUnverifiedEmail` | _bool_ | InsecureAllowUnverifiedEmail prevents failures if an email address in an id_token is not verified<br/>default set to 'false' |
-| `InsecureSkipIssuerVerification` | _bool_ | InsecureSkipIssuerVerification skips verification of ID token issuers. When false, ID Token Issuers must match the OIDC discovery URL<br/>default set to 'false' |
-| `InsecureSkipNonce` | _bool_ | InsecureSkipNonce skips verifying the ID Token's nonce claim that must match<br/>the random nonce sent in the initial OAuth flow. Otherwise, the nonce is checked<br/>after the initial OAuth redeem & subsequent token refreshes.<br/>default set to 'true'<br/>Warning: In a future release, this will change to 'false' by default for enhanced security. |
-| `SkipDiscovery` | _bool_ | SkipDiscovery allows to skip OIDC discovery and use manually supplied Endpoints<br/>default set to 'false' |
-| `JwksURL` | _string_ | JwksURL is the OpenID Connect JWKS URL<br/>eg: https://www.googleapis.com/oauth2/v3/certs |
-| `PublicKeyFiles` | _[]string_ | PublicKeyFiles is a list of paths pointing to public key files in PEM format to use<br/>for verifying JWT tokens |
-| `EmailClaim` | _string_ | EmailClaim indicates which claim contains the user email,<br/>default set to 'email' |
-| `GroupsClaim` | _string_ | GroupsClaim indicates which claim contains the user groups<br/>default set to 'groups' |
-| `UserIDClaim` | _string_ | UserIDClaim indicates which claim contains the user ID<br/>default set to 'email' |
-| `AudienceClaims` | _[]string_ | AudienceClaim allows to define any claim that is verified against the client id<br/>By default `aud` claim is used for verification. |
-| `ExtraAudiences` | _[]string_ | ExtraAudiences is a list of additional audiences that are allowed<br/>to pass verification in addition to the client id. |
+| `issuerURL` | _string_ | IssuerURL is the OpenID Connect issuer URL<br/>eg: https://accounts.google.com |
+| `insecureAllowUnverifiedEmail` | _bool_ | InsecureAllowUnverifiedEmail prevents failures if an email address in an id_token is not verified<br/>default set to 'false' |
+| `insecureSkipIssuerVerification` | _bool_ | InsecureSkipIssuerVerification skips verification of ID token issuers. When false, ID Token Issuers must match the OIDC discovery URL<br/>default set to 'false' |
+| `insecureSkipNonce` | _bool_ | InsecureSkipNonce skips verifying the ID Token's nonce claim that must match<br/>the random nonce sent in the initial OAuth flow. Otherwise, the nonce is checked<br/>after the initial OAuth redeem & subsequent token refreshes.<br/>default set to 'true'<br/>Warning: In a future release, this will change to 'false' by default for enhanced security. |
+| `skipDiscovery` | _bool_ | SkipDiscovery allows to skip OIDC discovery and use manually supplied Endpoints<br/>default set to 'false' |
+| `jwksURL` | _string_ | JwksURL is the OpenID Connect JWKS URL<br/>eg: https://www.googleapis.com/oauth2/v3/certs |
+| `publicKeyFiles` | _[]string_ | PublicKeyFiles is a list of paths pointing to public key files in PEM format to use<br/>for verifying JWT tokens |
+| `emailClaim` | _string_ | EmailClaim indicates which claim contains the user email,<br/>default set to 'email' |
+| `groupsClaim` | _string_ | GroupsClaim indicates which claim contains the user groups<br/>default set to 'groups' |
+| `userIDClaim` | _string_ | UserIDClaim indicates which claim contains the user ID<br/>default set to 'email' |
+| `audienceClaims` | _[]string_ | AudienceClaim allows to define any claim that is verified against the client id<br/>By default `aud` claim is used for verification. |
+| `extraAudiences` | _[]string_ | ExtraAudiences is a list of additional audiences that are allowed<br/>to pass verification in addition to the client id. |
 
 ### Provider
 
@@ -415,36 +415,36 @@ Provider holds all configuration for a single provider
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `ClientID` | _string_ | ClientID is the OAuth Client ID that is defined in the provider<br/>This value is required for all providers. |
-| `ClientSecret` | _string_ | ClientSecret is the OAuth Client Secret that is defined in the provider<br/>This value is required for all providers. |
-| `ClientSecretFile` | _string_ | ClientSecretFile is the name of the file<br/>containing the OAuth Client Secret, it will be used if ClientSecret is not set. |
-| `KeycloakConfig` | _[KeycloakOptions](#keycloakoptions)_ | KeycloakConfig holds all configurations for Keycloak provider. |
-| `AzureConfig` | _[AzureOptions](#azureoptions)_ | AzureConfig holds all configurations for Azure provider. |
-| `MicrosoftEntraIDConfig` | _[MicrosoftEntraIDOptions](#microsoftentraidoptions)_ | MicrosoftEntraIDConfig holds all configurations for Entra ID provider. |
+| `clientID` | _string_ | ClientID is the OAuth Client ID that is defined in the provider<br/>This value is required for all providers. |
+| `clientSecret` | _string_ | ClientSecret is the OAuth Client Secret that is defined in the provider<br/>This value is required for all providers. |
+| `clientSecretFile` | _string_ | ClientSecretFile is the name of the file<br/>containing the OAuth Client Secret, it will be used if ClientSecret is not set. |
+| `keycloakConfig` | _[KeycloakOptions](#keycloakoptions)_ | KeycloakConfig holds all configurations for Keycloak provider. |
+| `azureConfig` | _[AzureOptions](#azureoptions)_ | AzureConfig holds all configurations for Azure provider. |
+| `microsoftEntraIDConfig` | _[MicrosoftEntraIDOptions](#microsoftentraidoptions)_ | MicrosoftEntraIDConfig holds all configurations for Entra ID provider. |
 | `ADFSConfig` | _[ADFSOptions](#adfsoptions)_ | ADFSConfig holds all configurations for ADFS provider. |
-| `BitbucketConfig` | _[BitbucketOptions](#bitbucketoptions)_ | BitbucketConfig holds all configurations for Bitbucket provider. |
-| `GitHubConfig` | _[GitHubOptions](#githuboptions)_ | GitHubConfig holds all configurations for GitHubC provider. |
-| `GitLabConfig` | _[GitLabOptions](#gitlaboptions)_ | GitLabConfig holds all configurations for GitLab provider. |
-| `GoogleConfig` | _[GoogleOptions](#googleoptions)_ | GoogleConfig holds all configurations for Google provider. |
-| `OIDCConfig` | _[OIDCOptions](#oidcoptions)_ | OIDCConfig holds all configurations for OIDC provider<br/>or providers utilize OIDC configurations. |
-| `LoginGovConfig` | _[LoginGovOptions](#logingovoptions)_ | LoginGovConfig holds all configurations for LoginGov provider. |
-| `ID` | _string_ | ID should be a unique identifier for the provider.<br/>This value is required for all providers. |
-| `Type` | _[ProviderType](#providertype)_ | Type is the OAuth provider<br/>must be set from the supported providers group,<br/>otherwise 'Google' is set as default |
-| `Name` | _string_ | Name is the providers display name<br/>if set, it will be shown to the users in the login page. |
-| `CAFiles` | _[]string_ | CAFiles is a list of paths to CA certificates that should be used when connecting to the provider.<br/>If not specified, the default Go trust sources are used instead |
-| `UseSystemTrustStore` | _bool_ | UseSystemTrustStore determines if your custom CA files and the system trust store are used<br/>If set to true, your custom CA files and the system trust store are used otherwise only your custom CA files. |
-| `LoginURL` | _string_ | LoginURL is the authentication endpoint |
-| `LoginURLParameters` | _[[]LoginURLParameter](#loginurlparameter)_ | LoginURLParameters defines the parameters that can be passed from the start URL to the IdP login URL |
-| `AuthRequestResponseMode` | _string_ | AuthRequestResponseMode defines the response mode to request during authorization request |
-| `RedeemURL` | _string_ | RedeemURL is the token redemption endpoint |
-| `ProfileURL` | _string_ | ProfileURL is the profile access endpoint |
-| `SkipClaimsFromProfileURL` | _bool_ | SkipClaimsFromProfileURL allows to skip request to Profile URL for resolving claims not present in id_token<br/>default set to 'false' |
-| `ProtectedResource` | _string_ | ProtectedResource is the resource that is protected (Azure AD and ADFS only) |
-| `ValidateURL` | _string_ | ValidateURL is the access token validation endpoint |
-| `Scope` | _string_ | Scope is the OAuth scope specification |
-| `AllowedGroups` | _[]string_ | AllowedGroups is a list of restrict logins to members of this group |
-| `CodeChallengeMethod` | _string_ | The code challenge method |
-| `BackendLogoutURL` | _string_ | URL to call to perform backend logout, `{id_token}` would be replaced by the actual `id_token` if available in the session |
+| `bitbucketConfig` | _[BitbucketOptions](#bitbucketoptions)_ | BitbucketConfig holds all configurations for Bitbucket provider. |
+| `githubConfig` | _[GitHubOptions](#githuboptions)_ | GitHubConfig holds all configurations for GitHubC provider. |
+| `gitlabConfig` | _[GitLabOptions](#gitlaboptions)_ | GitLabConfig holds all configurations for GitLab provider. |
+| `googleConfig` | _[GoogleOptions](#googleoptions)_ | GoogleConfig holds all configurations for Google provider. |
+| `oidcConfig` | _[OIDCOptions](#oidcoptions)_ | OIDCConfig holds all configurations for OIDC provider<br/>or providers utilize OIDC configurations. |
+| `loginGovConfig` | _[LoginGovOptions](#logingovoptions)_ | LoginGovConfig holds all configurations for LoginGov provider. |
+| `id` | _string_ | ID should be a unique identifier for the provider.<br/>This value is required for all providers. |
+| `provider` | _[ProviderType](#providertype)_ | Type is the OAuth provider<br/>must be set from the supported providers group,<br/>otherwise 'Google' is set as default |
+| `name` | _string_ | Name is the providers display name<br/>if set, it will be shown to the users in the login page. |
+| `caFiles` | _[]string_ | CAFiles is a list of paths to CA certificates that should be used when connecting to the provider.<br/>If not specified, the default Go trust sources are used instead |
+| `useSystemTrustStore` | _bool_ | UseSystemTrustStore determines if your custom CA files and the system trust store are used<br/>If set to true, your custom CA files and the system trust store are used otherwise only your custom CA files. |
+| `loginURL` | _string_ | LoginURL is the authentication endpoint |
+| `loginURLParameters` | _[[]LoginURLParameter](#loginurlparameter)_ | LoginURLParameters defines the parameters that can be passed from the start URL to the IdP login URL |
+| `authRequestResponseMode` | _string_ | AuthRequestResponseMode defines the response mode to request during authorization request |
+| `redeemURL` | _string_ | RedeemURL is the token redemption endpoint |
+| `profileURL` | _string_ | ProfileURL is the profile access endpoint |
+| `skipClaimsFromProfileURL` | _bool_ | SkipClaimsFromProfileURL allows to skip request to Profile URL for resolving claims not present in id_token<br/>default set to 'false' |
+| `resource` | _string_ | ProtectedResource is the resource that is protected (Azure AD and ADFS only) |
+| `validateURL` | _string_ | ValidateURL is the access token validation endpoint |
+| `scope` | _string_ | Scope is the OAuth scope specification |
+| `allowedGroups` | _[]string_ | AllowedGroups is a list of restrict logins to members of this group |
+| `code_challenge_method` | _string_ | The code challenge method |
+| `backendLogoutURL` | _string_ | URL to call to perform backend logout, `{id_token}` would be replaced by the actual `id_token` if available in the session |
 
 ### ProviderType
 #### (`string` alias)
@@ -477,9 +477,9 @@ Only one source within the struct should be defined at any time.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `Value` | _string_ | Value expects a base64 encoded string value. |
-| `FromEnv` | _string_ | FromEnv expects the name of an environment variable. |
-| `FromFile` | _string_ | FromFile expects a path to a file containing the secret value. |
+| `value` | _string_ | Value expects a base64 encoded string value. |
+| `fromEnv` | _string_ | FromEnv expects the name of an environment variable. |
+| `fromFile` | _string_ | FromFile expects a path to a file containing the secret value. |
 
 ### Server
 
@@ -489,9 +489,9 @@ Server represents the configuration for an HTTP(S) server
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `BindAddress` | _string_ | BindAddress is the address on which to serve traffic.<br/>Leave blank or set to "-" to disable. |
-| `SecureBindAddress` | _string_ | SecureBindAddress is the address on which to serve secure traffic.<br/>Leave blank or set to "-" to disable. |
-| `TLS` | _[TLS](#tls)_ | TLS contains the information for loading the certificate and key for the<br/>secure traffic and further configuration for the TLS server. |
+| `bindAddress` | _string_ | BindAddress is the address on which to serve traffic.<br/>Leave blank or set to "-" to disable. |
+| `secureBindAddress` | _string_ | SecureBindAddress is the address on which to serve secure traffic.<br/>Leave blank or set to "-" to disable. |
+| `tls` | _[TLS](#tls)_ | TLS contains the information for loading the certificate and key for the<br/>secure traffic and further configuration for the TLS server. |
 
 ### TLS
 
@@ -502,10 +502,10 @@ as well as an optional minimal TLS version that is acceptable.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `Key` | _[SecretSource](#secretsource)_ | Key is the TLS key data to use.<br/>Typically this will come from a file. |
-| `Cert` | _[SecretSource](#secretsource)_ | Cert is the TLS certificate data to use.<br/>Typically this will come from a file. |
-| `MinVersion` | _string_ | MinVersion is the minimal TLS version that is acceptable.<br/>E.g. Set to "TLS1.3" to select TLS version 1.3 |
-| `CipherSuites` | _[]string_ | CipherSuites is a list of TLS cipher suites that are allowed.<br/>E.g.:<br/>- TLS_RSA_WITH_RC4_128_SHA<br/>- TLS_RSA_WITH_AES_256_GCM_SHA384<br/>If not specified, the default Go safe cipher list is used.<br/>List of valid cipher suites can be found in the [crypto/tls documentation](https://pkg.go.dev/crypto/tls#pkg-constants). |
+| `key` | _[SecretSource](#secretsource)_ | Key is the TLS key data to use.<br/>Typically this will come from a file. |
+| `cert` | _[SecretSource](#secretsource)_ | Cert is the TLS certificate data to use.<br/>Typically this will come from a file. |
+| `minVersion` | _string_ | MinVersion is the minimal TLS version that is acceptable.<br/>E.g. Set to "TLS1.3" to select TLS version 1.3 |
+| `cipherSuites` | _[]string_ | CipherSuites is a list of TLS cipher suites that are allowed.<br/>E.g.:<br/>- TLS_RSA_WITH_RC4_128_SHA<br/>- TLS_RSA_WITH_AES_256_GCM_SHA384<br/>If not specified, the default Go safe cipher list is used.<br/>List of valid cipher suites can be found in the [crypto/tls documentation](https://pkg.go.dev/crypto/tls#pkg-constants). |
 
 ### URLParameterRule
 
@@ -518,8 +518,8 @@ login URL.  Either Value or Pattern should be supplied, not both.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `Value` | _string_ | A Value rule matches just this specific value |
-| `Pattern` | _string_ | A Pattern rule gives a regular expression that must be matched by<br/>some substring of the value.  The expression is _not_ automatically<br/>anchored to the start and end of the value, if you _want_ to restrict<br/>the whole parameter value you must anchor it yourself with `^` and `$`. |
+| `value` | _string_ | A Value rule matches just this specific value |
+| `pattern` | _string_ | A Pattern rule gives a regular expression that must be matched by<br/>some substring of the value.  The expression is _not_ automatically<br/>anchored to the start and end of the value, if you _want_ to restrict<br/>the whole parameter value you must anchor it yourself with `^` and `$`. |
 
 ### Upstream
 
@@ -530,18 +530,18 @@ Requests will be proxied to this upstream if the path matches the request path.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `ID` | _string_ | ID should be a unique identifier for the upstream.<br/>This value is required for all upstreams. |
-| `Path` | _string_ | Path is used to map requests to the upstream server.<br/>The closest match will take precedence and all Paths must be unique.<br/>Path can also take a pattern when used with RewriteTarget.<br/>Path segments can be captured and matched using regular experessions.<br/>Eg:<br/>- `^/foo$`: Match only the explicit path `/foo`<br/>- `^/bar/$`: Match any path prefixed with `/bar/`<br/>- `^/baz/(.*)$`: Match any path prefixed with `/baz` and capture the remaining path for use with RewriteTarget |
-| `RewriteTarget` | _string_ | RewriteTarget allows users to rewrite the request path before it is sent to<br/>the upstream server (for an HTTP/HTTPS upstream) or mapped to the filesystem<br/>(for a `file:` upstream).<br/>Use the Path to capture segments for reuse within the rewrite target.<br/>Eg: With a Path of `^/baz/(.*)`, a RewriteTarget of `/foo/$1` would rewrite<br/>the request `/baz/abc/123` to `/foo/abc/123` before proxying to the<br/>upstream server.  Or if the upstream were `file:///app`, a request for<br/>`/baz/info.html` would return the contents of the file `/app/foo/info.html`. |
-| `URI` | _string_ | The URI of the upstream server. This may be an HTTP(S) server of a File<br/>based URL. It may include a path, in which case all requests will be served<br/>under that path.<br/>Eg:<br/>- http://localhost:8080<br/>- https://service.localhost<br/>- https://service.localhost/path<br/>- file://host/path<br/>If the URI's path is "/base" and the incoming request was for "/dir",<br/>the upstream request will be for "/base/dir". |
-| `InsecureSkipTLSVerify` | _bool_ | InsecureSkipTLSVerify will skip TLS verification of upstream HTTPS hosts.<br/>This option is insecure and will allow potential Man-In-The-Middle attacks<br/>between OAuth2 Proxy and the upstream server.<br/>Defaults to false. |
-| `Static` | _bool_ | Static will make all requests to this upstream have a static response.<br/>The response will have a body of "Authenticated" and a response code<br/>matching StaticCode.<br/>If StaticCode is not set, the response will return a 200 response. |
-| `StaticCode` | _int_ | StaticCode determines the response code for the Static response.<br/>This option can only be used with Static enabled. |
-| `FlushInterval` | _duration_ | FlushInterval is the period between flushing the response buffer when<br/>streaming response from the upstream.<br/>Defaults to 1 second. |
-| `PassHostHeader` | _bool_ | PassHostHeader determines whether the request host header should be proxied<br/>to the upstream server.<br/>Defaults to true. |
-| `ProxyWebSockets` | _bool_ | ProxyWebSockets enables proxying of websockets to upstream servers<br/>Defaults to true. |
-| `Timeout` | _duration_ | Timeout is the maximum duration the server will wait for a response from the upstream server.<br/>Defaults to 30 seconds. |
-| `DisableKeepAlives` | _bool_ | DisableKeepAlives disables HTTP keep-alive connections to the upstream server.<br/>Defaults to false. |
+| `id` | _string_ | ID should be a unique identifier for the upstream.<br/>This value is required for all upstreams. |
+| `path` | _string_ | Path is used to map requests to the upstream server.<br/>The closest match will take precedence and all Paths must be unique.<br/>Path can also take a pattern when used with RewriteTarget.<br/>Path segments can be captured and matched using regular experessions.<br/>Eg:<br/>- `^/foo$`: Match only the explicit path `/foo`<br/>- `^/bar/$`: Match any path prefixed with `/bar/`<br/>- `^/baz/(.*)$`: Match any path prefixed with `/baz` and capture the remaining path for use with RewriteTarget |
+| `rewriteTarget` | _string_ | RewriteTarget allows users to rewrite the request path before it is sent to<br/>the upstream server (for an HTTP/HTTPS upstream) or mapped to the filesystem<br/>(for a `file:` upstream).<br/>Use the Path to capture segments for reuse within the rewrite target.<br/>Eg: With a Path of `^/baz/(.*)`, a RewriteTarget of `/foo/$1` would rewrite<br/>the request `/baz/abc/123` to `/foo/abc/123` before proxying to the<br/>upstream server.  Or if the upstream were `file:///app`, a request for<br/>`/baz/info.html` would return the contents of the file `/app/foo/info.html`. |
+| `uri` | _string_ | The URI of the upstream server. This may be an HTTP(S) server of a File<br/>based URL. It may include a path, in which case all requests will be served<br/>under that path.<br/>Eg:<br/>- http://localhost:8080<br/>- https://service.localhost<br/>- https://service.localhost/path<br/>- file://host/path<br/>If the URI's path is "/base" and the incoming request was for "/dir",<br/>the upstream request will be for "/base/dir". |
+| `insecureSkipTLSVerify` | _bool_ | InsecureSkipTLSVerify will skip TLS verification of upstream HTTPS hosts.<br/>This option is insecure and will allow potential Man-In-The-Middle attacks<br/>between OAuth2 Proxy and the upstream server.<br/>Defaults to false. |
+| `static` | _bool_ | Static will make all requests to this upstream have a static response.<br/>The response will have a body of "Authenticated" and a response code<br/>matching StaticCode.<br/>If StaticCode is not set, the response will return a 200 response. |
+| `staticCode` | _int_ | StaticCode determines the response code for the Static response.<br/>This option can only be used with Static enabled. |
+| `flushInterval` | _duration_ | FlushInterval is the period between flushing the response buffer when<br/>streaming response from the upstream.<br/>Defaults to 1 second. |
+| `passHostHeader` | _bool_ | PassHostHeader determines whether the request host header should be proxied<br/>to the upstream server.<br/>Defaults to true. |
+| `proxyWebSockets` | _bool_ | ProxyWebSockets enables proxying of websockets to upstream servers<br/>Defaults to true. |
+| `timeout` | _duration_ | Timeout is the maximum duration the server will wait for a response from the upstream server.<br/>Defaults to 30 seconds. |
+| `disableKeepAlives` | _bool_ | DisableKeepAlives disables HTTP keep-alive connections to the upstream server.<br/>Defaults to false. |
 
 ### UpstreamConfig
 
@@ -551,5 +551,5 @@ UpstreamConfig is a collection of definitions for upstream servers.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `ProxyRawPath` | _bool_ | ProxyRawPath will pass the raw url path to upstream allowing for urls<br/>like: "/%2F/" which would otherwise be redirected to "/" |
-| `Upstreams` | _[[]Upstream](#upstream)_ | Upstreams represents the configuration for the upstream servers.<br/>Requests will be proxied to this upstream if the path matches the request path. |
+| `proxyRawPath` | _bool_ | ProxyRawPath will pass the raw url path to upstream allowing for urls<br/>like: "/%2F/" which would otherwise be redirected to "/" |
+| `upstreams` | _[[]Upstream](#upstream)_ | Upstreams represents the configuration for the upstream servers.<br/>Requests will be proxied to this upstream if the path matches the request path. |
