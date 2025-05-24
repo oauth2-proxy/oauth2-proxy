@@ -79,7 +79,7 @@ func (c *cfbCipher) Decrypt(ciphertext []byte) ([]byte, error) {
 
 	iv, ciphertext := ciphertext[:aes.BlockSize], ciphertext[aes.BlockSize:]
 	plaintext := make([]byte, len(ciphertext))
-	stream := cipher.NewCFBEncrypter(c.Block, iv) //nolint:staticcheck
+	stream := cipher.NewCFBDecrypter(c.Block, iv) //nolint:staticcheck
 	stream.XORKeyStream(plaintext, ciphertext)
 
 	return plaintext, nil
