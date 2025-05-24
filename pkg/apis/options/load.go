@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/a8m/envsubst"
-	"github.com/mitchellh/mapstructure"
+	"github.com/go-viper/mapstructure/v2"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
