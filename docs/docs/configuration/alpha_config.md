@@ -204,6 +204,16 @@ ClaimSource allows loading a header value from a claim within the session
 | `prefix` | _string_ | Prefix is an optional prefix that will be prepended to the value of the<br/>claim if it is non-empty. |
 | `basicAuthPassword` | _[SecretSource](#secretsource)_ | BasicAuthPassword converts this claim into a basic auth header.<br/>Note the value of claim will become the basic auth username and the<br/>basicAuthPassword will be used as the password value. |
 
+### DiscordOptions
+
+(**Appears on:** [Provider](#provider))
+
+DiscordOptions holds configuration options for Discord provider
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `restricted_user_ids` | _[]string_ |  |
+
 ### Duration
 #### (`string` alias)
 
@@ -433,6 +443,7 @@ Provider holds all configuration for a single provider
 | `microsoftEntraIDConfig` | _[MicrosoftEntraIDOptions](#microsoftentraidoptions)_ | MicrosoftEntraIDConfig holds all configurations for Entra ID provider. |
 | `ADFSConfig` | _[ADFSOptions](#adfsoptions)_ | ADFSConfig holds all configurations for ADFS provider. |
 | `bitbucketConfig` | _[BitbucketOptions](#bitbucketoptions)_ | BitbucketConfig holds all configurations for Bitbucket provider. |
+| `discordConfig` | _[DiscordOptions](#discordoptions)_ | DiscordConfig holds all configurations for Discord provider. |
 | `githubConfig` | _[GitHubOptions](#githuboptions)_ | GitHubConfig holds all configurations for GitHubC provider. |
 | `gitlabConfig` | _[GitLabOptions](#gitlaboptions)_ | GitLabConfig holds all configurations for GitLab provider. |
 | `googleConfig` | _[GoogleOptions](#googleoptions)_ | GoogleConfig holds all configurations for Google provider. |
