@@ -8,6 +8,8 @@
 
 ## Changes since v7.9.0
 
+- [#2685](https://github.com/oauth2-proxy/oauth2-proxy/pull/2685) Allow arbitrary claims from the IDToken to be injected into the response header (@vegetablest)
+
 # V7.9.0
 
 ## Release Highlights

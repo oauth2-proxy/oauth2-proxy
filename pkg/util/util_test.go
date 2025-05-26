@@ -2,8 +2,10 @@ package util
 
 import (
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"os"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -251,5 +253,84 @@ func TestGetCertPool(t *testing.T) {
 		assert.NoError(t, err2)
 		_, err3 := cert3.Verify(opts)
 		assert.Error(t, err3)
+	}
+}
+
+func stringPointer(s string) *string {
+	return &s
+}
+
+func stringSlicePointer(s []string) *[]string {
+	return &s
+}
+
+func boolPointer(b bool) *bool {
+	return &b
+}
+
+type coerceClaimTableInput struct {
+	name          string
+	value         interface{}
+	dst           interface{}
+	expectedDst   interface{}
+	expectedError error
+}
+
+func TestCoerceClaim(t *testing.T) {
+	tests := []coerceClaimTableInput{
+		{
+			name:        "coerces a string to a string",
+			value:       "some_string",
+			dst:         stringPointer(""),
+			expectedDst: stringPointer("some_string"),
+		},
+		{
+			name:        "coerces a slice to a string slice",
+			value:       []interface{}{"a", "b"},
+			dst:         stringSlicePointer([]string{}),
+			expectedDst: stringSlicePointer([]string{"a", "b"}),
+		},
+		{
+			name:        "coerces a bool to a bool",
+			value:       true,
+			dst:         boolPointer(false),
+			expectedDst: boolPointer(true),
+		},
+		{
+			name:        "coerces a string to a bool",
+			value:       "true",
+			dst:         boolPointer(false),
+			expectedDst: boolPointer(true),
+		},
+		{
+			name: "coerces a map to a string",
+			value: map[string]interface{}{
+				"foo": []interface{}{"bar", "baz"},
+			},
+			dst:         stringPointer(""),
+			expectedDst: stringPointer("{\"foo\":[\"bar\",\"baz\"]}"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := CoerceClaim(tt.value, tt.dst)
+			if tt.expectedError != nil {
+				if err == nil || err.Error() != tt.expectedError.Error() {
+					t.Errorf("expected error %v, got %v", tt.expectedError, err)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if !reflect.DeepEqual(tt.dst, tt.expectedDst) {
+				gotJSON, _ := json.Marshal(tt.dst)
+				wantJSON, _ := json.Marshal(tt.expectedDst)
+				t.Errorf("expected dst to be %+v, got %+v", string(wantJSON), string(gotJSON))
+			}
+		})
 	}
 }
