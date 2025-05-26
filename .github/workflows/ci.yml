@@ -10,6 +10,11 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go:
+        - stable
+        - oldstable
     env:
       COVER: true
     steps:
@@ -19,7 +24,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version-file: go.mod
+        go-version: ${{ matrix.go }}
       id: go
 
     - name: Get dependencies
