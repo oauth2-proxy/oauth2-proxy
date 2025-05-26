@@ -1,3 +1,14 @@
+// This testsuite is disabled on Go below 1.24 because handling
+// of embedded structs by encoding/json changed in go 1.24 and that change
+// affects error messages which are checked by our tests.
+// See https://github.com/oauth2-proxy/oauth2-proxy/pull/3064#issuecomment-2909608099
+// for details.
+// The go1.24 change: https://go.dev/cl/606956
+//
+// This compile guard will be removed once the minimum go version is upgraded above 1.24 in go.mod.
+//
+//go:build go1.24
+
 package options
 
 import (
