@@ -1,3 +1,12 @@
+// This testsuite is disabled on Go below 1.24 because handling
+// of embedded structs by encoding/json changed in go 1.24 and that change
+// affects error messages which are checked by our tests.
+// The go1.24 change: https://go.dev/cl/606956
+//
+// This compile guard will be removed once the minimum go version is upgraded above 1.23 in go.mod.
+//
+//go:build go1.24
+
 package options
 
 import (
@@ -471,7 +480,7 @@ sub:
 				configFile:     []byte(`stringSliceOption: "a"`),
 				input:          &TestOptions{},
 				expectedOutput: &TestOptions{},
-				expectedErr:    errors.New("error unmarshalling config: error unmarshaling JSON: while decoding JSON: json: cannot unmarshal string into Go struct field TestOptions.StringSliceOption of type []string"),
+				expectedErr:    errors.New("error unmarshalling config: error unmarshaling JSON: while decoding JSON: json: cannot unmarshal string into Go struct field TestOptions.TestOptionSubStruct.StringSliceOption of type []string"),
 			}),
 			Entry("with a config file containing environment variable references", loadYAMLTableInput{
 				configFile: []byte("stringOption: ${TESTUSER}"),
