@@ -24,6 +24,8 @@ func NewReadynessCheck(ctx context.Context, path string, verifiable Verifiable) 
 
 func readynessCheck(ctx context.Context, path string, verifiable Verifiable, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		// Check the server context (not request).
+		// Has the context been canceled because of SIGTERM?
 		if ctx.Err() != nil {
 			rw.WriteHeader(http.StatusServiceUnavailable)
 			fmt.Fprintf(rw, "Shutting down")

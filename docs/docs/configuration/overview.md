@@ -232,6 +232,8 @@ Provider specific options can be found on their respective subpages.
 | flag: `--tls-key-file`<br/>toml: `tls_key_file`                     | string         | path to private key file                                                                                                                                                                                                                                                                                      |                    |
 | flag: `--tls-cipher-suite`<br/>toml: `tls_cipher_suites`            | string \| list | Restricts TLS cipher suites used by server to those listed (e.g. TLS_RSA_WITH_RC4_128_SHA) (may be given multiple times). If not specified, the default Go safe cipher list is used. List of valid cipher suites can be found in the [crypto/tls documentation](https://pkg.go.dev/crypto/tls#pkg-constants). |                    |
 | flag: `--tls-min-version`<br/>toml: `tls_min_version`               | string         | minimum TLS version that is acceptable, either `"TLS1.2"` or `"TLS1.3"`                                                                                                                                                                                                                                       | `"TLS1.2"`         |
+| flag: `--shutdown-duration`<br/>toml: `shutdown_duration`           | duration       | Duration of time to continue serving traffic after receiving an exit signal. During this duration the readiness endpoint will be returning HTTP 503 errors. | `"0s"` |
+
 
 ### Session Options
 

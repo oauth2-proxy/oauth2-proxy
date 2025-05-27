@@ -271,7 +271,7 @@ func (p *OAuthProxy) setupServer(opts *options.Options) error {
 		BindAddress:       opts.Server.BindAddress,
 		SecureBindAddress: opts.Server.SecureBindAddress,
 		TLS:               opts.Server.TLS,
-		ShutdownDuration:  opts.ShutdownDuration,
+		ShutdownDuration:  opts.Server.ShutdownDuration,
 	}
 
 	// Option: AllowQuerySemicolons

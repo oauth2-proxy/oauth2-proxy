@@ -11,6 +11,7 @@
 - [#3072](https://github.com/oauth2-proxy/oauth2-proxy/pull/3072) feat: support for multiple github orgs #3072 (@daniel-mersch)
 - [#3116](https://github.com/oauth2-proxy/oauth2-proxy/pull/3116) feat: bump to go1.24.5 and full dependency update (@wardviaene / @dolmen)
 - [#3097](https://github.com/oauth2-proxy/oauth2-proxy/pull/3097) chore(deps): update alpine base image to v3.22.0
+- [#3068](https://github.com/oauth2-proxy/oauth2-proxy/pull/3068) feat: graceful shutdown to prevent errors when oauth2-proxy is load balanced (@adelsz)
 
 # V7.9.0
 
