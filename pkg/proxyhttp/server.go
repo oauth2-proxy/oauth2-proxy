@@ -222,9 +222,7 @@ func (s *server) startServer(ctx context.Context, listener net.Listener) error {
 	g.Go(func() error {
 		<-groupCtx.Done()
 		logger.Printf("Context canceled. Waiting %s before shutting down the listeners.", s.shutdownDuration)
-
 		time.Sleep(s.shutdownDuration)
-
 		logger.Printf("Shutting down listener.")
 
 		if err := srv.Shutdown(context.Background()); err != nil {
