@@ -3,7 +3,6 @@ package options
 import (
 	"crypto"
 	"net/url"
-	"time"
 
 	ipapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/ip"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
@@ -29,8 +28,6 @@ type Options struct {
 	ForceHTTPS          bool     `flag:"force-https" cfg:"force_https"`
 	RawRedirectURL      string   `flag:"redirect-url" cfg:"redirect_url"`
 	RelativeRedirectURL bool     `flag:"relative-redirect-url" cfg:"relative_redirect_url"`
-
-	ShutdownDuration time.Duration `flag:"shutdown-duration" cfg:"shutdown_duration"`
 
 	AuthenticatedEmailsFile string   `flag:"authenticated-emails-file" cfg:"authenticated_emails_file"`
 	EmailDomains            []string `flag:"email-domain" cfg:"email_domains"`
@@ -164,7 +161,6 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Int("redis-connection-idle-timeout", 0, "Redis connection idle timeout seconds, if Redis timeout option is non-zero, the --redis-connection-idle-timeout must be less then Redis timeout option")
 	flagSet.String("signature-key", "", "GAP-Signature request signature key (algorithm:secretkey)")
 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
-	flagSet.Duration("shutdown-duration", 0, "Amount of time to continue serving traffic after receiving an exit signal with readiness endpoint set to false.")
 
 	flagSet.AddFlagSet(cookieFlagSet())
 	flagSet.AddFlagSet(loggingFlagSet())

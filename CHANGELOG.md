@@ -9,6 +9,7 @@
 ## Changes since v7.9.0
 
 - [#3072](https://github.com/oauth2-proxy/oauth2-proxy/pull/3072) feat: support for multiple github orgs #3072 (@daniel-mersch)
+- [#3068](https://github.com/oauth2-proxy/oauth2-proxy/pull/3068) feat: graceful shutdown to prevent errors when oauth2-proxy is load balanced (@adelsz)
 
 # V7.9.0
 
