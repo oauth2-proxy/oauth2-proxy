@@ -451,16 +451,17 @@ func getXAuthRequestAccessTokenHeader() Header {
 }
 
 type LegacyServer struct {
-	MetricsAddress       string   `flag:"metrics-address" cfg:"metrics_address"`
-	MetricsSecureAddress string   `flag:"metrics-secure-address" cfg:"metrics_secure_address"`
-	MetricsTLSCertFile   string   `flag:"metrics-tls-cert-file" cfg:"metrics_tls_cert_file"`
-	MetricsTLSKeyFile    string   `flag:"metrics-tls-key-file" cfg:"metrics_tls_key_file"`
-	HTTPAddress          string   `flag:"http-address" cfg:"http_address"`
-	HTTPSAddress         string   `flag:"https-address" cfg:"https_address"`
-	TLSCertFile          string   `flag:"tls-cert-file" cfg:"tls_cert_file"`
-	TLSKeyFile           string   `flag:"tls-key-file" cfg:"tls_key_file"`
-	TLSMinVersion        string   `flag:"tls-min-version" cfg:"tls_min_version"`
-	TLSCipherSuites      []string `flag:"tls-cipher-suite" cfg:"tls_cipher_suites"`
+	MetricsAddress       string        `flag:"metrics-address" cfg:"metrics_address"`
+	MetricsSecureAddress string        `flag:"metrics-secure-address" cfg:"metrics_secure_address"`
+	MetricsTLSCertFile   string        `flag:"metrics-tls-cert-file" cfg:"metrics_tls_cert_file"`
+	MetricsTLSKeyFile    string        `flag:"metrics-tls-key-file" cfg:"metrics_tls_key_file"`
+	HTTPAddress          string        `flag:"http-address" cfg:"http_address"`
+	HTTPSAddress         string        `flag:"https-address" cfg:"https_address"`
+	TLSCertFile          string        `flag:"tls-cert-file" cfg:"tls_cert_file"`
+	TLSKeyFile           string        `flag:"tls-key-file" cfg:"tls_key_file"`
+	TLSMinVersion        string        `flag:"tls-min-version" cfg:"tls_min_version"`
+	TLSCipherSuites      []string      `flag:"tls-cipher-suite" cfg:"tls_cipher_suites"`
+	ShutdownDuration     time.Duration `flag:"shutdown-duration" cfg:"shutdown_duration"`
 }
 
 func legacyServerFlagset() *pflag.FlagSet {
@@ -476,6 +477,7 @@ func legacyServerFlagset() *pflag.FlagSet {
 	flagSet.String("tls-key-file", "", "path to private key file")
 	flagSet.String("tls-min-version", "", "minimal TLS version for HTTPS clients (either \"TLS1.2\" or \"TLS1.3\")")
 	flagSet.StringSlice("tls-cipher-suite", []string{}, "restricts TLS cipher suites to those listed (e.g. TLS_RSA_WITH_RC4_128_SHA) (may be given multiple times)")
+	flagSet.Duration("shutdown-duration", 0, "Amount of time to continue serving traffic after receiving an exit signal with readiness endpoint set to false.")
 
 	return flagSet
 }
@@ -626,6 +628,7 @@ func (l LegacyServer) convert() (Server, Server) {
 	appServer := Server{
 		BindAddress:       l.HTTPAddress,
 		SecureBindAddress: l.HTTPSAddress,
+		ShutdownDuration:  l.ShutdownDuration,
 	}
 	if l.TLSKeyFile != "" || l.TLSCertFile != "" {
 		appServer.TLS = &TLS{
