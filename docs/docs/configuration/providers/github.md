@@ -8,7 +8,7 @@ title: GitHub
 | Flag             | Toml Field     | Type           | Description                                                                                                   | Default |
 | ---------------- | -------------- | -------------- | ------------------------------------------------------------------------------------------------------------- | ------- |
 | `--github-org`   | `github_org`   | string         | restrict logins to members of this organisation                                                               |         |
-| `--github-team`  | `github_team`  | string         | restrict logins to members of any of these teams (slug), separated by a comma                                 |         |
+| `--github-team`  | `github_team`  | string         | restrict logins to members of any of these teams (slug) or (org:team), comma separated                        |         |
 | `--github-repo`  | `github_repo`  | string         | restrict logins to collaborators of this repository formatted as `orgname/repo`                               |         |
 | `--github-token` | `github_token` | string         | the token to use when verifying repository collaborators (must have push access to the repository)            |         |
 | `--github-user`  | `github_users` | string \| list | To allow users to login by username even if they do not belong to the specified org and team or collaborators |         |
@@ -24,23 +24,36 @@ team level access, or to collaborators of a repository. Restricting by these opt
 NOTE: When `--github-user` is set, the specified users are allowed to log in even if they do not belong to the specified 
 org and team or collaborators.
 
-To restrict by organization only, include the following flag:
+To restrict access to your organization:
 
 ```shell
-    --github-org=""  # restrict logins to members of this organisation
+    # restrict logins to members of this organisation
+    --github-org="your-org"
 ```
 
-To restrict within an organization to specific teams, include the following flag in addition to `-github-org`:
+To restrict access to specific teams within an organization:
 
 ```shell
-    --github-team=""  # restrict logins to members of any of these teams (slug), separated by a comma
+    --github-org="your-org"
+    # restrict logins to members of any of these teams (slug), comma separated
+    --github-team="team1,team2,team3"
+```
+
+To restrict to teams within different organizations, keep the organization flag empty and use `--github-team` like so:
+
+```shell
+    # keep empty
+    --github-org=""
+    # restrict logins to members to any of the following teams (format <org>:<slug>, like octo:team1), comma separated
+    --github-team="org1:team1,org2:team1,org3:team42,octo:cat"
 ```
 
 If you would rather restrict access to collaborators of a repository, those users must either have push access to a 
 public repository or any access to a private repository:
 
 ```shell
-    --github-repo=""  # restrict logins to collaborators of this repository formatted as orgname/repo
+    # restrict logins to collaborators of this repository formatted as orgname/repo
+    --github-repo=""
 ```
 
 If you'd like to allow access to users with **read only** access to a **public** repository you will need to provide a 
@@ -48,14 +61,15 @@ If you'd like to allow access to users with **read only** access to a **public**
 created with at least the `public_repo` scope:
 
 ```shell
-    --github-token=""  # the token to use when verifying repository collaborators
+    # the token to use when verifying repository collaborators
+    --github-token=""
 ```
 
-To allow a user to log in with their username even if they do not belong to the specified org and team or collaborators, 
-separated by a comma
+To allow a user to log in with their username even if they do not belong to the specified org and team or collaborators:
 
 ```shell
-    --github-user="" #allow logins by username, separated by a comma
+    # allow logins by username, comma separated
+    --github-user=""
 ```
 
 If you are using GitHub enterprise, make sure you set the following to the appropriate url:
