@@ -35,11 +35,11 @@ func PicsSignOutAllSessions(backendLogoutAllSessionsURL string, introspectClaims
 	return resp, err
 }
 
-func PicsRevokeAcessToken(backendRevokeURL string, accessToken string, clientID string, clientSecret string) (resp requests.Result, err error) {
+func PicsRevokeAcessToken(backendRevokeURL string, accessToken string, clientID string, clientSecret string) (err error) {
 	authHeader := "Basic " + base64.StdEncoding.EncodeToString([]byte(clientID+":"+clientSecret))
 	body := "token=" + accessToken
 
-	resp = requests.New(backendRevokeURL).
+	resp := requests.New(backendRevokeURL).
 		WithMethod("POST").
 		SetHeader("Authorization", authHeader).
 		SetHeader("api-version", "2").
@@ -49,10 +49,14 @@ func PicsRevokeAcessToken(backendRevokeURL string, accessToken string, clientID 
 		Do()
 
 	if resp.Error() != nil {
-		return nil, fmt.Errorf("error revoking access token: %v", resp.Error())
+		return fmt.Errorf("error revoking access token: %v", resp.Error())
 	}
 
-	return resp, nil
+	if resp.StatusCode() != 200 {
+		return fmt.Errorf("error revoking access token: %v", resp.Error())
+	}
+
+	return nil
 }
 
 func getUserID(introspectClaims string) (string, error) {
