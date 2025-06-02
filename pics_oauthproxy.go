@@ -29,7 +29,7 @@ func PicsSignOutAllSessions(backendLogoutAllSessionsURL string, introspectClaims
 		Do()
 
 	if resp.Error() != nil {
-		return nil, fmt.Errorf("error logging out from IAM: %v", resp.Error())
+		return nil, fmt.Errorf("errr logging out from IAM: %v", resp.Error())
 	}
 
 	return resp, err
