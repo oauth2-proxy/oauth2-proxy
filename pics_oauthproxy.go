@@ -53,7 +53,7 @@ func PicsRevokeAcessToken(backendRevokeURL string, accessToken string, clientID 
 	}
 
 	if resp.StatusCode() != 200 {
-		return fmt.Errorf("error revoking access token: %v", resp.Error())
+		return fmt.Errorf("error revoking access token: status code %d, error: %v", resp.StatusCode(), resp.Error())
 	}
 
 	return nil
