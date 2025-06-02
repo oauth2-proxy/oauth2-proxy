@@ -815,7 +815,7 @@ func (p *OAuthProxy) backendLogout(rw http.ResponseWriter, req *http.Request, si
 		p.picsAuditClient.CreateSuccessfulLogoutAuditEntry(session, req.RequestURI, req.Header.Get("edisp-org-id"))
 	} else {
 		if providerData.BackendRevokeAccessTokenURL != "" {
-			err := PicsRevokeAcessToken(providerData.BackendRevokeAccessTokenURL, session.AccessToken, providerData.ClientID, providerData.ClientSecret)
+			err := PicsRevokeAccessToken(providerData.BackendRevokeAccessTokenURL, session.AccessToken, providerData.ClientID, providerData.ClientSecret)
 			if err != nil {
 				logger.Errorf("error while calling backend revoke access token: %v", err)
 			} else {

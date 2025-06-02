@@ -35,7 +35,7 @@ func PicsSignOutAllSessions(backendLogoutAllSessionsURL string, introspectClaims
 	return resp, err
 }
 
-func PicsRevokeAcessToken(backendRevokeURL string, accessToken string, clientID string, clientSecret string) (err error) {
+func PicsRevokeAccessToken(backendRevokeURL string, accessToken string, clientID string, clientSecret string) (err error) {
 	authHeader := "Basic " + base64.StdEncoding.EncodeToString([]byte(clientID+":"+clientSecret))
 	body := "token=" + accessToken
 
