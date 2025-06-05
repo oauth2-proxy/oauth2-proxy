@@ -11,6 +11,7 @@ Valid providers are :
 - [ADFS](adfs.md)
 - [Bitbucket](bitbucket.md)
 - [DigitalOcean](digitalocean.md)
+- [Discord](discord.md)
 - [Facebook](facebook.md)
 - [Gitea](gitea.md)
 - [GitHub](github.md)
