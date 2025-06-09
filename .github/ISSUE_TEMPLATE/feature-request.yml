@@ -31,6 +31,7 @@ body:
       options:
         - new provider
         - adfs
+        - arcgis
         - azure
         - bitbucket
         - digitalocean

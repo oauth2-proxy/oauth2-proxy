@@ -15,6 +15,7 @@ body:
       description: Which identity provider are you using?
       options:
         - adfs
+        - arcgis
         - azure
         - bitbucket
         - digitalocean

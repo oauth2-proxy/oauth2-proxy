@@ -97,7 +97,7 @@ type Provider struct {
 }
 
 // ProviderType is used to enumerate the different provider type options
-// Valid options are: adfs, azure, bitbucket, digitalocean facebook, github,
+// Valid options are: adfs, arcgis, azure, bitbucket, digitalocean facebook, github,
 // gitlab, google, keycloak, keycloak-oidc, linkedin, login.gov, nextcloud
 // and oidc.
 type ProviderType string
@@ -105,6 +105,9 @@ type ProviderType string
 const (
 	// ADFSProvider is the provider type for ADFS
 	ADFSProvider ProviderType = "adfs"
+
+	// ArcgisProvider is the provider type for Arcgis
+	ArcgisProvider ProviderType = "arcgis"
 
 	// AzureProvider is the provider type for Azure
 	AzureProvider ProviderType = "azure"

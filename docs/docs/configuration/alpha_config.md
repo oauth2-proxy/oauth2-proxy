@@ -462,7 +462,7 @@ Provider holds all configuration for a single provider
 (**Appears on:** [Provider](#provider))
 
 ProviderType is used to enumerate the different provider type options
-Valid options are: adfs, azure, bitbucket, digitalocean facebook, github,
+Valid options are: adfs, arcgis, azure, bitbucket, digitalocean facebook, github,
 gitlab, google, keycloak, keycloak-oidc, linkedin, login.gov, nextcloud
 and oidc.
 
