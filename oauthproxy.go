@@ -565,7 +565,7 @@ func (p *OAuthProxy) ClearSessionCookie(rw http.ResponseWriter, req *http.Reques
 }
 
 func (p *OAuthProxy) ClearAllSessions(req *http.Request, session *sessionsapi.SessionState) error {
-	return p.sessionStore.ClearAll(req, session)
+	return p.sessionStore.ClearAllUserSessions(req, session)
 }
 
 // LoadCookiedSession reads the user's authentication details from the request

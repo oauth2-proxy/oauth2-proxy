@@ -34,8 +34,8 @@ type SessionStore struct {
 }
 
 // ClearAll implements sessions.SessionStore.
-func (s *SessionStore) ClearAll(req *http.Request, session *sessions.SessionState) error {
-	panic("unimplemented")
+func (s *SessionStore) ClearAllUserSessions(req *http.Request, session *sessions.SessionState) error {
+	return fmt.Errorf("ClearAllUserSessions is only supported by redis store")
 }
 
 // Save takes a sessions.SessionState and stores the information from it

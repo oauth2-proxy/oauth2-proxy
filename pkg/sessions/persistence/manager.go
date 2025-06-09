@@ -75,7 +75,7 @@ func (m *Manager) Load(req *http.Request) (*sessions.SessionState, error) {
 }
 
 // ClearAll implements sessions.SessionStore.
-func (m *Manager) ClearAll(req *http.Request, session *sessions.SessionState) error {
+func (m *Manager) ClearAllUserSessions(req *http.Request, session *sessions.SessionState) error {
 	ticket, _ := decodeTicketFromRequest(req, m.Options)
 	sessionKey := encryption.EncryptStringWithSecret(session.User+session.Email, ticket.options.Secret)
 	keys, err := m.Store.LoadList(req.Context(), sessionKey)
