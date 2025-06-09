@@ -45,6 +45,31 @@ func (store *SessionStore) Save(ctx context.Context, key string, value []byte, e
 	return nil
 }
 
+// Save takes a sessions.SessionState and stores the information from it
+// to redis, and adds a new persistence cookie on the HTTP response writer
+func (store *SessionStore) RPush(ctx context.Context, key string, value string, exp time.Duration) error {
+	err := store.Client.RPush(ctx, key, value)
+	if err != nil {
+		return fmt.Errorf("error appending redis session: %v", err)
+	}
+
+	if exp > 0 {
+		if err := store.Client.Expire(ctx, key, exp); err != nil {
+			return fmt.Errorf("error settings expiration time on appending redis session: %v", err)
+		}
+	}
+	return nil
+}
+
+// LoadList reads a list of strings from Redis at the given key and returns.
+func (store *SessionStore) LoadList(ctx context.Context, key string) ([]string, error) {
+	values, err := store.Client.LRange(ctx, key)
+	if err != nil {
+		return nil, fmt.Errorf("error loading redis list: %v", err)
+	}
+	return values, nil
+}
+
 // Load reads sessions.SessionState information from a persistence
 // cookie within the HTTP request object
 func (store *SessionStore) Load(ctx context.Context, key string) ([]byte, error) {

@@ -20,7 +20,11 @@ import (
 
 // saveFunc performs a persistent store's save functionality using
 // a key string, value []byte & (optional) expiration time.Duration
-type saveFunc func(string, []byte, time.Duration) error
+type saveFunc func(string, []byte, time.Duration, *sessions.SessionState) error
+
+// saveUserStateFunc performs a persistent store's save functionality using
+// a key string, value []byte & (optional) expiration time.Duration
+type saverUserMapSessionFunc func(string, string, time.Duration) error
 
 // loadFunc performs a load from a persistent store using a
 // string key and returning the stored value as []byte
@@ -157,7 +161,7 @@ func decodeTicketFromRequest(req *http.Request, cookieOpts *options.Cookie) (*ti
 
 // saveSession encodes the SessionState with the ticket's secret and persists
 // it to disk via the passed saveFunc.
-func (t *ticket) saveSession(s *sessions.SessionState, saver saveFunc) error {
+func (t *ticket) saveSession(s *sessions.SessionState, saver saveFunc, saverUserMapSession saverUserMapSessionFunc) error {
 	c, err := t.makeCipher()
 	if err != nil {
 		return err
@@ -166,7 +170,10 @@ func (t *ticket) saveSession(s *sessions.SessionState, saver saveFunc) error {
 	if err != nil {
 		return fmt.Errorf("failed to encode the session state with the ticket: %v", err)
 	}
-	return saver(t.id, ciphertext, t.options.Expire)
+
+	encodedUserState := encryption.EncryptStringWithSecret(s.User+s.Email, t.options.Secret)
+	saverUserMapSession(encodedUserState, t.id, 2*time.Hour)
+	return saver(t.id, ciphertext, t.options.Expire, s)
 }
 
 // loadSession loads a session from the disk store via the passed loadFunc

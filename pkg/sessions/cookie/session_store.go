@@ -33,6 +33,11 @@ type SessionStore struct {
 	Minimal      bool
 }
 
+// ClearAll implements sessions.SessionStore.
+func (s *SessionStore) ClearAll(req *http.Request, session *sessions.SessionState) error {
+	panic("unimplemented")
+}
+
 // Save takes a sessions.SessionState and stores the information from it
 // within Cookies set on the HTTP response writer
 func (s *SessionStore) Save(rw http.ResponseWriter, req *http.Request, ss *sessions.SessionState) error {

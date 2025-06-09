@@ -13,7 +13,9 @@ import (
 type Store interface {
 	Save(context.Context, string, []byte, time.Duration) error
 	Load(context.Context, string) ([]byte, error)
+	LoadList(ctx context.Context, key string) ([]string, error)
 	Clear(context.Context, string) error
 	Lock(key string) sessions.Lock
+	RPush(context.Context, string, string, time.Duration) error
 	VerifyConnection(context.Context) error
 }

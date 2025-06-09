@@ -8,6 +8,7 @@ import (
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 )
 
 // Manager wraps a Store and handles the implementation details of the
@@ -42,9 +43,14 @@ func (m *Manager) Save(rw http.ResponseWriter, req *http.Request, s *sessions.Se
 		}
 	}
 
-	err = tckt.saveSession(s, func(key string, val []byte, exp time.Duration) error {
-		return m.Store.Save(req.Context(), key, val, exp)
-	})
+	err = tckt.saveSession(
+		s,
+		func(key string, val []byte, exp time.Duration, s *sessions.SessionState) error {
+			return m.Store.Save(req.Context(), key, val, exp)
+		},
+		func(key string, val string, exp time.Duration) error {
+			return m.Store.RPush(req.Context(), key, val, exp)
+		})
 	if err != nil {
 		return err
 	}
@@ -66,6 +72,30 @@ func (m *Manager) Load(req *http.Request) (*sessions.SessionState, error) {
 		},
 		m.Store.Lock,
 	)
+}
+
+// ClearAll implements sessions.SessionStore.
+func (m *Manager) ClearAll(req *http.Request, session *sessions.SessionState) error {
+	ticket, _ := decodeTicketFromRequest(req, m.Options)
+	sessionKey := encryption.EncryptStringWithSecret(session.User+session.Email, ticket.options.Secret)
+	keys, err := m.Store.LoadList(req.Context(), sessionKey)
+	if err != nil {
+		return fmt.Errorf("error decoding ticket to clear session: %v", err)
+	}
+
+	for _, key := range keys {
+		err = m.Store.Clear(req.Context(), key)
+		if err != nil {
+			return fmt.Errorf("error clearing session for key: %v", err)
+		}
+	}
+
+	err = m.Store.Clear(req.Context(), sessionKey)
+	if err != nil {
+		return fmt.Errorf("error clearing sessions keys: %v", err)
+	}
+
+	return err
 }
 
 // Clear clears any saved session information for a given ticket cookie.
