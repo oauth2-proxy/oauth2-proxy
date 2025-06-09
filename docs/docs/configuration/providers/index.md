@@ -9,6 +9,7 @@ with Redirect URI(s) for the domain you intend to run `oauth2-proxy` on.
 Valid providers are :
 
 - [ADFS](adfs.md)
+- [Arcgis](arcgis.md)
 - [Bitbucket](bitbucket.md)
 - [DigitalOcean](digitalocean.md)
 - [Facebook](facebook.md)

@@ -32,6 +32,7 @@ const sidebars = {
           },
           items: [
             "configuration/providers/adfs",
+            "configuration/providers/arcgis",
             "configuration/providers/azure",
             "configuration/providers/bitbucket",
             "configuration/providers/digitalocean",
