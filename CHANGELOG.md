@@ -6,9 +6,31 @@
 
 ## Breaking Changes
 
+## Changes since v7.9.0
+
+- [#3072](https://github.com/oauth2-proxy/oauth2-proxy/pull/3072) feat: support for multiple github orgs #3072 (@daniel-mersch)
+
+# V7.9.0
+
+## Release Highlights
+- 📨 OAuth 2.0 Multiple Response Type Encoding
+- 📦️ Support for JWT encoded profile claims
+- 🔵 Golang version upgrade to v1.23.8
+- 🕵️‍♀️ Vulnerabilities have been addressed
+  - [CVE-2025-22871](https://github.com/advisories/GHSA-g9pc-8g42-g6vq)
+- 🐛 Squashed some bugs
+  
+## Important Notes
+
+## Breaking Changes
+
 ## Changes since v7.8.2
 
+- [#3031](https://github.com/oauth2-proxy/oauth2-proxy/pull/3031) Fixes Refresh Token bug with Entra ID and Workload Identity (#3027)[https://github.com/oauth2-proxy/oauth2-proxy/issues/3028] by using client assertion when redeeming the token (@richard87)
 - [#3001](https://github.com/oauth2-proxy/oauth2-proxy/pull/3001) Allow to set non-default authorization request response mode (@stieler-it)
+- [#3041](https://github.com/oauth2-proxy/oauth2-proxy/pull/3041) chore(deps): upgrade to latest golang v1.23.x release (@TheImplementer)
+- [#1916](https://github.com/oauth2-proxy/oauth2-proxy/pull/1916) fix: role extraction from access token in keycloak oidc (@Elektordi / @tuunit)
+- [#3014](https://github.com/oauth2-proxy/oauth2-proxy/pull/3014) feat: ability to parse JWT encoded profile claims (@ikarius)
 
 # V7.8.2
 
@@ -32,6 +54,7 @@
 
 ## Changes since v7.8.1
 
+- [#2918](https://github.com/oauth2-proxy/oauth2-proxy/issues/2918) feat: add --bearer-token-login-fallback (@carillonator)
 - [#2927](https://github.com/oauth2-proxy/oauth2-proxy/pull/2927) chore(deps/build): bump golang to 1.23 and use go.mod as single point of truth for all build files (@tuunit)
 - [#2697](https://github.com/oauth2-proxy/oauth2-proxy/pull/2697) Use `Max-Age` instead of `Expires` for cookie expiration (@matpen-wi)
 - [#2969](https://github.com/oauth2-proxy/oauth2-proxy/pull/2969) Update golang.org/x/oauth2 to v0.27.0 to address CVE-2025-22868 (@dsymonds)

@@ -11,7 +11,11 @@ const (
 // OIDCAudienceClaims is the generic audience claim list used by the OIDC provider.
 var OIDCAudienceClaims = []string{"aud"}
 
-// Providers is a collection of definitions for providers.
+// The provider can be selected using the `provider` configuration value, or
+// set in the [`providers` array using
+// AlphaConfig](https://oauth2-proxy.github.io/oauth2-proxy/configuration/alpha-config#providers).
+// However, [**the feature to implement multiple providers is not
+// complete**](https://github.com/oauth2-proxy/oauth2-proxy/issues/926).
 type Providers []Provider
 
 // Provider holds all configuration for a single provider

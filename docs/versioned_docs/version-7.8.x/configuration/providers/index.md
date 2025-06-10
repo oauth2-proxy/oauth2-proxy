@@ -25,7 +25,7 @@ Valid providers are :
 - [Nextcloud](nextcloud.md)
 - [OpenID Connect](openid_connect.md)
 
-The provider can be selected using the `provider` configuration value.
+The provider can be selected using the `provider` configuration value, or set in the [`providers` array using AlphaConfig](https://oauth2-proxy.github.io/oauth2-proxy/configuration/alpha-config#providers). However, [**the feature to implement multiple providers is not complete**](https://github.com/oauth2-proxy/oauth2-proxy/issues/926).
 
 Please note that not all providers support all claims. The `preferred_username` claim is currently only supported by the 
 OpenID Connect provider.
