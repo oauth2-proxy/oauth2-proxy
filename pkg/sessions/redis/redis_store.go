@@ -218,6 +218,10 @@ func setupTLSConfig(opts options.RedisStoreOptions, opt *redis.Options) error {
 // parseRedisURLs parses a list of redis urls and returns a list
 // of addresses in the form of host:port and redis.Options that can be used to connect to Redis
 func parseRedisURLs(urls []string) ([]string, *redis.Options, error) {
+	if len(urls) == 0 {
+		return nil, nil, fmt.Errorf("unable to parse redis urls: no redis urls provided")
+	}
+
 	addrs := []string{}
 	var redisOptions *redis.Options
 	for _, u := range urls {
