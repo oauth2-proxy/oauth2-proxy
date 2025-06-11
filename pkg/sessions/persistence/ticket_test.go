@@ -76,7 +76,7 @@ var _ = Describe("Session Ticket Tests", func() {
 			}
 			err = t.saveSession(
 				ss,
-				func(k string, v []byte, e time.Duration, s *sessions.SessionState) error {
+				func(k string, v []byte, e time.Duration) error {
 					store[k] = v
 					return nil
 				},
@@ -98,7 +98,7 @@ var _ = Describe("Session Ticket Tests", func() {
 
 			err = t.saveSession(
 				&sessions.SessionState{User: "foobar"},
-				func(k string, v []byte, e time.Duration, s *sessions.SessionState) error {
+				func(k string, v []byte, e time.Duration) error {
 					return errors.New("save error")
 				},
 				func(key string, value string, d time.Duration) error {
@@ -113,7 +113,7 @@ var _ = Describe("Session Ticket Tests", func() {
 
 			err = t.saveSession(
 				&sessions.SessionState{User: "foobar"},
-				func(k string, v []byte, e time.Duration, s *sessions.SessionState) error {
+				func(k string, v []byte, e time.Duration) error {
 					return nil
 				},
 				func(key string, value string, d time.Duration) error {

@@ -20,7 +20,7 @@ import (
 
 // saveFunc performs a persistent store's save functionality using
 // a key string, value []byte & (optional) expiration time.Duration
-type saveFunc func(string, []byte, time.Duration, *sessions.SessionState) error
+type saveFunc func(string, []byte, time.Duration) error
 
 // saveUserStateFunc performs a persistent store's save functionality using
 // a key string, value []byte & (optional) expiration time.Duration
@@ -173,7 +173,7 @@ func (t *ticket) saveSession(s *sessions.SessionState, saver saveFunc, saverUser
 
 	encodedUserState := encryption.EncryptStringWithSecret(s.User+s.Email, t.options.Secret)
 	saverUserMapSession(encodedUserState, t.id, 2*time.Hour)
-	return saver(t.id, ciphertext, t.options.Expire, s)
+	return saver(t.id, ciphertext, t.options.Expire)
 }
 
 // loadSession loads a session from the disk store via the passed loadFunc

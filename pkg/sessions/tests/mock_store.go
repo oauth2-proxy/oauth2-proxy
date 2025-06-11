@@ -29,7 +29,7 @@ type MockStore struct {
 }
 
 // LoadList implements persistence.Store.
-func (s *MockStore) LoadList(ctx context.Context, key string) ([]string, error) {
+func (s *MockStore) LoadList(_ context.Context, key string) ([]string, error) {
 	entry, ok := s.cacheList[key]
 	if !ok || entry.expiration <= s.elapsed {
 		delete(s.cache, key)
@@ -39,7 +39,7 @@ func (s *MockStore) LoadList(ctx context.Context, key string) ([]string, error) 
 }
 
 // RPush implements persistence.Store.
-func (s *MockStore) RPush(ctx context.Context, key string, value string, time time.Duration) error {
+func (s *MockStore) RPush(_ context.Context, key string, value string, time time.Duration) error {
 	entry, ok := s.cacheList[key]
 	if ok {
 		// If the key exists, check if the expiration is still valid
