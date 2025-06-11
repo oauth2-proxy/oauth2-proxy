@@ -451,6 +451,28 @@ func SessionStoreInterfaceTests(in *testInput) {
 		CheckCookieOptions(in)
 	})
 
+	Context("Clear all user sessions", func() {
+		BeforeEach(func() {
+			req := httptest.NewRequest("GET", "http://example.com/", nil)
+			resp := httptest.NewRecorder()
+			err := in.ss().Save(resp, req, in.session)
+			Expect(err).ToNot(HaveOccurred())
+			resultCookies := resp.Result().Cookies()
+			for _, c := range resultCookies {
+				in.request.AddCookie(c)
+			}
+		})
+		It("should clear all user sessions", func() {
+			err := in.ss().ClearAllUserSessions(in.request, in.session)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Verify that the session is cleared
+			loadedSession, loadErr := in.ss().Load(in.request)
+			Expect(loadedSession).To(BeNil())
+			Expect(loadErr).To(HaveOccurred())
+		})
+	})
+
 	Context("when Load is called", func() {
 		Context("with a valid session cookie in the request", func() {
 			BeforeEach(func() {

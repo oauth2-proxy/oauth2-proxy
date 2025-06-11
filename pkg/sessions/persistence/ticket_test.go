@@ -70,15 +70,26 @@ var _ = Describe("Session Ticket Tests", func() {
 
 			ss := &sessions.SessionState{User: "foobar"}
 			store := map[string][]byte{}
-			err = t.saveSession(ss, func(k string, v []byte, e time.Duration) error {
-				store[k] = v
-				return nil
-			})
+			storeUserSessionList := map[string][]string{}
+			storedUserSessionListExpected := map[string][]string{
+				"16-axDAZ63SxeHvCLMjoF5EEX0ipSzNNqxpUITxPxgk": {t.id},
+			}
+			err = t.saveSession(
+				ss,
+				func(k string, v []byte, e time.Duration, s *sessions.SessionState) error {
+					store[k] = v
+					return nil
+				},
+				func(key string, value string, d time.Duration) error {
+					storeUserSessionList[key] = append(storeUserSessionList[key], value)
+					return nil
+				})
 			Expect(err).ToNot(HaveOccurred())
 
 			stored, err := sessions.DecodeSessionState(store[t.id], c, false)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stored).To(Equal(ss))
+			Expect(storeUserSessionList).To(Equal(storedUserSessionListExpected))
 		})
 
 		It("errors when the saveFunc errors", func() {
@@ -87,10 +98,28 @@ var _ = Describe("Session Ticket Tests", func() {
 
 			err = t.saveSession(
 				&sessions.SessionState{User: "foobar"},
-				func(k string, v []byte, e time.Duration) error {
+				func(k string, v []byte, e time.Duration, s *sessions.SessionState) error {
 					return errors.New("save error")
+				},
+				func(key string, value string, d time.Duration) error {
+					return nil
 				})
 			Expect(err).To(MatchError(errors.New("save error")))
+		})
+
+		It("should not return error when the saverUserMapSession errors", func() {
+			t, err := newTicket(&options.Cookie{Name: "dummy"})
+			Expect(err).ToNot(HaveOccurred())
+
+			err = t.saveSession(
+				&sessions.SessionState{User: "foobar"},
+				func(k string, v []byte, e time.Duration, s *sessions.SessionState) error {
+					return nil
+				},
+				func(key string, value string, d time.Duration) error {
+					return errors.New("save user session error")
+				})
+			Expect(err).To(BeNil())
 		})
 	})
 

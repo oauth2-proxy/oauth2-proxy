@@ -778,13 +778,17 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request, signOutA
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
-	session, err := p.getAuthenticatedSession(rw, req)
-	if err != nil {
-		logger.Errorf("Error clearing all sessions cookie: %v", err)
-	}
 	err = p.ClearSessionCookie(rw, req)
 	if signOutAllSessions {
-		err = p.ClearAllSessions(req, session)
+		session, errAuthSession := p.getAuthenticatedSession(rw, req)
+		if errAuthSession != nil {
+			logger.Errorf("Error clearing all sessions cookie: %v", errAuthSession)
+		} else {
+			clearAllError := p.ClearAllSessions(req, session)
+			if clearAllError != nil {
+				logger.Errorf("Error clearing session cookie: %v", clearAllError)
+			}
+		}
 	}
 	if err != nil {
 		logger.Errorf("Error clearing session cookie: %v", err)

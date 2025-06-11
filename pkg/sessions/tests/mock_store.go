@@ -14,12 +14,48 @@ type entry struct {
 	expiration time.Duration
 }
 
+type entryList struct {
+	data       []string
+	expiration time.Duration
+}
+
 // MockStore is a generic in-memory implementation of persistence.Store
 // for mocking in tests
 type MockStore struct {
 	cache     map[string]entry
+	cacheList map[string]entryList
 	lockCache map[string]*MockLock
 	elapsed   time.Duration
+}
+
+// LoadList implements persistence.Store.
+func (s *MockStore) LoadList(ctx context.Context, key string) ([]string, error) {
+	entry, ok := s.cacheList[key]
+	if !ok || entry.expiration <= s.elapsed {
+		delete(s.cache, key)
+		return nil, fmt.Errorf("key not found: %s", key)
+	}
+	return entry.data, nil
+}
+
+// RPush implements persistence.Store.
+func (s *MockStore) RPush(ctx context.Context, key string, value string, time time.Duration) error {
+	entry, ok := s.cacheList[key]
+	if ok {
+		// If the key exists, check if the expiration is still valid
+		entry.data = append(entry.data, value)
+		s.cacheList[key] = entry
+	} else {
+		// If the key does not exist, create a new entryList
+		if s.cacheList == nil {
+			s.cacheList = make(map[string]entryList)
+		}
+		s.cacheList[key] = entryList{
+			data:       []string{value},
+			expiration: time,
+		}
+	}
+	return nil
 }
 
 // NewMockStore creates a MockStore
