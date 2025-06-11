@@ -27,6 +27,7 @@ type testInput struct {
 	request               *http.Request
 	response              *httptest.ResponseRecorder
 	persistentFastForward PersistentStoreFastForwardFunc
+	opts                  *options.SessionOptions
 }
 
 // sessionStoreFunc is used in testInput to wrap the SessionStore interface.
@@ -93,6 +94,7 @@ func RunSessionStoreTests(newSS NewSessionStoreFunc, persistentFastForward Persi
 				request:               request,
 				response:              response,
 				persistentFastForward: persistentFastForward,
+				opts:                  opts,
 			}
 		})
 
@@ -449,6 +451,32 @@ func SessionStoreInterfaceTests(in *testInput) {
 		})
 
 		CheckCookieOptions(in)
+	})
+
+	Context("Clear all user sessions", func() {
+		BeforeEach(func() {
+			req := httptest.NewRequest("GET", "http://example.com/", nil)
+			resp := httptest.NewRecorder()
+			err := in.ss().Save(resp, req, in.session)
+			Expect(err).ToNot(HaveOccurred())
+			resultCookies := resp.Result().Cookies()
+			for _, c := range resultCookies {
+				in.request.AddCookie(c)
+			}
+		})
+		It("should clear all user sessions", func() {
+			if in.opts.Type == options.CookieSessionStoreType {
+				Expect(in.ss().ClearAllUserSessions(in.request, in.session)).To(MatchError("ClearAllUserSessions is only supported by redis store"))
+				return
+			}
+			err := in.ss().ClearAllUserSessions(in.request, in.session)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Verify that the session is cleared
+			loadedSession, loadErr := in.ss().Load(in.request)
+			Expect(loadedSession).To(BeNil())
+			Expect(loadErr).To(HaveOccurred())
+		})
 	})
 
 	Context("when Load is called", func() {

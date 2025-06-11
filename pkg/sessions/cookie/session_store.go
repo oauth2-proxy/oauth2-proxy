@@ -33,6 +33,11 @@ type SessionStore struct {
 	Minimal      bool
 }
 
+// ClearAll implements sessions.SessionStore.
+func (s *SessionStore) ClearAllUserSessions(_ *http.Request, _ *sessions.SessionState) error {
+	return fmt.Errorf("ClearAllUserSessions is only supported by redis store")
+}
+
 // Save takes a sessions.SessionState and stores the information from it
 // within Cookies set on the HTTP response writer
 func (s *SessionStore) Save(rw http.ResponseWriter, req *http.Request, ss *sessions.SessionState) error {

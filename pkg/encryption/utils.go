@@ -96,6 +96,14 @@ func GenerateRandomASCIIString(length int) (string, error) {
 	return string(b), nil
 }
 
+// Encrypts a string with a secret using HMAC-SHA256 and returns a base64-encoded string.
+func EncryptStringWithSecret(input, secret string) string {
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write([]byte(input))
+	sum := mac.Sum(nil)
+	return base64.RawURLEncoding.EncodeToString(sum)
+}
+
 func GenerateCodeChallenge(method, codeVerifier string) (string, error) {
 	switch method {
 	case CodeChallengeMethodPlain:

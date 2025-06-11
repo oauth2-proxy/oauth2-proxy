@@ -87,6 +87,14 @@ func TestSecretBytesNonBase64(t *testing.T) {
 	assert.Equal(t, 32, len(sb32))
 }
 
+func TestEncryptStringWithSecret(t *testing.T) {
+	secret := "my-secret"
+	input := "my-input"
+
+	result := EncryptStringWithSecret(input, secret)
+	assert.Equal(t, result, "7DlH3g1Io9AmyD8tVPEPHdpH9N4jsO07mNCkfNcfW2A")
+}
+
 func TestSignAndValidate(t *testing.T) {
 	seed := "0123456789abcdef"
 	key := "cookie-name"

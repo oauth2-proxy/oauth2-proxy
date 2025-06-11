@@ -12,6 +12,9 @@ import (
 type Client interface {
 	Get(ctx context.Context, key string) ([]byte, error)
 	Lock(key string) sessions.Lock
+	Expire(ctx context.Context, key string, expiration time.Duration) error
+	RPush(ctx context.Context, key string, value string) error
+	LRange(ctx context.Context, key string) ([]string, error)
 	Set(ctx context.Context, key string, value []byte, expiration time.Duration) error
 	Del(ctx context.Context, key string) error
 	Ping(ctx context.Context) error
@@ -27,6 +30,18 @@ func newClient(c *redis.Client) Client {
 	return &client{
 		Client: c,
 	}
+}
+
+func (c *client) Expire(ctx context.Context, key string, expiration time.Duration) error {
+	return c.Client.Expire(ctx, key, expiration).Err()
+}
+
+func (c *client) LRange(ctx context.Context, key string) ([]string, error) {
+	return c.Client.LRange(ctx, key, 0, -1).Result()
+}
+
+func (c *client) RPush(ctx context.Context, key string, value string) error {
+	return c.Client.RPush(ctx, key, value).Err()
 }
 
 func (c *client) Get(ctx context.Context, key string) ([]byte, error) {
@@ -61,12 +76,26 @@ func newClusterClient(c *redis.ClusterClient) Client {
 	}
 }
 
+// Expire implements Client.
+// Subtle: this method shadows the method (*ClusterClient).Expire of clusterClient.ClusterClient.
+func (c *clusterClient) Expire(ctx context.Context, key string, expiration time.Duration) error {
+	return c.ClusterClient.Expire(ctx, key, expiration).Err()
+}
+
 func (c *clusterClient) Get(ctx context.Context, key string) ([]byte, error) {
 	return c.ClusterClient.Get(ctx, key).Bytes()
 }
 
 func (c *clusterClient) Set(ctx context.Context, key string, value []byte, expiration time.Duration) error {
 	return c.ClusterClient.Set(ctx, key, value, expiration).Err()
+}
+
+func (c *clusterClient) RPush(ctx context.Context, key string, value string) error {
+	return c.ClusterClient.RPush(ctx, key, value).Err()
+}
+
+func (c *clusterClient) LRange(ctx context.Context, key string) ([]string, error) {
+	return c.ClusterClient.LRange(ctx, key, 0, -1).Result()
 }
 
 func (c *clusterClient) Del(ctx context.Context, key string) error {

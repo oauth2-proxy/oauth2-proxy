@@ -564,6 +564,10 @@ func (p *OAuthProxy) ClearSessionCookie(rw http.ResponseWriter, req *http.Reques
 	return p.sessionStore.Clear(rw, req)
 }
 
+func (p *OAuthProxy) ClearAllSessions(req *http.Request, session *sessionsapi.SessionState) error {
+	return p.sessionStore.ClearAllUserSessions(req, session)
+}
+
 // LoadCookiedSession reads the user's authentication details from the request
 func (p *OAuthProxy) LoadCookiedSession(req *http.Request) (*sessionsapi.SessionState, error) {
 	return p.sessionStore.Load(req)
@@ -775,6 +779,17 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request, signOutA
 		return
 	}
 	err = p.ClearSessionCookie(rw, req)
+	if signOutAllSessions {
+		session, errAuthSession := p.getAuthenticatedSession(rw, req)
+		if errAuthSession != nil {
+			logger.Errorf("Error clearing all sessions cookie: %v", errAuthSession)
+		} else {
+			clearAllError := p.ClearAllSessions(req, session)
+			if clearAllError != nil {
+				logger.Errorf("Error clearing session cookie: %v", clearAllError)
+			}
+		}
+	}
 	if err != nil {
 		logger.Errorf("Error clearing session cookie: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
