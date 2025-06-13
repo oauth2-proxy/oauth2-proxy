@@ -237,32 +237,33 @@ func TestGoogleProviderGetEmailAddressEmailMissing(t *testing.T) {
 
 func TestGoogleProvider_userInGroup(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/admin/directory/v1/groups/group@example.com/hasMember/member-in-domain@example.com" {
-			fmt.Fprintln(w, `{"isMember": true}`)
-		} else if r.URL.Path == "/admin/directory/v1/groups/group@example.com/hasMember/non-member-in-domain@example.com" {
-			fmt.Fprintln(w, `{"isMember": false}`)
-		} else if r.URL.Path == "/admin/directory/v1/groups/group@example.com/hasMember/member-out-of-domain@otherexample.com" {
+		switch r.URL.Path {
+		case "/admin/directory/v1/groups/group@example.com/hasMember/member-in-domain@example.com":
+			fmt.Fprintln(w, `{"isMember":true}`)
+		case "/admin/directory/v1/groups/group@example.com/hasMember/non-member-in-domain@example.com":
+			fmt.Fprintln(w, `{"isMember":false}`)
+		case "/admin/directory/v1/groups/group@example.com/hasMember/member-out-of-domain@otherexample.com":
 			http.Error(
 				w,
-				`{"error": {"errors": [{"domain": "global","reason": "invalid","message": "Invalid Input: memberKey"}],"code": 400,"message": "Invalid Input: memberKey"}}`,
+				`{"error":{"errors":[{"domain":"global","reason":"invalid","message":"Invalid Input: memberKey"}],"code":400,"message":"Invalid Input: memberKey"}}`,
 				http.StatusBadRequest,
 			)
-		} else if r.URL.Path == "/admin/directory/v1/groups/group@example.com/hasMember/non-member-out-of-domain@otherexample.com" {
+		case "/admin/directory/v1/groups/group@example.com/hasMember/non-member-out-of-domain@otherexample.com":
 			http.Error(
 				w,
-				`{"error": {"errors": [{"domain": "global","reason": "invalid","message": "Invalid Input: memberKey"}],"code": 400,"message": "Invalid Input: memberKey"}}`,
+				`{"error":{"errors":[{"domain":"global","reason":"invalid","message":"Invalid Input: memberKey"}],"code":400,"message":"Invalid Input: memberKey"}}`,
 				http.StatusBadRequest,
 			)
-		} else if r.URL.Path == "/admin/directory/v1/groups/group@example.com/members/non-member-out-of-domain@otherexample.com" {
+		case "/admin/directory/v1/groups/group@example.com/members/non-member-out-of-domain@otherexample.com":
 			// note that the client currently doesn't care what this response text or code is - any error here results in failure to match the group
 			http.Error(
 				w,
-				`{"error": {"errors": [{"domain": "global","reason": "notFound","message": "Resource Not Found: memberKey"}],"code": 404,"message": "Resource Not Found: memberKey"}}`,
+				`{"kind":"admin#directory#member","etag":"12345","id":"1234567890","email":"member-out-of-domain@otherexample.com","role":"MEMBER","type":"USER","status":"ACTIVE","delivery_settings":"ALL_MAIL"}`,
 				http.StatusNotFound,
 			)
-		} else if r.URL.Path == "/admin/directory/v1/groups/group@example.com/members/member-out-of-domain@otherexample.com" {
+		case "/admin/directory/v1/groups/group@example.com/members/member-out-of-domain@otherexample.com":
 			fmt.Fprintln(w,
-				`{"kind": "admin#directory#member","etag":"12345","id":"1234567890","email": "member-out-of-domain@otherexample.com","role": "MEMBER","type": "USER","status": "ACTIVE","delivery_settings": "ALL_MAIL"}}`,
+				`{"kind":"admin#directory#member","etag":"12345","id":"1234567890","email":"member-out-of-domain@otherexample.com","role":"MEMBER","type":"USER","status":"ACTIVE","delivery_settings":"ALL_MAIL"}`,
 			)
 		}
 	}))

@@ -18,6 +18,7 @@ body:
         - azure
         - bitbucket
         - digitalocean
+        - entra-id
         - facebook
         - gitea
         - github

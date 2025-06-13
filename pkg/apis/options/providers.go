@@ -11,7 +11,11 @@ const (
 // OIDCAudienceClaims is the generic audience claim list used by the OIDC provider.
 var OIDCAudienceClaims = []string{"aud"}
 
-// Providers is a collection of definitions for providers.
+// The provider can be selected using the `provider` configuration value, or
+// set in the [`providers` array using
+// AlphaConfig](https://oauth2-proxy.github.io/oauth2-proxy/configuration/alpha-config#providers).
+// However, [**the feature to implement multiple providers is not
+// complete**](https://github.com/oauth2-proxy/oauth2-proxy/issues/926).
 type Providers []Provider
 
 // Provider holds all configuration for a single provider
@@ -68,6 +72,8 @@ type Provider struct {
 	LoginURL string `json:"loginURL,omitempty"`
 	// LoginURLParameters defines the parameters that can be passed from the start URL to the IdP login URL
 	LoginURLParameters []LoginURLParameter `json:"loginURLParameters,omitempty"`
+	// AuthRequestResponseMode defines the response mode to request during authorization request
+	AuthRequestResponseMode string `json:"authRequestResponseMode,omitempty"`
 	// RedeemURL is the token redemption endpoint
 	RedeemURL string `json:"redeemURL,omitempty"`
 	// ProfileURL is the profile access endpoint
@@ -166,6 +172,10 @@ type MicrosoftEntraIDOptions struct {
 	// When not specified, all tenants are allowed. Redundant for single-tenant apps
 	// (regular ID token validation matches the issuer).
 	AllowedTenants []string `json:"allowedTenants,omitempty"`
+
+	// FederatedTokenAuth enable oAuth2 client authentication with federated token projected
+	// by Entra Workload Identity plugin, instead of client secret.
+	FederatedTokenAuth bool `json:"federatedTokenAuth,omitempty"`
 }
 
 type ADFSOptions struct {
@@ -238,6 +248,9 @@ type OIDCOptions struct {
 	// JwksURL is the OpenID Connect JWKS URL
 	// eg: https://www.googleapis.com/oauth2/v3/certs
 	JwksURL string `json:"jwksURL,omitempty"`
+	// PublicKeyFiles is a list of paths pointing to public key files in PEM format to use
+	// for verifying JWT tokens
+	PublicKeyFiles []string `json:"publicKeyFiles,omitempty"`
 	// EmailClaim indicates which claim contains the user email,
 	// default set to 'email'
 	EmailClaim string `json:"emailClaim,omitempty"`

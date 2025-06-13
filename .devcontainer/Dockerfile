@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/vscode/devcontainers/go:1-1.22
+FROM mcr.microsoft.com/vscode/devcontainers/go:1-1.23
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
