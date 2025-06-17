@@ -9,6 +9,7 @@
 ## Changes since v7.9.0
 
 - [#3072](https://github.com/oauth2-proxy/oauth2-proxy/pull/3072) feat: support for multiple github orgs #3072 (@daniel-mersch)
+- [#3055](https://github.com/oauth2-proxy/oauth2-proxy/pull/3055) feat: support non-default authorization request response mode also for OIDC providers (@stieler-it)
 
 # V7.9.0
 
