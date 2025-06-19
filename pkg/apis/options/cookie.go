@@ -27,17 +27,7 @@ type Cookie struct {
 
 // GetSecret returns the cookie secret, reading from file if SecretFile is set
 func (c *Cookie) GetSecret() (secret string, err error) {
-	if c.Secret != "" || c.SecretFile == "" {
-		return c.Secret, nil
-	}
-
-	// Getting secret can fail in runtime so we need to report it without returning the file name to the user
-	fileSecret, err := os.ReadFile(c.SecretFile)
-	if err != nil {
-		logger.Errorf("error reading cookie secret file %s: %s", c.SecretFile, err)
-		return "", errors.New("could not read cookie secret file")
-	}
-	return string(fileSecret), nil
+	return getSecretFromValueOrFile(c.Secret, c.SecretFile, "cookie secret")
 }
 
 func cookieFlagSet() *pflag.FlagSet {
@@ -74,4 +64,19 @@ func cookieDefaults() Cookie {
 		CSRFPerRequest: false,
 		CSRFExpire:     time.Duration(15) * time.Minute,
 	}
+}
+
+// getSecretFromValueOrFile returns the secret from value if set, otherwise reads from file
+func getSecretFromValueOrFile(value, file, secretType string) (string, error) {
+	if value != "" || file == "" {
+		return value, nil
+	}
+
+	// Getting secret can fail in runtime so we need to report it without returning the file name to the user
+	fileSecret, err := os.ReadFile(file)
+	if err != nil {
+		logger.Errorf("error reading %s file %s: %s", secretType, file, err)
+		return "", errors.New("could not read " + secretType + " file")
+	}
+	return string(fileSecret), nil
 }

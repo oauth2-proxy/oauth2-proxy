@@ -54,20 +54,18 @@ func (s *SessionStore) Load(req *http.Request) (*sessions.SessionState, error) {
 		// always http.ErrNoCookie
 		return nil, err
 	}
+	
 	secret, err := s.Cookie.GetSecret()
 	if err != nil {
 		return nil, fmt.Errorf("error getting cookie secret: %v", err)
 	}
+	
 	val, _, ok := encryption.Validate(c, secret, s.Cookie.Expire)
 	if !ok {
 		return nil, errors.New("cookie signature not valid")
 	}
 
-	session, err := sessions.DecodeSessionState(val, s.CookieCipher, true)
-	if err != nil {
-		return nil, err
-	}
-	return session, nil
+	return sessions.DecodeSessionState(val, s.CookieCipher, true)
 }
 
 // Clear clears any saved session information by writing a cookie to
