@@ -3,6 +3,7 @@ package validation
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"sort"
 	"time"
 
@@ -11,7 +12,7 @@ import (
 )
 
 func validateCookie(o options.Cookie) []string {
-	msgs := validateCookieSecret(o.Secret)
+	msgs := validateCookieSecret(o.Secret, o.SecretFile)
 
 	if o.Expire != time.Duration(0) && o.Refresh >= o.Expire {
 		msgs = append(msgs, fmt.Sprintf(
@@ -49,9 +50,27 @@ func validateCookieName(name string) []string {
 	return msgs
 }
 
-func validateCookieSecret(secret string) []string {
-	if secret == "" {
-		return []string{"missing setting: cookie-secret"}
+func validateCookieSecret(secret string, secretFile string) []string {
+	if secret == "" && secretFile == "" {
+		return []string{"missing setting: cookie-secret or cookie-secret-file"}
+	}
+	if secret == "" && secretFile != "" {
+		fileData, err := os.ReadFile(secretFile)
+		if err != nil {
+			return []string{"could not read cookie secret file: " + secretFile}
+		}
+		// Validate the file content as a secret
+		secretBytes := encryption.SecretBytes(string(fileData))
+		switch len(secretBytes) {
+		case 16, 24, 32:
+			// Valid secret size found
+			return []string{}
+		}
+		// Invalid secret size found, return a message
+		return []string{fmt.Sprintf(
+			"cookie_secret from file must be 16, 24, or 32 bytes to create an AES cipher, but is %d bytes",
+			len(secretBytes)),
+		}
 	}
 
 	secretBytes := encryption.SecretBytes(secret)
