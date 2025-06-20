@@ -206,7 +206,7 @@ func (l *Logger) PrintAuthf(username string, req *http.Request, status AuthStatu
 		RequestID:     scope.RequestID,
 		RequestMethod: req.Method,
 		Timestamp:     FormatTimestamp(now),
-		UserAgent:     fmt.Sprintf("%q", req.UserAgent()),
+		UserAgent:     fmt.Sprintf("%s", req.UserAgent()),
 		Username:      username,
 		Status:        string(status),
 		Message:       fmt.Sprintf(format, a...),
@@ -262,12 +262,12 @@ func (l *Logger) PrintReq(username, upstream string, req *http.Request, url url.
 		RequestID:       scope.RequestID,
 		RequestDuration: fmt.Sprintf("%0.3f", duration),
 		RequestMethod:   req.Method,
-		RequestURI:      fmt.Sprintf("%q", url.RequestURI()),
+		RequestURI:      fmt.Sprintf("%s", url.RequestURI()),
 		ResponseSize:    fmt.Sprintf("%d", size),
 		StatusCode:      fmt.Sprintf("%d", status),
 		Timestamp:       FormatTimestamp(ts),
 		Upstream:        upstream,
-		UserAgent:       fmt.Sprintf("%q", req.UserAgent()),
+		UserAgent:       fmt.Sprintf("%s", req.UserAgent()),
 		Username:        username,
 	})
 	if err != nil {
