@@ -10,7 +10,7 @@
 ## Changes since v7.9.0
 
 - [#3072](https://github.com/oauth2-proxy/oauth2-proxy/pull/3072) feat: support for multiple github orgs #3072 (@daniel-mersch)
-- [#3105](https://github.com/oauth2-proxy/oauth2-proxy/pull/3105) feat: Logfield quotation parity - removing quotes from RequestID and UserAgent #3105 (@ricardo-mestre)
+- [#3107](https://github.com/oauth2-proxy/oauth2-proxy/pull/3107) feat: Logfield quotation parity - removing quotes from RequestID and UserAgent #3107 (@ricardo-mestre)
   
 # V7.9.0
 
