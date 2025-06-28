@@ -7,7 +7,7 @@ title: Keycloak OIDC
 
 | Flag             | Toml Field      | Type           | Description                                                                                                        | Default |
 | ---------------- | --------------- | -------------- | ------------------------------------------------------------------------------------------------------------------ | ------- |
-| `--allowed-role` | `allowed_roles` | string \| list | restrict logins to users with this role (may be given multiple times). Only works with the keycloak-oidc provider. |         |
+| `--allowed-role` | `allowed_roles` | string \| list | Restrict logins to users with this role (may be given multiple times). Works with the keycloak-oidc and ms-entra-id provider. |         |
 
 ## Usage
 

@@ -1,11 +1,14 @@
 package providers
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"golang.org/x/oauth2"
 )
 
@@ -73,4 +76,19 @@ func formatGroup(rawGroup interface{}) (string, error) {
 		return "", err
 	}
 	return string(jsonGroup), nil
+}
+
+// extractAccessTokenPayload extracts the access token payload (JSON string in bytes)
+func extractAccessTokenPayload(s *sessions.SessionState) ([]byte, error) {
+	parts := strings.Split(s.AccessToken, ".")
+	if len(parts) < 2 {
+		return nil, fmt.Errorf("malformed access token, expected 3 parts got %d", len(parts))
+	}
+
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return nil, fmt.Errorf("malformed access token, couldn't extract jwt payload: %v", err)
+	}
+
+	return payload, nil
 }
