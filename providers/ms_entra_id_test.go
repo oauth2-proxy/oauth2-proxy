@@ -13,6 +13,7 @@ import (
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/stretchr/testify/assert"
 
 	. "github.com/onsi/gomega"
@@ -182,4 +183,68 @@ type mockedVerifier struct {
 
 func (v *mockedVerifier) Verify(ctx context.Context, rawIDToken string) (*oidc.IDToken, error) {
 	return nil, nil
+}
+
+type registeredClaimsWithRoles struct {
+	// the `roles` (Roles) claim. See https://learn.microsoft.com/en-us/entra/identity-platform/howto-add-app-roles-in-apps#usage-scenario-of-app-roles
+	Roles []string `json:"roles,omitempty"`
+
+	jwt.RegisteredClaims
+}
+
+func TestAzureEntraOIDCProviderValidateSessionAllowedRoles(t *testing.T) {
+	// Create multi-tenant Azure Entra provider with allowed roles
+	provider := NewMicrosoftEntraIDProvider(
+		&ProviderData{
+			Verifier: &mockedVerifier{},
+		},
+		options.Provider{
+			OIDCConfig: options.OIDCOptions{
+				IssuerURL:                      "https://login.microsoftonline.com/common/v2.0",
+				InsecureSkipIssuerVerification: true,
+				InsecureSkipNonce:              true,
+			},
+			MicrosoftEntraIDConfig: options.MicrosoftEntraIDOptions{
+				Roles: []string{"Owner", "Contributor"},
+			},
+		},
+	)
+
+	// Check for access token don't have allowed roles
+	key, _ := rsa.GenerateKey(rand.Reader, 2048)
+
+	claimsWithEmptyRoles := &registeredClaimsWithRoles{}
+	claimsWithEmptyRoles.Issuer = "https://login.microsoftonline.com/85d7d600-7804-4d92-8d43-9c33c21c130c/v2.0"
+	claimsWithEmptyRoles.Roles = nil
+
+	idToken := jwt.NewWithClaims(jwt.SigningMethodRS256, claimsWithEmptyRoles)
+	unauthorizedRoleJWT, err := idToken.SignedString(key)
+	assert.NoError(t, err)
+
+	session := &sessions.SessionState{
+		AccessToken: "unauthorized_token",
+		Groups:      nil,
+	}
+	session.IDToken = unauthorizedRoleJWT
+
+	authorized, _ := provider.Authorize(context.Background(), session)
+	assert.False(t, authorized)
+
+	// Check for access token has one of allowed roles
+	claimsWithAuthorizedRole := &registeredClaimsWithRoles{}
+	claimsWithAuthorizedRole.Issuer = "https://login.microsoftonline.com/85d7d600-7804-4d92-8d43-9c33c21c130c/v2.0"
+	claimsWithAuthorizedRole.Roles = []string{"Owner"}
+
+	idToken = jwt.NewWithClaims(jwt.SigningMethodRS256, claimsWithAuthorizedRole)
+	validJWT, err := idToken.SignedString(key)
+	assert.NoError(t, err)
+
+	session = &sessions.SessionState{
+		AccessToken: "authorized_token",
+		Groups:      []string{formatAppRole("Owner")},
+	}
+	session.IDToken = validJWT
+
+	authorized, _ = provider.Authorize(context.Background(), session)
+	assert.True(t, authorized)
 }
