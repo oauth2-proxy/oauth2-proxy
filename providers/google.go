@@ -233,15 +233,25 @@ func getAdminService(opts options.GoogleOptions) *admin.Service {
 	ctx := context.Background()
 	var client *http.Client
 	if opts.UseApplicationDefaultCredentials {
-		ts, err := impersonate.CredentialsTokenSource(ctx, impersonate.CredentialsConfig{
-			TargetPrincipal: getTargetPrincipal(ctx, opts),
-			Scopes:          []string{admin.AdminDirectoryGroupReadonlyScope, admin.AdminDirectoryUserReadonlyScope},
-			Subject:         opts.AdminEmail,
-		})
-		if err != nil {
-			logger.Fatal("failed to fetch application default credentials: ", err)
+		// If a target principal is set, use impersonation to fetch credentials
+		if opts.TargetPrincipal != "" {
+			ts, err := impersonate.CredentialsTokenSource(ctx, impersonate.CredentialsConfig{
+				TargetPrincipal: getTargetPrincipal(ctx, opts),
+				Scopes:          []string{admin.AdminDirectoryGroupReadonlyScope, admin.AdminDirectoryUserReadonlyScope},
+				Subject:         opts.AdminEmail,
+			})
+			if err != nil {
+				logger.Fatal("failed to fetch application default credentials for target principal: ", err)
+			}
+			client = oauth2.NewClient(ctx, ts)
+			// If no target principal is set, use the default credentials
+		} else {
+			defaultClient, err := google.DefaultClient(ctx, admin.AdminDirectoryGroupReadonlyScope, admin.AdminDirectoryUserReadonlyScope)
+			if err != nil {
+				logger.Fatal("failed to fetch application default credentials: ", err)
+			}
+			client = defaultClient
 		}
-		client = oauth2.NewClient(ctx, ts)
 	} else {
 		credentialsReader, err := os.Open(opts.ServiceAccountJSON)
 		if err != nil {
