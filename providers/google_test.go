@@ -289,3 +289,39 @@ func TestGoogleProvider_userInGroup(t *testing.T) {
 	result = userInGroup(service, "group@example.com", "non-member-out-of-domain@otherexample.com")
 	assert.False(t, result)
 }
+
+func TestGoogleProvider_getUserGroups(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/admin/directory/v1/groups" && r.URL.Query().Get("userKey") == "test@example.com" {
+			response := `{
+				"kind": "admin#directory#groups",
+				"groups": [
+					{
+						"kind": "admin#directory#group",
+						"id": "1",
+						"email": "group1@example.com",
+						"name": "Group 1"
+					},
+					{
+						"kind": "admin#directory#group", 
+						"id": "2",
+						"email": "group2@example.com",
+						"name": "Group 2"
+					}
+				]
+			}`
+			fmt.Fprintln(w, response)
+		} else {
+			http.NotFound(w, r)
+		}
+	}))
+	defer ts.Close()
+
+	client := &http.Client{}
+	adminService, err := admin.NewService(context.Background(), option.WithHTTPClient(client), option.WithEndpoint(ts.URL))
+	assert.NoError(t, err)
+
+	groups, err := getUserGroups(adminService, "test@example.com")
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"group1@example.com", "group2@example.com"}, groups)
+}
