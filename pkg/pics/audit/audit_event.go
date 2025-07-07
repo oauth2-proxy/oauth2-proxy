@@ -110,9 +110,12 @@ type Event struct {
 }
 
 type RootEvent struct {
-	ResourceType string         `json:"resourceType,omitempty"`
-	Event        *Event         `json:"event,omitempty"`
-	Participant  []*Participant `json:"participant,omitempty"`
-	Source       Source         `json:"source,omitempty"`
-	Object       []*Object      `json:"object,omitempty"`
+	ResourceType    string         `json:"resourceType,omitempty"`
+	Event           *Event         `json:"event,omitempty"`
+	Participant     []*Participant `json:"participant,omitempty"`
+	Source          Source         `json:"source,omitempty"`
+	Object          []*Object      `json:"object,omitempty"`
+	ServiceIDs      []string       `json:"service_ids,omitempty"`
+	SourceIPAddress string         `json:"source_ip_address,omitempty"`
+	TargetIPAddress string         `json:"target_ip_address,omitempty"`
 }

@@ -827,14 +827,14 @@ func (p *OAuthProxy) backendLogout(rw http.ResponseWriter, req *http.Request, si
 		if resp.StatusCode() != 200 {
 			logger.Errorf("error while calling backend logout url, returned error code %v", resp.StatusCode())
 		}
-		p.picsAuditClient.CreateSuccessfulLogoutAuditEntry(session, req.RequestURI, req.Header.Get("edisp-org-id"))
+		p.picsAuditClient.CreateSuccessfulLogoutAuditEntry(session, req.RequestURI, req.Header.Get("edisp-org-id"), req)
 	} else {
 		if providerData.BackendRevokeAccessTokenURL != "" {
 			err := PicsRevokeAccessToken(providerData.BackendRevokeAccessTokenURL, session.AccessToken, providerData.ClientID, providerData.ClientSecret)
 			if err != nil {
 				logger.Errorf("error while calling backend revoke access token: %v", err)
 			} else {
-				p.picsAuditClient.CreateSuccessfulRevokeAccessTokenAuditEntry(session, req.RequestURI, req.Header.Get("edisp-org-id"))
+				p.picsAuditClient.CreateSuccessfulRevokeAccessTokenAuditEntry(session, req.RequestURI, req.Header.Get("edisp-org-id"), req)
 			}
 		}
 
@@ -1010,7 +1010,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 			return
 		}
-		p.picsAuditClient.CreateSuccessfulLoginAuditEntry(session, appRedirect, req.Header.Get("edisp-org-id"))
+		p.picsAuditClient.CreateSuccessfulLoginAuditEntry(session, appRedirect, req.Header.Get("edisp-org-id"), req)
 		http.Redirect(rw, req, appRedirect, http.StatusFound)
 	} else {
 		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: unauthorized")
