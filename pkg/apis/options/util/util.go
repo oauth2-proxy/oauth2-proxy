@@ -1,4 +1,4 @@
-package util //nolint:revive
+package util
 
 import (
 	"errors"
