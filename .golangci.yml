@@ -49,6 +49,10 @@ linters:
       - linters:
           - staticcheck
         text: QF1008
+      - linters:
+          - revive
+        path: util/.*\.go$
+        text: "var-naming: avoid meaningless package names"
     paths:
       - third_party$
       - builtin$
