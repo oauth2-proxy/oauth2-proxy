@@ -41,7 +41,7 @@ services:
     depends_on:
       - oauth2-proxy
     container_name: nginx
-    image: nginx:1.28
+    image: nginx:1.29
     restart: unless-stopped
     ports:
       - 80:80/tcp
