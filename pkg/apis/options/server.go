@@ -1,5 +1,7 @@
 package options
 
+import "time"
+
 // Server represents the configuration for an HTTP(S) server
 type Server struct {
 	// BindAddress is the address on which to serve traffic.
@@ -13,6 +15,11 @@ type Server struct {
 	// TLS contains the information for loading the certificate and key for the
 	// secure traffic and further configuration for the TLS server.
 	TLS *TLS
+
+	// Duration of time to continue serving traffic after receiving an exit signal.
+	// During this time the readiness endpoint will be returning HTTP 503 errors.
+	// Leave blank to disable.
+	ShutdownDuration time.Duration
 }
 
 // TLS contains the information for loading a TLS certificate and key

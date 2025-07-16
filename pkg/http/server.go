@@ -40,12 +40,16 @@ type Opts struct {
 
 	// Let testing infrastructure circumvent parsing file descriptors
 	fdFiles []*os.File
+
+	// Graceful shutdown duration
+	ShutdownDuration time.Duration
 }
 
 // NewServer creates a new Server from the options given.
 func NewServer(opts Opts) (Server, error) {
 	s := &server{
-		handler: opts.Handler,
+		handler:          opts.Handler,
+		shutdownDuration: opts.ShutdownDuration,
 	}
 
 	if len(opts.fdFiles) > 0 {
@@ -71,6 +75,9 @@ type server struct {
 
 	// ensure activation.Files are called once
 	fdFiles []*os.File
+
+	// Graceful shutdown duration
+	shutdownDuration time.Duration
 }
 
 // setupListener sets the server listener if the HTTP server is enabled.
@@ -214,10 +221,14 @@ func (s *server) startServer(ctx context.Context, listener net.Listener) error {
 
 	g.Go(func() error {
 		<-groupCtx.Done()
+		logger.Printf("Context canceled. Waiting %s before shutting down the listeners.", s.shutdownDuration)
+		time.Sleep(s.shutdownDuration)
+		logger.Printf("Shutting down listener.")
 
 		if err := srv.Shutdown(context.Background()); err != nil {
 			return fmt.Errorf("error shutting down server: %v", err)
 		}
+
 		return nil
 	})
 

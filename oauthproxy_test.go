@@ -47,7 +47,7 @@ func TestRobotsTxt(t *testing.T) {
 	err := validation.Validate(opts)
 	assert.NoError(t, err)
 
-	proxy, err := NewOAuthProxy(opts, func(string) bool { return true })
+	proxy, err := NewOAuthProxy(context.Background(), opts, func(string) bool { return true })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +108,7 @@ func Test_redeemCode(t *testing.T) {
 	err := validation.Validate(opts)
 	assert.NoError(t, err)
 
-	proxy, err := NewOAuthProxy(opts, func(string) bool { return true })
+	proxy, err := NewOAuthProxy(context.Background(), opts, func(string) bool { return true })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -160,7 +160,7 @@ func Test_enrichSession(t *testing.T) {
 			err := validation.Validate(opts)
 			assert.NoError(t, err)
 
-			proxy, err := NewOAuthProxy(opts, func(string) bool { return true })
+			proxy, err := NewOAuthProxy(context.Background(), opts, func(string) bool { return true })
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -229,7 +229,7 @@ func TestBasicAuthPassword(t *testing.T) {
 	providerURL, _ := url.Parse(providerServer.URL)
 	const emailAddress = "john.doe@example.com"
 
-	proxy, err := NewOAuthProxy(opts, func(email string) bool {
+	proxy, err := NewOAuthProxy(context.Background(), opts, func(email string) bool {
 		return email == emailAddress
 	})
 	if err != nil {
@@ -291,7 +291,7 @@ func TestPassGroupsHeadersWithGroups(t *testing.T) {
 		CreatedAt:   &created,
 	}
 
-	proxy, err := NewOAuthProxy(opts, func(email string) bool {
+	proxy, err := NewOAuthProxy(context.Background(), opts, func(email string) bool {
 		return email == emailAddress
 	})
 	assert.NoError(t, err)
@@ -387,7 +387,7 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) (*PassAccessTokenTe
 
 	testProvider := NewTestProvider(providerURL, emailAddress)
 	testProvider.ValidToken = opts.ValidToken
-	patt.proxy, err = NewOAuthProxy(patt.opts, func(email string) bool {
+	patt.proxy, err = NewOAuthProxy(context.Background(), patt.opts, func(email string) bool {
 		return email == emailAddress
 	})
 	patt.proxy.provider = testProvider
@@ -592,7 +592,7 @@ func NewSignInPageTest(skipProvider bool) (*SignInPageTest, error) {
 		return nil, err
 	}
 
-	sipTest.proxy, err = NewOAuthProxy(sipTest.opts, func(email string) bool {
+	sipTest.proxy, err = NewOAuthProxy(context.Background(), sipTest.opts, func(email string) bool {
 		return true
 	})
 	if err != nil {
@@ -628,7 +628,7 @@ func TestManualSignInStoresUserGroupsInTheSession(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	proxy, err := NewOAuthProxy(opts, func(email string) bool {
+	proxy, err := NewOAuthProxy(context.Background(), opts, func(email string) bool {
 		return true
 	})
 	if err != nil {
@@ -676,7 +676,7 @@ func ManualSignInWithCredentials(t *testing.T, user, pass string) int {
 		t.Fatal(err)
 	}
 
-	proxy, err := NewOAuthProxy(opts, func(email string) bool {
+	proxy, err := NewOAuthProxy(context.Background(), opts, func(email string) bool {
 		return true
 	})
 	if err != nil {
@@ -826,7 +826,7 @@ func NewProcessCookieTest(opts ProcessCookieTestOpts, modifiers ...OptionsModifi
 		return nil, err
 	}
 
-	pcTest.proxy, err = NewOAuthProxy(pcTest.opts, func(email string) bool {
+	pcTest.proxy, err = NewOAuthProxy(context.Background(), pcTest.opts, func(email string) bool {
 		return pcTest.validateUser
 	})
 	if err != nil {
@@ -1200,7 +1200,7 @@ func TestAuthOnlyEndpointSetXAuthRequestHeaders(t *testing.T) {
 	err := validation.Validate(pcTest.opts)
 	assert.NoError(t, err)
 
-	pcTest.proxy, err = NewOAuthProxy(pcTest.opts, func(email string) bool {
+	pcTest.proxy, err = NewOAuthProxy(context.Background(), pcTest.opts, func(email string) bool {
 		return pcTest.validateUser
 	})
 	if err != nil {
@@ -1293,7 +1293,7 @@ func TestAuthOnlyEndpointSetBasicAuthTrueRequestHeaders(t *testing.T) {
 	err := validation.Validate(pcTest.opts)
 	assert.NoError(t, err)
 
-	pcTest.proxy, err = NewOAuthProxy(pcTest.opts, func(email string) bool {
+	pcTest.proxy, err = NewOAuthProxy(context.Background(), pcTest.opts, func(email string) bool {
 		return pcTest.validateUser
 	})
 	if err != nil {
@@ -1373,7 +1373,7 @@ func TestAuthOnlyEndpointSetBasicAuthFalseRequestHeaders(t *testing.T) {
 	err := validation.Validate(pcTest.opts)
 	assert.NoError(t, err)
 
-	pcTest.proxy, err = NewOAuthProxy(pcTest.opts, func(email string) bool {
+	pcTest.proxy, err = NewOAuthProxy(context.Background(), pcTest.opts, func(email string) bool {
 		return pcTest.validateUser
 	})
 	if err != nil {
@@ -1429,7 +1429,7 @@ func TestAuthSkippedForPreflightRequests(t *testing.T) {
 
 	upstreamURL, _ := url.Parse(upstreamServer.URL)
 
-	proxy, err := NewOAuthProxy(opts, func(string) bool { return false })
+	proxy, err := NewOAuthProxy(context.Background(), opts, func(string) bool { return false })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1554,7 +1554,7 @@ func (st *SignatureTest) MakeRequestWithExpectedKey(method, body, key string) er
 	if err != nil {
 		return err
 	}
-	proxy, err := NewOAuthProxy(st.opts, func(email string) bool { return true })
+	proxy, err := NewOAuthProxy(context.Background(), st.opts, func(email string) bool { return true })
 	if err != nil {
 		return err
 	}
@@ -1642,7 +1642,7 @@ func newAjaxRequestTest(forceJSONErrors bool) (*ajaxRequestTest, error) {
 		return nil, err
 	}
 
-	test.proxy, err = NewOAuthProxy(test.opts, func(email string) bool {
+	test.proxy, err = NewOAuthProxy(context.Background(), test.opts, func(email string) bool {
 		return true
 	})
 	if err != nil {
@@ -1958,7 +1958,7 @@ func Test_noCacheHeaders(t *testing.T) {
 	opts.SkipAuthRegex = []string{".*"}
 	err := validation.Validate(opts)
 	assert.NoError(t, err)
-	proxy, err := NewOAuthProxy(opts, func(_ string) bool { return true })
+	proxy, err := NewOAuthProxy(context.Background(), opts, func(_ string) bool { return true })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2233,7 +2233,7 @@ func TestTrustedIPs(t *testing.T) {
 			err := validation.Validate(opts)
 			assert.NoError(t, err)
 
-			proxy, err := NewOAuthProxy(opts, func(string) bool { return true })
+			proxy, err := NewOAuthProxy(context.Background(), opts, func(string) bool { return true })
 			assert.NoError(t, err)
 			rw := httptest.NewRecorder()
 
@@ -2478,7 +2478,7 @@ func TestApiRoutes(t *testing.T) {
 	opts.SkipProviderButton = true
 	err := validation.Validate(opts)
 	assert.NoError(t, err)
-	proxy, err := NewOAuthProxy(opts, func(_ string) bool { return true })
+	proxy, err := NewOAuthProxy(context.Background(), opts, func(_ string) bool { return true })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2561,7 +2561,7 @@ func TestAllowedRequest(t *testing.T) {
 	}
 	err := validation.Validate(opts)
 	assert.NoError(t, err)
-	proxy, err := NewOAuthProxy(opts, func(_ string) bool { return true })
+	proxy, err := NewOAuthProxy(context.Background(), opts, func(_ string) bool { return true })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2660,7 +2660,7 @@ func TestAllowedRequestWithForwardedUriHeader(t *testing.T) {
 	}
 	err := validation.Validate(opts)
 	assert.NoError(t, err)
-	proxy, err := NewOAuthProxy(opts, func(_ string) bool { return true })
+	proxy, err := NewOAuthProxy(context.Background(), opts, func(_ string) bool { return true })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2759,7 +2759,7 @@ func TestAllowedRequestNegateWithoutMethod(t *testing.T) {
 	}
 	err := validation.Validate(opts)
 	assert.NoError(t, err)
-	proxy, err := NewOAuthProxy(opts, func(_ string) bool { return true })
+	proxy, err := NewOAuthProxy(context.Background(), opts, func(_ string) bool { return true })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2859,7 +2859,7 @@ func TestAllowedRequestNegateWithMethod(t *testing.T) {
 	}
 	err := validation.Validate(opts)
 	assert.NoError(t, err)
-	proxy, err := NewOAuthProxy(opts, func(_ string) bool { return true })
+	proxy, err := NewOAuthProxy(context.Background(), opts, func(_ string) bool { return true })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3460,7 +3460,7 @@ func TestGetOAuthRedirectURI(t *testing.T) {
 			err := validation.Validate(baseOpts)
 			assert.NoError(t, err)
 
-			proxy, err := NewOAuthProxy(tt.setupOpts(baseOpts), func(string) bool { return true })
+			proxy, err := NewOAuthProxy(context.Background(), tt.setupOpts(baseOpts), func(string) bool { return true })
 			assert.NoError(t, err)
 
 			assert.Equalf(t, tt.want, proxy.getOAuthRedirectURI(tt.req), "getOAuthRedirectURI(%v)", tt.req)

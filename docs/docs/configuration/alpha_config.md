@@ -502,6 +502,7 @@ Server represents the configuration for an HTTP(S) server
 | `BindAddress` | _string_ | BindAddress is the address on which to serve traffic.<br/>Leave blank or set to "-" to disable. |
 | `SecureBindAddress` | _string_ | SecureBindAddress is the address on which to serve secure traffic.<br/>Leave blank or set to "-" to disable. |
 | `TLS` | _[TLS](#tls)_ | TLS contains the information for loading the certificate and key for the<br/>secure traffic and further configuration for the TLS server. |
+| `ShutdownDuration` | _duration_ | Duration of time to continue serving traffic after receiving an exit signal.<br/>During this time the readiness endpoint will be returning HTTP 503 errors.<br/>Leave blank to disable. |
 
 ### TLS
 
