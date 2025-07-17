@@ -53,6 +53,7 @@ const (
 	oauthCallbackPath = "/callback"
 	authOnlyPath      = "/auth"
 	userInfoPath      = "/userinfo"
+	refreshPath       = "/refresh"
 	staticPathPrefix  = "/static/"
 )
 
@@ -104,6 +105,7 @@ type OAuthProxy struct {
 	trustedIPs           *ip.NetSet
 
 	sessionChain      alice.Chain
+	refreshChain      alice.Chain
 	headersChain      alice.Chain
 	preAuthChain      alice.Chain
 	pageWriter        pagewriter.Writer
@@ -204,7 +206,22 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 	if err != nil {
 		return nil, fmt.Errorf("could not build pre-auth chain: %v", err)
 	}
-	sessionChain := buildSessionChain(opts, provider, sessionStore, basicAuthValidator)
+
+	sessionChain := buildSessionChain(opts, provider, sessionStore, basicAuthValidator).Append(
+		middleware.NewStoredSessionLoader(&middleware.StoredSessionLoaderOptions{
+			SessionStore:    sessionStore,
+			RefreshPeriod:   opts.Cookie.Refresh,
+			RefreshSession:  provider.RefreshSession,
+			ValidateSession: provider.ValidateSession,
+		}))
+	refreshChain := buildSessionChain(opts, provider, sessionStore, basicAuthValidator).Append(
+		middleware.NewStoredSessionRefresher(&middleware.StoredSessionLoaderOptions{
+			SessionStore:    sessionStore,
+			RefreshPeriod:   opts.Cookie.Refresh,
+			RefreshSession:  provider.RefreshSession,
+			ValidateSession: provider.ValidateSession,
+		}))
+
 	headersChain, err := buildHeadersChain(opts)
 	if err != nil {
 		return nil, fmt.Errorf("could not build headers chain: %v", err)
@@ -241,6 +258,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		basicAuthValidator: basicAuthValidator,
 		basicAuthGroups:    opts.HtpasswdUserGroups,
 		sessionChain:       sessionChain,
+		refreshChain:       refreshChain,
 		headersChain:       headersChain,
 		preAuthChain:       preAuthChain,
 		pageWriter:         pageWriter,
@@ -347,6 +365,7 @@ func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
 
 	// The userinfo and logout endpoints needs to load sessions before handling the request
 	s.Path(userInfoPath).Handler(p.sessionChain.ThenFunc(p.UserInfo))
+	s.Path(refreshPath).Handler(p.refreshChain.ThenFunc(p.Proxy))
 	s.Path(signOutPath).Handler(p.sessionChain.ThenFunc(p.SignOut))
 }
 
