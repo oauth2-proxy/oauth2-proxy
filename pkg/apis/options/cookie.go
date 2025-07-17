@@ -1,8 +1,11 @@
 package options
 
 import (
+	"errors"
+	"os"
 	"time"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/spf13/pflag"
 )
 
@@ -10,6 +13,7 @@ import (
 type Cookie struct {
 	Name           string        `flag:"cookie-name" cfg:"cookie_name"`
 	Secret         string        `flag:"cookie-secret" cfg:"cookie_secret"`
+	SecretFile     string        `flag:"cookie-secret-file" cfg:"cookie_secret_file"`
 	Domains        []string      `flag:"cookie-domain" cfg:"cookie_domains"`
 	Path           string        `flag:"cookie-path" cfg:"cookie_path"`
 	Expire         time.Duration `flag:"cookie-expire" cfg:"cookie_expire"`
@@ -21,11 +25,17 @@ type Cookie struct {
 	CSRFExpire     time.Duration `flag:"cookie-csrf-expire" cfg:"cookie_csrf_expire"`
 }
 
+// GetSecret returns the cookie secret, reading from file if SecretFile is set
+func (c *Cookie) GetSecret() (secret string, err error) {
+	return getSecretFromValueOrFile(c.Secret, c.SecretFile, "cookie secret")
+}
+
 func cookieFlagSet() *pflag.FlagSet {
 	flagSet := pflag.NewFlagSet("cookie", pflag.ExitOnError)
 
 	flagSet.String("cookie-name", "_oauth2_proxy", "the name of the cookie that the oauth_proxy creates")
 	flagSet.String("cookie-secret", "", "the seed string for secure cookies (optionally base64 encoded)")
+	flagSet.String("cookie-secret-file", "", "the file with Cookie Secret")
 	flagSet.StringSlice("cookie-domain", []string{}, "Optional cookie domains to force cookies to (ie: `.yourcompany.com`). The longest domain matching the request's host will be used (or the shortest cookie domain if there is no match).")
 	flagSet.String("cookie-path", "/", "an optional cookie path to force cookies to (ie: /poc/)*")
 	flagSet.Duration("cookie-expire", time.Duration(168)*time.Hour, "expire timeframe for cookie")
@@ -43,6 +53,7 @@ func cookieDefaults() Cookie {
 	return Cookie{
 		Name:           "_oauth2_proxy",
 		Secret:         "",
+		SecretFile:     "",
 		Domains:        nil,
 		Path:           "/",
 		Expire:         time.Duration(168) * time.Hour,
@@ -53,4 +64,19 @@ func cookieDefaults() Cookie {
 		CSRFPerRequest: false,
 		CSRFExpire:     time.Duration(15) * time.Minute,
 	}
+}
+
+// getSecretFromValueOrFile returns the secret from value if set, otherwise reads from file
+func getSecretFromValueOrFile(value, file, secretType string) (string, error) {
+	if value != "" || file == "" {
+		return value, nil
+	}
+
+	// Getting secret can fail in runtime so we need to report it without returning the file name to the user
+	fileSecret, err := os.ReadFile(file)
+	if err != nil {
+		logger.Errorf("error reading %s file %s: %s", secretType, file, err)
+		return "", errors.New("could not read " + secretType + " file")
+	}
+	return string(fileSecret), nil
 }
