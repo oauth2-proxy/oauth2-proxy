@@ -176,6 +176,9 @@ type MicrosoftEntraIDOptions struct {
 	// FederatedTokenAuth enable oAuth2 client authentication with federated token projected
 	// by Entra Workload Identity plugin, instead of client secret.
 	FederatedTokenAuth bool `json:"federatedTokenAuth,omitempty"`
+
+	// Role enables to restrict login to users with app role
+	Roles []string `json:"roles,omitempty"`
 }
 
 type ADFSOptions struct {
