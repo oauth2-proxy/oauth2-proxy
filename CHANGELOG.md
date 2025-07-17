@@ -168,6 +168,7 @@
 ## Changes since v7.6.0
 
 - [#2539](https://github.com/oauth2-proxy/oauth2-proxy/pull/2539) pkg/http: Fix leaky test (@isodude)
+- [#2615](https://github.com/oauth2-proxy/oauth2-proxy/pull/2615) pgk/cookies: add option to set a limit on the number of per-request CSRF cookies oauth2-proxy sets.
 - [#4917](https://github.com/oauth2-proxy/oauth2-proxy/pull/4917) Upgraded all modules to the latest version (@pierluigilenoci)
 - [#2570](https://github.com/oauth2-proxy/oauth2-proxy/pull/2570) Set default user agent to oauth2-proxy/$version (from default Golang one)
 - [#2674](https://github.com/oauth2-proxy/oauth2-proxy/pull/2674) docs: additional notes about available claims for HeaderValue (@vegetablest)
