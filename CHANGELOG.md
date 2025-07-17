@@ -11,6 +11,14 @@
 # V7.10.0
 
 ## Release Highlights
+- 🏢 Support for multiple orgs using the GitHub / Gitea provider
+- 🔵 Golang version upgrade to v1.24.5
+- 🕵️‍♀️ Vulnerabilities have been addressed
+  - [CVE-2025-4673](https://access.redhat.com/security/cve/CVE-2025-4673)
+  - [CVE-2025-22872](https://access.redhat.com/security/cve/CVE-2025-22872)
+  - [CVE-2025-09130](https://nvd.nist.gov/vuln/detail/CVE-2025-09130)
+  - [CVE-2025-22871](https://access.redhat.com/security/cve/CVE-2025-22871)
+- 🐛 Squashed some bugs
 
 ## Important Notes
 
