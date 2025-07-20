@@ -153,23 +153,29 @@ func (c *csrf) SetCookie(rw http.ResponseWriter, req *http.Request) (*http.Cooki
 	return cookie, nil
 }
 
+// ClearExtraCsrfCookies limits the amount of existing CSRF cookies by deleting
+// an excess of cookies controlled through the option CSRFPerRequestLimit
 func ClearExtraCsrfCookies(opts *options.Cookie, rw http.ResponseWriter, req *http.Request) {
 	if !opts.CSRFPerRequest || opts.CSRFPerRequestLimit <= 0 {
 		return
 	}
+
 	cookies := req.Cookies()
-	// determine how many csrf cookies we have
 	existingCsrfCookies := []*http.Cookie{}
 	startsWith := fmt.Sprintf("%v_", opts.Name)
+
+	// determine how many csrf cookies we have
 	for _, cookie := range cookies {
 		if strings.HasPrefix(cookie.Name, startsWith) && strings.HasSuffix(cookie.Name, "_csrf") {
 			existingCsrfCookies = append(existingCsrfCookies, cookie)
 		}
 	}
+
 	// short circuit return
 	if len(existingCsrfCookies) <= opts.CSRFPerRequestLimit {
 		return
 	}
+
 	decodedCookies := []*csrf{}
 	for _, cookie := range existingCsrfCookies {
 		decodedCookie, err := decodeCSRFCookie(cookie, opts)
@@ -178,12 +184,13 @@ func ClearExtraCsrfCookies(opts *options.Cookie, rw http.ResponseWriter, req *ht
 		}
 		decodedCookies = append(decodedCookies, decodedCookie)
 	}
+
 	// delete the X oldest cookies
 	slices.SortStableFunc(decodedCookies, func(a, b *csrf) int {
 		return a.time.Now().Compare(b.time.Now())
 	})
-	numberToDelete := len(decodedCookies) - opts.CSRFPerRequestLimit
-	for i := 0; i < numberToDelete; i++ {
+
+	for i := 0; i < len(decodedCookies)-opts.CSRFPerRequestLimit; i++ {
 		decodedCookies[i].ClearCookie(rw, req)
 	}
 }
