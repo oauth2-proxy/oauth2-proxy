@@ -47,8 +47,7 @@ services:
   httpbin:
     container_name: httpbin
     image: kennethreitz/httpbin
-    ports:
-      - 8080:80/tcp
+    ports: []
     networks:
       httpbin:
         aliases:
