@@ -8,6 +8,8 @@
 
 ## Changes since v7.10.0
 
+- [#2615](https://github.com/oauth2-proxy/oauth2-proxy/pull/2615) feat(cookies): add option to set a limit on the number of per-request CSRF cookies oauth2-proxy sets (@bh-tt)
+
 # V7.10.0
 
 ## Release Highlights
