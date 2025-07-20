@@ -191,11 +191,11 @@ var _ = Describe("CSRF Cookie with non-fixed name Tests", func() {
 			})
 		})
 
-		Context("CSRF max cookies", func() {
-			It("disables the 3rd cookie if a limit of 2 is set", func() {
+		Context("CSRF per request limit", func() {
+			It("clears cookies based on the limit", func() {
 				//needs to be now as pkg/encryption/utils.go uses time.Now()
 				testNow := time.Now()
-				cookieOpts.CSRFPerRequestLimit = 2
+				cookieOpts.CSRFPerRequestLimit = 1
 
 				publicCSRF1, err := NewCSRF(cookieOpts, "verifier")
 				Expect(err).ToNot(HaveOccurred())
@@ -212,7 +212,6 @@ var _ = Describe("CSRF Cookie with non-fixed name Tests", func() {
 				privateCSRF3 := publicCSRF3.(*csrf)
 				privateCSRF3.time.Set(testNow.Add(time.Minute * 2))
 
-				//for the test we set all the cookies on a single request, but in reality this will be multiple requests after another
 				cookies := []string{}
 				for _, csrf := range []*csrf{privateCSRF1, privateCSRF2, privateCSRF3} {
 					encoded, err := csrf.encodeCookie()
@@ -223,10 +222,10 @@ var _ = Describe("CSRF Cookie with non-fixed name Tests", func() {
 						encoded,
 						csrf.cookieOpts,
 						csrf.cookieOpts.CSRFExpire,
-						csrf.time.Now(),
 					)
 					cookies = append(cookies, fmt.Sprintf("%v=%v", cookie.Name, cookie.Value))
 				}
+
 				header := make(map[string][]string, 1)
 				header["Cookie"] = cookies
 				req = &http.Request{
@@ -241,17 +240,31 @@ var _ = Describe("CSRF Cookie with non-fixed name Tests", func() {
 					},
 					Header: header,
 				}
-				fmt.Println(req.Cookies())
+
+				// when setting the limit to one csrf cookie but configuring three csrf cookies
+				// then two cookies should be removed / set to expired on the response
+
+				// for this test case we have set all the cookies on a single request,
+				// but in reality this will be multiple requests after another
 				rw := httptest.NewRecorder()
 				ClearExtraCsrfCookies(cookieOpts, rw, req)
 
-				Expect(rw.Header().Values("Set-Cookie")).To(ContainElement(
+				clearedCookies := rw.Header()["Set-Cookie"]
+				Expect(clearedCookies).To(HaveLen(2))
+				Expect(clearedCookies[0]).To(Equal(
 					fmt.Sprintf(
-						"%s=; Path=%s; Domain=%s; Expires=%s; HttpOnly; Secure",
+						"%s=; Path=%s; Domain=%s; Max-Age=0; HttpOnly; Secure",
 						privateCSRF1.cookieName(),
 						cookiePath,
 						cookieDomain,
-						testCookieExpires(testNow.Add(time.Hour*-1)),
+					),
+				))
+				Expect(clearedCookies[1]).To(Equal(
+					fmt.Sprintf(
+						"%s=; Path=%s; Domain=%s; Max-Age=0; HttpOnly; Secure",
+						privateCSRF2.cookieName(),
+						cookiePath,
+						cookieDomain,
 					),
 				))
 			})
