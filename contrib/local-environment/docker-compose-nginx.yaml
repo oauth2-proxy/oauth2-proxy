@@ -62,7 +62,7 @@ services:
       - "./dex.yaml:/dex.yaml"
     restart: unless-stopped
     ports:
-      - 4190:4190/tcp
+      - 5556:4181/tcp
     networks:
       dex:
         aliases:
