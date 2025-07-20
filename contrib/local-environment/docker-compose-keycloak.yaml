@@ -34,12 +34,9 @@ services:
     container_name: httpbin
     image: kennethreitz/httpbin:latest
     hostname: httpbin
-    ports:
-      - 8080:80/tcp
+    ports: []
     networks:
-      httpbin:
-        aliases:
-          - httpbin.localtest.me
+      httpbin: {}
 
   keycloak:
     container_name: keycloak

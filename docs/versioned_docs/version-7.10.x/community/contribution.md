@@ -85,5 +85,5 @@ The docker compose setups expose the services with a dynamic reverse DNS resolve
 
 - OAuth2-Proxy: http://oauth2-proxy.localtest.me:4180
 - Upstream: http://httpbin.localtest.me:8080
-- Dex: http://dex.localtest.me:4190
+- Dex: http://dex.localtest.me:5556
 

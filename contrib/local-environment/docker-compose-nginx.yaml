@@ -62,7 +62,7 @@ services:
       - "./dex.yaml:/dex.yaml"
     restart: unless-stopped
     ports:
-      - 4190:4190/tcp
+      - 5556:4181/tcp
     networks:
       dex:
         aliases:
@@ -73,12 +73,9 @@ services:
   httpbin:
     container_name: httpbin
     image: kennethreitz/httpbin
-    ports:
-      - 8080:80/tcp
+    ports: []
     networks:
-      httpbin:
-        aliases:
-          - httpbin.localtest.me
+      httpbin: {}
   etcd:
     container_name: etcd
     image: gcr.io/etcd-development/etcd:v3.6.2
