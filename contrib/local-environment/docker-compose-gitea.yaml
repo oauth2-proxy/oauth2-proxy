@@ -36,9 +36,7 @@ services:
     hostname: httpbin
     ports: []
     networks:
-      httpbin:
-        aliases:
-          - httpbin.localtest.me
+      httpbin: {}
 
   gitea:
     image: gitea/gitea:1.24.3

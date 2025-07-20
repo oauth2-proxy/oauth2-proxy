@@ -36,9 +36,7 @@ services:
     hostname: httpbin
     ports: []
     networks:
-      httpbin:
-        aliases:
-          - httpbin.localtest.me
+      httpbin: {}
 
   keycloak:
     container_name: keycloak

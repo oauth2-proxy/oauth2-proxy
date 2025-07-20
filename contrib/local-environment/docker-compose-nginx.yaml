@@ -75,9 +75,7 @@ services:
     image: kennethreitz/httpbin
     ports: []
     networks:
-      httpbin:
-        aliases:
-          - httpbin.localtest.me
+      httpbin: {}
   etcd:
     container_name: etcd
     image: gcr.io/etcd-development/etcd:v3.6.2
