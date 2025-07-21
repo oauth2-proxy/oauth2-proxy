@@ -6,11 +6,34 @@
 
 ## Breaking Changes
 
+## Changes since v7.10.0
+
+- [#2615](https://github.com/oauth2-proxy/oauth2-proxy/pull/2615) feat(cookies): add option to set a limit on the number of per-request CSRF cookies oauth2-proxy sets (@bh-tt)
+- [#2605](https://github.com/oauth2-proxy/oauth2-proxy/pull/2605) fix: show login page on broken cookie (@Primexz)
+- [#2743](https://github.com/oauth2-proxy/oauth2-proxy/pull/2743) feat: allow use more possible google admin-sdk api scopes (@BobDu)
+
+# V7.10.0
+
+## Release Highlights
+- 🏢 Support for multiple orgs using the GitHub / Gitea provider
+- 🔵 Golang version upgrade to v1.24.5
+- 🕵️‍♀️ Vulnerabilities have been addressed
+  - [CVE-2025-4673](https://access.redhat.com/security/cve/CVE-2025-4673)
+  - [CVE-2025-22872](https://access.redhat.com/security/cve/CVE-2025-22872)
+  - [CVE-2025-09130](https://nvd.nist.gov/vuln/detail/CVE-2025-09130)
+  - [CVE-2025-22871](https://access.redhat.com/security/cve/CVE-2025-22871)
+- 🐛 Squashed some bugs
+
+## Important Notes
+
+## Breaking Changes
+
 ## Changes since v7.9.0
 
 - [#3072](https://github.com/oauth2-proxy/oauth2-proxy/pull/3072) feat: support for multiple github orgs #3072 (@daniel-mersch)
 - [#3116](https://github.com/oauth2-proxy/oauth2-proxy/pull/3116) feat: bump to go1.24.5 and full dependency update (@wardviaene / @dolmen)
 - [#3097](https://github.com/oauth2-proxy/oauth2-proxy/pull/3097) chore(deps): update alpine base image to v3.22.0
+- [#3101](https://github.com/oauth2-proxy/oauth2-proxy/pull/3101) fix: return error for empty Redis URL list (@dgivens)
 - [#2273](https://github.com/oauth2-proxy/oauth2-proxy/pull/2273) feat: add Cidaas provider (@Bibob7, @Teko012)
 
 # V7.9.0
