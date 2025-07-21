@@ -285,19 +285,23 @@ func getAdminService(opts options.GoogleOptions) *admin.Service {
 
 		if retrieveErr, ok := err.(*oauth2.RetrieveError); ok {
 			retrieveErrBody := map[string]interface{}{}
+
 			if err := json.Unmarshal(retrieveErr.Body, &retrieveErrBody); err != nil {
 				logger.Fatal("error unmarshalling retrieveErr body:", err)
 			}
+
 			if retrieveErrBody["error"] == "unauthorized_client" && retrieveErrBody["error_description"] == "Client is unauthorized to retrieve access tokens using this method, or client not authorized for any of the scopes requested." {
 				continue
 			}
+
 			logger.Fatal("error retrieving token:", err)
 		}
 	}
 
 	if client == nil {
-		logger.Fatal("error: google credentials are not have enough permissions scope to access admin API")
+		logger.Fatal("error: google credentials do not have enough permissions to access admin API scope")
 	}
+
 	adminService, err := admin.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
 		logger.Fatal(err)
