@@ -248,24 +248,25 @@ func getOauth2TokenSource(ctx context.Context, opts options.GoogleOptions, scope
 			logger.Fatal("failed to fetch application default credentials: ", err)
 		}
 		return ts
-	} else {
-		credentialsReader, err := os.Open(opts.ServiceAccountJSON)
-		if err != nil {
-			logger.Fatal("couldn't open Google credentials file: ", err)
-		}
-
-		data, err := io.ReadAll(credentialsReader)
-		if err != nil {
-			logger.Fatal("can't read Google credentials file:", err)
-		}
-
-		conf, err := google.JWTConfigFromJSON(data, scope)
-		if err != nil {
-			logger.Fatal("can't load Google credentials file:", err)
-		}
-		conf.Subject = opts.AdminEmail
-		return conf.TokenSource(ctx)
 	}
+
+	credentialsReader, err := os.Open(opts.ServiceAccountJSON)
+	if err != nil {
+		logger.Fatal("couldn't open Google credentials file: ", err)
+	}
+
+	data, err := io.ReadAll(credentialsReader)
+	if err != nil {
+		logger.Fatal("can't read Google credentials file:", err)
+	}
+
+	conf, err := google.JWTConfigFromJSON(data, scope)
+	if err != nil {
+		logger.Fatal("can't load Google credentials file:", err)
+	}
+
+	conf.Subject = opts.AdminEmail
+	return conf.TokenSource(ctx)
 }
 
 func getAdminService(opts options.GoogleOptions) *admin.Service {
