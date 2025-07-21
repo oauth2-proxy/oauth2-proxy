@@ -39,6 +39,8 @@ func NewProvider(providerConfig options.Provider) (Provider, error) {
 	switch providerConfig.Type {
 	case options.ADFSProvider:
 		return NewADFSProvider(providerData, providerConfig), nil
+	case options.ArcgisProvider:
+		return NewArcgisProvider(providerData), nil
 	case options.AzureProvider:
 		return NewAzureProvider(providerData, providerConfig.AzureConfig), nil
 	case options.MicrosoftEntraIDProvider:
@@ -182,7 +184,7 @@ func parseCodeChallengeMethod(providerConfig options.Provider) string {
 
 func providerRequiresOIDCProviderVerifier(providerType options.ProviderType) (bool, error) {
 	switch providerType {
-	case options.BitbucketProvider, options.DigitalOceanProvider, options.FacebookProvider, options.GitHubProvider,
+	case options.ArcgisProvider, options.BitbucketProvider, options.DigitalOceanProvider, options.FacebookProvider, options.GitHubProvider,
 		options.GoogleProvider, options.KeycloakProvider, options.LinkedInProvider, options.LoginGovProvider, options.NextCloudProvider:
 		return false, nil
 	case options.ADFSProvider, options.AzureProvider, options.GitLabProvider, options.KeycloakOIDCProvider, options.OIDCProvider, options.MicrosoftEntraIDProvider:
