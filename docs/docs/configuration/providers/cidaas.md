@@ -34,4 +34,4 @@ This will be transformed into a flat list of groups:
 }
 ```
 
-Apart from that the Cidaas provider inherits all the features of the [OpenID Connect provider](openid-connect.md).
+Apart from that the Cidaas provider inherits all the features of the [OpenID Connect provider](openid_connect.md).
