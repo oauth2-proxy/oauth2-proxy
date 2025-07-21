@@ -13,7 +13,7 @@ version: '3.0'
 services:
   oauth2-proxy:
     container_name: oauth2-proxy
-    image: quay.io/oauth2-proxy/oauth2-proxy:v7.9.0
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.10.0
     command: --config /oauth2-proxy.cfg
     hostname: oauth2-proxy
     volumes:
@@ -36,7 +36,7 @@ services:
       - "./dex.yaml:/dex.yaml"
     restart: unless-stopped
     ports:
-      - 4190:4190/tcp
+      - 5556:4181/tcp
     networks:
       dex:
         aliases:
@@ -47,15 +47,12 @@ services:
   httpbin:
     container_name: httpbin
     image: kennethreitz/httpbin
-    ports:
-      - 8080:80/tcp
+    ports: []
     networks:
-      httpbin:
-        aliases:
-          - httpbin.localtest.me
+      httpbin: {}
   etcd:
     container_name: etcd
-    image: gcr.io/etcd-development/etcd:v3.6.0
+    image: gcr.io/etcd-development/etcd:v3.6.2
     entrypoint: /usr/local/bin/etcd
     command:
       - --listen-client-urls=http://0.0.0.0:2379
