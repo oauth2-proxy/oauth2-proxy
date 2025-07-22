@@ -487,6 +487,31 @@ sub:
 					StringOption: "Bob",
 				},
 			}),
+			Entry("with a config file containing $ signs for things other than environment variables", loadYAMLTableInput{
+				configFile: []byte(`
+stringOption: /$1
+stringSliceOption:
+- /$1
+- ^/(.*)$
+- api/$1
+- api/(.*)$
+- ^/api/(.*)$
+- /api/$1`),
+				input: &TestOptions{},
+				expectedOutput: &TestOptions{
+					StringOption: "/$1",
+					TestOptionSubStruct: TestOptionSubStruct{
+						StringSliceOption: []string{
+							"/$1",
+							"^/(.*)$",
+							"api/$1",
+							"api/(.*)$",
+							"^/api/(.*)$",
+							"/api/$1",
+						},
+					},
+				},
+			}),
 		)
 	})
 
