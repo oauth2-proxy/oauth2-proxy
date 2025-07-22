@@ -219,13 +219,22 @@ func (c *csrf) encodeCookie() (string, error) {
 		return "", err
 	}
 
-	return encryption.SignedValue(c.cookieOpts.Secret, c.cookieName(), encrypted, c.time.Now())
+	secret, err := c.cookieOpts.GetSecret()
+	if err != nil {
+		return "", fmt.Errorf("error getting cookie secret: %v", err)
+	}
+	return encryption.SignedValue(secret, c.cookieName(), encrypted, c.time.Now())
 }
 
 // decodeCSRFCookie validates the signature then decrypts and decodes a CSRF
 // cookie into a CSRF struct
 func decodeCSRFCookie(cookie *http.Cookie, opts *options.Cookie) (*csrf, error) {
-	val, t, ok := encryption.Validate(cookie, opts.Secret, opts.Expire)
+	secret, err := opts.GetSecret()
+	if err != nil {
+		return nil, fmt.Errorf("error getting cookie secret: %v", err)
+	}
+
+	val, t, ok := encryption.Validate(cookie, secret, opts.Expire)
 	if !ok {
 		return nil, errors.New("CSRF cookie failed validation")
 	}
@@ -235,15 +244,18 @@ func decodeCSRFCookie(cookie *http.Cookie, opts *options.Cookie) (*csrf, error) 
 		return nil, err
 	}
 
-	// Valid cookie, Unmarshal the CSRF
+	return unmarshalCSRF(decrypted, opts, t)
+}
+
+// unmarshalCSRF unmarshals decrypted data into a CSRF struct
+func unmarshalCSRF(decrypted []byte, opts *options.Cookie, csrfTime time.Time) (*csrf, error) {
 	clock := clock.Clock{}
-	clock.Set(t)
+	clock.Set(csrfTime)
+
 	csrf := &csrf{cookieOpts: opts, time: clock}
-	err = msgpack.Unmarshal(decrypted, csrf)
-	if err != nil {
+	if err := msgpack.Unmarshal(decrypted, csrf); err != nil {
 		return nil, fmt.Errorf("error unmarshalling data to CSRF: %v", err)
 	}
-
 	return csrf, nil
 }
 
@@ -290,5 +302,9 @@ func decrypt(data []byte, opts *options.Cookie) ([]byte, error) {
 }
 
 func makeCipher(opts *options.Cookie) (encryption.Cipher, error) {
-	return encryption.NewCFBCipher(encryption.SecretBytes(opts.Secret))
+	secret, err := opts.GetSecret()
+	if err != nil {
+		return nil, fmt.Errorf("error getting cookie secret: %v", err)
+	}
+	return encryption.NewCFBCipher(encryption.SecretBytes(secret))
 }
