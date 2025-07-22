@@ -156,7 +156,8 @@ func LoadYAML(configFileName string, into interface{}) error {
 	return nil
 }
 
-// Performs the heavy lifting of the LoadYaml function
+// loadAndParseYaml reads the config from the filesystem and
+// execute the environment variable substitution
 func loadAndParseYaml(configFileName string) ([]byte, error) {
 	if configFileName == "" {
 		return nil, errors.New("no configuration file provided")
@@ -167,12 +168,11 @@ func loadAndParseYaml(configFileName string) ([]byte, error) {
 		return nil, fmt.Errorf("unable to load config file: %w", err)
 	}
 
-	modifiedBuffer, err := normalizeSubstitution(unparsedBuffer, err)
+	modifiedBuffer, err := normalizeSubstitution(unparsedBuffer)
 	if err != nil {
 		return nil, fmt.Errorf("error normalizing substitution string : %w", err)
 	}
 
-	// We now parse over the yaml with env substring, and fill in the ENV's
 	buffer, err := envsubst.Bytes(modifiedBuffer)
 	if err != nil {
 		return nil, fmt.Errorf("error in substituting env variables : %w", err)
@@ -181,18 +181,13 @@ func loadAndParseYaml(configFileName string) ([]byte, error) {
 	return buffer, nil
 }
 
-func normalizeSubstitution(unparsedBuffer []byte, err error) ([]byte, error) {
-	// Convert the byte array to a string for regex processing
+// normalizeSubstitution normalizes dollar signs ($) with numerals like
+// $1 or $2 properly by correctly escaping them
+func normalizeSubstitution(unparsedBuffer []byte) ([]byte, error) {
 	unparsedString := string(unparsedBuffer)
 
-	// Compile the regex pattern
-	regexPattern, err := regexp.Compile(`\$(\d+)`)
-	if err != nil {
-		return nil, fmt.Errorf("failed to compile regex pattern: %w", err)
-	}
+	regexPattern := regexp.MustCompile(`\$(\d+)`)
 
 	substitutedString := regexPattern.ReplaceAllString(unparsedString, `$$$$1`)
-
-	modifiedBuffer := []byte(substitutedString)
-	return modifiedBuffer, nil
+	return []byte(substitutedString), nil
 }
