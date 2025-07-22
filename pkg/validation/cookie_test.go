@@ -36,7 +36,7 @@ func TestValidateCookie(t *testing.T) {
 		t.Fatalf("Failed to create temporary file: %v", err)
 	}
 	defer os.Remove(tmpfile.Name())
-	
+
 	// Write a valid 32-byte secret to the file
 	_, err = tmpfile.Write([]byte(validSecret))
 	if err != nil {
