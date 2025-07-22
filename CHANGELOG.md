@@ -12,7 +12,8 @@
 - [#2605](https://github.com/oauth2-proxy/oauth2-proxy/pull/2605) fix: show login page on broken cookie (@Primexz)
 - [#2743](https://github.com/oauth2-proxy/oauth2-proxy/pull/2743) feat: allow use more possible google admin-sdk api scopes (@BobDu)
 - [#2359](https://github.com/oauth2-proxy/oauth2-proxy/pull/2359) feat: add SourceHut (sr.ht) provider(@bitfehler)
--[#2524](https://github.com/oauth2-proxy/oauth2-proxy/pull/2524) fix: regex substitution for $ signs in upstream path handling before running envsubst (@dashkan / @tuunit)
+- [#2524](https://github.com/oauth2-proxy/oauth2-proxy/pull/2524) fix: regex substitution for $ signs in upstream path handling before running envsubst (@dashkan / @tuunit)
+- [#3104](https://github.com/oauth2-proxy/oauth2-proxy/pull/3104) feat(cookie): add feature support for cookie-secret-file (@sandy2008)
 
 # V7.10.0
 
