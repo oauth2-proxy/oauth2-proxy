@@ -1,6 +1,7 @@
 package validation
 
 import (
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -28,6 +29,20 @@ func TestValidateCookie(t *testing.T) {
 		"cba.localhost",
 		"a.cba.localhost",
 	}
+
+	// Create a temporary file for the valid secret file test
+	tmpfile, err := os.CreateTemp("", "cookie-secret-test")
+	if err != nil {
+		t.Fatalf("Failed to create temporary file: %v", err)
+	}
+	defer os.Remove(tmpfile.Name())
+	
+	// Write a valid 32-byte secret to the file
+	_, err = tmpfile.Write([]byte(validSecret))
+	if err != nil {
+		t.Fatalf("Failed to write to temporary file: %v", err)
+	}
+	tmpfile.Close()
 
 	invalidNameMsg := "invalid cookie name: \"_oauth2;proxy\""
 	longNameMsg := "cookie name should be under 256 characters: cookie name is 260 characters"
@@ -276,7 +291,7 @@ func TestValidateCookie(t *testing.T) {
 			cookie: options.Cookie{
 				Name:       validName,
 				Secret:     "",
-				SecretFile: "/tmp/cookie-secret-32.txt",
+				SecretFile: tmpfile.Name(),
 				Domains:    domains,
 				Path:       "",
 				Expire:     24 * time.Hour,
