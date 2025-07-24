@@ -49,9 +49,12 @@ func (store *SessionStore) Save(ctx context.Context, key string, value []byte, e
 // cookie within the HTTP request object
 func (store *SessionStore) Load(ctx context.Context, key string) ([]byte, error) {
 	value, err := store.Client.Get(ctx, key)
-	if err != nil {
+	if err == redis.Nil {
+		return nil, fmt.Errorf("session does not exist")
+	} else if err != nil {
 		return nil, fmt.Errorf("error loading redis session: %v", err)
 	}
+
 	return value, nil
 }
 

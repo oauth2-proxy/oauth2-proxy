@@ -16,6 +16,8 @@
 - [#3104](https://github.com/oauth2-proxy/oauth2-proxy/pull/3104) feat(cookie): add feature support for cookie-secret-file (@sandy2008)
 - [#3055](https://github.com/oauth2-proxy/oauth2-proxy/pull/3055) feat: support non-default authorization request response mode also for OIDC providers (@stieler-it)
 - [#3138](https://github.com/oauth2-proxy/oauth2-proxy/pull/3138) feat: make google_groups argument optional when using google provider (@sourava01)
+- [#3093](https://github.com/oauth2-proxy/oauth2-proxy/pull/3093) feat: differentiate between "no available key" and error for redis sessions (@nobletrout)
+
 
 # V7.10.0
 
