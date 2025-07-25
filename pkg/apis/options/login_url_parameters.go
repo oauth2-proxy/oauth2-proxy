@@ -71,19 +71,19 @@ package options
 // character.
 type LoginURLParameter struct {
 	// Name specifies the name of the query parameter.
-	Name string `json:"name"`
+	Name string `yaml:"name"`
 
 	// Default specifies a default value or values that will be
 	// passed to the IdP if not overridden.
 	//+optional
-	Default []string `json:"default,omitempty"`
+	Default []string `yaml:"default,omitempty"`
 
 	// Allow specifies rules about how the default (if any) may be
 	// overridden via the query string to `/oauth2/start`.  Only
 	// values that match one or more of the allow rules will be
 	// forwarded to the IdP.
 	//+optional
-	Allow []URLParameterRule `json:"allow,omitempty"`
+	Allow []URLParameterRule `yaml:"allow,omitempty"`
 }
 
 // URLParameterRule represents a rule by which query parameters
@@ -92,11 +92,11 @@ type LoginURLParameter struct {
 // login URL.  Either Value or Pattern should be supplied, not both.
 type URLParameterRule struct {
 	// A Value rule matches just this specific value
-	Value *string `json:"value,omitempty"`
+	Value *string `yaml:"value,omitempty"`
 
 	// A Pattern rule gives a regular expression that must be matched by
 	// some substring of the value.  The expression is _not_ automatically
 	// anchored to the start and end of the value, if you _want_ to restrict
 	// the whole parameter value you must anchor it yourself with `^` and `$`.
-	Pattern *string `json:"pattern,omitempty"`
+	Pattern *string `yaml:"pattern,omitempty"`
 }

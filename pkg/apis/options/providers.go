@@ -71,9 +71,9 @@ type Provider struct {
 	// LoginURL is the authentication endpoint
 	LoginURL string `yaml:"loginURL,omitempty"`
 	// LoginURLParameters defines the parameters that can be passed from the start URL to the IdP login URL
-	LoginURLParameters []LoginURLParameter `json:"loginURLParameters,omitempty"`
+	LoginURLParameters []LoginURLParameter `yaml:"loginURLParameters,omitempty"`
 	// AuthRequestResponseMode defines the response mode to request during authorization request
-	AuthRequestResponseMode string `json:"authRequestResponseMode,omitempty"`
+	AuthRequestResponseMode string `yaml:"authRequestResponseMode,omitempty"`
 	// RedeemURL is the token redemption endpoint
 	RedeemURL string `yaml:"redeemURL,omitempty"`
 	// ProfileURL is the profile access endpoint
