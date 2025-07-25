@@ -51,9 +51,11 @@ func validateHeaderValue(_ string, value options.HeaderValue) []string {
 
 func validateHeaderValueClaimSource(claim options.ClaimSource) []string {
 	msgs := []string{}
+
 	if claim.Claim == "" {
 		msgs = append(msgs, "claim should not be empty")
 	}
+
 	if claim.BasicAuthPassword != nil {
 		msgs = append(msgs, prefixValues("invalid basicAuthPassword: ", validateSecretSource(*claim.BasicAuthPassword))...)
 	}
