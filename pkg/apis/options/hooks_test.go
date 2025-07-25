@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-func TestDecode(t *testing.T) {
+func TestToDurationHook(t *testing.T) {
 	type result struct {
 		Duration time.Duration `yaml:"duration"`
 	}
@@ -78,5 +78,19 @@ func TestDecode(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestStringToBytesHook(t *testing.T) {
+	var result struct {
+		Value []byte `yaml:"value"`
+	}
+
+	if err := Decode(map[string]interface{}{"value": "hello-world"}, &result); err != nil {
+		t.Fatal(err)
+	}
+
+	if string(result.Value) != "hello-world" {
+		t.Errorf("expected %q, got %q", "hello-world", string(result.Value))
 	}
 }
