@@ -67,7 +67,7 @@ type Provider struct {
 	CAFiles []string `yaml:"caFiles,omitempty"`
 	// UseSystemTrustStore determines if your custom CA files and the system trust store are used
 	// If set to true, your custom CA files and the system trust store are used otherwise only your custom CA files.
-	UseSystemTrustStore bool `yaml:"useSystemTrustStore,omitempty"`
+	UseSystemTrustStore bool `yaml:"useSystemTrustStore"`
 	// LoginURL is the authentication endpoint
 	LoginURL string `yaml:"loginURL,omitempty"`
 	// LoginURLParameters defines the parameters that can be passed from the start URL to the IdP login URL
@@ -80,7 +80,7 @@ type Provider struct {
 	ProfileURL string `yaml:"profileURL,omitempty"`
 	// SkipClaimsFromProfileURL allows to skip request to Profile URL for resolving claims not present in id_token
 	// default set to 'false'
-	SkipClaimsFromProfileURL bool `yaml:"skipClaimsFromProfileURL,omitempty"`
+	SkipClaimsFromProfileURL bool `yaml:"skipClaimsFromProfileURL"`
 	// ProtectedResource is the resource that is protected (Azure AD and ADFS only)
 	ProtectedResource string `yaml:"resource,omitempty"`
 	// ValidateURL is the access token validation endpoint
@@ -181,13 +181,13 @@ type MicrosoftEntraIDOptions struct {
 
 	// FederatedTokenAuth enable oAuth2 client authentication with federated token projected
 	// by Entra Workload Identity plugin, instead of client secret.
-	FederatedTokenAuth bool `yaml:"federatedTokenAuth,omitempty"`
+	FederatedTokenAuth bool `yaml:"federatedTokenAuth"`
 }
 
 type ADFSOptions struct {
 	// Skip adding the scope parameter in login request
 	// Default value is 'false'
-	SkipScope bool `yaml:"skipScope,omitempty"`
+	SkipScope bool `yaml:"skipScope"`
 }
 
 type BitbucketOptions struct {
@@ -227,7 +227,7 @@ type GoogleOptions struct {
 	// ServiceAccountJSON is the path to the service account json credentials
 	ServiceAccountJSON string `yaml:"serviceAccountJson,omitempty"`
 	// UseApplicationDefaultCredentials is a boolean whether to use Application Default Credentials instead of a ServiceAccountJSON
-	UseApplicationDefaultCredentials bool `yaml:"useApplicationDefaultCredentials,omitempty"`
+	UseApplicationDefaultCredentials bool `yaml:"useApplicationDefaultCredentials"`
 	// TargetPrincipal is the Google Service Account used for Application Default Credentials
 	TargetPrincipal string `yaml:"targetPrincipal,omitempty"`
 }
@@ -250,7 +250,7 @@ type OIDCOptions struct {
 	InsecureSkipNonce bool `yaml:"insecureSkipNonce"`
 	// SkipDiscovery allows to skip OIDC discovery and use manually supplied Endpoints
 	// default set to 'false'
-	SkipDiscovery bool `yaml:"skipDiscovery,omitempty"`
+	SkipDiscovery bool `yaml:"skipDiscovery"`
 	// JwksURL is the OpenID Connect JWKS URL
 	// eg: https://www.googleapis.com/oauth2/v3/certs
 	JwksURL string `yaml:"jwksURL,omitempty"`

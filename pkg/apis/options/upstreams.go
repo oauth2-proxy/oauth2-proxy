@@ -14,7 +14,7 @@ const (
 type UpstreamConfig struct {
 	// ProxyRawPath will pass the raw url path to upstream allowing for urls
 	// like: "/%2F/" which would otherwise be redirected to "/"
-	ProxyRawPath bool `yaml:"proxyRawPath,omitempty"`
+	ProxyRawPath bool `yaml:"proxyRawPath"`
 
 	// Upstreams represents the configuration for the upstream servers.
 	// Requests will be proxied to this upstream if the path matches the request path.
@@ -64,13 +64,13 @@ type Upstream struct {
 	// This option is insecure and will allow potential Man-In-The-Middle attacks
 	// between OAuth2 Proxy and the upstream server.
 	// Defaults to false.
-	InsecureSkipTLSVerify bool `yaml:"insecureSkipTLSVerify,omitempty"`
+	InsecureSkipTLSVerify bool `yaml:"insecureSkipTLSVerify"`
 
 	// Static will make all requests to this upstream have a static response.
 	// The response will have a body of "Authenticated" and a response code
 	// matching StaticCode.
 	// If StaticCode is not set, the response will return a 200 response.
-	Static bool `yaml:"static,omitempty"`
+	Static bool `yaml:"static"`
 
 	// StaticCode determines the response code for the Static response.
 	// This option can only be used with Static enabled.
@@ -84,11 +84,11 @@ type Upstream struct {
 	// PassHostHeader determines whether the request host header should be proxied
 	// to the upstream server.
 	// Defaults to true.
-	PassHostHeader *bool `yaml:"passHostHeader,omitempty"`
+	PassHostHeader *bool `yaml:"passHostHeader"`
 
 	// ProxyWebSockets enables proxying of websockets to upstream servers
 	// Defaults to true.
-	ProxyWebSockets *bool `yaml:"proxyWebSockets,omitempty"`
+	ProxyWebSockets *bool `yaml:"proxyWebSockets"`
 
 	// Timeout is the maximum duration the server will wait for a response from the upstream server.
 	// Defaults to 30 seconds.

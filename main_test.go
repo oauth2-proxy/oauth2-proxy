@@ -22,7 +22,7 @@ var _ = Describe("Configuration Loading Suite", func() {
 http_address="127.0.0.1:4180"
 upstreams="http://httpbin"
 set_basic_auth="true"
-basic_auth_password="super-secret-password"
+basic_auth_password="c3VwZXItc2VjcmV0LXBhc3N3b3Jk"
 client_id="oauth2-proxy"
 client_secret="b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK"
 `
@@ -45,7 +45,7 @@ injectRequestHeaders:
       claim: user
       prefix: "Basic "
       basicAuthPassword:
-        value: super-secret-password
+        value: c3VwZXItc2VjcmV0LXBhc3N3b3Jk
 - name: X-Forwarded-Groups
   values:
   - claimSource:
@@ -69,12 +69,12 @@ injectResponseHeaders:
       claim: user
       prefix: "Basic "
       basicAuthPassword:
-        value: super-secret-password
+        value: c3VwZXItc2VjcmV0LXBhc3N3b3Jk
 server:
   bindAddress: "127.0.0.1:4180"
 providers:
-- provider: google
-  ID: google=oauth2-proxy
+- id: google=oauth2-proxy
+  provider: google
   clientSecret: b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK
   clientID: oauth2-proxy
   azureConfig:
@@ -139,7 +139,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 						Claim:  "user",
 						Prefix: "Basic ",
 						BasicAuthPassword: &options.SecretSource{
-							Value: []byte("super-secret-password"),
+							Value: []byte("c3VwZXItc2VjcmV0LXBhc3N3b3Jk"),
 						},
 					},
 				},
@@ -248,7 +248,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 		Entry("with bad legacy configuration", loadConfigurationTableInput{
 			configContent:   testCoreConfig + "unknown_field=\"something\"",
 			expectedOptions: func() *options.Options { return nil },
-			expectedErr:     errors.New("failed to load config: error unmarshalling config: decoding failed due to the following error(s):\n\n'' has invalid keys: unknown_field"),
+			expectedErr:     errors.New("failed to load legacy options: failed to load config: error unmarshalling config: decoding failed due to the following error(s):\n\n'' has invalid keys: unknown_field"),
 		}),
 		Entry("with bad alpha configuration", loadConfigurationTableInput{
 			configContent:      testCoreConfig,
@@ -260,7 +260,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 			configContent:      testCoreConfig + "unknown_field=\"something\"",
 			alphaConfigContent: testAlphaConfig,
 			expectedOptions:    func() *options.Options { return nil },
-			expectedErr:        errors.New("failed to load core options: failed to load config: error unmarshalling config: decoding failed due to the following error(s):\n\n'' has invalid keys: unknown_field"),
+			expectedErr:        errors.New("failed to load legacy options: failed to load config: error unmarshalling config: decoding failed due to the following error(s):\n\n'' has invalid keys: unknown_field"),
 		}),
 	)
 })

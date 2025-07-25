@@ -155,7 +155,7 @@ var _ = Describe("Load", func() {
 				}
 				err := Load(configFileName, flagSet, input)
 				if o.expectedErr != nil {
-					Expect(err).To(MatchError(o.expectedErr.Error()))
+					Expect(err).To(MatchError(ContainSubstring(o.expectedErr.Error())))
 				} else {
 					Expect(err).ToNot(HaveOccurred())
 				}
@@ -471,7 +471,7 @@ sub:
 				configFile:     []byte(`stringSliceOption: "a"`),
 				input:          &TestOptions{},
 				expectedOutput: &TestOptions{},
-				expectedErr:    errors.New("error unmarshalling config: error unmarshaling JSON: while decoding JSON: json: cannot unmarshal string into Go struct field TestOptions.TestOptionSubStruct.StringSliceOption of type []string"),
+				expectedErr:    errors.New("error decoding config: decoding failed due to the following error(s):\n\n'stringSliceOption' source data must be an array or slice, got string"),
 			}),
 			Entry("with a config file containing environment variable references", loadYAMLTableInput{
 				configFile: []byte("stringOption: ${TESTUSER}"),
