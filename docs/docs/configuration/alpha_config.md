@@ -265,7 +265,7 @@ make up the header value
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `value` | _string_ | Value expects a base64 encoded string value. |
+| `value` | _[]byte_ | Value expects a base64 encoded []byte |
 | `fromEnv` | _string_ | FromEnv expects the name of an environment variable. |
 | `fromFile` | _string_ | FromFile expects a path to a file containing the secret value. |
 | `claim` | _string_ | Claim is the name of the claim in the session that the value should be<br/>loaded from. Available claims: `access_token` `id_token` `created_at`<br/>`expires_on` `refresh_token` `email` `user` `groups` `preferred_username`. |
@@ -477,7 +477,7 @@ Only one source within the struct should be defined at any time.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `value` | _string_ | Value expects a base64 encoded string value. |
+| `value` | _[]byte_ | Value expects a base64 encoded []byte |
 | `fromEnv` | _string_ | FromEnv expects the name of an environment variable. |
 | `fromFile` | _string_ | FromFile expects a path to a file containing the secret value. |
 
