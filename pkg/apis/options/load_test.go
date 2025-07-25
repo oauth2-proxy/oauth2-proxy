@@ -581,7 +581,7 @@ injectResponseHeaders:
 					Values: []HeaderValue{
 						{
 							SecretSource: &SecretSource{
-								Value: "secret",
+								Value: []byte("secret"),
 							},
 						},
 					},

@@ -139,7 +139,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 						Claim:  "user",
 						Prefix: "Basic ",
 						BasicAuthPassword: &options.SecretSource{
-							Value: "super-secret-password",
+							Value: []byte("super-secret-password"),
 						},
 					},
 				},

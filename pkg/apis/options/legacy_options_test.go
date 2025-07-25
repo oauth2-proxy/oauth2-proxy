@@ -369,7 +369,7 @@ var _ = Describe("Legacy Options", func() {
 						Claim:  "user",
 						Prefix: "Basic ",
 						BasicAuthPassword: &SecretSource{
-							Value: basicAuthSecret,
+							Value: []byte(basicAuthSecret),
 						},
 					},
 				},
@@ -409,7 +409,7 @@ var _ = Describe("Legacy Options", func() {
 						Claim:  "email",
 						Prefix: "Basic ",
 						BasicAuthPassword: &SecretSource{
-							Value: basicAuthSecret,
+							Value: []byte(basicAuthSecret),
 						},
 					},
 				},
