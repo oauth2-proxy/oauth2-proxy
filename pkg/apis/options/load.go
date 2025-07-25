@@ -89,7 +89,10 @@ func LoadYAML(configFileName string, opts interface{}) error {
 // - An error if decoding fails or if there are unmapped keys.
 func Decode(input interface{}, result interface{}) error {
 	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-		DecodeHook:           mapstructure.ComposeDecodeHookFunc(toDurationHookFunc()),
+		DecodeHook: mapstructure.ComposeDecodeHookFunc(
+			toDurationHookFunc(),
+			stringToBytesHookFunc(),
+		),
 		Metadata:             nil,    // Don't track any metadata
 		Result:               result, // Decode the result into the prefilled options
 		TagName:              "yaml", // Parse all fields that use the json tag

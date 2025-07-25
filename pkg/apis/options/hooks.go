@@ -41,3 +41,17 @@ func toDurationHookFunc() mapstructure.DecodeHookFunc {
 		}
 	}
 }
+
+// StringToBytesHookFunc returns a DecodeHookFunc that converts string to []byte.
+func stringToBytesHookFunc() mapstructure.DecodeHookFunc {
+	return func(
+		f reflect.Type,
+		t reflect.Type,
+		data interface{},
+	) (interface{}, error) {
+		if f.Kind() == reflect.String && t == reflect.TypeOf([]byte{}) {
+			return []byte(data.(string)), nil
+		}
+		return data, nil
+	}
+}
