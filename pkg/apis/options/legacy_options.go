@@ -289,7 +289,7 @@ func getBasicAuthHeader(preferEmailToUser bool, basicAuthPassword string) Header
 					Claim:  claim,
 					Prefix: "Basic ",
 					BasicAuthPassword: &SecretSource{
-						Value: basicAuthPassword,
+						Value: []byte(basicAuthPassword),
 					},
 				},
 			},
