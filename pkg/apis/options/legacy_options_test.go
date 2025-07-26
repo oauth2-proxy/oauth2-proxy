@@ -15,8 +15,8 @@ var _ = Describe("Legacy Options", func() {
 			legacyOpts := NewLegacyOptions()
 
 			// Set upstreams and related options to test their conversion
-			flushInterval := Duration(5 * time.Second)
-			timeout := Duration(5 * time.Second)
+			flushInterval := 5 * time.Second
+			timeout := 5 * time.Second
 			legacyOpts.LegacyUpstreams.FlushInterval = time.Duration(flushInterval)
 			legacyOpts.LegacyUpstreams.Timeout = time.Duration(timeout)
 			legacyOpts.LegacyUpstreams.PassHostHeader = true
@@ -143,8 +143,8 @@ var _ = Describe("Legacy Options", func() {
 		skipVerify := true
 		passHostHeader := false
 		proxyWebSockets := true
-		flushInterval := Duration(5 * time.Second)
-		timeout := Duration(5 * time.Second)
+		flushInterval := 5 * time.Second
+		timeout := 5 * time.Second
 
 		// Test cases and expected outcomes
 		validHTTP := "http://foo.bar/baz"

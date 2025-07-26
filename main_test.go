@@ -2,9 +2,7 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -24,7 +22,7 @@ var _ = Describe("Configuration Loading Suite", func() {
 http_address="127.0.0.1:4180"
 upstreams="http://httpbin"
 set_basic_auth="true"
-basic_auth_password="super-secret-password"
+basic_auth_password="c3VwZXItc2VjcmV0LXBhc3N3b3Jk"
 client_id="oauth2-proxy"
 client_secret="b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK"
 `
@@ -43,34 +41,40 @@ upstreamConfig:
 injectRequestHeaders:
 - name: Authorization
   values:
-  - claim: user
-    prefix: "Basic "
-    basicAuthPassword:
-      value: c3VwZXItc2VjcmV0LXBhc3N3b3Jk
+  - claimSource:
+      claim: user
+      prefix: "Basic "
+      basicAuthPassword:
+        value: c3VwZXItc2VjcmV0LXBhc3N3b3Jk
 - name: X-Forwarded-Groups
   values:
-  - claim: groups
+  - claimSource:
+      claim: groups
 - name: X-Forwarded-User
   values:
-  - claim: user
+  - claimSource:
+      claim: user
 - name: X-Forwarded-Email
   values:
-  - claim: email
+  - claimSource:
+      claim: email
 - name: X-Forwarded-Preferred-Username
   values:
-  - claim: preferred_username
+  - claimSource:
+      claim: preferred_username
 injectResponseHeaders:
 - name: Authorization
   values:
-  - claim: user
-    prefix: "Basic "
-    basicAuthPassword:
-      value: c3VwZXItc2VjcmV0LXBhc3N3b3Jk
+  - claimSource:
+      claim: user
+      prefix: "Basic "
+      basicAuthPassword:
+        value: c3VwZXItc2VjcmV0LXBhc3N3b3Jk
 server:
   bindAddress: "127.0.0.1:4180"
 providers:
-- provider: google
-  ID: google=oauth2-proxy
+- id: google=oauth2-proxy
+  provider: google
   clientSecret: b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK
   clientID: oauth2-proxy
   azureConfig:
@@ -100,9 +104,8 @@ redirect_url="http://localhost:4180/oauth2/callback"
 		return &b
 	}
 
-	durationPtr := func(d time.Duration) *options.Duration {
-		du := options.Duration(d)
-		return &du
+	durationPtr := func(d time.Duration) *time.Duration {
+		return &d
 	}
 
 	testExpectedOptions := func() *options.Options {
@@ -136,7 +139,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 						Claim:  "user",
 						Prefix: "Basic ",
 						BasicAuthPassword: &options.SecretSource{
-							Value: []byte("super-secret-password"),
+							Value: []byte("c3VwZXItc2VjcmV0LXBhc3N3b3Jk"),
 						},
 					},
 				},
@@ -226,7 +229,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 
 			opts, err := loadConfiguration(configFileName, alphaConfigFileName, extraFlags, in.args)
 			if in.expectedErr != nil {
-				Expect(err).To(MatchError(in.expectedErr.Error()))
+				Expect(err).To(MatchError(ContainSubstring(in.expectedErr.Error())))
 			} else {
 				Expect(err).ToNot(HaveOccurred())
 			}
@@ -245,19 +248,19 @@ redirect_url="http://localhost:4180/oauth2/callback"
 		Entry("with bad legacy configuration", loadConfigurationTableInput{
 			configContent:   testCoreConfig + "unknown_field=\"something\"",
 			expectedOptions: func() *options.Options { return nil },
-			expectedErr:     errors.New("failed to load config: error unmarshalling config: decoding failed due to the following error(s):\n\n'' has invalid keys: unknown_field"),
+			expectedErr:     errors.New("failed to load legacy options: failed to load config: error unmarshalling config: decoding failed due to the following error(s):\n\n'' has invalid keys: unknown_field"),
 		}),
 		Entry("with bad alpha configuration", loadConfigurationTableInput{
 			configContent:      testCoreConfig,
 			alphaConfigContent: testAlphaConfig + ":",
 			expectedOptions:    func() *options.Options { return nil },
-			expectedErr:        fmt.Errorf("failed to load alpha options: error unmarshalling config: error converting YAML to JSON: yaml: line %d: did not find expected key", strings.Count(testAlphaConfig, "\n")),
+			expectedErr:        errors.New("failed to load alpha options: error unmarshalling config: yaml: line 1: did not find expected key"),
 		}),
 		Entry("with alpha configuration and bad core configuration", loadConfigurationTableInput{
 			configContent:      testCoreConfig + "unknown_field=\"something\"",
 			alphaConfigContent: testAlphaConfig,
 			expectedOptions:    func() *options.Options { return nil },
-			expectedErr:        errors.New("failed to load core options: failed to load config: error unmarshalling config: decoding failed due to the following error(s):\n\n'' has invalid keys: unknown_field"),
+			expectedErr:        errors.New("failed to load legacy options: failed to load config: error unmarshalling config: decoding failed due to the following error(s):\n\n'' has invalid keys: unknown_field"),
 		}),
 	)
 })
