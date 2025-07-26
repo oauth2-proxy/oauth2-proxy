@@ -74,6 +74,10 @@ DOCKER_BUILDX_PUSH_X_PLATFORM_ALPINE := $(DOCKER_BUILDX_X_PLATFORM_ALPINE) --pus
 .PHONY: build-docker
 build-docker: build-distroless build-alpine ## Build multi architecture docker images in both flavours (distroless / alpine)
 
+.PHONY: build-docker-local
+build-docker-local: ## Build distroless docker image and locally load into docker images
+	$(DOCKER_BUILDX) --load -t $(REGISTRY)/$(REPOSITORY):${VERSION}-local .
+
 .PHONY: build-distroless
 build-distroless: ## Build multi architecture distroless based docker image
 	$(DOCKER_BUILDX_X_PLATFORM) -t $(REGISTRY)/$(REPOSITORY):latest -t $(REGISTRY)/$(REPOSITORY):${VERSION} .

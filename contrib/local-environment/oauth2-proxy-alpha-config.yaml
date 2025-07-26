@@ -4,12 +4,8 @@ upstreamConfig:
   upstreams:
     - id: httpbin
       path: /
-      uri: http://httpbin.localtest.me:8080
+      uri: http://httpbin
 injectRequestHeaders:
-  - name: X-Forwarded-Groups
-    values:
-      - claimSource:
-          claim: groups
   - name: X-Forwarded-User
     values:
       - claimSource:
@@ -18,14 +14,10 @@ injectRequestHeaders:
     values:
       - claimSource:
           claim: email
-  - name: X-Forwarded-Preferred-Username
-    values:
-      - claimSource:
-          claim: preferred_username
 providers:
   - id: oidc
     provider: oidc
     clientSecret: b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK
     clientID: oauth2-proxy
     oidcConfig:
-      issuerURL: http://dex.localhost:5556/dex
+      issuerURL: http://dex.localtest.me:5556/dex
