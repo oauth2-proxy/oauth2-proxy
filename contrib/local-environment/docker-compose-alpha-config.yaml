@@ -10,11 +10,58 @@
 #    make alpha-config-<command> (eg make nginx-up, make nginx-down)
 #
 # Access http://localhost:4180 to initiate a login cycle
-version: '3.0'
+version: "3.0"
 services:
   oauth2-proxy:
+    container_name: oauth2-proxy
     image: quay.io/oauth2-proxy/oauth2-proxy:v7.12.0
     command: --config /oauth2-proxy.cfg --alpha-config /oauth2-proxy-alpha-config.yaml
+    hostname: oauth2-proxy
     volumes:
       - "./oauth2-proxy-alpha-config.cfg:/oauth2-proxy.cfg"
       - "./oauth2-proxy-alpha-config.yaml:/oauth2-proxy-alpha-config.yaml"
+    restart: unless-stopped
+    ports:
+      - 4180:4180/tcp
+    networks:
+      dex: {}
+      httpbin: {}
+    depends_on:
+      - dex
+      - httpbin
+  dex:
+    container_name: dex
+    image: ghcr.io/dexidp/dex:v2.43.1
+    command: dex serve /dex.yaml
+    hostname: dex
+    volumes:
+      - "./dex.yaml:/dex.yaml"
+    restart: unless-stopped
+    ports:
+      - 5556:5556/tcp
+    networks:
+      dex:
+        aliases:
+          - dex.localtest.me
+      etcd: {}
+    depends_on:
+      - etcd
+  httpbin:
+    container_name: httpbin
+    image: kennethreitz/httpbin
+    ports: []
+    networks:
+      httpbin: {}
+  etcd:
+    container_name: etcd
+    image: gcr.io/etcd-development/etcd:v3.6.2
+    entrypoint: /usr/local/bin/etcd
+    command:
+      - --listen-client-urls=http://0.0.0.0:2379
+      - --advertise-client-urls=http://etcd:2379
+    networks:
+      etcd: {}
+networks:
+  dex: {}
+  etcd: {}
+  httpbin: {}
