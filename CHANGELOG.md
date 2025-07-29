@@ -11,6 +11,13 @@
 - [#2615](https://github.com/oauth2-proxy/oauth2-proxy/pull/2615) feat(cookies): add option to set a limit on the number of per-request CSRF cookies oauth2-proxy sets (@bh-tt)
 - [#2605](https://github.com/oauth2-proxy/oauth2-proxy/pull/2605) fix: show login page on broken cookie (@Primexz)
 - [#2743](https://github.com/oauth2-proxy/oauth2-proxy/pull/2743) feat: allow use more possible google admin-sdk api scopes (@BobDu)
+- [#2359](https://github.com/oauth2-proxy/oauth2-proxy/pull/2359) feat: add SourceHut (sr.ht) provider(@bitfehler)
+- [#2524](https://github.com/oauth2-proxy/oauth2-proxy/pull/2524) fix: regex substitution for $ signs in upstream path handling before running envsubst (@dashkan / @tuunit)
+- [#3104](https://github.com/oauth2-proxy/oauth2-proxy/pull/3104) feat(cookie): add feature support for cookie-secret-file (@sandy2008)
+- [#3055](https://github.com/oauth2-proxy/oauth2-proxy/pull/3055) feat: support non-default authorization request response mode also for OIDC providers (@stieler-it)
+- [#3138](https://github.com/oauth2-proxy/oauth2-proxy/pull/3138) feat: make google_groups argument optional when using google provider (@sourava01)
+- [#3093](https://github.com/oauth2-proxy/oauth2-proxy/pull/3093) feat: differentiate between "no available key" and error for redis sessions (@nobletrout)
+
 
 # V7.10.0
 

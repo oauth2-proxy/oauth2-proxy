@@ -48,23 +48,43 @@ func TestNewOptions(t *testing.T) {
 	assert.NotEqual(t, nil, err)
 
 	expected := errorMsg([]string{
-		"missing setting: cookie-secret",
+		"missing setting: cookie-secret or cookie-secret-file",
 		"provider has empty id: ids are required for all providers",
 		"provider missing setting: client-id",
 		"missing setting: client-secret or client-secret-file"})
 	assert.Equal(t, expected, err.Error())
 }
 
-func TestGoogleGroupOptions(t *testing.T) {
+func TestGoogleGroupOptionsWithoutServiceAccountJSON(t *testing.T) {
 	o := testOptions()
-	o.Providers[0].GoogleConfig.Groups = []string{"googlegroup"}
+	o.Providers[0].GoogleConfig.AdminEmail = "admin@example.com"
 	err := Validate(o)
 	assert.NotEqual(t, nil, err)
 
 	expected := errorMsg([]string{
-		"missing setting: google-admin-email",
 		"missing setting: google-service-account-json or google-use-application-default-credentials"})
 	assert.Equal(t, expected, err.Error())
+}
+
+func TestGoogleGroupOptionsWithoutAdminEmail(t *testing.T) {
+	o := testOptions()
+	o.Providers[0].GoogleConfig.UseApplicationDefaultCredentials = true
+	err := Validate(o)
+	assert.NotEqual(t, nil, err)
+
+	expected := errorMsg([]string{
+		"missing setting: google-admin-email"})
+	assert.Equal(t, expected, err.Error())
+}
+
+func TestGoogleGroupOptionsWithoutGroups(t *testing.T) {
+	o := testOptions()
+	// Set admin email and application default credentials but no groups - should still require them
+	o.Providers[0].GoogleConfig.AdminEmail = "admin@example.com"
+	o.Providers[0].GoogleConfig.UseApplicationDefaultCredentials = true
+	err := Validate(o)
+	// Should pass validation since google-group is now optional
+	assert.Equal(t, nil, err)
 }
 
 func TestGoogleGroupInvalidFile(t *testing.T) {

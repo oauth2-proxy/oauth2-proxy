@@ -146,7 +146,11 @@ func decodeTicketFromRequest(req *http.Request, cookieOpts *options.Cookie) (*ti
 	}
 
 	// An existing cookie exists, try to retrieve the ticket
-	val, _, ok := encryption.Validate(requestCookie, cookieOpts.Secret, cookieOpts.Expire)
+	secret, err := cookieOpts.GetSecret()
+	if err != nil {
+		return nil, fmt.Errorf("error getting cookie secret: %v", err)
+	}
+	val, _, ok := encryption.Validate(requestCookie, secret, cookieOpts.Expire)
 	if !ok {
 		return nil, fmt.Errorf("session ticket cookie failed validation: %v", err)
 	}

@@ -61,6 +61,11 @@ func (p *OIDCProvider) GetLoginURL(redirectURI, state, nonce string, extraParams
 	if !p.SkipNonce {
 		extraParams.Add("nonce", nonce)
 	}
+	// Response mode should only be set if a non default mode is requested
+	if p.AuthRequestResponseMode != "" {
+		extraParams.Add("response_mode", p.AuthRequestResponseMode)
+	}
+
 	loginURL := makeLoginURL(p.Data(), redirectURI, state, extraParams)
 	return loginURL.String()
 }
