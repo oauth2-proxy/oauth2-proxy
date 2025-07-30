@@ -580,7 +580,7 @@ func isAllowedMethod(req *http.Request, route allowedRoute) bool {
 }
 
 func isAllowedPath(req *http.Request, route allowedRoute) bool {
-	matches := route.pathRegex.MatchString(requestutil.GetRequestURI(req))
+	matches := route.pathRegex.MatchString(requestutil.GetRequestPath(req))
 
 	if route.negate {
 		return !matches

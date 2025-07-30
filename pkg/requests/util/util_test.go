@@ -13,16 +13,17 @@ import (
 
 var _ = Describe("Util Suite", func() {
 	const (
-		proto = "http"
-		host  = "www.oauth2proxy.test"
-		uri   = "/test/endpoint"
+		proto              = "http"
+		host               = "www.oauth2proxy.test"
+		uriWithQueryParams = "/test/endpoint?query=param"
+		uriNoQueryParams   = "/test/endpoint"
 	)
 	var req *http.Request
 
 	BeforeEach(func() {
 		req = httptest.NewRequest(
 			http.MethodGet,
-			fmt.Sprintf("%s://%s%s", proto, host, uri),
+			fmt.Sprintf("%s://%s%s", proto, host, uriWithQueryParams),
 			nil,
 		)
 	})
@@ -101,13 +102,13 @@ var _ = Describe("Util Suite", func() {
 				req = middleware.AddRequestScope(req, &middleware.RequestScope{})
 			})
 
-			It("returns the URI", func() {
-				Expect(util.GetRequestURI(req)).To(Equal(uri))
+			It("returns the URI (with query params)", func() {
+				Expect(util.GetRequestURI(req)).To(Equal(uriWithQueryParams))
 			})
 
-			It("ignores X-Forwarded-Uri and returns the URI", func() {
+			It("ignores X-Forwarded-Uri and returns the URI (with query params)", func() {
 				req.Header.Add("X-Forwarded-Uri", "/some/other/path")
-				Expect(util.GetRequestURI(req)).To(Equal(uri))
+				Expect(util.GetRequestURI(req)).To(Equal(uriWithQueryParams))
 			})
 		})
 
@@ -118,13 +119,47 @@ var _ = Describe("Util Suite", func() {
 				})
 			})
 
-			It("returns the URI if X-Forwarded-Uri is not present", func() {
-				Expect(util.GetRequestURI(req)).To(Equal(uri))
+			It("returns the URI if X-Forwarded-Uri is not present (with query params)", func() {
+				Expect(util.GetRequestURI(req)).To(Equal(uriWithQueryParams))
 			})
 
-			It("returns the X-Forwarded-Uri when present", func() {
-				req.Header.Add("X-Forwarded-Uri", "/some/other/path")
-				Expect(util.GetRequestURI(req)).To(Equal("/some/other/path"))
+			It("returns the X-Forwarded-Uri when present (with query params)", func() {
+				req.Header.Add("X-Forwarded-Uri", "/some/other/path?query=param")
+				Expect(util.GetRequestURI(req)).To(Equal("/some/other/path?query=param"))
+			})
+		})
+	})
+
+	Context("GetRequestPath", func() {
+		Context("IsProxied is false", func() {
+			BeforeEach(func() {
+				req = middleware.AddRequestScope(req, &middleware.RequestScope{})
+			})
+
+			It("returns the URI (without query params)", func() {
+				Expect(util.GetRequestPath(req)).To(Equal(uriNoQueryParams))
+			})
+
+			It("ignores X-Forwarded-Uri and returns the URI (without query params)", func() {
+				req.Header.Add("X-Forwarded-Uri", "/some/other/path?query=param")
+				Expect(util.GetRequestPath(req)).To(Equal(uriNoQueryParams))
+			})
+		})
+
+		Context("IsProxied is true", func() {
+			BeforeEach(func() {
+				req = middleware.AddRequestScope(req, &middleware.RequestScope{
+					ReverseProxy: true,
+				})
+			})
+
+			It("returns the URI if X-Forwarded-Uri is not present (without query params)", func() {
+				Expect(util.GetRequestPath(req)).To(Equal(uriNoQueryParams))
+			})
+
+			It("returns the X-Forwarded-Uri when present (without query params)", func() {
+				req.Header.Add("X-Forwarded-Uri", "/some/other/path?query=param")
+				Expect(util.GetRequestPath(req)).To(Equal("/some/other/path"))
 			})
 		})
 	})
