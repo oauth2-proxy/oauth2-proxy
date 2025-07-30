@@ -4,6 +4,16 @@
 
 ## Important Notes
 
+## Breaking Changes
+
+## Changes since v7.11.0
+
+# V7.11.0
+
+## Release Highlights
+
+## Important Notes
+
 Fixed critical vulnerability where `skip_auth_routes` regex patterns matched against the full request URI (path + query parameters) instead of just the path, allowing authentication bypass attacks.
 
 ## Breaking Changes
