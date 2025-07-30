@@ -4,7 +4,39 @@
 
 ## Important Notes
 
-Fixed critical vulnerability where `skip_auth_routes` regex patterns matched against the full request URI (path + query parameters) instead of just the path, allowing authentication bypass attacks.
+## Breaking Changes
+
+## Changes since v7.11.0
+
+# V7.11.0
+
+## Release Highlights
+
+- 🏢 Support for SourceHut (sr.ht) provider
+- 🔍️ Support for more fine-grained control over the google admin-sdk scopes and optional google groups
+- 🐛 Squashed some bugs
+
+
+## Important Notes
+
+Firstly, fixed critical vulnerability where `skip_auth_routes` regex patterns matched against the full request URI (path + query parameters) instead of just the path, allowing authentication bypass attacks.
+
+Secondly, fixed double-escaping of `$` in regexes for Alpha Config upstreams path and rewriteTargets:
+
+```yaml
+# Before
+upstreams:
+  - id: web
+    path: ^/(.*)$$
+    rewriteTarget: /$$1
+
+# After
+upstreams:
+  - id: web
+    path: ^/(.*)$
+    rewriteTarget: /$1
+```
+
 
 ## Breaking Changes
 
