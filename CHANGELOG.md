@@ -6,6 +6,52 @@
 
 ## Breaking Changes
 
+## Changes since v7.11.0
+
+# V7.11.0
+
+## Release Highlights
+
+- 🏢 Support for SourceHut (sr.ht) provider
+- 🔍️ Support for more fine-grained control over the google admin-sdk scopes and optional google groups
+- 🐛 Squashed some bugs
+
+
+## Important Notes
+
+Firstly, fixed critical vulnerability where `skip_auth_routes` regex patterns matched against the full request URI (path + query parameters) instead of just the path, allowing authentication bypass attacks.
+
+Secondly, fixed double-escaping of `$` in regexes for Alpha Config upstreams path and rewriteTargets:
+
+```yaml
+# Before
+upstreams:
+  - id: web
+    path: ^/(.*)$$
+    rewriteTarget: /$$1
+
+# After
+upstreams:
+  - id: web
+    path: ^/(.*)$
+    rewriteTarget: /$1
+```
+
+
+## Breaking Changes
+
+If your configuration relies on matching query parameters in `skip_auth_routes` patterns, you must update your regex patterns to match paths only. Review all `skip_auth_routes` entries for potential impact.
+
+**Example of affected configuration:**
+```yaml
+# This pattern previously matched both:
+# - /api/foo/status (intended)
+# - /api/private/sensitive?path=/status (bypass - now fixed)
+skip_auth_routes: ["^/api/.*/status"]
+```
+
+For detailed information, migration guidance, and security implications, see the [security advisory](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-7rh7-c77v-6434).
+
 ## Changes since v7.10.0
 
 - [#2615](https://github.com/oauth2-proxy/oauth2-proxy/pull/2615) feat(cookies): add option to set a limit on the number of per-request CSRF cookies oauth2-proxy sets (@bh-tt)
@@ -17,6 +63,7 @@
 - [#3055](https://github.com/oauth2-proxy/oauth2-proxy/pull/3055) feat: support non-default authorization request response mode also for OIDC providers (@stieler-it)
 - [#3138](https://github.com/oauth2-proxy/oauth2-proxy/pull/3138) feat: make google_groups argument optional when using google provider (@sourava01)
 - [#3093](https://github.com/oauth2-proxy/oauth2-proxy/pull/3093) feat: differentiate between "no available key" and error for redis sessions (@nobletrout)
+- [GHSA-7rh7-c77v-6434](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-7rh7-c77v-6434) fix: skip_auth_routes bypass through query parameter inclusion
 
 
 # V7.10.0
