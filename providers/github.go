@@ -464,6 +464,7 @@ func (p *GitHubProvider) getOrgs(ctx context.Context, s *sessions.SessionState) 
 
 	type Organization struct {
 		Login string `json:"login"`
+		Name string `json:"name"`
 	}
 
 	pn := 1
@@ -490,8 +491,12 @@ func (p *GitHubProvider) getOrgs(ctx context.Context, s *sessions.SessionState) 
 		}
 
 		for _, org := range orgs {
-			logger.Printf("Member of Github Organization:%q", org.Login)
-			s.Groups = append(s.Groups, org.Login)
+			orgName := org.Login
+			if orgName == "" {
+				orgName = org.Name
+			}
+			logger.Printf("Member of Github Organization:%q", orgName)
+			s.Groups = append(s.Groups, orgName)
 		}
 		pn++
 	}
@@ -506,6 +511,7 @@ func (p *GitHubProvider) getTeams(ctx context.Context, s *sessions.SessionState)
 		Slug string `json:"slug"`
 		Org  struct {
 			Login string `json:"login"`
+			Name string `json:"name"`
 		} `json:"organization"`
 	}
 
@@ -533,7 +539,15 @@ func (p *GitHubProvider) getTeams(ctx context.Context, s *sessions.SessionState)
 		}
 
 		for _, team := range teams {
-			logger.Printf("Member of Github Organization/Team: %q/%q", team.Org.Login, team.Slug)
+			orgName := team.Org.Login
+			if orgName == "" {
+				orgName = team.Org.Name
+			}
+			teamName := team.Slug
+			if teamName == "" {
+				teamName = team.Name
+			}
+			logger.Printf("Member of Github Organization/Team:%q/%q", orgName, teamName)
 			s.Groups = append(s.Groups, fmt.Sprintf("%s%s%s", team.Org.Login, orgTeamSeparator, team.Slug))
 		}
 
