@@ -30,10 +30,10 @@ type RedisStoreOptions struct {
 	SentinelMasterName     string   `flag:"redis-sentinel-master-name" cfg:"redis_sentinel_master_name"`
 	SentinelConnectionURLs []string `flag:"redis-sentinel-connection-urls" cfg:"redis_sentinel_connection_urls"`
 	UseCluster             bool     `flag:"redis-use-cluster" cfg:"redis_use_cluster"`
-	UseAWSIAMAuth          bool     `flag:"redis-aws-use-iam-auth" cfg:"redis_aws_use_iam_auth"`
-	AWSServiceName         string   `flag:"redis-aws-service-name" cfg:"redis_aws_service_name"`
-	AWSClusterName         string   `flag:"redis-aws-cluster-name" cfg:"redis_aws_cluster_name"`
-	AWSUsername            string   `flag:"redis-aws-username" cfg:"redis_aws_username"`
+	UseAWSIAMAuth          bool     `cfg:"redis_aws_use_iam_auth"`
+	AWSServiceName         string   `cfg:"redis_aws_service_name"`
+	AWSClusterName         string   `cfg:"redis_aws_cluster_name"`
+	AWSUsername            string   `cfg:"redis_aws_username"`
 	ClusterConnectionURLs  []string `flag:"redis-cluster-connection-urls" cfg:"redis_cluster_connection_urls"`
 	CAPath                 string   `flag:"redis-ca-path" cfg:"redis_ca_path"`
 	InsecureSkipTLSVerify  bool     `flag:"redis-insecure-skip-tls-verify" cfg:"redis_insecure_skip_tls_verify"`

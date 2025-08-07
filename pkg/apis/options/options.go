@@ -159,10 +159,6 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Bool("redis-use-cluster", false, "Connect to redis cluster. Must set --redis-cluster-connection-urls to use this feature")
 	flagSet.StringSlice("redis-cluster-connection-urls", []string{}, "List of Redis cluster connection URLs (eg redis://[USER[:PASSWORD]@]HOST[:PORT]). Used in conjunction with --redis-use-cluster")
 	flagSet.Int("redis-connection-idle-timeout", 0, "Redis connection idle timeout seconds, if Redis timeout option is non-zero, the --redis-connection-idle-timeout must be less then Redis timeout option")
-	flagSet.Bool("redis-aws-use-iam-auth", false, "Use AWS IAM authentication for Redis. Must set --redis-aws-service-name, --redis-aws-cluster-name, & --redis-aws-username to use this feature")
-	flagSet.String("redis-aws-service-name", "", "AWS service name for Redis IAM authentication -  `elasticache` or  `memorydb`")
-	flagSet.String("redis-aws-cluster-name", "", "AWS cluster name for Redis IAM authentication")
-	flagSet.String("redis-aws-username", "", "AWS username for Redis IAM authentication")
 	flagSet.String("signature-key", "", "GAP-Signature request signature key (algorithm:secretkey)")
 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
 
