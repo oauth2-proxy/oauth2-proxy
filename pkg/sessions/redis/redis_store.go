@@ -185,22 +185,22 @@ func buildStandaloneClient(opts options.RedisStoreOptions) (Client, error) {
 }
 
 func setupAWSIAMAuth(opts options.RedisStoreOptions, opt *redis.Options) error {
-	if !opts.UseAWSIAMAuth {
+	if opts.AWSIAMConfig == nil {
 		return nil
 	}
-	if opts.AWSServiceName != "elasticache" && opts.AWSServiceName != "memorydb" {
+	if opts.AWSIAMConfig.ServiceName != "elasticache" && opts.AWSIAMConfig.ServiceName != "memorydb" {
 		return fmt.Errorf("AWS IAM auth is only supported for elasticache and memorydb")
 	}
-	generator, err := auth.New(opts.AWSServiceName, opts.AWSClusterName, opts.AWSUsername)
+	generator, err := auth.New(opts.AWSIAMConfig.ServiceName, opts.AWSIAMConfig.ClusterName, opts.AWSIAMConfig.Username)
 	if err != nil {
 		return fmt.Errorf("error creating AWS IAM auth token generator: %v", err)
 	}
 	opt.CredentialsProvider = func() (username string, password string) {
-		token, err := generator.Generate()
+		token, err := generator.GenerateToken()
 		if err != nil {
 			logger.Errorf("error generating AWS IAM auth token: %v", err)
 		}
-		return opts.AWSUsername, token
+		return opts.AWSIAMConfig.Username, token
 	}
 	// AWS services has a max connection lifetime of 12 hours. This is set to 11 hours to give some buffer time
 	opt.ConnMaxLifetime = 11 * time.Hour

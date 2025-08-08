@@ -27,8 +27,12 @@ const (
 	hexEncodedSHA256EmptyString = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 )
 
+type TokenGenerator interface {
+	GenerateToken() (string, error)
+}
+
 // IAMTokenGenerator generates an IAM token for AWS Redis authentication.
-type IAMTokenGenerator interface {
+type iamTokenGenerator struct {
 	serviceName string
 	region      string
 	req         *http.Request
@@ -65,7 +69,7 @@ func New(serviceName, clusterName, userName string) (*IAMTokenGenerator, error) 
 		return nil, err
 	}
 
-	return &IAMTokenGenerator{
+	return &iamTokenGenerator{
 		serviceName:         serviceName,
 		region:              cfg.Region,
 		req:                 req,
@@ -74,7 +78,7 @@ func New(serviceName, clusterName, userName string) (*IAMTokenGenerator, error) 
 	}, nil
 }
 
-func (atg IAMTokenGenerator) Generate() (string, error) {
+func (atg iamTokenGenerator) GenerateToken() (string, error) {
 	ctx := context.Background()
 	credentials, err := atg.credentialsProvider.Retrieve(ctx)
 	if err != nil {
