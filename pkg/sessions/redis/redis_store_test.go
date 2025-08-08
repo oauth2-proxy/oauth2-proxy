@@ -277,7 +277,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 		Context("with AWS IAM options", func() {
 			It("should initialize CredentialsProvider when AWSIAMConfig is present", func() {
 				redisOpts := options.RedisStoreOptions{
-					AWSIAMConfig: &options.AWSIAMOptions{
+					AWSIAMConfig: &options.AWSIAMConfig{
 						ServiceName: "elasticache",
 						ClusterName: "test-cluster",
 						Username:    "test-user",
@@ -288,6 +288,8 @@ var _ = Describe("Redis SessionStore Tests", func() {
 				opt = &redis.Options{}
 
 				err := setupAWSIAMAuth(redisOpts, opt)
+				Expect(err).ToNot(HaveOccurred())
+
 				Expect(opt.CredentialsProvider).ToNot(BeNil())
 
 				username, _ := opt.CredentialsProvider()
@@ -302,7 +304,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 				opt = &redis.Options{}
 
 				err := setupAWSIAMAuth(redisOpts, opt)
-
+				Expect(err).ToNot(HaveOccurred())
 				Expect(opt.CredentialsProvider).To(BeNil())
 			})
 		})
