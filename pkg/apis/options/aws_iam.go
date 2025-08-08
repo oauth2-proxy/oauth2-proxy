@@ -1,6 +1,6 @@
 package options
 
-type AWSIAMOptions struct {
+type AWSIAMConfig struct {
 	// AWS service redis service being used. "elasticache" or "memorydb"
 	ServiceName         string   `json:"serviceName,omitempty`
 	// AWS Cluster name
