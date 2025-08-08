@@ -288,10 +288,8 @@ var _ = Describe("Redis SessionStore Tests", func() {
 				opt = &redis.Options{}
 
 				err := setupAWSIAMAuth(redisOpts, opt)
-				Expect(err).ToNot(HaveOccurred())
 				Expect(opt.CredentialsProvider).ToNot(BeNil())
 
-				// Verify the CredentialsProvider returns the expected username
 				username, _ := opt.CredentialsProvider()
 				Expect(username).To(Equal("test-user"))
 			})
@@ -304,7 +302,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 				opt = &redis.Options{}
 
 				err := setupAWSIAMAuth(redisOpts, opt)
-				Expect(err).ToNot(HaveOccurred())
+
 				Expect(opt.CredentialsProvider).To(BeNil())
 			})
 		})

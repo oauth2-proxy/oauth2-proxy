@@ -34,7 +34,7 @@ type RedisStoreOptions struct {
 	CAPath                 string   		`flag:"redis-ca-path" cfg:"redis_ca_path"`
 	InsecureSkipTLSVerify  bool     		`flag:"redis-insecure-skip-tls-verify" cfg:"redis_insecure_skip_tls_verify"`
 	IdleTimeout            int      		`flag:"redis-connection-idle-timeout" cfg:"redis_connection_idle_timeout"`
-	AWSIAMConfig           *AWSIAMOptions 	`cfg:",internal"`
+	AWSIAMConfig           *AWSIAMConfig 	`cfg:",internal"`
 }
 
 func sessionOptionsDefaults() SessionOptions {
