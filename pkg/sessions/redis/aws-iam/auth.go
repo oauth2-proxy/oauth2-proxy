@@ -27,7 +27,8 @@ const (
 	hexEncodedSHA256EmptyString = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 )
 
-type IAMTokenGenerator struct {
+// IAMTokenGenerator generates an IAM token for AWS Redis authentication.
+type IAMTokenGenerator interface {
 	serviceName string
 	region      string
 	req         *http.Request
@@ -36,6 +37,7 @@ type IAMTokenGenerator struct {
 	signer              *v4.Signer
 }
 
+// New creates a new IAMTokenGenerator instance
 func New(serviceName, clusterName, userName string) (*IAMTokenGenerator, error) {
 
 	ctx := context.Background()
@@ -91,7 +93,8 @@ func (atg IAMTokenGenerator) Generate() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("AWS IAM request signing failed - %v", err)
 	}
-
+	// AWS expects the scheme to be removed before using as an auth token
+	// https://docs.aws.amazon.com/AmazonElastiCache/latest/dg/auth-iam.html#auth-iam-Connecting
 	signedURL = strings.Replace(signedURL, "http://", "", 1)
 
 	return signedURL, nil
