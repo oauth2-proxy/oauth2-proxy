@@ -11,6 +11,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/tests"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/redis/go-redis/v9"
 )
 
 const (
@@ -269,6 +270,43 @@ var _ = Describe("Redis SessionStore Tests", func() {
 			Expect(err.Error()).To(Equal("unable to parse redis urls: no redis urls provided"))
 			Expect(addrs).To(BeNil())
 			Expect(opts).To(BeNil())
+		})
+	})
+
+	Describe("AWSIAMAuth", func() {
+		Context("with AWS IAM options", func() {
+			It("should initialize CredentialsProvider when AWSIAMConfig is present", func() {
+				redisOpts := options.RedisStoreOptions{
+					AWSIAMConfig: &options.AWSIAMOptions{
+						ServiceName: "elasticache",
+						ClusterName: "test-cluster",
+						Username:    "test-user",
+					},
+				}
+
+				var opt *redis.Options
+				opt = &redis.Options{}
+
+				err := setupAWSIAMAuth(redisOpts, opt)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(opt.CredentialsProvider).ToNot(BeNil())
+
+				// Verify the CredentialsProvider returns the expected username
+				username, _ := opt.CredentialsProvider()
+				Expect(username).To(Equal("test-user"))
+			})
+			It("should not initialize CredentialsProvider when AWSIAMConfig is nil", func() {
+				redisOpts := options.RedisStoreOptions{
+					AWSIAMConfig: nil,
+				}
+
+				var opt *redis.Options
+				opt = &redis.Options{}
+
+				err := setupAWSIAMAuth(redisOpts, opt)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(opt.CredentialsProvider).To(BeNil())
+			})
 		})
 	})
 })

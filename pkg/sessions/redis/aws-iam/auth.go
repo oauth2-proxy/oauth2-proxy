@@ -42,7 +42,7 @@ type iamTokenGenerator struct {
 }
 
 // New creates a new IAMTokenGenerator instance
-func New(serviceName, clusterName, userName string) (*IAMTokenGenerator, error) {
+func New(serviceName, clusterName, userName string) (TokenGenerator, error) {
 
 	ctx := context.Background()
 	cfg, err := config.LoadDefaultConfig(ctx)
