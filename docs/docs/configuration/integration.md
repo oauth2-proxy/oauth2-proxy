@@ -18,6 +18,8 @@ server {
   location /oauth2/ {
     proxy_pass       http://127.0.0.1:4180;
     proxy_set_header Host                    $host;
+    # or if you are using a proxy by DNS/Service Mesh and can't rewrite the Host
+    # proxy_set_header X-Forwarded-Host 	     $host;
     proxy_set_header X-Real-IP               $remote_addr;
     proxy_set_header X-Auth-Request-Redirect $request_uri;
     # or, if you are handling multiple domains:
@@ -26,6 +28,8 @@ server {
   location = /oauth2/auth {
     proxy_pass       http://127.0.0.1:4180;
     proxy_set_header Host             $host;
+    # or if you are using a proxy by DNS/Service Mesh and can't rewrite the Host
+    # proxy_set_header X-Forwarded-Host 	     $host;
     proxy_set_header X-Real-IP        $remote_addr;
     proxy_set_header X-Forwarded-Uri  $request_uri;
     # nginx auth_request includes headers but not body
