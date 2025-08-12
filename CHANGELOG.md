@@ -8,6 +8,8 @@
 
 ## Changes since v7.11.0
 
+- [#2273](https://github.com/oauth2-proxy/oauth2-proxy/pull/2273) feat: add Cidaas provider (@Bibob7, @Teko012)
+
 # V7.11.0
 
 ## Release Highlights

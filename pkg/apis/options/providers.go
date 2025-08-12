@@ -115,6 +115,9 @@ const (
 	// BitbucketProvider is the provider type for Bitbucket
 	BitbucketProvider ProviderType = "bitbucket"
 
+	// CidaasProvider is the provider type for Cidaas IDP
+	CidaasProvider ProviderType = "cidaas"
+
 	// DigitalOceanProvider is the provider type for DigitalOcean
 	DigitalOceanProvider ProviderType = "digitalocean"
 
