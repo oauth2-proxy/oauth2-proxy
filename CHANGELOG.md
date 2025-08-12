@@ -4,6 +4,10 @@
 
 ## Important Notes
 
+Use of [`k8s.io/apimachinery/pkg/util/errors.NewAggregate`](https://pkg.go.dev/k8s.io/apimachinery/pkg/util/errors#NewAggregate)
+is removed and replaced by standard [`errors.Join`](https://pkg.go.dev/errors#Join) (available since Go 1.20) which allows
+standard unwrapping of errors.
+
 ## Breaking Changes
 
 ## Changes since v7.11.0
