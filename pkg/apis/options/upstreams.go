@@ -93,4 +93,8 @@ type Upstream struct {
 	// Timeout is the maximum duration the server will wait for a response from the upstream server.
 	// Defaults to 30 seconds.
 	Timeout *Duration `json:"timeout,omitempty"`
+
+	// DisableKeepAlives disables HTTP keep-alive connections to the upstream server.
+	// Defaults to false.
+	DisableKeepAlives bool `json:"disableKeepAlives,omitempty"`
 }

@@ -372,12 +372,13 @@ var _ = Describe("HTTP Upstream Suite", func() {
 	})
 
 	type newUpstreamTableInput struct {
-		proxyWebSockets bool
-		flushInterval   options.Duration
-		skipVerify      bool
-		sigData         *options.SignatureData
-		errorHandler    func(http.ResponseWriter, *http.Request, error)
-		timeout         options.Duration
+		proxyWebSockets   bool
+		flushInterval     options.Duration
+		skipVerify        bool
+		sigData           *options.SignatureData
+		errorHandler      func(http.ResponseWriter, *http.Request, error)
+		timeout           options.Duration
+		disableKeepAlives bool
 	}
 
 	DescribeTable("newHTTPUpstreamProxy",
@@ -391,6 +392,7 @@ var _ = Describe("HTTP Upstream Suite", func() {
 				InsecureSkipTLSVerify: in.skipVerify,
 				ProxyWebSockets:       &in.proxyWebSockets,
 				Timeout:               &in.timeout,
+				DisableKeepAlives:     in.disableKeepAlives,
 			}
 
 			handler := newHTTPUpstreamProxy(upstream, u, in.sigData, in.errorHandler)
@@ -411,6 +413,9 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			Expect(proxy.ErrorHandler != nil).To(Equal(in.errorHandler != nil))
 			if in.skipVerify {
 				Expect(transport.TLSClientConfig.InsecureSkipVerify).To(Equal(true))
+			}
+			if in.disableKeepAlives {
+				Expect(transport.DisableKeepAlives).To(Equal(true))
 			}
 		},
 		Entry("with proxy websockets", &newUpstreamTableInput{
@@ -462,6 +467,15 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			sigData:         nil,
 			errorHandler:    nil,
 			timeout:         options.Duration(5 * time.Second),
+		}),
+		Entry("with a DisableKeepAlives", &newUpstreamTableInput{
+			proxyWebSockets:   false,
+			flushInterval:     defaultFlushInterval,
+			skipVerify:        false,
+			sigData:           nil,
+			errorHandler:      nil,
+			timeout:           defaultTimeout,
+			disableKeepAlives: true,
 		}),
 	)
 
