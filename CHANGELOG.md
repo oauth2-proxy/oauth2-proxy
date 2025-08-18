@@ -2,6 +2,9 @@
 
 ## Release Highlights
 
+- 🕵️‍♀️ Vulnerabilities have been addressed
+  - [CVE-2025-47907](https://pkg.go.dev/vuln/GO-2025-3849)
+
 ## Important Notes
 
 ## Breaking Changes
@@ -9,6 +12,7 @@
 ## Changes since v7.11.0
 
 - [#2273](https://github.com/oauth2-proxy/oauth2-proxy/pull/2273) feat: add Cidaas provider (@Bibob7, @Teko012)
+- [#3166](https://github.com/oauth2-proxy/oauth2-proxy/pull/3166) chore(dep): upgrade to latest golang 1.24.6 (@tuunit)
 
 # V7.11.0
 
