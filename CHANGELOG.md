@@ -14,6 +14,7 @@
 - [#2273](https://github.com/oauth2-proxy/oauth2-proxy/pull/2273) feat: add Cidaas provider (@Bibob7, @Teko012)
 - [#3166](https://github.com/oauth2-proxy/oauth2-proxy/pull/3166) chore(dep): upgrade to latest golang 1.24.6 (@tuunit)
 - [#3156](https://github.com/oauth2-proxy/oauth2-proxy/pull/3156) feat: allow disable-keep-alives configuration for upstream (@jet-go)
+- [#3150](https://github.com/oauth2-proxy/oauth2-proxy/pull/3150) fix: Gitea team membership (@MagicRB, @tuunit)
 
 # V7.11.0
 
