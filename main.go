@@ -77,7 +77,8 @@ func loadConfiguration(config, yamlConfig string, extraFlags *pflag.FlagSet, arg
 		logger.Printf("WARNING: You are using alpha configuration. The structure in this configuration file may change without notice. You MUST remove conflicting options from your existing configuration.")
 		return loadYamlOptions(yamlConfig, config, extraFlags, args)
 	}
-	return opts, err
+
+	return opts, nil
 }
 
 // loadLegacyOptions loads the old toml options using the legacy flagset
