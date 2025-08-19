@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -68,7 +69,7 @@ func TestGoogleGroupOptionsWithoutServiceAccountJSON(t *testing.T) {
 
 func TestGoogleGroupOptionsWithoutAdminEmail(t *testing.T) {
 	o := testOptions()
-	o.Providers[0].GoogleConfig.UseApplicationDefaultCredentials = true
+	o.Providers[0].GoogleConfig.UseApplicationDefaultCredentials = ptr.Ptr(true)
 	err := Validate(o)
 	assert.NotEqual(t, nil, err)
 
@@ -81,7 +82,7 @@ func TestGoogleGroupOptionsWithoutGroups(t *testing.T) {
 	o := testOptions()
 	// Set admin email and application default credentials but no groups - should still require them
 	o.Providers[0].GoogleConfig.AdminEmail = "admin@example.com"
-	o.Providers[0].GoogleConfig.UseApplicationDefaultCredentials = true
+	o.Providers[0].GoogleConfig.UseApplicationDefaultCredentials = ptr.Ptr(true)
 	err := Validate(o)
 	// Should pass validation since google-group is now optional
 	assert.Equal(t, nil, err)

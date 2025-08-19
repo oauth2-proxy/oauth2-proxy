@@ -27,12 +27,12 @@ func NewProxy(upstreams options.UpstreamConfig, sigData *options.SignatureData, 
 		serveMux: mux.NewRouter(),
 	}
 
-	if upstreams.ProxyRawPath {
+	if *upstreams.ProxyRawPath {
 		m.serveMux.UseEncodedPath()
 	}
 
 	for _, upstream := range sortByPathLongest(upstreams.Upstreams) {
-		if upstream.Static {
+		if *upstream.Static {
 			if err := m.registerStaticResponseHandler(upstream, writer); err != nil {
 				return nil, fmt.Errorf("could not register static upstream %q: %v", upstream.ID, err)
 			}

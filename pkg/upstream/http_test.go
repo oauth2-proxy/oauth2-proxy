@@ -15,6 +15,7 @@ import (
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/middleware"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"golang.org/x/net/websocket"
@@ -23,8 +24,6 @@ import (
 var _ = Describe("HTTP Upstream Suite", func() {
 	defaultFlushInterval := options.DefaultUpstreamFlushInterval
 	defaultTimeout := options.DefaultUpstreamTimeout
-	truth := true
-	falsum := false
 
 	type httpUpstreamTableInput struct {
 		id                     string
@@ -64,8 +63,8 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			upstream := options.Upstream{
 				ID:                    in.id,
 				PassHostHeader:        &in.passUpstreamHostHeader,
-				ProxyWebSockets:       &falsum,
-				InsecureSkipTLSVerify: false,
+				ProxyWebSockets:       ptr.Ptr(false),
+				InsecureSkipTLSVerify: ptr.Ptr(false),
 				FlushInterval:         &flush,
 				Timeout:               &timeout,
 			}
@@ -343,9 +342,9 @@ var _ = Describe("HTTP Upstream Suite", func() {
 
 		upstream := options.Upstream{
 			ID:                    "noPassHost",
-			PassHostHeader:        &falsum,
-			ProxyWebSockets:       &falsum,
-			InsecureSkipTLSVerify: false,
+			PassHostHeader:        ptr.Ptr(false),
+			ProxyWebSockets:       ptr.Ptr(false),
+			InsecureSkipTLSVerify: ptr.Ptr(false),
 			FlushInterval:         &defaultFlushInterval,
 			Timeout:               &defaultTimeout,
 		}
@@ -389,10 +388,10 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			upstream := options.Upstream{
 				ID:                    "foo123",
 				FlushInterval:         &in.flushInterval,
-				InsecureSkipTLSVerify: in.skipVerify,
+				InsecureSkipTLSVerify: &in.skipVerify,
 				ProxyWebSockets:       &in.proxyWebSockets,
 				Timeout:               &in.timeout,
-				DisableKeepAlives:     in.disableKeepAlives,
+				DisableKeepAlives:     &in.disableKeepAlives,
 			}
 
 			handler := newHTTPUpstreamProxy(upstream, u, in.sigData, in.errorHandler)
@@ -487,9 +486,9 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			timeout := options.DefaultUpstreamTimeout
 			upstream := options.Upstream{
 				ID:                    "websocketProxy",
-				PassHostHeader:        &truth,
-				ProxyWebSockets:       &truth,
-				InsecureSkipTLSVerify: false,
+				PassHostHeader:        ptr.Ptr(true),
+				ProxyWebSockets:       ptr.Ptr(true),
+				InsecureSkipTLSVerify: ptr.Ptr(false),
 				FlushInterval:         &flush,
 				Timeout:               &timeout,
 			}

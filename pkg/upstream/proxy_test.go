@@ -10,6 +10,7 @@ import (
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/app/pagewriter"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -60,19 +61,19 @@ var _ = Describe("Proxy Suite", func() {
 						{
 							ID:         "static-backend",
 							Path:       "/static/",
-							Static:     true,
+							Static:     ptr.Ptr(true),
 							StaticCode: &ok,
 						},
 						{
 							ID:         "static-backend-no-trailing-slash",
 							Path:       "/static",
-							Static:     true,
+							Static:     ptr.Ptr(true),
 							StaticCode: &accepted,
 						},
 						{
 							ID:         "static-backend-long",
 							Path:       "/static/long",
-							Static:     true,
+							Static:     ptr.Ptr(true),
 							StaticCode: &accepted,
 						},
 						{
@@ -83,7 +84,7 @@ var _ = Describe("Proxy Suite", func() {
 						{
 							ID:         "single-path-backend",
 							Path:       "/single-path",
-							Static:     true,
+							Static:     ptr.Ptr(true),
 							StaticCode: &ok,
 						},
 						{
@@ -346,7 +347,7 @@ var _ = Describe("Proxy Suite", func() {
 				upstream: "",
 			}),
 			Entry("containing an escaped '/' with ProxyRawPath", &proxyTableInput{
-				upstreams: options.UpstreamConfig{ProxyRawPath: true},
+				upstreams: options.UpstreamConfig{ProxyRawPath: ptr.Ptr(true)},
 				target:    "http://example.localhost/%2F/test1/%2F/test2",
 				response: testHTTPResponse{
 					code: 404,

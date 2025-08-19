@@ -16,6 +16,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -172,7 +173,7 @@ var _ = Describe("ADFS Provider Tests", func() {
 				ProtectedResource: resource,
 				Scope:             "",
 			}, options.Provider{
-				ADFSConfig: options.ADFSOptions{SkipScope: true},
+				ADFSConfig: options.ADFSOptions{SkipScope: ptr.Ptr(true)},
 			})
 
 			result := p.GetLoginURL("https://example.com/adfs/oauth2/", "", "", url.Values{})

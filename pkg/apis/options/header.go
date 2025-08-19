@@ -11,7 +11,7 @@ type Header struct {
 	// should be preserved for the request to the upstream server.
 	// This option only applies to injected request headers.
 	// Defaults to false (headers that match this header will be stripped).
-	PreserveRequestValue bool `yaml:"preserveRequestValue"`
+	PreserveRequestValue *bool `yaml:"preserveRequestValue,omitempty"`
 
 	// InsecureSkipHeaderNormalization disables normalizing the header name
 	// According to RFC 7230 Section 3.2 there aren't any rules about

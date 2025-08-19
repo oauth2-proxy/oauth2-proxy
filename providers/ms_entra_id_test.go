@@ -13,6 +13,7 @@ import (
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 
 	. "github.com/onsi/gomega"
@@ -24,7 +25,7 @@ func TestAzureEntraOIDCProviderNewMultiTenant(t *testing.T) {
 	provider := NewMicrosoftEntraIDProvider(&ProviderData{},
 		options.Provider{OIDCConfig: options.OIDCOptions{
 			IssuerURL:                      "https://login.microsoftonline.com/common/v2.0",
-			InsecureSkipIssuerVerification: true,
+			InsecureSkipIssuerVerification: ptr.Ptr(true),
 		}},
 	)
 	g.Expect(provider.Data().ProviderName).To(Equal("Microsoft Entra ID"))
@@ -90,8 +91,8 @@ func TestAzureEntraOIDCProviderValidateSessionAllowedTenants(t *testing.T) {
 		options.Provider{
 			OIDCConfig: options.OIDCOptions{
 				IssuerURL:                      "https://login.microsoftonline.com/common/v2.0",
-				InsecureSkipIssuerVerification: true,
-				InsecureSkipNonce:              true,
+				InsecureSkipIssuerVerification: ptr.Ptr(true),
+				InsecureSkipNonce:              ptr.Ptr(true),
 			},
 			MicrosoftEntraIDConfig: options.MicrosoftEntraIDOptions{
 				AllowedTenants: []string{"85d7d600-7804-4d92-8d43-9c33c21c130c"},
