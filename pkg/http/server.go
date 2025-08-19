@@ -146,11 +146,11 @@ func (s *server) setupTLSListener(opts Opts) error {
 		return errors.New("no TLS config provided")
 	}
 
-	l, err := getCertificateLoader(opts.TLS)
+	loader, err := getCertificateLoader(opts.TLS)
 	if err != nil {
 		return fmt.Errorf("could not load certificate: %v", err)
 	}
-	config.GetCertificate = l.GetCertificate
+	config.GetCertificate = loader.GetCertificate
 
 	if len(opts.TLS.CipherSuites) > 0 {
 		cipherSuites, err := parseCipherSuites(opts.TLS.CipherSuites)
@@ -178,10 +178,12 @@ func (s *server) setupTLSListener(opts Opts) error {
 		return fmt.Errorf("listen (%s) failed: %v", listenAddr, err)
 	}
 
-	ka := tcpKeepAliveListener{listener.(*net.TCPListener)}
 	s.tlsListener = reloadableTLSListener{
-		Listener: tls.NewListener(ka, config),
-		loader:   l,
+		Listener: tls.NewListener(
+			tcpKeepAliveListener{listener.(*net.TCPListener)},
+			config,
+		),
+		loader: loader,
 	}
 	return nil
 }
@@ -202,14 +204,14 @@ func (s *server) Start(ctx context.Context) error {
 	}
 
 	if s.tlsListener != nil {
-		rl := s.tlsListener.(reloadableTLSListener)
+		listener := s.tlsListener.(reloadableTLSListener)
 		ch := make(chan os.Signal, 1)
-
+		signal.Notify(ch, syscall.SIGHUP)
 		g.Go(func() error {
 			for {
 				select {
 				case <-ch:
-					if err := rl.Reload(); err != nil {
+					if err := listener.Reload(); err != nil {
 						logger.Errorf("Error reloading TLS certificate: %v", err)
 					}
 				case <-ctx.Done():
@@ -217,8 +219,6 @@ func (s *server) Start(ctx context.Context) error {
 				}
 			}
 		})
-		signal.Notify(ch, syscall.SIGHUP)
-
 		g.Go(func() error {
 			if err := s.startServer(groupCtx, s.tlsListener); err != nil {
 				return fmt.Errorf("error starting secure server: %v", err)
@@ -317,15 +317,15 @@ func (t *tlsLoader) GetCertificate(_ *tls.ClientHelloInfo) (*tls.Certificate, er
 }
 
 func getCertificateLoader(opts *options.TLS) (*tlsLoader, error) {
-	l := &tlsLoader{
+	loader := &tlsLoader{
 		TLS: opts,
 	}
 
-	if err := l.LoadCert(); err != nil {
+	if err := loader.LoadCert(); err != nil {
 		return nil, err
 	}
 
-	return l, nil
+	return loader, nil
 }
 
 type reloadableTLSListener struct {
