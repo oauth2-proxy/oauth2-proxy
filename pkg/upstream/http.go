@@ -166,6 +166,10 @@ func newReverseProxy(target *url.URL, upstream options.Upstream, errorHandler Pr
 		proxy.ErrorHandler = errorHandler
 	}
 
+	// Pass on DisableKeepAlives to the transport settings
+	// to allow for disabling HTTP keep-alive connections
+	transport.DisableKeepAlives = upstream.DisableKeepAlives
+
 	// Apply the customized transport to our proxy before returning it
 	proxy.Transport = transport
 
