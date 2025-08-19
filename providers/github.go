@@ -460,11 +460,14 @@ func (p *GitHubProvider) getOrgAndTeam(ctx context.Context, s *sessions.SessionS
 }
 
 func (p *GitHubProvider) getOrgs(ctx context.Context, s *sessions.SessionState) error {
-	// https://docs.github.com/en/rest/orgs/orgs#list-organizations-for-the-authenticated-user
 
 	type Organization struct {
-		Login string `json:"login"`
-		Name string `json:"name"`
+		// Support for Github organizations
+		// https://docs.github.com/en/rest/orgs/orgs#list-organizations-for-the-authenticated-user
+		Login string `json:"login,omitempty"`
+		// Support for Gitea organizations
+		// https://docs.gitea.com/api/1.24/#tag/organization/operation/orgGetAll
+		Name string `json:"name,omitempty"`
 	}
 
 	pn := 1
@@ -491,11 +494,15 @@ func (p *GitHubProvider) getOrgs(ctx context.Context, s *sessions.SessionState) 
 		}
 
 		for _, org := range orgs {
-			orgName := org.Login
-			if orgName == "" {
+			var orgName string
+			if len(org.Login) > 0 {
+				orgName = org.Login
+				logger.Printf("Member of Github Organization: %q", orgName)
+			} else {
 				orgName = org.Name
+				logger.Printf("Member of Gitea Organization: %q", orgName)
 			}
-			logger.Printf("Member of Github Organization:%q", orgName)
+
 			s.Groups = append(s.Groups, orgName)
 		}
 		pn++
@@ -511,7 +518,7 @@ func (p *GitHubProvider) getTeams(ctx context.Context, s *sessions.SessionState)
 		Slug string `json:"slug"`
 		Org  struct {
 			Login string `json:"login"`
-			Name string `json:"name"`
+			Name  string `json:"name"`
 		} `json:"organization"`
 	}
 
@@ -539,16 +546,19 @@ func (p *GitHubProvider) getTeams(ctx context.Context, s *sessions.SessionState)
 		}
 
 		for _, team := range teams {
-			orgName := team.Org.Login
-			if orgName == "" {
+			var orgName, teamName string
+
+			if len(team.Org.Login) > 0 {
+				orgName = team.Org.Login
+				teamName = team.Slug
+				logger.Printf("Member of Github Organization/Team: %q/%q", orgName, teamName)
+			} else {
 				orgName = team.Org.Name
-			}
-			teamName := team.Slug
-			if teamName == "" {
 				teamName = team.Name
+				logger.Printf("Member of Gitea Organization/Team: %q/%q", orgName, teamName)
 			}
-			logger.Printf("Member of Github Organization/Team:%q/%q", orgName, teamName)
-			s.Groups = append(s.Groups, fmt.Sprintf("%s%s%s", team.Org.Login, orgTeamSeparator, team.Slug))
+
+			s.Groups = append(s.Groups, fmt.Sprintf("%s%s%s", orgName, orgTeamSeparator, teamName))
 		}
 
 		pn++
