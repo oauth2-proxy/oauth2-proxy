@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	"github.com/spf13/pflag"
 )
 
@@ -142,12 +143,12 @@ func (l *LegacyUpstreams) convert() (UpstreamConfig, error) {
 			ID:                    u.Path,
 			Path:                  u.Path,
 			URI:                   upstreamString,
-			InsecureSkipTLSVerify: l.SSLUpstreamInsecureSkipVerify,
+			InsecureSkipTLSVerify: &l.SSLUpstreamInsecureSkipVerify,
 			PassHostHeader:        &l.PassHostHeader,
 			ProxyWebSockets:       &l.ProxyWebSockets,
 			FlushInterval:         &flushInterval,
 			Timeout:               &timeout,
-			DisableKeepAlives:     l.DisableKeepAlives,
+			DisableKeepAlives:     &l.DisableKeepAlives,
 		}
 
 		switch u.Scheme {
@@ -164,7 +165,7 @@ func (l *LegacyUpstreams) convert() (UpstreamConfig, error) {
 				logger.Errorf("unable to convert %q to int, use default \"200\"", u.Host)
 				responseCode = 200
 			}
-			upstream.Static = true
+			upstream.Static = ptr.Ptr(true)
 			upstream.StaticCode = &responseCode
 
 			// This is not allowed to be empty and must be unique
@@ -175,12 +176,12 @@ func (l *LegacyUpstreams) convert() (UpstreamConfig, error) {
 
 			// Force defaults compatible with static responses
 			upstream.URI = ""
-			upstream.InsecureSkipTLSVerify = false
+			upstream.InsecureSkipTLSVerify = ptr.Ptr(false)
 			upstream.PassHostHeader = nil
 			upstream.ProxyWebSockets = nil
 			upstream.FlushInterval = nil
 			upstream.Timeout = nil
-			upstream.DisableKeepAlives = false
+			upstream.DisableKeepAlives = ptr.Ptr(false)
 		case "unix":
 			upstream.Path = "/"
 		}
@@ -253,7 +254,7 @@ func (l *LegacyHeaders) getRequestHeaders() []Header {
 	}
 
 	for i := range requestHeaders {
-		requestHeaders[i].PreserveRequestValue = !l.SkipAuthStripHeaders
+		requestHeaders[i].PreserveRequestValue = ptr.Ptr(!l.SkipAuthStripHeaders)
 	}
 
 	return requestHeaders
@@ -680,11 +681,11 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		ClientSecretFile:         l.ClientSecretFile,
 		Type:                     ProviderType(l.ProviderType),
 		CAFiles:                  l.ProviderCAFiles,
-		UseSystemTrustStore:      l.UseSystemTrustStore,
+		UseSystemTrustStore:      &l.UseSystemTrustStore,
 		LoginURL:                 l.LoginURL,
 		RedeemURL:                l.RedeemURL,
 		ProfileURL:               l.ProfileURL,
-		SkipClaimsFromProfileURL: l.SkipClaimsFromProfileURL,
+		SkipClaimsFromProfileURL: &l.SkipClaimsFromProfileURL,
 		ProtectedResource:        l.ProtectedResource,
 		ValidateURL:              l.ValidateURL,
 		Scope:                    l.Scope,
@@ -697,10 +698,10 @@ func (l *LegacyProvider) convert() (Providers, error) {
 	// This part is out of the switch section for all providers that support OIDC
 	provider.OIDCConfig = OIDCOptions{
 		IssuerURL:                      l.OIDCIssuerURL,
-		InsecureAllowUnverifiedEmail:   l.InsecureOIDCAllowUnverifiedEmail,
-		InsecureSkipIssuerVerification: l.InsecureOIDCSkipIssuerVerification,
-		InsecureSkipNonce:              l.InsecureOIDCSkipNonce,
-		SkipDiscovery:                  l.SkipOIDCDiscovery,
+		InsecureAllowUnverifiedEmail:   &l.InsecureOIDCAllowUnverifiedEmail,
+		InsecureSkipIssuerVerification: &l.InsecureOIDCSkipIssuerVerification,
+		InsecureSkipNonce:              &l.InsecureOIDCSkipNonce,
+		SkipDiscovery:                  &l.SkipOIDCDiscovery,
 		JwksURL:                        l.OIDCJwksURL,
 		UserIDClaim:                    l.UserIDClaim,
 		EmailClaim:                     l.OIDCEmailClaim,
@@ -768,13 +769,13 @@ func (l *LegacyProvider) convert() (Providers, error) {
 			Groups:                           l.GoogleGroups,
 			AdminEmail:                       l.GoogleAdminEmail,
 			ServiceAccountJSON:               l.GoogleServiceAccountJSON,
-			UseApplicationDefaultCredentials: l.GoogleUseApplicationDefaultCredentials,
+			UseApplicationDefaultCredentials: &l.GoogleUseApplicationDefaultCredentials,
 			TargetPrincipal:                  l.GoogleTargetPrincipal,
 		}
 	case "entra-id":
 		provider.MicrosoftEntraIDConfig = MicrosoftEntraIDOptions{
 			AllowedTenants:     l.EntraIDAllowedTenants,
-			FederatedTokenAuth: l.EntraIDFederatedTokenAuth,
+			FederatedTokenAuth: &l.EntraIDFederatedTokenAuth,
 		}
 	}
 
