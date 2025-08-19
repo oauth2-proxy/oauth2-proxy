@@ -8,6 +8,7 @@ import (
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -115,7 +116,7 @@ var _ = Describe("Headers Suite", func() {
 			headers: []options.Header{
 				{
 					Name:                 "Claim",
-					PreserveRequestValue: true,
+					PreserveRequestValue: ptr.Ptr(true),
 					Values: []options.HeaderValue{
 						{
 							ClaimSource: &options.ClaimSource{
@@ -160,7 +161,7 @@ var _ = Describe("Headers Suite", func() {
 			headers: []options.Header{
 				{
 					Name:                 "Claim",
-					PreserveRequestValue: true,
+					PreserveRequestValue: ptr.Ptr(true),
 					Values: []options.HeaderValue{
 						{
 							ClaimSource: &options.ClaimSource{
@@ -341,7 +342,7 @@ var _ = Describe("Headers Suite", func() {
 			headers: []options.Header{
 				{
 					Name:                 "Claim",
-					PreserveRequestValue: true,
+					PreserveRequestValue: ptr.Ptr(true),
 					Values: []options.HeaderValue{
 						{
 							ClaimSource: &options.ClaimSource{
@@ -388,7 +389,7 @@ var _ = Describe("Headers Suite", func() {
 			headers: []options.Header{
 				{
 					Name:                 "Claim",
-					PreserveRequestValue: true,
+					PreserveRequestValue: ptr.Ptr(true),
 					Values: []options.HeaderValue{
 						{
 							ClaimSource: &options.ClaimSource{

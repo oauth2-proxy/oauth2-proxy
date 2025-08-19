@@ -1,5 +1,7 @@
 package options
 
+import "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
+
 const (
 	// OIDCEmailClaim is the generic email claim used by the OIDC provider.
 	OIDCEmailClaim = "email"
@@ -67,7 +69,7 @@ type Provider struct {
 	CAFiles []string `yaml:"caFiles,omitempty"`
 	// UseSystemTrustStore determines if your custom CA files and the system trust store are used
 	// If set to true, your custom CA files and the system trust store are used otherwise only your custom CA files.
-	UseSystemTrustStore bool `yaml:"useSystemTrustStore"`
+	UseSystemTrustStore *bool `yaml:"useSystemTrustStore,omitempty"`
 	// LoginURL is the authentication endpoint
 	LoginURL string `yaml:"loginURL,omitempty"`
 	// LoginURLParameters defines the parameters that can be passed from the start URL to the IdP login URL
@@ -80,7 +82,7 @@ type Provider struct {
 	ProfileURL string `yaml:"profileURL,omitempty"`
 	// SkipClaimsFromProfileURL allows to skip request to Profile URL for resolving claims not present in id_token
 	// default set to 'false'
-	SkipClaimsFromProfileURL bool `yaml:"skipClaimsFromProfileURL"`
+	SkipClaimsFromProfileURL *bool `yaml:"skipClaimsFromProfileURL,omitempty"`
 	// ProtectedResource is the resource that is protected (Azure AD and ADFS only)
 	ProtectedResource string `yaml:"resource,omitempty"`
 	// ValidateURL is the access token validation endpoint
@@ -181,13 +183,13 @@ type MicrosoftEntraIDOptions struct {
 
 	// FederatedTokenAuth enable oAuth2 client authentication with federated token projected
 	// by Entra Workload Identity plugin, instead of client secret.
-	FederatedTokenAuth bool `yaml:"federatedTokenAuth"`
+	FederatedTokenAuth *bool `yaml:"federatedTokenAuth,omitempty"`
 }
 
 type ADFSOptions struct {
 	// Skip adding the scope parameter in login request
 	// Default value is 'false'
-	SkipScope bool `yaml:"skipScope"`
+	SkipScope *bool `yaml:"skipScope,omitempty"`
 }
 
 type BitbucketOptions struct {
@@ -227,7 +229,7 @@ type GoogleOptions struct {
 	// ServiceAccountJSON is the path to the service account json credentials
 	ServiceAccountJSON string `yaml:"serviceAccountJson,omitempty"`
 	// UseApplicationDefaultCredentials is a boolean whether to use Application Default Credentials instead of a ServiceAccountJSON
-	UseApplicationDefaultCredentials bool `yaml:"useApplicationDefaultCredentials"`
+	UseApplicationDefaultCredentials *bool `yaml:"useApplicationDefaultCredentials,omitempty"`
 	// TargetPrincipal is the Google Service Account used for Application Default Credentials
 	TargetPrincipal string `yaml:"targetPrincipal,omitempty"`
 }
@@ -238,19 +240,19 @@ type OIDCOptions struct {
 	IssuerURL string `yaml:"issuerURL,omitempty"`
 	// InsecureAllowUnverifiedEmail prevents failures if an email address in an id_token is not verified
 	// default set to 'false'
-	InsecureAllowUnverifiedEmail bool `yaml:"insecureAllowUnverifiedEmail"`
+	InsecureAllowUnverifiedEmail *bool `yaml:"insecureAllowUnverifiedEmail,omitempty"`
 	// InsecureSkipIssuerVerification skips verification of ID token issuers. When false, ID Token Issuers must match the OIDC discovery URL
 	// default set to 'false'
-	InsecureSkipIssuerVerification bool `yaml:"insecureSkipIssuerVerification"`
+	InsecureSkipIssuerVerification *bool `yaml:"insecureSkipIssuerVerification,omitempty"`
 	// InsecureSkipNonce skips verifying the ID Token's nonce claim that must match
 	// the random nonce sent in the initial OAuth flow. Otherwise, the nonce is checked
 	// after the initial OAuth redeem & subsequent token refreshes.
 	// default set to 'true'
 	// Warning: In a future release, this will change to 'false' by default for enhanced security.
-	InsecureSkipNonce bool `yaml:"insecureSkipNonce"`
+	InsecureSkipNonce *bool `yaml:"insecureSkipNonce,omitempty"`
 	// SkipDiscovery allows to skip OIDC discovery and use manually supplied Endpoints
 	// default set to 'false'
-	SkipDiscovery bool `yaml:"skipDiscovery"`
+	SkipDiscovery *bool `yaml:"skipDiscovery,omitempty"`
 	// JwksURL is the OpenID Connect JWKS URL
 	// eg: https://www.googleapis.com/oauth2/v3/certs
 	JwksURL string `yaml:"jwksURL,omitempty"`
@@ -291,9 +293,9 @@ func providerDefaults() Providers {
 				Tenant: "common",
 			},
 			OIDCConfig: OIDCOptions{
-				InsecureAllowUnverifiedEmail: false,
-				InsecureSkipNonce:            true,
-				SkipDiscovery:                false,
+				InsecureAllowUnverifiedEmail: ptr.Ptr(false),
+				InsecureSkipNonce:            ptr.Ptr(true),
+				SkipDiscovery:                ptr.Ptr(false),
 				UserIDClaim:                  OIDCEmailClaim, // Deprecated: Use OIDCEmailClaim
 				EmailClaim:                   OIDCEmailClaim,
 				GroupsClaim:                  OIDCGroupsClaim,

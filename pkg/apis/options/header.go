@@ -11,7 +11,7 @@ type Header struct {
 	// should be preserved for the request to the upstream server.
 	// This option only applies to injected request headers.
 	// Defaults to false (headers that match this header will be stripped).
-	PreserveRequestValue bool `yaml:"preserveRequestValue"`
+	PreserveRequestValue *bool `yaml:"preserveRequestValue,omitempty"`
 
 	// Values contains the desired values for this header
 	Values []HeaderValue `yaml:"values,omitempty"`

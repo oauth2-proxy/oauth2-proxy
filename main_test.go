@@ -7,6 +7,7 @@ import (
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	. "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options/testutil"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/format"
@@ -100,10 +101,6 @@ cookie_secure="false"
 redirect_url="http://localhost:4180/oauth2/callback"
 `
 
-	boolPtr := func(b bool) *bool {
-		return &b
-	}
-
 	durationPtr := func(d time.Duration) *time.Duration {
 		return &d
 	}
@@ -124,8 +121,8 @@ redirect_url="http://localhost:4180/oauth2/callback"
 					Path:            "/",
 					URI:             "http://httpbin",
 					FlushInterval:   durationPtr(options.DefaultUpstreamFlushInterval),
-					PassHostHeader:  boolPtr(true),
-					ProxyWebSockets: boolPtr(true),
+					PassHostHeader:  ptr.Ptr(true),
+					ProxyWebSockets: ptr.Ptr(true),
 					Timeout:         durationPtr(options.DefaultUpstreamTimeout),
 				},
 			},
@@ -164,7 +161,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 					UserIDClaim:       "email",
 					AudienceClaims:    []string{"aud"},
 					ExtraAudiences:    []string{},
-					InsecureSkipNonce: true,
+					InsecureSkipNonce: ptr.Ptr(true),
 				},
 				LoginURLParameters: []options.LoginURLParameter{
 					{Name: "approval_prompt", Default: []string{"force"}},

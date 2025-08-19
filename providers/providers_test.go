@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	. "github.com/onsi/gomega"
 )
 
@@ -81,7 +82,7 @@ func TestSkipOIDCDiscovery(t *testing.T) {
 		ClientSecretFile: clientSecret,
 		OIDCConfig: options.OIDCOptions{
 			IssuerURL:     msIssuerURL,
-			SkipDiscovery: true,
+			SkipDiscovery: ptr.Ptr(true),
 		},
 	}
 
@@ -108,7 +109,7 @@ func TestURLsCorrectlyParsed(t *testing.T) {
 		RedeemURL:        msTokenURL,
 		OIDCConfig: options.OIDCOptions{
 			IssuerURL:     msIssuerURL,
-			SkipDiscovery: true,
+			SkipDiscovery: ptr.Ptr(true),
 			JwksURL:       msKeysURL,
 		},
 	}
@@ -216,7 +217,7 @@ func TestScope(t *testing.T) {
 			AllowedGroups:    tc.allowedGroups,
 			OIDCConfig: options.OIDCOptions{
 				IssuerURL:     msIssuerURL,
-				SkipDiscovery: true,
+				SkipDiscovery: ptr.Ptr(true),
 				JwksURL:       msKeysURL,
 			},
 		}
@@ -297,7 +298,7 @@ func TestEmailClaimCorrectlySet(t *testing.T) {
 				RedeemURL:        msTokenURL,
 				OIDCConfig: options.OIDCOptions{
 					IssuerURL:     msIssuerURL,
-					SkipDiscovery: true,
+					SkipDiscovery: ptr.Ptr(true),
 					JwksURL:       msKeysURL,
 					UserIDClaim:   tc.userIDClaim,
 					EmailClaim:    tc.emailClaim,
