@@ -2,6 +2,16 @@
 
 ## Release Highlights
 
+## Important Notes
+
+## Breaking Changes
+
+## Changes since v7.12.0
+
+# V7.12.0
+
+## Release Highlights
+
 - 🕵️‍♀️ Vulnerabilities have been addressed
   - [CVE-2025-47907](https://pkg.go.dev/vuln/GO-2025-3849)
 
