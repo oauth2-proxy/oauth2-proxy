@@ -284,8 +284,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 					},
 				}
 
-				var opt *redis.Options
-				opt = &redis.Options{}
+				var opt = &redis.Options{}
 
 				err := setupAWSIAMAuth(redisOpts, opt)
 				Expect(err).ToNot(HaveOccurred())
@@ -300,8 +299,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 					AWSIAMConfig: nil,
 				}
 
-				var opt *redis.Options
-				opt = &redis.Options{}
+				var opt = &redis.Options{}
 
 				err := setupAWSIAMAuth(redisOpts, opt)
 				Expect(err).ToNot(HaveOccurred())
