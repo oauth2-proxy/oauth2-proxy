@@ -19,7 +19,6 @@ import (
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	k8serrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
 type noOpKeySet struct {
@@ -302,10 +301,10 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 			}),
 			Entry("Bearer <nonVerifiedToken>", getJWTSessionTableInput{
 				authorizationHeader: fmt.Sprintf("Bearer %s", nonVerifiedToken),
-				expectedErr: k8serrors.NewAggregate([]error{
+				expectedErr: errors.Join(
 					errors.New("unable to verify bearer token"),
 					errors.New("oidc: malformed jwt: oidc: malformed jwt payload: illegal base64 data at input byte 8"),
-				}),
+				),
 				expectedSession: nil,
 			}),
 			Entry("Bearer <verifiedToken>", getJWTSessionTableInput{
@@ -315,10 +314,10 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 			}),
 			Entry("Basic Base64(<nonVerifiedToken>:) (No password)", getJWTSessionTableInput{
 				authorizationHeader: "Basic ZXlKZm9vYmFyLmV5SmZvb2Jhci4xMjM0NWFzZGY6",
-				expectedErr: k8serrors.NewAggregate([]error{
+				expectedErr: errors.Join(
 					errors.New("unable to verify bearer token"),
 					errors.New("oidc: malformed jwt: oidc: malformed jwt payload: illegal base64 data at input byte 8"),
-				}),
+				),
 				expectedSession: nil,
 			}),
 			Entry("Basic Base64(<verifiedToken>:x-oauth-basic) (Sentinel password)", getJWTSessionTableInput{
