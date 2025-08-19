@@ -36,13 +36,12 @@ REPOSITORY ?= oauth2-proxy
 DATE := $(shell date +"%Y%m%d")
 .NOTPARALLEL:
 
-GO_MAJOR_VERSION = $(shell $(GO) version | cut -c 14- | cut -d' ' -f1 | cut -d'.' -f1)
-GO_MINOR_VERSION = $(shell $(GO) version | cut -c 14- | cut -d' ' -f1 | cut -d'.' -f2)
+# The go version in go.mod used for the Docker build toolchain, without the patch
+GO_MOD_VERSION_MINOR := $(shell $(GO) list -f '{{printf "%.4s" .Module.GoVersion}}' )
 
-GO_MOD_VERSION = $(shell sed -En 's/^go ([[:digit:]]\.[[:digit:]]+)\.[[:digit:]]+/\1/p' go.mod)
-MINIMUM_SUPPORTED_GO_MAJOR_VERSION = $(shell echo ${GO_MOD_VERSION} | cut -d' ' -f1 | cut -d'.' -f1)
-MINIMUM_SUPPORTED_GO_MINOR_VERSION = $(shell echo ${GO_MOD_VERSION} | cut -d' ' -f1 | cut -d'.' -f2)
-GO_VERSION_VALIDATION_ERR_MSG = Golang version is not supported, please update to at least $(MINIMUM_SUPPORTED_GO_MAJOR_VERSION).$(MINIMUM_SUPPORTED_GO_MINOR_VERSION)
+# From go1.21 go will transparently download the toolchain declared in go.mod. https://go.dev/doc/toolchain
+# We don't need to keep this message updated: the important info is in go.mod.
+GO_VERSION_VALIDATION_ERR_MSG = Golang version is not supported, please update to at least go1.21
 
 ifeq ($(COVER),true)
 TESTCOVER ?= -coverprofile c.out
@@ -56,7 +55,7 @@ build: validate-go-version clean $(BINARY) ## Build and create oauth2-proxy bina
 $(BINARY):
 	CGO_ENABLED=0 $(GO) build -a -installsuffix cgo -ldflags="-X github.com/oauth2-proxy/oauth2-proxy/v7/pkg/version.VERSION=${VERSION}" -o $@ github.com/oauth2-proxy/oauth2-proxy/v7
 
-DOCKER_BUILDX_COMMON_ARGS     ?= --build-arg BUILD_IMAGE=docker.io/library/golang:${GO_MOD_VERSION}-bookworm --build-arg VERSION=${VERSION}
+DOCKER_BUILDX_COMMON_ARGS     ?= --build-arg BUILD_IMAGE=docker.io/library/golang:$(GO_MOD_VERSION_MINOR)-bookworm --build-arg VERSION=$(VERSION)
 
 DOCKER_BUILD_PLATFORM         ?= linux/amd64,linux/arm64,linux/ppc64le,linux/arm/v7,linux/s390x
 DOCKER_BUILD_RUNTIME_IMAGE    ?= gcr.io/distroless/static:nonroot
@@ -158,15 +157,7 @@ lint: validate-go-version ## Lint all files using golangci-lint
 
 .PHONY: validate-go-version
 validate-go-version: ## Validate Go environment requirements
-	@if [ $(GO_MAJOR_VERSION) -gt $(MINIMUM_SUPPORTED_GO_MAJOR_VERSION) ]; then \
-		exit 0 ;\
-	elif [ $(GO_MAJOR_VERSION) -lt $(MINIMUM_SUPPORTED_GO_MAJOR_VERSION) ]; then \
-		echo '$(GO_VERSION_VALIDATION_ERR_MSG)';\
-		exit 1; \
-	elif [ $(GO_MINOR_VERSION) -lt $(MINIMUM_SUPPORTED_GO_MINOR_VERSION) ] ; then \
-		echo '$(GO_VERSION_VALIDATION_ERR_MSG)';\
-		exit 1; \
-	fi
+	@$(GO) list . >/dev/null || { echo '$(GO_VERSION_VALIDATION_ERR_MSG)'; exit 1; }
 
 # local-env can be used to interact with the local development environment
 # eg:
