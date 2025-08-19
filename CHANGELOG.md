@@ -14,6 +14,9 @@
 
 - 🕵️‍♀️ Vulnerabilities have been addressed
   - [CVE-2025-47907](https://pkg.go.dev/vuln/GO-2025-3849)
+- 🦸 Support for Cidaas IDP
+- 🐛 Squashed some bugs
+
 
 ## Important Notes
 
