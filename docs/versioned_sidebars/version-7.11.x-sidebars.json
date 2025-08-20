@@ -46,7 +46,8 @@
             "configuration/providers/login_gov",
             "configuration/providers/ms_entra_id",
             "configuration/providers/nextcloud",
-            "configuration/providers/openid_connect"
+            "configuration/providers/openid_connect",
+            "configuration/providers/sourcehut"
           ]
         },
         "configuration/session_storage",
