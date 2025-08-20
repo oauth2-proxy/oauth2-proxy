@@ -27,7 +27,7 @@ func NewRequestHeaderInjector(headers []options.Header) (alice.Constructor, erro
 func newStripHeaders(headers []options.Header) alice.Constructor {
 	headersToStrip := []string{}
 	for _, header := range headers {
-		if !header.PreserveRequestValue {
+		if !(*header.PreserveRequestValue) {
 			headersToStrip = append(headersToStrip, header.Name)
 		}
 	}

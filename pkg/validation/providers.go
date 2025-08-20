@@ -64,7 +64,7 @@ func validateProvider(provider options.Provider, providerIDs map[string]struct{}
 // providerRequiresClientSecret checks if provider requires client secret to be set
 // or it can be omitted in favor of JWT token to authenticate oAuth client
 func providerRequiresClientSecret(provider options.Provider) bool {
-	if provider.Type == "entra-id" && provider.MicrosoftEntraIDConfig.FederatedTokenAuth {
+	if provider.Type == "entra-id" && *provider.MicrosoftEntraIDConfig.FederatedTokenAuth {
 		return false
 	}
 
@@ -98,7 +98,7 @@ func validateGoogleConfig(provider options.Provider) []string {
 	hasSAJSON := provider.GoogleConfig.ServiceAccountJSON != ""
 	useADC := provider.GoogleConfig.UseApplicationDefaultCredentials
 
-	if !hasAdminEmail && !hasSAJSON && !useADC {
+	if !hasAdminEmail && !hasSAJSON && !*useADC {
 		return msgs
 	}
 
@@ -107,7 +107,7 @@ func validateGoogleConfig(provider options.Provider) []string {
 	}
 
 	_, err := os.Stat(provider.GoogleConfig.ServiceAccountJSON)
-	if !useADC {
+	if !*useADC {
 		if !hasSAJSON {
 			msgs = append(msgs, "missing setting: google-service-account-json or google-use-application-default-credentials")
 		} else if err != nil {
@@ -123,7 +123,7 @@ func validateGoogleConfig(provider options.Provider) []string {
 func validateEntraConfig(provider options.Provider) []string {
 	msgs := []string{}
 
-	if provider.MicrosoftEntraIDConfig.FederatedTokenAuth {
+	if *provider.MicrosoftEntraIDConfig.FederatedTokenAuth {
 		federatedTokenPath := os.Getenv("AZURE_FEDERATED_TOKEN_FILE")
 
 		if federatedTokenPath == "" {

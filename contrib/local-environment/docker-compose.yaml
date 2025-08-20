@@ -9,7 +9,7 @@
 #    make <command> (eg. make up, make down)
 #
 # Access http://oauth2-proxy.localtest.me:4180 to initiate a login cycle
-version: '3.0'
+version: "3.0"
 services:
   oauth2-proxy:
     container_name: oauth2-proxy
