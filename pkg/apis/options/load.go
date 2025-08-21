@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"regexp"
 	"strings"
 
 	"github.com/a8m/envsubst"
 	"github.com/ghodss/yaml"
-	"github.com/mitchellh/mapstructure"
+	"github.com/go-viper/mapstructure/v2"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
@@ -155,7 +156,8 @@ func LoadYAML(configFileName string, into interface{}) error {
 	return nil
 }
 
-// Performs the heavy lifting of the LoadYaml function
+// loadAndParseYaml reads the config from the filesystem and
+// execute the environment variable substitution
 func loadAndParseYaml(configFileName string) ([]byte, error) {
 	if configFileName == "" {
 		return nil, errors.New("no configuration file provided")
@@ -166,12 +168,26 @@ func loadAndParseYaml(configFileName string) ([]byte, error) {
 		return nil, fmt.Errorf("unable to load config file: %w", err)
 	}
 
-	// We now parse over the yaml with env substring, and fill in the ENV's
-	buffer, err := envsubst.Bytes(unparsedBuffer)
+	modifiedBuffer, err := normalizeSubstitution(unparsedBuffer)
+	if err != nil {
+		return nil, fmt.Errorf("error normalizing substitution string : %w", err)
+	}
+
+	buffer, err := envsubst.Bytes(modifiedBuffer)
 	if err != nil {
 		return nil, fmt.Errorf("error in substituting env variables : %w", err)
 	}
 
 	return buffer, nil
+}
 
+// normalizeSubstitution normalizes dollar signs ($) with numerals like
+// $1 or $2 properly by correctly escaping them
+func normalizeSubstitution(unparsedBuffer []byte) ([]byte, error) {
+	unparsedString := string(unparsedBuffer)
+
+	regexPattern := regexp.MustCompile(`\$(\d+)`)
+
+	substitutedString := regexPattern.ReplaceAllString(unparsedString, `$$$$1`)
+	return []byte(substitutedString), nil
 }

@@ -31,10 +31,11 @@ type LegacyOptions struct {
 func NewLegacyOptions() *LegacyOptions {
 	return &LegacyOptions{
 		LegacyUpstreams: LegacyUpstreams{
-			PassHostHeader:  true,
-			ProxyWebSockets: true,
-			FlushInterval:   DefaultUpstreamFlushInterval,
-			Timeout:         DefaultUpstreamTimeout,
+			PassHostHeader:    true,
+			ProxyWebSockets:   true,
+			FlushInterval:     DefaultUpstreamFlushInterval,
+			Timeout:           DefaultUpstreamTimeout,
+			DisableKeepAlives: false,
 		},
 
 		LegacyHeaders: LegacyHeaders{
@@ -105,6 +106,7 @@ type LegacyUpstreams struct {
 	SSLUpstreamInsecureSkipVerify bool          `flag:"ssl-upstream-insecure-skip-verify" cfg:"ssl_upstream_insecure_skip_verify"`
 	Upstreams                     []string      `flag:"upstream" cfg:"upstreams"`
 	Timeout                       time.Duration `flag:"upstream-timeout" cfg:"upstream_timeout"`
+	DisableKeepAlives             bool          `flag:"disable-keep-alives" cfg:"disable_keep_alives"`
 }
 
 func legacyUpstreamsFlagSet() *pflag.FlagSet {
@@ -116,6 +118,7 @@ func legacyUpstreamsFlagSet() *pflag.FlagSet {
 	flagSet.Bool("ssl-upstream-insecure-skip-verify", false, "skip validation of certificates presented when using HTTPS upstreams")
 	flagSet.StringSlice("upstream", []string{}, "the http url(s) of the upstream endpoint, file:// paths for static files or static://<status_code> for static response. Routing is based on the path")
 	flagSet.Duration("upstream-timeout", DefaultUpstreamTimeout, "maximum amount of time the server will wait for a response from the upstream")
+	flagSet.Bool("disable-keep-alives", false, "disable HTTP keep-alive connections to the upstream server")
 
 	return flagSet
 }
@@ -144,6 +147,7 @@ func (l *LegacyUpstreams) convert() (UpstreamConfig, error) {
 			ProxyWebSockets:       &l.ProxyWebSockets,
 			FlushInterval:         &flushInterval,
 			Timeout:               &timeout,
+			DisableKeepAlives:     l.DisableKeepAlives,
 		}
 
 		switch u.Scheme {
@@ -176,6 +180,7 @@ func (l *LegacyUpstreams) convert() (UpstreamConfig, error) {
 			upstream.ProxyWebSockets = nil
 			upstream.FlushInterval = nil
 			upstream.Timeout = nil
+			upstream.DisableKeepAlives = false
 		case "unix":
 			upstream.Path = "/"
 		}

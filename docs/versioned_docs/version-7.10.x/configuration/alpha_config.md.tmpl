@@ -1,0 +1,139 @@
+---
+id: alpha-config
+title: Alpha Configuration
+---
+
+:::warning
+This page contains documentation for alpha features.
+We reserve the right to make breaking changes to the features detailed within this page with no notice.
+
+Options described in this page may be changed, removed, renamed or moved without prior warning.
+Please beware of this before you use alpha configuration options.
+:::
+
+This page details a set of **alpha** configuration options in a new format.
+Going forward we are intending to add structured configuration in YAML format to
+replace the existing TOML based configuration file and flags.
+
+Below is a reference for the structure of the configuration, with
+[AlphaOptions](#alphaoptions) as the root of the configuration.
+
+When using alpha configuration, your config file will look something like below:
+
+```yaml
+upstreams:
+  - id: ...
+    ...: ...
+injectRequestHeaders:
+  - name: ...
+    ...: ...
+injectResponseHeaders:
+  - name: ...
+    ...: ...
+```
+
+Please browse the [reference](#configuration-reference) below for the structure
+of the new configuration format.
+
+## Using Alpha Configuration
+
+To use the new **alpha** configuration, generate a YAML file based on the format
+described in the [reference](#configuration-reference) below.
+
+Provide the path to this file using the `--alpha-config` flag.
+
+:::note
+When using the `--alpha-config` flag, some options are no longer available.
+See [removed options](#removed-options) below for more information.
+:::
+
+### Converting configuration to the new structure
+
+Before adding the new `--alpha-config` option, start OAuth2 Proxy using the
+`convert-config-to-alpha` flag to convert existing configuration to the new format.
+
+```bash
+oauth2-proxy --convert-config-to-alpha --config ./path/to/existing/config.cfg
+```
+
+This will convert any options supported by the new format to YAML and print the
+new configuration to `STDOUT`.
+
+Copy this to a new file, remove any options from your existing configuration
+noted in [removed options](#removed-options) and then start OAuth2 Proxy using
+the new config.
+
+```bash
+oauth2-proxy --alpha-config ./path/to/new/config.yaml --config ./path/to/existing/config.cfg
+```
+
+## Using ENV variables in the alpha configuration
+
+The alpha package supports the use of environment variables in place of yaml keys, allowing sensitive values to be pulled from somewhere other than the yaml file.
+When using environment variables, your yaml will look like this:
+
+```yaml
+    providers:
+    - provider: azure
+      clientSecret: ${CLIENT_SECRET}
+      ...
+```
+Where CLIENT_SECRET is an environment variable.
+More information and available patterns can be found [here](https://github.com/a8m/envsubst#docs)
+
+## Removed options
+
+The following flags/options and their respective environment variables are no
+longer available when using alpha configuration:
+
+<!-- Legacy Upstream FlagSet -->
+- `flush-interval`/`flush_interval`
+- `pass-host-header`/`pass_host_header`
+- `proxy-websockets`/`proxy_websockets`
+- `ssl-upstream-insecure-skip-verify`/`ssl_upstream_insecure_skip_verify`
+- `upstream`/`upstreams`
+
+<!-- Legacy Headers FlagSet -->
+- `pass-basic-auth`/`pass_basic_auth`
+- `pass-access-token`/`pass_access_token`
+- `pass-user-headers`/`pass_user_headers`
+- `pass-authorization-header`/`pass_authorization_header`
+- `set-basic-auth`/`set_basic_auth`
+- `set-xauthrequest`/`set_xauthrequest`
+- `set-authorization-header`/`set_authorization_header`
+- `prefer-email-to-user`/`prefer_email_to_user`
+- `basic-auth-password`/`basic_auth_password`
+- `skip-auth-strip-headers`/`skip_auth_strip_headers`
+
+<!-- Legacy provider FlagSet -->
+- `client-id`/`client_id`
+- `client-secret`/`client_secret`, and `client-secret-file`/`client_secret_file`
+- `provider`
+- `provider-display-name`/`provider_display_name`
+- `provider-ca-file`/`provider_ca_files`
+- `login-url`/`login_url`
+- `redeem-url`/`redeem_url`
+- `profile-url`/`profile_url`
+- `resource`
+- `validate-url`/`validate_url`
+- `scope`
+- `prompt`
+- `approval-prompt`/`approval_prompt`
+- `acr-values`/`acr_values`
+- `user-id-claim`/`user_id_claim`
+- `allowed-group`/`allowed_groups`
+- `allowed-role`/`allowed_roles`
+- `jwt-key`/`jwt_key`
+- `jwt-key-file`/`jwt_key_file`
+- `pubjwk-url`/`pubjwk_url`
+
+and all provider-specific options, i.e. any option whose name includes `oidc`,
+`azure`, `bitbucket`, `github`, `gitlab`, `google` or `keycloak`.  Attempting to
+use any of these options via flags or via config when `--alpha-config` is
+set will result in an error.
+
+:::important
+You must remove these options before starting OAuth2 Proxy with `--alpha-config`
+:::
+
+## Configuration Reference

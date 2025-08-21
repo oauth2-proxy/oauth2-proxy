@@ -2,6 +2,8 @@ package util
 
 import (
 	"net/http"
+	"net/url"
+	"strings"
 
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 )
@@ -40,6 +42,25 @@ func GetRequestURI(req *http.Request) string {
 		// Use RequestURI to preserve ?query
 		uri = req.URL.RequestURI()
 	}
+	return uri
+}
+
+// GetRequestPath returns the request URI or X-Forwarded-Uri if present and the
+// request is proxied but always strips the query parameters and only returns
+// the pure path
+func GetRequestPath(req *http.Request) string {
+	uri := GetRequestURI(req)
+
+	// Parse URI and return only the path component
+	if parsedURL, err := url.Parse(uri); err == nil {
+		return parsedURL.Path
+	}
+
+	// Fallback: strip query parameters manually
+	if idx := strings.Index(uri, "?"); idx != -1 {
+		return uri[:idx]
+	}
+
 	return uri
 }
 

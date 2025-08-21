@@ -149,7 +149,7 @@ func mockGraphAPI(noGroupMemberPermissions bool) *httptest.Server {
 
 			} else if r.URL.Path == groupsPath && r.Method == http.MethodGet {
 				// First page (pagination)
-				w.Write([]byte(fmt.Sprintf(`{
+				fmt.Fprintf(w, `{
 					"@odata.context": "https://graph.microsoft.com/v1.0/$metadata#directoryObjects(id)",
 					"@odata.nextLink": "http://%s/v1.0/me/transitiveMemberOf?$select=id&$top=2&$skiptoken=TEST_TOKEN",
 					"value": [
@@ -162,7 +162,7 @@ func mockGraphAPI(noGroupMemberPermissions bool) *httptest.Server {
 							"id": "916f0604-8a3b-4a69-bda9-06db11a8f0cd"
 						  }
 					]
-				}`, r.Host)))
+				}`, r.Host)
 			}
 		},
 	))

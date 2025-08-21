@@ -47,6 +47,7 @@ const sidebars = {
             "configuration/providers/ms_entra_id",
             "configuration/providers/nextcloud",
             "configuration/providers/openid_connect",
+            "configuration/providers/sourcehut"
           ],
         },
         'configuration/session_storage',

@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -151,6 +153,48 @@ func (c *csrf) SetCookie(rw http.ResponseWriter, req *http.Request) (*http.Cooki
 	return cookie, nil
 }
 
+// ClearExtraCsrfCookies limits the amount of existing CSRF cookies by deleting
+// an excess of cookies controlled through the option CSRFPerRequestLimit
+func ClearExtraCsrfCookies(opts *options.Cookie, rw http.ResponseWriter, req *http.Request) {
+	if !opts.CSRFPerRequest || opts.CSRFPerRequestLimit <= 0 {
+		return
+	}
+
+	cookies := req.Cookies()
+	existingCsrfCookies := []*http.Cookie{}
+	startsWith := fmt.Sprintf("%v_", opts.Name)
+
+	// determine how many csrf cookies we have
+	for _, cookie := range cookies {
+		if strings.HasPrefix(cookie.Name, startsWith) && strings.HasSuffix(cookie.Name, "_csrf") {
+			existingCsrfCookies = append(existingCsrfCookies, cookie)
+		}
+	}
+
+	// short circuit return
+	if len(existingCsrfCookies) <= opts.CSRFPerRequestLimit {
+		return
+	}
+
+	decodedCookies := []*csrf{}
+	for _, cookie := range existingCsrfCookies {
+		decodedCookie, err := decodeCSRFCookie(cookie, opts)
+		if err != nil {
+			continue
+		}
+		decodedCookies = append(decodedCookies, decodedCookie)
+	}
+
+	// delete the X oldest cookies
+	slices.SortStableFunc(decodedCookies, func(a, b *csrf) int {
+		return a.time.Now().Compare(b.time.Now())
+	})
+
+	for i := 0; i < len(decodedCookies)-opts.CSRFPerRequestLimit; i++ {
+		decodedCookies[i].ClearCookie(rw, req)
+	}
+}
+
 // ClearCookie removes the CSRF cookie
 func (c *csrf) ClearCookie(rw http.ResponseWriter, req *http.Request) {
 	http.SetCookie(rw, MakeCookieFromOptions(
@@ -175,13 +219,22 @@ func (c *csrf) encodeCookie() (string, error) {
 		return "", err
 	}
 
-	return encryption.SignedValue(c.cookieOpts.Secret, c.cookieName(), encrypted, c.time.Now())
+	secret, err := c.cookieOpts.GetSecret()
+	if err != nil {
+		return "", fmt.Errorf("error getting cookie secret: %v", err)
+	}
+	return encryption.SignedValue(secret, c.cookieName(), encrypted, c.time.Now())
 }
 
 // decodeCSRFCookie validates the signature then decrypts and decodes a CSRF
 // cookie into a CSRF struct
 func decodeCSRFCookie(cookie *http.Cookie, opts *options.Cookie) (*csrf, error) {
-	val, _, ok := encryption.Validate(cookie, opts.Secret, opts.Expire)
+	secret, err := opts.GetSecret()
+	if err != nil {
+		return nil, fmt.Errorf("error getting cookie secret: %v", err)
+	}
+
+	val, t, ok := encryption.Validate(cookie, secret, opts.Expire)
 	if !ok {
 		return nil, errors.New("CSRF cookie failed validation")
 	}
@@ -191,13 +244,18 @@ func decodeCSRFCookie(cookie *http.Cookie, opts *options.Cookie) (*csrf, error) 
 		return nil, err
 	}
 
-	// Valid cookie, Unmarshal the CSRF
-	csrf := &csrf{cookieOpts: opts}
-	err = msgpack.Unmarshal(decrypted, csrf)
-	if err != nil {
+	return unmarshalCSRF(decrypted, opts, t)
+}
+
+// unmarshalCSRF unmarshals decrypted data into a CSRF struct
+func unmarshalCSRF(decrypted []byte, opts *options.Cookie, csrfTime time.Time) (*csrf, error) {
+	clock := clock.Clock{}
+	clock.Set(csrfTime)
+
+	csrf := &csrf{cookieOpts: opts, time: clock}
+	if err := msgpack.Unmarshal(decrypted, csrf); err != nil {
 		return nil, fmt.Errorf("error unmarshalling data to CSRF: %v", err)
 	}
-
 	return csrf, nil
 }
 
@@ -244,5 +302,9 @@ func decrypt(data []byte, opts *options.Cookie) ([]byte, error) {
 }
 
 func makeCipher(opts *options.Cookie) (encryption.Cipher, error) {
-	return encryption.NewCFBCipher(encryption.SecretBytes(opts.Secret))
+	secret, err := opts.GetSecret()
+	if err != nil {
+		return nil, fmt.Errorf("error getting cookie secret: %v", err)
+	}
+	return encryption.NewCFBCipher(encryption.SecretBytes(secret))
 }

@@ -569,7 +569,7 @@ func isAllowedMethod(req *http.Request, route allowedRoute) bool {
 }
 
 func isAllowedPath(req *http.Request, route allowedRoute) bool {
-	matches := route.pathRegex.MatchString(requestutil.GetRequestURI(req))
+	matches := route.pathRegex.MatchString(requestutil.GetRequestPath(req))
 
 	if route.negate {
 		return !matches
@@ -622,12 +622,6 @@ func (p *OAuthProxy) isTrustedIP(req *http.Request) bool {
 // SignInPage writes the sign in template to the response
 func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code int) {
 	prepareNoCache(rw)
-	err := p.ClearSessionCookie(rw, req)
-	if err != nil {
-		logger.Printf("Error clearing session cookie: %v", err)
-		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
-		return
-	}
 	rw.WriteHeader(code)
 
 	redirectURL, err := p.appDirector.GetRedirect(req)
@@ -639,6 +633,10 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 
 	if redirectURL == p.SignInPath {
 		redirectURL = "/"
+	}
+
+	if err := p.ClearSessionCookie(rw, req); err != nil {
+		logger.Printf("Error clearing session cookie: %v", err)
 	}
 
 	p.pageWriter.WriteSignInPage(rw, req, redirectURL, code)
@@ -834,13 +832,12 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 		csrf.HashOIDCNonce(),
 		extraParams,
 	)
-
+	cookies.ClearExtraCsrfCookies(p.CookieOptions, rw, req)
 	if _, err := csrf.SetCookie(rw, req); err != nil {
 		logger.Errorf("Error setting CSRF cookie: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
-
 	http.Redirect(rw, req, loginURL, http.StatusFound)
 }
 
