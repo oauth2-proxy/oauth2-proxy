@@ -24,6 +24,7 @@ Valid providers are :
 - [Microsoft Entra ID](ms_entra_id.md)
 - [Nextcloud](nextcloud.md)
 - [OpenID Connect](openid_connect.md)
+- [SourceHut](sourcehut.md)
 
 The provider can be selected using the `provider` configuration value, or set in the [`providers` array using AlphaConfig](https://oauth2-proxy.github.io/oauth2-proxy/configuration/alpha-config#providers). However, [**the feature to implement multiple providers is not complete**](https://github.com/oauth2-proxy/oauth2-proxy/issues/926).
 
