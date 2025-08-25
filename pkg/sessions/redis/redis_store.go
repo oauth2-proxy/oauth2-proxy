@@ -119,6 +119,7 @@ func buildSentinelClient(opts options.RedisStoreOptions) (Client, error) {
 		SentinelAddrs:    addrs,
 		SentinelPassword: opts.SentinelPassword,
 		Username:         opts.Username,
+		DB:               opts.SentinelDB,
 		Password:         opts.Password,
 		TLSConfig:        opt.TLSConfig,
 		ConnMaxIdleTime:  time.Duration(opts.IdleTimeout) * time.Second,

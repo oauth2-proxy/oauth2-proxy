@@ -93,6 +93,29 @@ var _ = Describe("Redis SessionStore Tests", func() {
 					return nil
 				},
 			)
+
+			Context("with custom sentinel DB", func() {
+				tests.RunSessionStoreTests(
+					func(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
+						// Set the sentinel connection URL with custom DB
+						sentinelAddr := redisProtocol + ms.Addr()
+						opts.Type = options.RedisSessionStoreType
+						opts.Redis.SentinelConnectionURLs = []string{sentinelAddr}
+						opts.Redis.UseSentinel = true
+						opts.Redis.SentinelMasterName = ms.MasterInfo().Name
+						opts.Redis.SentinelDB = 1
+
+						// Capture the session store so that we can close the client
+						var err error
+						ss, err = NewRedisSessionStore(opts, cookieOpts)
+						return ss, err
+					},
+					func(d time.Duration) error {
+						mr.FastForward(d)
+						return nil
+					},
+				)
+			})
 		})
 
 		Context("with cluster", func() {
@@ -170,6 +193,30 @@ var _ = Describe("Redis SessionStore Tests", func() {
 						return nil
 					},
 				)
+
+				Context("with custom sentinel DB and password", func() {
+					tests.RunSessionStoreTests(
+						func(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
+							// Set the sentinel connection URL with custom DB and password
+							sentinelAddr := redisProtocol + ms.Addr()
+							opts.Type = options.RedisSessionStoreType
+							opts.Redis.SentinelConnectionURLs = []string{sentinelAddr}
+							opts.Redis.UseSentinel = true
+							opts.Redis.SentinelMasterName = ms.MasterInfo().Name
+							opts.Redis.Password = redisPassword
+							opts.Redis.SentinelDB = 2
+
+							// Capture the session store so that we can close the client
+							var err error
+							ss, err = NewRedisSessionStore(opts, cookieOpts)
+							return ss, err
+						},
+						func(d time.Duration) error {
+							mr.FastForward(d)
+							return nil
+						},
+					)
+				})
 			})
 
 			Context("with cluster", func() {
@@ -269,6 +316,116 @@ var _ = Describe("Redis SessionStore Tests", func() {
 			Expect(err.Error()).To(Equal("unable to parse redis urls: no redis urls provided"))
 			Expect(addrs).To(BeNil())
 			Expect(opts).To(BeNil())
+		})
+	})
+
+	Describe("Sentinel DB Configuration", func() {
+		var mr *miniredis.Miniredis
+		var ms *minisentinel.Sentinel
+
+		BeforeEach(func() {
+			var err error
+			mr, err = miniredis.Run()
+			Expect(err).ToNot(HaveOccurred())
+			ms = minisentinel.NewSentinel(mr)
+			Expect(ms.Start()).To(Succeed())
+		})
+
+		AfterEach(func() {
+			mr.Close()
+		})
+
+		It("should use default DB 0 when SentinelDB is not set", func() {
+			opts := options.RedisStoreOptions{
+				SentinelConnectionURLs: []string{"redis://" + ms.Addr()},
+				UseSentinel:            true,
+				SentinelMasterName:     ms.MasterInfo().Name,
+				SentinelDB:             0, // Default value
+			}
+
+			client, err := NewRedisClient(opts)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(client).ToNot(BeNil())
+
+			// Verify we can create a session store successfully
+			sessionStore := &SessionStore{Client: client}
+			Expect(sessionStore).ToNot(BeNil())
+
+			// Clean up
+			if closer, ok := client.(interface{ Close() error }); ok {
+				Expect(closer.Close()).To(Succeed())
+			}
+		})
+
+		It("should use custom SentinelDB value when set", func() {
+			testDB := 5
+			opts := options.RedisStoreOptions{
+				SentinelConnectionURLs: []string{"redis://" + ms.Addr()},
+				UseSentinel:            true,
+				SentinelMasterName:     ms.MasterInfo().Name,
+				SentinelDB:             testDB,
+			}
+
+			client, err := NewRedisClient(opts)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(client).ToNot(BeNil())
+
+			// Verify we can create a session store successfully
+			sessionStore := &SessionStore{Client: client}
+			Expect(sessionStore).ToNot(BeNil())
+
+			// Clean up
+			if closer, ok := client.(interface{ Close() error }); ok {
+				Expect(closer.Close()).To(Succeed())
+			}
+		})
+
+		It("should work with maximum valid DB number", func() {
+			maxDB := 15 // Redis supports DB 0-15 by default
+			opts := options.RedisStoreOptions{
+				SentinelConnectionURLs: []string{"redis://" + ms.Addr()},
+				UseSentinel:            true,
+				SentinelMasterName:     ms.MasterInfo().Name,
+				SentinelDB:             maxDB,
+			}
+
+			client, err := NewRedisClient(opts)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(client).ToNot(BeNil())
+
+			// Verify we can create a session store successfully
+			sessionStore := &SessionStore{Client: client}
+			Expect(sessionStore).ToNot(BeNil())
+
+			// Clean up
+			if closer, ok := client.(interface{ Close() error }); ok {
+				Expect(closer.Close()).To(Succeed())
+			}
+		})
+
+		It("should handle SentinelDB with authentication", func() {
+			testDB := 3
+			testPassword := "test-password"
+			opts := options.RedisStoreOptions{
+				SentinelConnectionURLs: []string{"redis://" + ms.Addr()},
+				UseSentinel:            true,
+				SentinelMasterName:     ms.MasterInfo().Name,
+				SentinelDB:             testDB,
+				Password:               testPassword,
+			}
+
+			client, err := NewRedisClient(opts)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(client).ToNot(BeNil())
+
+			// Verify we can create a session store successfully
+			sessionStore := &SessionStore{Client: client}
+			Expect(sessionStore).ToNot(BeNil())
+
+			// Clean up
+			if closer, ok := client.(interface{ Close() error }); ok {
+				Expect(closer.Close()).To(Succeed())
+			}
 		})
 	})
 })

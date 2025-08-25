@@ -26,6 +26,7 @@ type RedisStoreOptions struct {
 	Username               string   `flag:"redis-username" cfg:"redis_username"`
 	Password               string   `flag:"redis-password" cfg:"redis_password"`
 	UseSentinel            bool     `flag:"redis-use-sentinel" cfg:"redis_use_sentinel"`
+	SentinelDB             int      `flag:"redis-sentinel-db" cfg:"redis_sentinel_db"`
 	SentinelPassword       string   `flag:"redis-sentinel-password" cfg:"redis_sentinel_password"`
 	SentinelMasterName     string   `flag:"redis-sentinel-master-name" cfg:"redis_sentinel_master_name"`
 	SentinelConnectionURLs []string `flag:"redis-sentinel-connection-urls" cfg:"redis_sentinel_connection_urls"`

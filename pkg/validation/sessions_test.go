@@ -346,6 +346,56 @@ var _ = Describe("Sessions", func() {
 			},
 			errStrings: []string{},
 		}),
+		Entry("connect successfully to sentinel redis with custom DB", &redisStoreTableInput{
+			useSentinel:     true,
+			setSentinelAddr: true,
+			setMasterName:   true,
+
+			opts: &options.Options{
+				Session: options.SessionOptions{
+					Type: options.RedisSessionStoreType,
+					Redis: options.RedisStoreOptions{
+						UseSentinel: true,
+						SentinelDB:  1,
+					},
+				},
+			},
+			errStrings: []string{},
+		}),
+		Entry("connect successfully to sentinel redis with custom DB and password", &redisStoreTableInput{
+			password:        "abcdef123",
+			useSentinel:     true,
+			setSentinelAddr: true,
+			setMasterName:   true,
+
+			opts: &options.Options{
+				Session: options.SessionOptions{
+					Type: options.RedisSessionStoreType,
+					Redis: options.RedisStoreOptions{
+						Password:    "abcdef123",
+						UseSentinel: true,
+						SentinelDB:  5,
+					},
+				},
+			},
+			errStrings: []string{},
+		}),
+		Entry("connect successfully to sentinel redis with maximum DB number", &redisStoreTableInput{
+			useSentinel:     true,
+			setSentinelAddr: true,
+			setMasterName:   true,
+
+			opts: &options.Options{
+				Session: options.SessionOptions{
+					Type: options.RedisSessionStoreType,
+					Redis: options.RedisStoreOptions{
+						UseSentinel: true,
+						SentinelDB:  15,
+					},
+				},
+			},
+			errStrings: []string{},
+		}),
 		Entry("failed connection to sentinel redis with wrong password", &redisStoreTableInput{
 			password:        "abcdef123",
 			useSentinel:     true,

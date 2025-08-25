@@ -86,8 +86,7 @@ When using the redis store, specify `--session-store-type=redis` as well as the 
 `--redis-connection-url=redis://host[:port][/db-number]`.
 
 You may also configure the store for Redis Sentinel. In this case, you will want to use the
-`--redis-use-sentinel=true` flag, as well as configure the flags `--redis-sentinel-master-name`
-and `--redis-sentinel-connection-urls` appropriately.
+`--redis-use-sentinel=true` flag, as well as configure the flags `--redis-sentinel-master-name`, `--redis-sentinel-db` and `--redis-sentinel-connection-urls` appropriately.
 
 Redis Cluster is available to be the backend store as well. To leverage it, you will need to set the
 `--redis-use-cluster=true` flag, and configure the flags `--redis-cluster-connection-urls` appropriately.
