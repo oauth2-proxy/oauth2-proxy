@@ -21,5 +21,5 @@ to the appropriate URLs:
 
 The default configuration allows everyone with an account to authenticate.
 Restricting access is currently only supported by
-[email](#email-authentication).
+[email](index.md#email-authentication).
 

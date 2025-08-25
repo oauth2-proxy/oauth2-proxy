@@ -150,18 +150,6 @@ You must remove these options before starting OAuth2 Proxy with `--alpha-config`
 | ----- | ---- | ----------- |
 | `skipScope` | _bool_ | Skip adding the scope parameter in login request<br/>Default value is 'false' |
 
-### AWSIAMConfig
-
-(**Appears on:** [AlphaOptions](#alphaoptions))
-
-
-
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| `ServiceName` | _string_ | AWS service redis service being used. "elasticache" or "memorydb" |
-| `ClusterName` | _string_ | AWS Cluster name |
-| `Username` | _string_ | AWS Username |
-
 ### AlphaOptions
 
 AlphaOptions contains alpha structured configuration options.
@@ -181,7 +169,6 @@ They may change between releases without notice.
 | `server` | _[Server](#server)_ | Server is used to configure the HTTP(S) server for the proxy application.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
 | `metricsServer` | _[Server](#server)_ | MetricsServer is used to configure the HTTP(S) server for metrics.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
 | `providers` | _[Providers](#providers)_ | Providers is used to configure your provider. **Multiple-providers is not<br/>yet working.** [This feature is tracked in<br/>#925](https://github.com/oauth2-proxy/oauth2-proxy/issues/926) |
-| `redisSessionAWSIAMConfig` | _[AWSIAMConfig](#awsiamconfig)_ | AWS IAM Options is used to configure IAM authentication for your redis instance. |
 
 ### AzureOptions
 

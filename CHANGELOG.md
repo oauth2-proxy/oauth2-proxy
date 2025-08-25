@@ -2,8 +2,21 @@
 
 ## Release Highlights
 
+## Important Notes
+
+## Breaking Changes
+
+## Changes since v7.12.0
+
+# V7.12.0
+
+## Release Highlights
+
 - 🕵️‍♀️ Vulnerabilities have been addressed
   - [CVE-2025-47907](https://pkg.go.dev/vuln/GO-2025-3849)
+- 🦸 Support for Cidaas IDP
+- 🐛 Squashed some bugs
+
 
 ## Important Notes
 
@@ -14,6 +27,8 @@
 - [#2273](https://github.com/oauth2-proxy/oauth2-proxy/pull/2273) feat: add Cidaas provider (@Bibob7, @Teko012)
 - [#3166](https://github.com/oauth2-proxy/oauth2-proxy/pull/3166) chore(dep): upgrade to latest golang 1.24.6 (@tuunit)
 - [#3029](https://github.com/oauth2-proxy/oauth2-proxy/pull/3029) feat: IAM auth for AWS redis (@willwill96)
+- [#3156](https://github.com/oauth2-proxy/oauth2-proxy/pull/3156) feat: allow disable-keep-alives configuration for upstream (@jet-go)
+- [#3150](https://github.com/oauth2-proxy/oauth2-proxy/pull/3150) fix: Gitea team membership (@MagicRB, @tuunit)
 
 # V7.11.0
 
@@ -105,7 +120,7 @@ For detailed information, migration guidance, and security implications, see the
 - 🕵️‍♀️ Vulnerabilities have been addressed
   - [CVE-2025-22871](https://github.com/advisories/GHSA-g9pc-8g42-g6vq)
 - 🐛 Squashed some bugs
-  
+
 ## Important Notes
 
 ## Breaking Changes
