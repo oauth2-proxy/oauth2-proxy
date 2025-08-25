@@ -160,7 +160,7 @@ You must remove these options before starting OAuth2 Proxy with `--alpha-config`
 | ----- | ---- | ----------- |
 | `serviceName` | _string_ | AWS service redis service being used. "elasticache" or "memorydb" |
 | `clusterName` | _string_ | AWS Cluster name |
-| `username` | _string_ | AWS Username |
+| `userName` | _string_ | AWS Username |
 
 ### AlphaOptions
 
