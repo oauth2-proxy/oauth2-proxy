@@ -13,6 +13,8 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
+	"slices"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -115,7 +117,10 @@ type OAuthProxy struct {
 	redirectValidator redirect.Validator
 	appDirector       redirect.AppDirector
 
-	encodeState bool
+	encodeState         bool
+	maxAutomatedRetries int
+	idpErrorsToRetry    []string
+	retryCsrfErrors     bool
 }
 
 // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
@@ -240,16 +245,19 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		allowQuerySemicolons: opts.AllowQuerySemicolons,
 		trustedIPs:           trustedIPs,
 
-		basicAuthValidator: basicAuthValidator,
-		basicAuthGroups:    opts.HtpasswdUserGroups,
-		sessionChain:       sessionChain,
-		headersChain:       headersChain,
-		preAuthChain:       preAuthChain,
-		pageWriter:         pageWriter,
-		upstreamProxy:      upstreamProxy,
-		redirectValidator:  redirectValidator,
-		appDirector:        appDirector,
-		encodeState:        opts.EncodeState,
+		basicAuthValidator:  basicAuthValidator,
+		basicAuthGroups:     opts.HtpasswdUserGroups,
+		sessionChain:        sessionChain,
+		headersChain:        headersChain,
+		preAuthChain:        preAuthChain,
+		pageWriter:          pageWriter,
+		upstreamProxy:       upstreamProxy,
+		redirectValidator:   redirectValidator,
+		appDirector:         appDirector,
+		encodeState:         opts.EncodeState,
+		maxAutomatedRetries: opts.MaxAutomatedRetries,
+		idpErrorsToRetry:    opts.IdpErrorsToRetry,
+		retryCsrfErrors:     opts.RetryCsrfErrors,
 	}
 	p.buildServeMux(opts.ProxyPrefix)
 
@@ -805,13 +813,32 @@ func (p *OAuthProxy) backendLogout(rw http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// OAuthRestart restarts the OAuth2 authentication flow with a specified retryCounter
+func (p *OAuthProxy) OAuthRestart(rw http.ResponseWriter, req *http.Request, redirectPath string, retryCount int) (string, error) {
+	if !p.redirectValidator.IsValidRedirect(redirectPath) {
+		return fmt.Sprintf("Login Failed: The given redirect (%v) was not valid. Please try again.", redirectPath), errors.New("invalid redirect")
+	}
+
+	if retryCount >= p.maxAutomatedRetries {
+		return fmt.Sprintf("Login Failed: The maximum amount (%v) of automated retries exceeded.", p.maxAutomatedRetries), errors.New("retries exceeded")
+	}
+
+	logger.Printf("Restarting Oauth2 flow (%v/%v)", retryCount, p.maxAutomatedRetries)
+	// Handlers typically use this parameter to preserve the login redirect path.
+	// Since initialization now occurs within the proxy, we must set this parameter
+	// to retain the originally requested path for restarted requests.
+	req.Form.Set("rd", redirectPath)
+	p.doOAuthStart(rw, req, nil, retryCount+1)
+	return "", nil
+}
+
 // OAuthStart starts the OAuth2 authentication flow
 func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 	// start the flow permitting login URL query parameters to be overridden from the request URL
-	p.doOAuthStart(rw, req, req.URL.Query())
+	p.doOAuthStart(rw, req, req.URL.Query(), 0)
 }
 
-func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, overrides url.Values) {
+func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, overrides url.Values, retryCount int) {
 	extraParams := p.provider.Data().LoginURLParams(overrides)
 	prepareNoCache(rw)
 
@@ -856,7 +883,7 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 	callbackRedirect := p.getOAuthRedirectURI(req)
 	loginURL := p.provider.GetLoginURL(
 		callbackRedirect,
-		encodeState(csrf.HashOAuthState(), appRedirect, p.encodeState),
+		encodeState(csrf.HashOAuthState(), appRedirect, retryCount, p.encodeState),
 		csrf.HashOIDCNonce(),
 		extraParams,
 	)
@@ -881,19 +908,30 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
-	errorString := req.Form.Get("error")
-	if errorString != "" {
-		logger.Errorf("Error while parsing OAuth2 callback: %s", errorString)
-		message := fmt.Sprintf("Login Failed: The upstream identity provider returned an error: %s", errorString)
-		// Set the debug message and override the non debug message to be the same for this case
-		p.ErrorPage(rw, req, http.StatusForbidden, message, message)
-		return
-	}
 
-	nonce, appRedirect, err := decodeState(req.Form.Get("state"), p.encodeState)
+	nonce, appRedirect, retries, err := decodeState(req.Form.Get("state"), p.encodeState)
 	if err != nil {
 		logger.Errorf("Error while parsing OAuth2 state: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	errorString := req.Form.Get("error")
+	if errorString != "" {
+		message := fmt.Sprintf("Login Failed: The upstream identity provider returned an error: %s", errorString)
+		logger.Error(message)
+
+		if slices.Contains(p.idpErrorsToRetry, errorString) {
+			restartErrString, restartErr := p.OAuthRestart(rw, req, appRedirect, retries)
+
+			if restartErr != nil {
+				logger.Errorf("Encountered Error while restarting: %s", restartErr)
+				p.ErrorPage(rw, req, http.StatusForbidden, restartErr.Error(), message, restartErrString)
+			}
+			return
+		}
+		// Set the debug message and override the non debug message to be the same for this case
+		p.ErrorPage(rw, req, http.StatusForbidden, message, message)
 		return
 	}
 
@@ -905,8 +943,16 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		// There are a lot of issues opened complaining about missing CSRF cookies.
 		// Try to log the INs and OUTs of OAuthProxy, to be easier to analyse these issues.
 		LoggingCSRFCookiesInOAuthCallback(req, cookieName)
-		logger.Println(req, logger.AuthFailure, "Invalid authentication via OAuth2: unable to obtain CSRF cookie: %s (state=%s)", err, nonce)
-		p.ErrorPage(rw, req, http.StatusForbidden, err.Error(), "Login Failed: Unable to find a valid CSRF token. Please try again.")
+		message := fmt.Sprintf("Invalid authentication via OAuth2: unable to obtain CSRF cookie: %s (state=%s)", err, nonce)
+		logger.Println(req, logger.AuthFailure, message)
+
+		restartErrString, restartErr := p.OAuthRestart(rw, req, appRedirect, retries)
+
+		if restartErr != nil {
+			logger.Errorf("Encountered Error while restarting: %s", restartErr)
+			p.ErrorPage(rw, req, http.StatusForbidden, restartErr.Error(), message, restartErrString)
+		}
+
 		return
 	}
 
@@ -949,7 +995,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		logger.Errorf("Error with authorization: %v", err)
 	}
 	if p.Validator(session.Email) && authorized {
-		logger.PrintAuthf(session.Email, req, logger.AuthSuccess, "Authenticated via OAuth2: %s", session)
+		logger.PrintAuthf(session.Email, req, logger.AuthSuccess, "Authenticated via OAuth2 after %v retries: %s", retries, session)
 		err := p.SaveSession(rw, req, session)
 		if err != nil {
 			logger.Errorf("Error saving session state for %s: %v", remoteAddr, err)
@@ -1053,7 +1099,7 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 			// start OAuth flow, but only with the default login URL params - do not
 			// consider this request's query params as potential overrides, since
 			// the user did not explicitly start the login flow
-			p.doOAuthStart(rw, req, nil)
+			p.doOAuthStart(rw, req, nil, 0)
 		} else {
 			p.SignInPage(rw, req, http.StatusForbidden)
 		}
@@ -1266,8 +1312,9 @@ func checkAllowedEmails(req *http.Request, s *sessionsapi.SessionState) bool {
 
 // encodeState builds the OAuth state param out of our nonce and
 // original application redirect
-func encodeState(nonce string, redirect string, encode bool) string {
-	rawString := fmt.Sprintf("%v:%v", nonce, redirect)
+func encodeState(nonce string, redirect string, retryCount int, encode bool) string {
+	redirectEscaped := url.QueryEscape(redirect)
+	rawString := fmt.Sprintf("%v:%v:%v", nonce, redirectEscaped, retryCount)
 	if encode {
 		return base64.RawURLEncoding.EncodeToString([]byte(rawString))
 	}
@@ -1276,18 +1323,36 @@ func encodeState(nonce string, redirect string, encode bool) string {
 
 // decodeState splits the reflected OAuth state response back into
 // the nonce and original application redirect
-func decodeState(state string, encode bool) (string, string, error) {
+func decodeState(state string, encode bool) (string, string, int, error) {
 	toParse := state
 	if encode {
 		decoded, _ := base64.RawURLEncoding.DecodeString(state)
 		toParse = string(decoded)
 	}
 
-	parsedState := strings.SplitN(toParse, ":", 2)
-	if len(parsedState) != 2 {
-		return "", "", errors.New("invalid length")
+	parsedState := strings.Split(toParse, ":")
+	numStateParams := len(parsedState)
+
+	if numStateParams < 2 || numStateParams > 3 {
+		return "", "", -1, fmt.Errorf("invalid number of state parameters (%v)", numStateParams)
 	}
-	return parsedState[0], parsedState[1], nil
+
+	nonce := parsedState[0]
+
+	redirectPath, err := url.QueryUnescape(parsedState[1])
+	if err != nil {
+		return "", "", -1, fmt.Errorf("invalid redirectPath url (%v)", parsedState[1])
+	}
+
+	retries := 0
+	if numStateParams > 2 {
+		retries, err = strconv.Atoi(parsedState[2])
+		if err != nil {
+			return "", "", -1, fmt.Errorf("invalid retry count (%v)", parsedState[2])
+		}
+	}
+
+	return nonce, redirectPath, retries, nil
 }
 
 // addHeadersForProxying adds the appropriate headers the request / response for proxying

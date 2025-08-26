@@ -30,6 +30,7 @@ We improved our supply chain security by added additional checks to prevent pote
 ## Breaking Changes
 
 ## Changes since v7.14.2
+- [#3177](https://github.com/oauth2-proxy/oauth2-proxy/pull/3177) feat: add options to automate retries for IdP or CSRF erros (@TimFiernkranz)
 
 - [#3183](https://github.com/oauth2-proxy/oauth2-proxy/pull/3183) fix: allow URL parameters to configure username, password and max idle connection timeout if the matching configuration is empty.
 
