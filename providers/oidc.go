@@ -50,7 +50,7 @@ func NewOIDCProvider(p *ProviderData, opts options.OIDCOptions) *OIDCProvider {
 
 	return &OIDCProvider{
 		ProviderData: p,
-		SkipNonce:    opts.InsecureSkipNonce,
+		SkipNonce:    *opts.InsecureSkipNonce,
 	}
 }
 
