@@ -38,11 +38,15 @@ func NewProvider(providerConfig options.Provider) (Provider, error) {
 	}
 	switch providerConfig.Type {
 	case options.ADFSProvider:
-		return NewADFSProvider(providerData, providerConfig.ADFSConfig), nil
+		return NewADFSProvider(providerData, providerConfig), nil
 	case options.AzureProvider:
 		return NewAzureProvider(providerData, providerConfig.AzureConfig), nil
+	case options.MicrosoftEntraIDProvider:
+		return NewMicrosoftEntraIDProvider(providerData, providerConfig), nil
 	case options.BitbucketProvider:
 		return NewBitbucketProvider(providerData, providerConfig.BitbucketConfig), nil
+	case options.CidaasProvider:
+		return NewCIDAASProvider(providerData, providerConfig), nil
 	case options.DigitalOceanProvider:
 		return NewDigitalOceanProvider(providerData), nil
 	case options.FacebookProvider:
@@ -50,13 +54,13 @@ func NewProvider(providerConfig options.Provider) (Provider, error) {
 	case options.GitHubProvider:
 		return NewGitHubProvider(providerData, providerConfig.GitHubConfig), nil
 	case options.GitLabProvider:
-		return NewGitLabProvider(providerData, providerConfig.GitLabConfig)
+		return NewGitLabProvider(providerData, providerConfig)
 	case options.GoogleProvider:
 		return NewGoogleProvider(providerData, providerConfig.GoogleConfig)
 	case options.KeycloakProvider:
 		return NewKeycloakProvider(providerData, providerConfig.KeycloakConfig), nil
 	case options.KeycloakOIDCProvider:
-		return NewKeycloakOIDCProvider(providerData, providerConfig.KeycloakConfig), nil
+		return NewKeycloakOIDCProvider(providerData, providerConfig), nil
 	case options.LinkedInProvider:
 		return NewLinkedInProvider(providerData), nil
 	case options.LoginGovProvider:
@@ -65,6 +69,8 @@ func NewProvider(providerConfig options.Provider) (Provider, error) {
 		return NewNextcloudProvider(providerData), nil
 	case options.OIDCProvider:
 		return NewOIDCProvider(providerData, providerConfig.OIDCConfig), nil
+	case options.SourceHutProvider:
+		return NewSourceHutProvider(providerData), nil
 	default:
 		return nil, fmt.Errorf("unknown provider type %q", providerConfig.Type)
 	}
@@ -72,10 +78,11 @@ func NewProvider(providerConfig options.Provider) (Provider, error) {
 
 func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, error) {
 	p := &ProviderData{
-		Scope:            providerConfig.Scope,
-		ClientID:         providerConfig.ClientID,
-		ClientSecret:     providerConfig.ClientSecret,
-		ClientSecretFile: providerConfig.ClientSecretFile,
+		Scope:                   providerConfig.Scope,
+		ClientID:                providerConfig.ClientID,
+		ClientSecret:            providerConfig.ClientSecret,
+		ClientSecretFile:        providerConfig.ClientSecretFile,
+		AuthRequestResponseMode: providerConfig.AuthRequestResponseMode,
 	}
 
 	needsVerifier, err := providerRequiresOIDCProviderVerifier(providerConfig.Type)
@@ -90,6 +97,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 			ExtraAudiences:         providerConfig.OIDCConfig.ExtraAudiences,
 			IssuerURL:              providerConfig.OIDCConfig.IssuerURL,
 			JWKsURL:                providerConfig.OIDCConfig.JwksURL,
+			PublicKeyFiles:         providerConfig.OIDCConfig.PublicKeyFiles,
 			SkipDiscovery:          providerConfig.OIDCConfig.SkipDiscovery,
 			SkipIssuerVerification: providerConfig.OIDCConfig.InsecureSkipIssuerVerification,
 		})
@@ -138,6 +146,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 	p.AllowUnverifiedEmail = providerConfig.OIDCConfig.InsecureAllowUnverifiedEmail
 	p.EmailClaim = providerConfig.OIDCConfig.EmailClaim
 	p.GroupsClaim = providerConfig.OIDCConfig.GroupsClaim
+	p.SkipClaimsFromProfileURL = providerConfig.SkipClaimsFromProfileURL
 
 	// Set PKCE enabled or disabled based on discovery and force options
 	p.CodeChallengeMethod = parseCodeChallengeMethod(providerConfig)
@@ -156,15 +165,9 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 		p.EmailClaim = providerConfig.OIDCConfig.UserIDClaim
 	}
 
-	if providerConfig.Type == "oidc" && p.Scope == "" {
-		p.Scope = "openid email profile"
-
-		if len(providerConfig.AllowedGroups) > 0 {
-			p.Scope += " groups"
-		}
-	}
-
 	p.setAllowedGroups(providerConfig.AllowedGroups)
+
+	p.BackendLogoutURL = providerConfig.BackendLogoutURL
 
 	return p, nil
 }
@@ -184,9 +187,11 @@ func parseCodeChallengeMethod(providerConfig options.Provider) string {
 func providerRequiresOIDCProviderVerifier(providerType options.ProviderType) (bool, error) {
 	switch providerType {
 	case options.BitbucketProvider, options.DigitalOceanProvider, options.FacebookProvider, options.GitHubProvider,
-		options.GoogleProvider, options.KeycloakProvider, options.LinkedInProvider, options.LoginGovProvider, options.NextCloudProvider:
+		options.GoogleProvider, options.KeycloakProvider, options.LinkedInProvider, options.LoginGovProvider,
+		options.NextCloudProvider, options.SourceHutProvider:
 		return false, nil
-	case options.ADFSProvider, options.AzureProvider, options.GitLabProvider, options.KeycloakOIDCProvider, options.OIDCProvider:
+	case options.OIDCProvider, options.ADFSProvider, options.AzureProvider, options.CidaasProvider,
+		options.GitLabProvider, options.KeycloakOIDCProvider, options.MicrosoftEntraIDProvider:
 		return true, nil
 	default:
 		return false, fmt.Errorf("unknown provider type: %s", providerType)

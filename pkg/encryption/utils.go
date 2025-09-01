@@ -7,7 +7,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"hash"
-	"math/big"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -58,7 +58,7 @@ func Validate(cookie *http.Cookie, seed string, expiration time.Duration) (value
 		// creation timestamp stored in the cookie falls within the
 		// window defined by (Now()-expiration, Now()].
 		t = time.Unix(int64(ts), 0)
-		if t.After(time.Now().Add(expiration*-1)) && t.Before(time.Now().Add(time.Minute*5)) {
+		if (expiration == time.Duration(0)) || (t.After(time.Now().Add(expiration*-1)) && t.Before(time.Now().Add(time.Minute*5))) {
 			// it's a valid cookie. now get the contents
 			rawValue, err := base64.URLEncoding.DecodeString(parts[0])
 			if err == nil {
@@ -83,17 +83,13 @@ func SignedValue(seed string, key string, value []byte, now time.Time) (string, 
 	return cookieVal, nil
 }
 
-func GenerateRandomASCIIString(length int) (string, error) {
-	b := make([]byte, length)
-	charsetLen := new(big.Int).SetInt64(int64(len(asciiCharset)))
-	for i := range b {
-		character, err := rand.Int(rand.Reader, charsetLen)
-		if err != nil {
-			return "", err
-		}
-		b[i] = asciiCharset[character.Int64()]
+// GenerateCodeVerifierString returns a base64 encoded string of n random bytes
+func GenerateCodeVerifierString(n int) (string, error) {
+	data := make([]byte, n)
+	if _, err := io.ReadFull(rand.Reader, data); err != nil {
+		return "", err
 	}
-	return string(b), nil
+	return base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString(data), nil
 }
 
 func GenerateCodeChallenge(method, codeVerifier string) (string, error) {

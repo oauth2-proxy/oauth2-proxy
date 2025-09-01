@@ -3,8 +3,7 @@ package options
 import (
 	"time"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -25,6 +24,7 @@ var _ = Describe("Legacy Options", func() {
 			legacyOpts.LegacyUpstreams.SSLUpstreamInsecureSkipVerify = true
 			legacyOpts.LegacyUpstreams.Upstreams = []string{"http://foo.bar/baz", "file:///var/lib/website#/bar", "static://204"}
 			legacyOpts.LegacyProvider.ClientID = "oauth-proxy"
+			legacyOpts.LegacyUpstreams.DisableKeepAlives = false
 
 			truth := true
 			staticCode := 204
@@ -39,6 +39,7 @@ var _ = Describe("Legacy Options", func() {
 						PassHostHeader:        &truth,
 						ProxyWebSockets:       &truth,
 						Timeout:               &timeout,
+						DisableKeepAlives:     legacyOpts.LegacyUpstreams.DisableKeepAlives,
 					},
 					{
 						ID:                    "/bar",
@@ -49,6 +50,7 @@ var _ = Describe("Legacy Options", func() {
 						PassHostHeader:        &truth,
 						ProxyWebSockets:       &truth,
 						Timeout:               &timeout,
+						DisableKeepAlives:     legacyOpts.LegacyUpstreams.DisableKeepAlives,
 					},
 					{
 						ID:                    "static://204",
@@ -61,6 +63,7 @@ var _ = Describe("Legacy Options", func() {
 						PassHostHeader:        nil,
 						ProxyWebSockets:       nil,
 						Timeout:               nil,
+						DisableKeepAlives:     legacyOpts.LegacyUpstreams.DisableKeepAlives,
 					},
 				},
 			}
@@ -146,6 +149,7 @@ var _ = Describe("Legacy Options", func() {
 		proxyWebSockets := true
 		flushInterval := Duration(5 * time.Second)
 		timeout := Duration(5 * time.Second)
+		disableKeepAlives := true
 
 		// Test cases and expected outcomes
 		validHTTP := "http://foo.bar/baz"
@@ -158,6 +162,7 @@ var _ = Describe("Legacy Options", func() {
 			ProxyWebSockets:       &proxyWebSockets,
 			FlushInterval:         &flushInterval,
 			Timeout:               &timeout,
+			DisableKeepAlives:     disableKeepAlives,
 		}
 
 		// Test cases and expected outcomes
@@ -171,6 +176,7 @@ var _ = Describe("Legacy Options", func() {
 			ProxyWebSockets:       &proxyWebSockets,
 			FlushInterval:         &flushInterval,
 			Timeout:               &timeout,
+			DisableKeepAlives:     disableKeepAlives,
 		}
 
 		validFileWithFragment := "file:///var/lib/website#/bar"
@@ -183,6 +189,7 @@ var _ = Describe("Legacy Options", func() {
 			ProxyWebSockets:       &proxyWebSockets,
 			FlushInterval:         &flushInterval,
 			Timeout:               &timeout,
+			DisableKeepAlives:     disableKeepAlives,
 		}
 
 		validStatic := "static://204"
@@ -198,6 +205,7 @@ var _ = Describe("Legacy Options", func() {
 			ProxyWebSockets:       nil,
 			FlushInterval:         nil,
 			Timeout:               nil,
+			DisableKeepAlives:     false,
 		}
 
 		invalidStatic := "static://abc"
@@ -213,6 +221,7 @@ var _ = Describe("Legacy Options", func() {
 			ProxyWebSockets:       nil,
 			FlushInterval:         nil,
 			Timeout:               nil,
+			DisableKeepAlives:     false,
 		}
 
 		invalidHTTP := ":foo"
@@ -227,6 +236,7 @@ var _ = Describe("Legacy Options", func() {
 					ProxyWebSockets:               proxyWebSockets,
 					FlushInterval:                 time.Duration(flushInterval),
 					Timeout:                       time.Duration(timeout),
+					DisableKeepAlives:             disableKeepAlives,
 				}
 
 				upstreams, err := legacyUpstreams.convert()
@@ -991,6 +1001,14 @@ var _ = Describe("Legacy Options", func() {
 			GoogleServiceAccountJSON: "test.json",
 			GoogleGroups:             []string{"1", "2"},
 		}
+
+		legacyConfigLegacyProvider := LegacyProvider{
+			ClientID:                 clientID,
+			ProviderType:             "google",
+			GoogleAdminEmail:         "email@email.com",
+			GoogleServiceAccountJSON: "test.json",
+			GoogleGroupsLegacy:       []string{"1", "2"},
+		}
 		DescribeTable("convertLegacyProviders",
 			func(in *convertProvidersTableInput) {
 				providers, err := in.legacyProvider.convert()
@@ -1021,6 +1039,11 @@ var _ = Describe("Legacy Options", func() {
 			}),
 			Entry("with internal provider config", &convertProvidersTableInput{
 				legacyProvider:    internalConfigLegacyProvider,
+				expectedProviders: Providers{internalConfigProvider},
+				errMsg:            "",
+			}),
+			Entry("with legacy provider config", &convertProvidersTableInput{
+				legacyProvider:    legacyConfigLegacyProvider,
 				expectedProviders: Providers{internalConfigProvider},
 				errMsg:            "",
 			}),

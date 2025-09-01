@@ -1,5 +1,7 @@
 # Release
 
+The is a legacy document to explain the manual process of creating and publishing a new release of oauth2-proxy. As of now the release process has been automated with GitHub Actions workflows. For more information have a look at the workflows `create-release.yml` and `publish-release.yml`.
+
 Here's how OAuth2 Proxy releases are created.
 
 ## Schedule
@@ -39,8 +41,8 @@ Note this uses `v4.1.0` as an example release number.
 10. Publish release in Github
 11. Make and push docker images to Quay
   ```
-  make docker-all
-  make docker-push-all
+  make build-docker-all
+  make push-docker-all
   ```
   Note: Ensure the docker tags don't include `-dirty`. This means you have uncommitted changes.
 

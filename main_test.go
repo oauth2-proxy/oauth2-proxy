@@ -8,13 +8,18 @@ import (
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options/testutil"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/format"
 	"github.com/spf13/pflag"
 )
 
 var _ = Describe("Configuration Loading Suite", func() {
+	// For comparing the full configuration differences of our structs we need to increase the gomega limits
+	format.MaxLength = 50000
+	format.MaxDepth = 10
+
 	const testLegacyConfig = `
 http_address="127.0.0.1:4180"
 upstreams="http://httpbin"
@@ -226,7 +231,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 				Expect(err).ToNot(HaveOccurred())
 			}
 			Expect(in.expectedOptions).ToNot(BeNil())
-			Expect(opts).To(Equal(in.expectedOptions()))
+			Expect(opts).To(EqualOpts(in.expectedOptions()))
 		},
 		Entry("with legacy configuration", loadConfigurationTableInput{
 			configContent:   testCoreConfig + testLegacyConfig,
@@ -240,7 +245,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 		Entry("with bad legacy configuration", loadConfigurationTableInput{
 			configContent:   testCoreConfig + "unknown_field=\"something\"",
 			expectedOptions: func() *options.Options { return nil },
-			expectedErr:     errors.New("failed to load config: error unmarshalling config: 1 error(s) decoding:\n\n* '' has invalid keys: unknown_field"),
+			expectedErr:     errors.New("failed to load config: error unmarshalling config: decoding failed due to the following error(s):\n\n'' has invalid keys: unknown_field"),
 		}),
 		Entry("with bad alpha configuration", loadConfigurationTableInput{
 			configContent:      testCoreConfig,
@@ -252,7 +257,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 			configContent:      testCoreConfig + "unknown_field=\"something\"",
 			alphaConfigContent: testAlphaConfig,
 			expectedOptions:    func() *options.Options { return nil },
-			expectedErr:        errors.New("failed to load core options: failed to load config: error unmarshalling config: 1 error(s) decoding:\n\n* '' has invalid keys: unknown_field"),
+			expectedErr:        errors.New("failed to load core options: failed to load config: error unmarshalling config: decoding failed due to the following error(s):\n\n'' has invalid keys: unknown_field"),
 		}),
 	)
 })

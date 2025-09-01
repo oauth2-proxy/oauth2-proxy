@@ -1,0 +1,35 @@
+go:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/*.go'
+
+docs:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/*.md'
+
+changelog:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'CHAGELOG.md'
+
+tests:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/*_test.go'
+
+provider:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'providers/**/*'
+
+dependencies:
+- changed-files:
+  - any-glob-to-any-file:
+    - 'go.mod'
+    - 'go.sum'
+
+docker:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/Dockerfile'

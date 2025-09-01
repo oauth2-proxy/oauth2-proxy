@@ -11,7 +11,11 @@ const (
 // OIDCAudienceClaims is the generic audience claim list used by the OIDC provider.
 var OIDCAudienceClaims = []string{"aud"}
 
-// Providers is a collection of definitions for providers.
+// The provider can be selected using the `provider` configuration value, or
+// set in the [`providers` array using
+// AlphaConfig](https://oauth2-proxy.github.io/oauth2-proxy/configuration/alpha-config#providers).
+// However, [**the feature to implement multiple providers is not
+// complete**](https://github.com/oauth2-proxy/oauth2-proxy/issues/926).
 type Providers []Provider
 
 // Provider holds all configuration for a single provider
@@ -30,6 +34,8 @@ type Provider struct {
 	KeycloakConfig KeycloakOptions `json:"keycloakConfig,omitempty"`
 	// AzureConfig holds all configurations for Azure provider.
 	AzureConfig AzureOptions `json:"azureConfig,omitempty"`
+	// MicrosoftEntraIDConfig holds all configurations for Entra ID provider.
+	MicrosoftEntraIDConfig MicrosoftEntraIDOptions `json:"microsoftEntraIDConfig,omitempty"`
 	// ADFSConfig holds all configurations for ADFS provider.
 	ADFSConfig ADFSOptions `json:"ADFSConfig,omitempty"`
 	// BitbucketConfig holds all configurations for Bitbucket provider.
@@ -59,15 +65,22 @@ type Provider struct {
 	// CAFiles is a list of paths to CA certificates that should be used when connecting to the provider.
 	// If not specified, the default Go trust sources are used instead
 	CAFiles []string `json:"caFiles,omitempty"`
-
+	// UseSystemTrustStore determines if your custom CA files and the system trust store are used
+	// If set to true, your custom CA files and the system trust store are used otherwise only your custom CA files.
+	UseSystemTrustStore bool `json:"useSystemTrustStore,omitempty"`
 	// LoginURL is the authentication endpoint
 	LoginURL string `json:"loginURL,omitempty"`
 	// LoginURLParameters defines the parameters that can be passed from the start URL to the IdP login URL
 	LoginURLParameters []LoginURLParameter `json:"loginURLParameters,omitempty"`
+	// AuthRequestResponseMode defines the response mode to request during authorization request
+	AuthRequestResponseMode string `json:"authRequestResponseMode,omitempty"`
 	// RedeemURL is the token redemption endpoint
 	RedeemURL string `json:"redeemURL,omitempty"`
 	// ProfileURL is the profile access endpoint
 	ProfileURL string `json:"profileURL,omitempty"`
+	// SkipClaimsFromProfileURL allows to skip request to Profile URL for resolving claims not present in id_token
+	// default set to 'false'
+	SkipClaimsFromProfileURL bool `json:"skipClaimsFromProfileURL,omitempty"`
 	// ProtectedResource is the resource that is protected (Azure AD and ADFS only)
 	ProtectedResource string `json:"resource,omitempty"`
 	// ValidateURL is the access token validation endpoint
@@ -78,6 +91,9 @@ type Provider struct {
 	AllowedGroups []string `json:"allowedGroups,omitempty"`
 	// The code challenge method
 	CodeChallengeMethod string `json:"code_challenge_method,omitempty"`
+
+	// URL to call to perform backend logout, `{id_token}` would be replaced by the actual `id_token` if available in the session
+	BackendLogoutURL string `json:"backendLogoutURL"`
 }
 
 // ProviderType is used to enumerate the different provider type options
@@ -93,8 +109,14 @@ const (
 	// AzureProvider is the provider type for Azure
 	AzureProvider ProviderType = "azure"
 
+	// MicrosoftEntraIDProvider is the provider type for Entra OIDC
+	MicrosoftEntraIDProvider ProviderType = "entra-id"
+
 	// BitbucketProvider is the provider type for Bitbucket
 	BitbucketProvider ProviderType = "bitbucket"
+
+	// CidaasProvider is the provider type for Cidaas IDP
+	CidaasProvider ProviderType = "cidaas"
 
 	// DigitalOceanProvider is the provider type for DigitalOcean
 	DigitalOceanProvider ProviderType = "digitalocean"
@@ -128,6 +150,9 @@ const (
 
 	// OIDCProvider is the provider type for OIDC
 	OIDCProvider ProviderType = "oidc"
+
+	// SourceHutProvider is the provider type for SourceHut
+	SourceHutProvider ProviderType = "sourcehut"
 )
 
 type KeycloakOptions struct {
@@ -145,6 +170,18 @@ type AzureOptions struct {
 	// GraphGroupField configures the group field to be used when building the groups list from Microsoft Graph
 	// Default value is 'id'
 	GraphGroupField string `json:"graphGroupField,omitempty"`
+}
+
+type MicrosoftEntraIDOptions struct {
+	// AllowedTenants is a list of allowed tenants. In case of multi-tenant apps, incoming tokens are
+	// issued by different issuers and OIDC issuer verification needs to be disabled.
+	// When not specified, all tenants are allowed. Redundant for single-tenant apps
+	// (regular ID token validation matches the issuer).
+	AllowedTenants []string `json:"allowedTenants,omitempty"`
+
+	// FederatedTokenAuth enable oAuth2 client authentication with federated token projected
+	// by Entra Workload Identity plugin, instead of client secret.
+	FederatedTokenAuth bool `json:"federatedTokenAuth,omitempty"`
 }
 
 type ADFSOptions struct {
@@ -178,17 +215,21 @@ type GitHubOptions struct {
 type GitLabOptions struct {
 	// Group sets restrict logins to members of this group
 	Group []string `json:"group,omitempty"`
-	// Projects restricts logins to members of any of these projects
+	// Projects restricts logins to members of these projects
 	Projects []string `json:"projects,omitempty"`
 }
 
 type GoogleOptions struct {
-	// Groups sets restrict logins to members of this google group
+	// Groups sets restrict logins to members of this Google group
 	Groups []string `json:"group,omitempty"`
-	// AdminEmail is the google admin to impersonate for api calls
+	// AdminEmail is the Google admin to impersonate for api calls
 	AdminEmail string `json:"adminEmail,omitempty"`
 	// ServiceAccountJSON is the path to the service account json credentials
 	ServiceAccountJSON string `json:"serviceAccountJson,omitempty"`
+	// UseApplicationDefaultCredentials is a boolean whether to use Application Default Credentials instead of a ServiceAccountJSON
+	UseApplicationDefaultCredentials bool `json:"useApplicationDefaultCredentials,omitempty"`
+	// TargetPrincipal is the Google Service Account used for Application Default Credentials
+	TargetPrincipal string `json:"targetPrincipal,omitempty"`
 }
 
 type OIDCOptions struct {
@@ -213,6 +254,9 @@ type OIDCOptions struct {
 	// JwksURL is the OpenID Connect JWKS URL
 	// eg: https://www.googleapis.com/oauth2/v3/certs
 	JwksURL string `json:"jwksURL,omitempty"`
+	// PublicKeyFiles is a list of paths pointing to public key files in PEM format to use
+	// for verifying JWT tokens
+	PublicKeyFiles []string `json:"publicKeyFiles,omitempty"`
 	// EmailClaim indicates which claim contains the user email,
 	// default set to 'email'
 	EmailClaim string `json:"emailClaim,omitempty"`

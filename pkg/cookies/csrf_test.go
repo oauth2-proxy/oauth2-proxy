@@ -10,7 +10,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -19,6 +19,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 		cookieOpts  *options.Cookie
 		publicCSRF  CSRF
 		privateCSRF *csrf
+		csrfName    string
 	)
 
 	BeforeEach(func() {
@@ -31,6 +32,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 			Secure:         true,
 			HTTPOnly:       true,
 			CSRFPerRequest: false,
+			CSRFExpire:     time.Hour,
 		}
 
 		var err error
@@ -38,6 +40,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		privateCSRF = publicCSRF.(*csrf)
+		csrfName = GenerateCookieName(cookieOpts, csrfNonce)
 	})
 
 	Context("NewCSRF", func() {
@@ -139,7 +142,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 					Host:   cookieDomain,
 					Path:   cookiePath,
 				},
-			}
+				Header: make(http.Header)}
 		})
 
 		AfterEach(func() {
@@ -158,12 +161,73 @@ var _ = Describe("CSRF Cookie Tests", func() {
 				))
 				Expect(rw.Header().Get("Set-Cookie")).To(ContainSubstring(
 					fmt.Sprintf(
-						"; Path=%s; Domain=%s; Expires=%s; HttpOnly; Secure",
+						"; Path=%s; Domain=%s; Max-Age=%d; HttpOnly; Secure",
 						cookiePath,
 						cookieDomain,
-						testCookieExpires(testNow.Add(cookieOpts.CSRFExpire)),
+						int(cookieOpts.CSRFExpire.Seconds()),
 					),
 				))
+			})
+		})
+
+		Context("LoadCSRFCookie", func() {
+			BeforeEach(func() {
+				// we need to reset the time to ensure the cookie is valid
+				privateCSRF.time.Reset()
+			})
+
+			It("should return error when no cookie is set", func() {
+				csrf, err := LoadCSRFCookie(req, csrfName, cookieOpts)
+				Expect(err).To(HaveOccurred())
+				Expect(csrf).To(BeNil())
+			})
+
+			It("should find one valid cookie", func() {
+				privateCSRF.OAuthState = []byte(csrfState)
+				privateCSRF.OIDCNonce = []byte(csrfNonce)
+				encoded, err := privateCSRF.encodeCookie()
+				Expect(err).ToNot(HaveOccurred())
+
+				req.AddCookie(&http.Cookie{
+					Name:  privateCSRF.cookieName(),
+					Value: encoded,
+				})
+
+				csrf, err := LoadCSRFCookie(req, csrfName, cookieOpts)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(csrf).ToNot(BeNil())
+			})
+
+			It("should return error when one invalid cookie is set", func() {
+				req.AddCookie(&http.Cookie{
+					Name:  privateCSRF.cookieName(),
+					Value: "invalid",
+				})
+
+				csrf, err := LoadCSRFCookie(req, csrfName, cookieOpts)
+				Expect(err).To(HaveOccurred())
+				Expect(csrf).To(BeNil())
+			})
+
+			It("should be able to handle two cookie with one invalid", func() {
+				privateCSRF.OAuthState = []byte(csrfState)
+				privateCSRF.OIDCNonce = []byte(csrfNonce)
+				encoded, err := privateCSRF.encodeCookie()
+				Expect(err).ToNot(HaveOccurred())
+
+				req.AddCookie(&http.Cookie{
+					Name:  privateCSRF.cookieName(),
+					Value: "invalid",
+				})
+
+				req.AddCookie(&http.Cookie{
+					Name:  privateCSRF.cookieName(),
+					Value: encoded,
+				})
+
+				csrf, err := LoadCSRFCookie(req, csrfName, cookieOpts)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(csrf).ToNot(BeNil())
 			})
 		})
 
@@ -175,11 +239,10 @@ var _ = Describe("CSRF Cookie Tests", func() {
 
 				Expect(rw.Header().Get("Set-Cookie")).To(Equal(
 					fmt.Sprintf(
-						"%s=; Path=%s; Domain=%s; Expires=%s; HttpOnly; Secure",
+						"%s=; Path=%s; Domain=%s; Max-Age=0; HttpOnly; Secure",
 						privateCSRF.cookieName(),
 						cookiePath,
 						cookieDomain,
-						testCookieExpires(testNow.Add(time.Hour*-1)),
 					),
 				))
 			})

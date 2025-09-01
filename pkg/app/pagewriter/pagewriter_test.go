@@ -9,8 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -168,7 +167,7 @@ var _ = Describe("Writer", func() {
 				writer: &WriterFuncs{
 					SignInPageFunc: func(rw http.ResponseWriter, req *http.Request, redirectURL string, statusCode int) {
 						rw.WriteHeader(202)
-						rw.Write([]byte(fmt.Sprintf("%s %s", req.URL.Path, redirectURL)))
+						fmt.Fprintf(rw, "%s %s", req.URL.Path, redirectURL)
 					},
 				},
 				expectedStatus: 202,
@@ -201,7 +200,7 @@ var _ = Describe("Writer", func() {
 				writer: &WriterFuncs{
 					ErrorPageFunc: func(rw http.ResponseWriter, opts ErrorPageOpts) {
 						rw.WriteHeader(503)
-						rw.Write([]byte(fmt.Sprintf("%s %s", opts.RequestID, opts.RedirectURL)))
+						fmt.Fprintf(rw, "%s %s", opts.RequestID, opts.RedirectURL)
 					},
 				},
 				expectedStatus: 503,
@@ -231,7 +230,7 @@ var _ = Describe("Writer", func() {
 				writer: &WriterFuncs{
 					ProxyErrorFunc: func(rw http.ResponseWriter, req *http.Request, proxyErr error) {
 						rw.WriteHeader(503)
-						rw.Write([]byte(fmt.Sprintf("%s %v", req.URL.Path, proxyErr)))
+						fmt.Fprintf(rw, "%s %v", req.URL.Path, proxyErr)
 					},
 				},
 				expectedStatus: 503,

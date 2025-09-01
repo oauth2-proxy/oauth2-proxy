@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"mime"
 	"net/http"
 	"net/url"
 	"strings"
@@ -94,11 +95,25 @@ func (c *claimExtractor) loadProfileClaims() (*simplejson.Json, error) {
 		return simplejson.New(), nil
 	}
 
-	claims, err := requests.New(c.profileURL.String()).
+	builder := requests.New(c.profileURL.String()).
 		WithContext(c.ctx).
 		WithHeaders(c.requestHeaders).
-		Do().
-		UnmarshalSimpleJSON()
+		Do()
+
+	// We first check if the result is a JWT token
+	// https://openid.net/specs/openid-connect-core-1_0-final.html#UserInfoResponse
+	mediaType, _, parseErr := mime.ParseMediaType(builder.Headers().Get("Content-Type"))
+
+	if parseErr == nil && mediaType == "application/jwt" {
+		// Decode and use JWT payload as profile claims
+		if pl, err := parseJWT(string(builder.Body())); err == nil {
+			return simplejson.NewJson(pl)
+		}
+	}
+
+	// Otherwise, process as normal JSON payload
+	claims, err := builder.UnmarshalSimpleJSON()
+
 	if err != nil {
 		return nil, fmt.Errorf("error making request to profile URL: %v", err)
 	}
@@ -139,9 +154,12 @@ func parseJWT(p string) ([]byte, error) {
 }
 
 // getClaimFrom gets a claim from a Json object.
-// It can accept either a single claim name or a json path.
+// It can accept either a single claim name or a json path. The claim is always evaluated first as a single claim name.
 // Paths with indexes are not supported.
 func getClaimFrom(claim string, src *simplejson.Json) interface{} {
+	if value, ok := src.CheckGet(claim); ok {
+		return value.Interface()
+	}
 	claimParts := strings.Split(claim, ".")
 	return src.GetPath(claimParts...).Interface()
 }

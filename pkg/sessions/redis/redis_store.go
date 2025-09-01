@@ -49,9 +49,12 @@ func (store *SessionStore) Save(ctx context.Context, key string, value []byte, e
 // cookie within the HTTP request object
 func (store *SessionStore) Load(ctx context.Context, key string) ([]byte, error) {
 	value, err := store.Client.Get(ctx, key)
-	if err != nil {
+	if err == redis.Nil {
+		return nil, fmt.Errorf("session does not exist")
+	} else if err != nil {
 		return nil, fmt.Errorf("error loading redis session: %v", err)
 	}
+
 	return value, nil
 }
 
@@ -100,6 +103,13 @@ func buildSentinelClient(opts options.RedisStoreOptions) (Client, error) {
 		return nil, fmt.Errorf("could not parse redis urls: %v", err)
 	}
 
+	if opts.Password != "" {
+		opt.Password = opts.Password
+	}
+	if opts.Username != "" {
+		opt.Username = opts.Username
+	}
+
 	if err := setupTLSConfig(opts, opt); err != nil {
 		return nil, err
 	}
@@ -108,6 +118,7 @@ func buildSentinelClient(opts options.RedisStoreOptions) (Client, error) {
 		MasterName:       opts.SentinelMasterName,
 		SentinelAddrs:    addrs,
 		SentinelPassword: opts.SentinelPassword,
+		Username:         opts.Username,
 		Password:         opts.Password,
 		TLSConfig:        opt.TLSConfig,
 		ConnMaxIdleTime:  time.Duration(opts.IdleTimeout) * time.Second,
@@ -122,12 +133,20 @@ func buildClusterClient(opts options.RedisStoreOptions) (Client, error) {
 		return nil, fmt.Errorf("could not parse redis urls: %v", err)
 	}
 
+	if opts.Password != "" {
+		opt.Password = opts.Password
+	}
+	if opts.Username != "" {
+		opt.Username = opts.Username
+	}
+
 	if err := setupTLSConfig(opts, opt); err != nil {
 		return nil, err
 	}
 
 	client := redis.NewClusterClient(&redis.ClusterOptions{
 		Addrs:           addrs,
+		Username:        opts.Username,
 		Password:        opts.Password,
 		TLSConfig:       opt.TLSConfig,
 		ConnMaxIdleTime: time.Duration(opts.IdleTimeout) * time.Second,
@@ -145,6 +164,9 @@ func buildStandaloneClient(opts options.RedisStoreOptions) (Client, error) {
 
 	if opts.Password != "" {
 		opt.Password = opts.Password
+	}
+	if opts.Username != "" {
+		opt.Username = opts.Username
 	}
 
 	if err := setupTLSConfig(opts, opt); err != nil {
@@ -199,6 +221,10 @@ func setupTLSConfig(opts options.RedisStoreOptions, opt *redis.Options) error {
 // parseRedisURLs parses a list of redis urls and returns a list
 // of addresses in the form of host:port and redis.Options that can be used to connect to Redis
 func parseRedisURLs(urls []string) ([]string, *redis.Options, error) {
+	if len(urls) == 0 {
+		return nil, nil, fmt.Errorf("unable to parse redis urls: no redis urls provided")
+	}
+
 	addrs := []string{}
 	var redisOptions *redis.Options
 	for _, u := range urls {

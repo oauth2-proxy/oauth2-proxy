@@ -7,13 +7,15 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options/util"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
-	"golang.org/x/sync/errgroup"
 )
 
 // Server represents an HTTP or HTTPS server.
@@ -35,6 +37,9 @@ type Opts struct {
 
 	// TLS is the TLS configuration for the server.
 	TLS *options.TLS
+
+	// Let testing infrastructure circumvent parsing file descriptors
+	fdFiles []*os.File
 }
 
 // NewServer creates a new Server from the options given.
@@ -42,6 +47,11 @@ func NewServer(opts Opts) (Server, error) {
 	s := &server{
 		handler: opts.Handler,
 	}
+
+	if len(opts.fdFiles) > 0 {
+		s.fdFiles = opts.fdFiles
+	}
+
 	if err := s.setupListener(opts); err != nil {
 		return nil, fmt.Errorf("error setting up listener: %v", err)
 	}
@@ -58,6 +68,9 @@ type server struct {
 
 	listener    net.Listener
 	tlsListener net.Listener
+
+	// ensure activation.Files are called once
+	fdFiles []*os.File
 }
 
 // setupListener sets the server listener if the HTTP server is enabled.
@@ -69,12 +82,22 @@ func (s *server) setupListener(opts Opts) error {
 		return nil
 	}
 
+	// Use fd: as a prefix for systemd socket activation, it's generic
+	// enough and short.
+	// The most common usage would be --http-address fd:3.
+	// This causes oauth2-proxy to just assume that the third fd passed
+	// to the program is indeed a net.Listener and starts using it
+	// without setting up a new listener.
+	if strings.HasPrefix(strings.ToLower(opts.BindAddress), "fd:") {
+		return s.checkSystemdSocketSupport(opts)
+	}
+
 	networkType := getNetworkScheme(opts.BindAddress)
 	listenAddr := getListenAddress(opts.BindAddress)
 
 	listener, err := net.Listen(networkType, listenAddr)
 	if err != nil {
-		return fmt.Errorf("listen (%s, %s) failed: %v", networkType, listenAddr, err)
+		return fmt.Errorf("listen (%s, %s) failed: %w", networkType, listenAddr, err)
 	}
 	s.listener = listener
 

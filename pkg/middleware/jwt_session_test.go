@@ -14,11 +14,10 @@ import (
 	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	k8serrors "k8s.io/apimachinery/pkg/util/errors"
 )
@@ -72,6 +71,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 	// validToken will pass the token regex so can be used to check token fetching
 	// is valid. It will not pass the OIDC Verifier however.
 	const validToken = "eyJfoobar.eyJfoobar.12345asdf"
+	const validTokenWithSpace = "eyAidHlwIjogIkpXVCIsICJraWQiOiAiRTJlWW5ZMWR1eGttTkpiVGdCRzd4MkVpNVJZPSIsICJhbGciOiAiUlMyNTYiIH0K.eyJfoobar.12345asdf"
 
 	Context("JwtSessionLoader", func() {
 		var verifier middlewareapi.VerifyFunc
@@ -92,6 +92,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 			authorizationHeader string
 			existingSession     *sessionsapi.SessionState
 			expectedSession     *sessionsapi.SessionState
+			expectedStatus      int
 		}
 
 		DescribeTable("with an authorization header",
@@ -114,12 +115,13 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				// Create the handler with a next handler that will capture the session
 				// from the scope
 				var gotSession *sessionsapi.SessionState
-				handler := NewJwtSessionLoader(sessionLoaders)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				handler := NewJwtSessionLoader(sessionLoaders, true)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					gotSession = middlewareapi.GetRequestScope(r).Session
 				}))
 				handler.ServeHTTP(rw, req)
 
 				Expect(gotSession).To(Equal(in.expectedSession))
+				Expect(rw.Code).To(Equal(200))
 			},
 			Entry("<no value>", jwtSessionLoaderTableInput{
 				authorizationHeader: "",
@@ -163,6 +165,83 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 			}),
 		)
 
+		DescribeTable("with an authorization header, denyInvalidJWTs",
+			func(in jwtSessionLoaderTableInput) {
+				scope := &middlewareapi.RequestScope{
+					Session: in.existingSession,
+				}
+
+				// Set up the request with the authorization header and a request scope
+				req := httptest.NewRequest("", "/", nil)
+				req.Header.Set("Authorization", in.authorizationHeader)
+				req = middlewareapi.AddRequestScope(req, scope)
+
+				rw := httptest.NewRecorder()
+
+				sessionLoaders := []middlewareapi.TokenToSessionFunc{
+					middlewareapi.CreateTokenToSessionFunc(verifier),
+				}
+
+				// Create the handler with a next handler that will capture the session
+				// from the scope
+				var gotSession *sessionsapi.SessionState
+				handler := NewJwtSessionLoader(sessionLoaders, false)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					gotSession = middlewareapi.GetRequestScope(r).Session
+				}))
+				handler.ServeHTTP(rw, req)
+
+				Expect(gotSession).To(Equal(in.expectedSession))
+				Expect(rw.Code).To(Equal(in.expectedStatus))
+			},
+			Entry("<no value>", jwtSessionLoaderTableInput{
+				authorizationHeader: "",
+				existingSession:     nil,
+				expectedSession:     nil,
+				expectedStatus:      200,
+			}),
+			Entry("abcdef", jwtSessionLoaderTableInput{
+				authorizationHeader: "abcdef",
+				existingSession:     nil,
+				expectedSession:     nil,
+				expectedStatus:      403,
+			}),
+			Entry("abcdef  (with existing session)", jwtSessionLoaderTableInput{
+				authorizationHeader: "abcdef",
+				existingSession:     &sessionsapi.SessionState{User: "user"},
+				expectedSession:     &sessionsapi.SessionState{User: "user"},
+				expectedStatus:      200,
+			}),
+			Entry("Bearer <verifiedToken>", jwtSessionLoaderTableInput{
+				authorizationHeader: fmt.Sprintf("Bearer %s", verifiedToken),
+				existingSession:     nil,
+				expectedSession:     verifiedSession,
+				expectedStatus:      200,
+			}),
+			Entry("Bearer <nonVerifiedToken>", jwtSessionLoaderTableInput{
+				authorizationHeader: fmt.Sprintf("Bearer %s", nonVerifiedToken),
+				existingSession:     nil,
+				expectedSession:     nil,
+				expectedStatus:      403,
+			}),
+			Entry("Bearer <verifiedToken> (with existing session)", jwtSessionLoaderTableInput{
+				authorizationHeader: fmt.Sprintf("Bearer %s", verifiedToken),
+				existingSession:     &sessionsapi.SessionState{User: "user"},
+				expectedSession:     &sessionsapi.SessionState{User: "user"},
+				expectedStatus:      200,
+			}),
+			Entry("Basic Base64(<nonVerifiedToken>:) (No password)", jwtSessionLoaderTableInput{
+				authorizationHeader: "Basic ZXlKZm9vYmFyLmV5SmZvb2Jhci4xMjM0NWFzZGY6",
+				existingSession:     nil,
+				expectedSession:     nil,
+				expectedStatus:      403,
+			}),
+			Entry("Basic Base64(<verifiedToken>:x-oauth-basic) (Sentinel password)", jwtSessionLoaderTableInput{
+				authorizationHeader: fmt.Sprintf("Basic %s", verifiedTokenXOAuthBasicBase64),
+				existingSession:     nil,
+				expectedSession:     verifiedSession,
+				expectedStatus:      200,
+			}),
+		)
 	})
 
 	Context("getJWTSession", func() {
@@ -295,6 +374,11 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				expectedErr:   nil,
 				expectedToken: validToken,
 			}),
+			Entry("Bearer <valid-token-with-whitespace>", findBearerTokenFromHeaderTableInput{
+				header:        fmt.Sprintf("Bearer %s", validTokenWithSpace),
+				expectedErr:   nil,
+				expectedToken: validTokenWithSpace,
+			}),
 			Entry("Basic invalid-base64", findBearerTokenFromHeaderTableInput{
 				header:        "Basic invalid-base64",
 				expectedErr:   errors.New("invalid basic auth token: illegal base64 data at input byte 7"),
@@ -401,7 +485,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 		type idTokenClaims struct {
 			Email    string `json:"email,omitempty"`
 			Verified *bool  `json:"email_verified,omitempty"`
-			jwt.StandardClaims
+			jwt.RegisteredClaims
 		}
 
 		type tokenToSessionTableInput struct {
@@ -451,13 +535,12 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 			},
 			Entry("with no email", tokenToSessionTableInput{
 				idToken: idTokenClaims{
-					StandardClaims: jwt.StandardClaims{
-						Audience:  "asdf1234",
-						ExpiresAt: expiresFuture.Unix(),
-						Id:        "id-some-id",
-						IssuedAt:  time.Now().Unix(),
+					RegisteredClaims: jwt.RegisteredClaims{
+						Audience:  jwt.ClaimStrings{"asdf1234"},
+						ExpiresAt: jwt.NewNumericDate(expiresFuture),
+						IssuedAt:  jwt.NewNumericDate(time.Now()),
 						Issuer:    "https://issuer.example.com",
-						NotBefore: 0,
+						NotBefore: jwt.NewNumericDate(time.Time{}),
 						Subject:   "123456789",
 					},
 				},
@@ -468,13 +551,12 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 			}),
 			Entry("with a verified email", tokenToSessionTableInput{
 				idToken: idTokenClaims{
-					StandardClaims: jwt.StandardClaims{
-						Audience:  "asdf1234",
-						ExpiresAt: expiresFuture.Unix(),
-						Id:        "id-some-id",
-						IssuedAt:  time.Now().Unix(),
+					RegisteredClaims: jwt.RegisteredClaims{
+						Audience:  jwt.ClaimStrings{"asdf1234"},
+						ExpiresAt: jwt.NewNumericDate(expiresFuture),
+						IssuedAt:  jwt.NewNumericDate(time.Now()),
 						Issuer:    "https://issuer.example.com",
-						NotBefore: 0,
+						NotBefore: jwt.NewNumericDate(time.Time{}),
 						Subject:   "123456789",
 					},
 					Email:    "foo@example.com",
@@ -487,13 +569,12 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 			}),
 			Entry("with a non-verified email", tokenToSessionTableInput{
 				idToken: idTokenClaims{
-					StandardClaims: jwt.StandardClaims{
-						Audience:  "asdf1234",
-						ExpiresAt: expiresFuture.Unix(),
-						Id:        "id-some-id",
-						IssuedAt:  time.Now().Unix(),
+					RegisteredClaims: jwt.RegisteredClaims{
+						Audience:  jwt.ClaimStrings{"asdf1234"},
+						ExpiresAt: jwt.NewNumericDate(expiresFuture),
+						IssuedAt:  jwt.NewNumericDate(time.Now()),
 						Issuer:    "https://issuer.example.com",
-						NotBefore: 0,
+						NotBefore: jwt.NewNumericDate(time.Time{}),
 						Subject:   "123456789",
 					},
 					Email:    "foo@example.com",

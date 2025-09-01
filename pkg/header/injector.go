@@ -72,7 +72,7 @@ func newSecretInjector(name string, source *options.SecretSource) (valueInjector
 		return nil, fmt.Errorf("error getting secret value: %v", err)
 	}
 
-	return newInjectorFunc(func(header http.Header, session *sessionsapi.SessionState) {
+	return newInjectorFunc(func(header http.Header, _ *sessionsapi.SessionState) {
 		header.Add(name, string(value))
 	}), nil
 }
@@ -91,7 +91,7 @@ func newClaimInjector(name string, source *options.ClaimSource) (valueInjector, 
 					continue
 				}
 				auth := claim + ":" + string(password)
-				header.Add(name, "Basic "+base64.StdEncoding.EncodeToString([]byte(auth)))
+				header.Add(name, fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte(auth))))
 			}
 		}), nil
 	case source.Prefix != "":
