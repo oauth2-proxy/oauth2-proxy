@@ -60,15 +60,18 @@ FROM ${RUNTIME_IMAGE}
 # Reload version
 ARG VERSION
 
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=builder /go/src/github.com/oauth2-proxy/oauth2-proxy/oauth2-proxy /bin/oauth2-proxy
 COPY --from=builder /go/src/github.com/oauth2-proxy/oauth2-proxy/jwt_signing_key.pem /etc/ssl/private/jwt_signing_key.pem
 
 LABEL org.opencontainers.image.licenses=MIT \
       org.opencontainers.image.description="A reverse proxy that provides authentication with Google, Azure, OpenID Connect and many more identity providers." \
       org.opencontainers.image.documentation=https://oauth2-proxy.github.io/oauth2-proxy/ \
-      org.opencontainers.image.source=https://github.com/oauth2-proxy/oauth2-proxy \
+      org.opencontainers.image.source=https://github.com/opensourceways/oauth2-proxy \
       org.opencontainers.image.url=https://quay.io/oauth2-proxy/oauth2-proxy \
       org.opencontainers.image.title=oauth2-proxy \
       org.opencontainers.image.version=${VERSION}
+
+USER 2000:2000
 
 ENTRYPOINT ["/bin/oauth2-proxy"]
