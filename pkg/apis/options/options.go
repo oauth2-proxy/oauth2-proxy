@@ -64,8 +64,8 @@ type Options struct {
 	ForceJSONErrors          bool     `flag:"force-json-errors" cfg:"force_json_errors"`
 	EncodeState              bool     `flag:"encode-state" cfg:"encode_state"`
 	AllowQuerySemicolons     bool     `flag:"allow-query-semicolons" cfg:"allow_query_semicolons"`
-	EnableAuthRouters     bool     `flag:"enable-auth-routers" cfg:"enable_auth_routers"`
-	AuthRouters           []string `flag:"auth-routers" cfg:"auth_routers"`
+	EnableAuthRouters        bool     `flag:"enable-auth-routers" cfg:"enable_auth_routers"`
+	AuthRouters              []string `flag:"auth-routers" cfg:"auth_routers"`
 
 	SignatureKey    string `flag:"signature-key" cfg:"signature_key"`
 	GCPHealthChecks bool   `flag:"gcp-healthchecks" cfg:"gcp_healthchecks"`

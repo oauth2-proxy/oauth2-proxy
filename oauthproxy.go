@@ -85,8 +85,8 @@ type OAuthProxy struct {
 
 	SignInPath string
 
-	enableAuthRouters   bool
-	authRouters         []allowedRoute
+	enableAuthRouters    bool
+	authRouters          []allowedRoute
 	allowedRoutes        []allowedRoute
 	apiRoutes            []apiRoute
 	redirectURL          *url.URL // the url to receive requests at
