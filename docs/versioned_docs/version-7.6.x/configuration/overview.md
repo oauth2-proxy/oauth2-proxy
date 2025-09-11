@@ -170,6 +170,7 @@ Provider specific options can be found on their respective subpages.
 | ----------------------------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------- | ------- |
 | flag: `--banner`<br/>toml: `banner`                               | string | custom (html) banner string. Use `"-"` to disable default banner.                                                           |         |
 | flag: `--custom-sign-in-logo`<br/>toml: `custom_sign_in_logo`     | string | path or a URL to an custom image for the sign_in page logo. Use `"-"` to disable default logo.                              |
+| flag: `--custom-sign-in-title`<br/>toml: `custom_sign_in_title`   | string | custom title for the sign_in page. Use `"-"` to disable default title.                                                      |         |
 | flag: `--custom-templates-dir`<br/>toml: `custom_templates_dir`   | string | path to custom html templates                                                                                               |         |
 | flag: `--display-htpasswd-form`<br/>toml: `display_htpasswd_form` | bool   | display username / password login form if an htpasswd file is provided                                                      | true    |
 | flag: `--footer`<br/>toml: `footer`                               | string | custom (html) footer string. Use `"-"` to disable default footer. (Can be used to obfuscate the version)                    |         |

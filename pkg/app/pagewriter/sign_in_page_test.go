@@ -70,8 +70,8 @@ var _ = Describe("SignIn Page", func() {
 				signInPage.WriteSignInPage(recorder, request, "/redirect", http.StatusOK)
 
 				body, err := io.ReadAll(recorder.Result().Body)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(string(body)).To(Equal(fmt.Sprintf("Internal Server Error | %s", testRequestID)))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(body)).To(Equal("Internal Server Error: Unable to render sign-in page"))
 			})
 		})
 	})

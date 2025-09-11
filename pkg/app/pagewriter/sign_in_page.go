@@ -1,7 +1,6 @@
 package pagewriter
 
 import (
-	// Import embed to allow importing default logo
 	_ "embed"
 
 	"encoding/base64"
@@ -13,7 +12,6 @@ import (
 	"html/template"
 	"net/http"
 
-	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 )
 
@@ -50,6 +48,12 @@ type signInPageWriter struct {
 	// LogoData is the logo to render in the template.
 	// This should contain valid html.
 	logoData string
+
+	// CustomTitle is the custom title that should replace the default title
+	// on the sign_in page template.
+	// If unspecified, the default title will be used.
+	// To disable the default title, set this value to "-".
+	customTitle string
 }
 
 // WriteSignInPage writes the sign-in page to the given response writer.
@@ -65,6 +69,7 @@ func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, req *http.Req
 		ProxyPrefix   string
 		Footer        template.HTML
 		LogoData      template.HTML
+		CustomTitle   string
 	}{
 		ProviderName:  s.providerName,
 		SignInMessage: template.HTML(s.signInMessage), // #nosec G203 -- We allow unescaped template.HTML since it is user configured options
@@ -75,18 +80,15 @@ func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, req *http.Req
 		ProxyPrefix:   s.proxyPrefix,
 		Footer:        template.HTML(s.footer),   // #nosec G203 -- We allow unescaped template.HTML since it is user configured options
 		LogoData:      template.HTML(s.logoData), // #nosec G203 -- We allow unescaped template.HTML since it is user configured options
+		CustomTitle:   s.customTitle,
 	}
 
 	err := s.template.Execute(rw, t)
 	if err != nil {
 		logger.Printf("Error rendering sign-in template: %v", err)
-		scope := middlewareapi.GetRequestScope(req)
-		s.errorPageWriter.WriteErrorPage(rw, ErrorPageOpts{
-			Status:      http.StatusInternalServerError,
-			RedirectURL: redirectURL,
-			RequestID:   scope.RequestID,
-			AppError:    err.Error(),
-		})
+		// Don't inject error.html into sign-in response, just return a simple error
+		rw.WriteHeader(http.StatusInternalServerError)
+		rw.Write([]byte("Internal Server Error: Unable to render sign-in page"))
 	}
 }
 

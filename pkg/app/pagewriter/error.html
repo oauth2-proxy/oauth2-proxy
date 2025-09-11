@@ -1,107 +1,297 @@
 {{define "error.html"}}
 <!DOCTYPE html>
 <html lang="en" charset="utf-8">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  <title>{{.StatusCode}} {{.Title}}</title>
-<link rel="stylesheet" href="{{.ProxyPrefix}}/static/css/bulma.min.css">
-<link rel="stylesheet" href="{{.ProxyPrefix}}/static/css/all.min.css">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>{{.StatusCode}} {{.Title}} - OAuth2 Proxy</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet"> 
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'Noto Sans', 'sans-serif'],
+            },
+            colors: {
+              border: "hsl(var(--border))",
+              input: "hsl(var(--input))",
+              ring: "hsl(var(--ring))",
+              background: "hsl(var(--background))",
+              foreground: "hsl(var(--foreground))",
+              primary: {
+                DEFAULT: "hsl(var(--primary))",
+                foreground: "hsl(var(--primary-foreground))",
+              },
+              secondary: {
+                DEFAULT: "hsl(var(--secondary))",
+                foreground: "hsl(var(--secondary-foreground))",
+              },
+              destructive: {
+                DEFAULT: "hsl(var(--destructive))",
+                foreground: "hsl(var(--destructive-foreground))",
+              },
+              muted: {
+                DEFAULT: "hsl(var(--muted))",
+                foreground: "hsl(var(--muted-foreground))",
+              },
+              accent: {
+                DEFAULT: "hsl(var(--accent))",
+                foreground: "hsl(var(--accent-foreground))",
+              },
+              popover: {
+                DEFAULT: "hsl(var(--popover))",
+                foreground: "hsl(var(--popover-foreground))",
+              },
+              card: {
+                DEFAULT: "hsl(var(--card))",
+                foreground: "hsl(var(--card-foreground))",
+              },
+              success: {
+                DEFAULT: "hsl(var(--success))",
+                foreground: "hsl(var(--success-foreground))",
+              },
+              warning: {
+                DEFAULT: "hsl(var(--warning))",
+                foreground: "hsl(var(--warning-foreground))",
+              },
+              error: {
+                DEFAULT: "hsl(var(--error))",
+                foreground: "hsl(var(--error-foreground))",
+              },
+              info: {
+                DEFAULT: "hsl(var(--info))",
+                foreground: "hsl(var(--info-foreground))",
+              },
+            },
+          },
+        },
+      }
+    </script>
+    <style>
+      :root {
+        --background: 0 0% 100%;
+        --foreground: 20 14.3% 4.1%;
+        --card: 0 0% 100%;
+        --card-foreground: 20 14.3% 4.1%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 20 14.3% 4.1%;
+        --primary: 50 100% 50%;
+        --primary-foreground: 0 0% 0%;
+        --secondary: 60 4.8% 95.9%;
+        --secondary-foreground: 24 9.8% 10%;
+        --muted: 60 4.8% 95.9%;
+        --muted-foreground: 25 5.3% 44.7%;
+        --accent: 60 4.8% 95.9%;
+        --accent-foreground: 24 9.8% 10%;
+        --error: 11 67% 47%;
+        --error-foreground: 60 9.1% 97.8%;
+        --info: 214 55% 45%;
+        --info-foreground: 60 9.1% 97.8%;
+        --success: 111 100% 29%;
+        --success-foreground: 60 9.1% 97.8%;
+        --warning: 50 100% 50%;
+        --warning-foreground: 0 0% 0%;
+        --destructive: 11 67% 47%;
+        --destructive-foreground: 60 9.1% 97.8%;
+        --border: 20 5.9% 90%;
+        --input: 20 5.9% 90%;
+        --ring: 50 100% 50%;
+        --chart-1: 12 76% 61%;
+        --chart-2: 173 58% 39%;
+        --chart-3: 197 37% 24%;
+        --chart-4: 43 74% 66%;
+        --chart-5: 27 87% 67%;
+        --radius: 0.5rem;
+        --sidebar-background: 0 0% 98%;
+        --sidebar-foreground: 240 5.3% 26.1%;
+        --sidebar-primary: 240 5.9% 10%;
+        --sidebar-primary-foreground: 0 0% 98%;
+        --sidebar-accent: 240 4.8% 95.9%;
+        --sidebar-accent-foreground: 240 5.9% 10%;
+        --sidebar-border: 220 13% 91%;
+        --sidebar-ring: 240 5% 64.9%;
+      }
 
-<script type="text/javascript">
-  document.addEventListener('DOMContentLoaded', function() {
-    let cardToggles = document.getElementsByClassName('card-toggle');
-    for (let i = 0; i < cardToggles.length; i++) {
-      cardToggles[i].addEventListener('click', e => {
-        e.currentTarget.parentElement.parentElement.childNodes[3].classList.toggle('is-hidden');
+      .dark {
+        --background: 20 14.3% 4.1%;
+        --foreground: 60 9.1% 97.8%;
+        --card: 20 14.3% 4.1%;
+        --card-foreground: 60 9.1% 97.8%;
+        --popover: 20 14.3% 4.1%;
+        --popover-foreground: 60 9.1% 97.8%;
+        --primary: 50 100% 50%;
+        --primary-foreground: 0 0% 100%;
+        --secondary: 12 6.5% 15.1%;
+        --secondary-foreground: 60 9.1% 97.8%;
+        --muted: 12 6.5% 15.1%;
+        --muted-foreground: 24 5.4% 63.9%;
+        --accent: 12 6.5% 15.1%;
+        --accent-foreground: 60 9.1% 97.8%;
+        --error: 11 67% 47%;
+        --error-foreground: 60 9.1% 97.8%;
+        --info: 214 55% 45%;
+        --info-foreground: 60 9.1% 97.8%;
+        --success: 111 100% 29%;
+        --success-foreground: 60 9.1% 97.8%;
+        --warning: 50 100% 50%;
+        --warning-foreground: 0 0% 0%;
+        --destructive: 0 62.8% 30.6%;
+        --destructive-foreground: 60 9.1% 97.8%;
+        --border: 12 6.5% 15.1%;
+        --input: 12 6.5% 15.1%;
+        --ring: 45 100% 41%;
+        --chart-1: 220 70% 50%;
+        --chart-2: 160 60% 45%;
+        --chart-3: 30 80% 55%;
+        --chart-4: 280 65% 60%;
+        --chart-5: 340 75% 55%;
+        --sidebar-background: 240 5.9% 10%;
+        --sidebar-foreground: 240 4.8% 95.9%;
+        --sidebar-primary: 224.3 76.3% 48%;
+        --sidebar-primary-foreground: 0 0% 100%;
+        --sidebar-accent: 240 3.7% 15.9%;
+        --sidebar-accent-foreground: 240 4.8% 95.9%;
+        --sidebar-border: 240 3.7% 15.9%;
+        --sidebar-ring: 240 4.9% 83.9%;
+      }
+    </style>
+  </head>
+
+  <body class="min-h-screen bg-background flex items-center justify-center p-4" style="
+        background-image: url({{.ProxyPrefix}}/static/svgs/background-login.svg);
+        background-size: cover;
+        background-attachment: fixed;">
+    <!-- Main Container -->
+    <div class="bg-card text-card-foreground rounded-2xl shadow-xl w-full max-w-2xl space-y-6">
+      <div class="px-10 py-12">
+        <!-- Error Header Section -->
+        <div class="text-center justify-center items-center flex flex-col space-y-4 mb-8">
+          <!-- Error Icon -->
+          <div class="mx-auto w-16 h-16 bg-error rounded-xl flex items-center justify-center">
+            <svg class="w-8 h-8 text-error-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+            </svg>
+          </div>
+          
+          <h1 class="text-2xl font-bold text-error">{{.StatusCode}}</h1>
+          <p class="text-foreground">{{.Title}}</p>
+        </div>
+
+        <!-- Error Details -->
+        <div class="space-y-6">
+          {{ if or .Message .RequestID }}
+          <!-- More Info Card -->
+          <div class="bg-muted rounded-xl border border-border">
+            <div class="flex items-center justify-between p-4 cursor-pointer" onclick="toggleMoreInfo()">
+              <h3 class="text-lg font-semibold text-foreground">More Information</h3>
+              <svg id="chevronIcon" class="w-5 h-5 text-muted-foreground transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </div>
+            
+            <div id="moreInfoContent" class="px-4 pb-4 space-y-3 hidden">
+              {{ if .Message }}
+              <div class="bg-background rounded-lg p-4 border border-border">
+                <h4 class="text-sm font-medium text-foreground mb-2">Error Details:</h4>
+                <p class="text-sm text-muted-foreground">{{.Message}}</p>
+              </div>
+              {{ end }}
+              
+              {{ if .RequestID }}
+              <div class="bg-background rounded-lg p-4 border border-border">
+                <h4 class="text-sm font-medium text-foreground mb-2">Request ID:</h4>
+                <code class="text-sm text-muted-foreground font-mono">{{.RequestID}}</code>
+              </div>
+              {{ end }}
+            </div>
+          </div>
+          {{ end }}
+
+          {{ if .Redirect }}
+          <!-- Action Buttons -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form method="GET" action="{{.Redirect}}">
+              <button type="submit" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-12 px-8 w-full">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                Go Back
+              </button>
+            </form>
+            
+            <form method="GET" action="{{.ProxyPrefix}}/sign_in">
+              <input type="hidden" name="rd" value="{{.Redirect}}">
+              <button type="submit" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-12 px-8 w-full">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+                </svg>
+                Sign In
+              </button>
+            </form>
+          </div>
+          {{ end }}
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="flex items-center p-6 justify-center border-t border-border">
+        <div class="text-center text-sm text-muted-foreground">
+          {{ if eq .Footer "-" }}
+          {{ else if eq .Footer ""}}
+          <p>Secured with <a href="https://github.com/oauth2-proxy/oauth2-proxy" class="text-primary hover:underline">OAuth2 Proxy</a> version {{.Version}}</p>
+          {{ else }}
+          <p>{{.Footer}}</p>
+          {{ end }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Theme Toggle -->
+    <div class="fixed bottom-4 right-4">
+      <button onclick="toggleTheme()" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 w-10">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+        </svg>
+      </button>
+    </div>
+
+    <script>
+      // Toggle More Info Section
+      function toggleMoreInfo() {
+        const content = document.getElementById('moreInfoContent');
+        const icon = document.getElementById('chevronIcon');
+        
+        if (content.classList.contains('hidden')) {
+          content.classList.remove('hidden');
+          icon.style.transform = 'rotate(180deg)';
+        } else {
+          content.classList.add('hidden');
+          icon.style.transform = 'rotate(0deg)';
+        }
+      }
+
+      // Toggle Theme Function
+      function toggleTheme() {
+        document.documentElement.classList.toggle('dark');
+        
+        // Save theme preference
+        const isDark = document.documentElement.classList.contains('dark');
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+      }
+
+      // Load saved theme
+      document.addEventListener('DOMContentLoaded', function() {
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        }
       });
-    }
-  });
-</script>
-
-<style>
-  body {
-    height: 100vh;
-  }
-  .error-box {
-    margin: 1.25rem auto;
-    max-width: 600px;
-  }
-  .status-code {
-    font-size: 12rem;
-    font-weight: 600;
-  }
-  #more-info.card {
-    border: 1px solid #f0f0f0;
-  }
-  footer a {
-    text-decoration: underline;
-  }
-</style>
-</head>
-<body class="has-background-light">
-<section class="section">
-  <div class="box block error-box has-text-centered">
-    <div class="status-code">{{.StatusCode}}</div>
-    <div class="block">
-      <h1 class="subtitle is-1">{{.Title}}</h1>
-    </div>
-
-    {{ if or .Message .RequestID }}
-    <div id="more-info" class="block card is-fullwidth is-shadowless">
-      <header class="card-header is-shadowless">
-        <p class="card-header-title">More Info</p>
-        <a class="card-header-icon card-toggle">
-          <i class="fa fa-angle-down"></i>
-        </a>
-      </header>
-      <div class="card-content has-text-left is-hidden">
-        {{ if .Message }}
-        <div class="content">
-          {{.Message}}
-        </div>
-        {{ end }}
-        {{ if .RequestID }}
-        <div class="content">
-          Request ID: {{.RequestID}}
-        </div>
-        {{ end }}
-      </div>
-    </div>
-    {{ end }}
-
-    {{ if .Redirect }}
-    <hr>
-
-    <div class="columns">
-      <div class="column">
-        <form method="GET" action="{{.Redirect}}">
-          <button type="submit" class="button is-danger is-fullwidth">Go back</button>
-        </form>
-      </div>
-      <div class="column">
-        <form method="GET" action="{{.ProxyPrefix}}/sign_in">
-          <input type="hidden" name="rd" value="{{.Redirect}}">
-          <button type="submit" class="button is-primary is-fullwidth">Sign in</button>
-        </form>
-      </div>
-    </div>
-    {{ end }}
-
-  </div>
-</section>
-
-<footer class="footer has-text-grey has-background-light is-size-7">
-  <div class="content has-text-centered">
-    {{ if eq .Footer "-" }}
-    {{ else if eq .Footer ""}}
-    <p>Secured with <a href="https://github.com/oauth2-proxy/oauth2-proxy#oauth2_proxy" class="has-text-grey">OAuth2 Proxy</a> version {{.Version}}</p>
-    {{ else }}
-    <p>{{.Footer}}</p>
-    {{ end }}
-  </div>
-</footer>
-
-</body>
+    </script>
+  </body>
 </html>
 {{end}}

@@ -18,6 +18,12 @@ type Templates struct {
 	// To disable the default logo, set this value to "-".
 	CustomLogo string `flag:"custom-sign-in-logo" cfg:"custom_sign_in_logo"`
 
+	// CustomTitle is the custom title that should replace the default title
+	// on the sign_in page template.
+	// If unspecified, the default title will be used.
+	// To disable the default title, set this value to "-".
+	CustomTitle string `flag:"custom-sign-in-title" cfg:"custom_sign_in_title"`
+
 	// Banner overides the default sign_in page banner text. If unspecified,
 	// the message will give users a list of allowed email domains.
 	Banner string `flag:"banner" cfg:"banner"`
@@ -42,6 +48,7 @@ func templatesFlagSet() *pflag.FlagSet {
 
 	flagSet.String("custom-templates-dir", "", "path to custom html templates")
 	flagSet.String("custom-sign-in-logo", "", "path or URL to an custom image for the sign_in page logo. Use \"-\" to disable default logo.")
+	flagSet.String("custom-sign-in-title", "", "custom title for the sign_in page. Use \"-\" to disable default title.")
 	flagSet.String("banner", "", "custom banner string. Use \"-\" to disable default banner.")
 	flagSet.String("footer", "", "custom footer string. Use \"-\" to disable default footer.")
 	flagSet.Bool("display-htpasswd-form", true, "display username / password login form if an htpasswd file is provided")

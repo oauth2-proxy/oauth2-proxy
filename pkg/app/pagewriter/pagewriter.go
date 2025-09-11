@@ -56,6 +56,12 @@ type Opts struct {
 	// The logo can be either PNG, JPG/JPEG or SVG.
 	// If a URL is used, image support depends on the browser.
 	CustomLogo string
+
+	// CustomTitle is the custom title that should replace the default title
+	// on the sign_in page template.
+	// If unspecified, the default title will be used.
+	// To disable the default title, set this value to "-".
+	CustomTitle string
 }
 
 // NewWriter constructs a Writer from the options given to allow
@@ -89,6 +95,7 @@ func NewWriter(opts Opts) (Writer, error) {
 		version:          opts.Version,
 		displayLoginForm: opts.DisplayLoginForm,
 		logoData:         logoData,
+		customTitle:      opts.CustomTitle,
 	}
 
 	staticPages, err := newStaticPageWriter(opts.TemplatesPath, errorPage)
