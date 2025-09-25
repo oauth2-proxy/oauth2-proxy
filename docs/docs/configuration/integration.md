@@ -77,23 +77,15 @@ server {
 }
 ```
 
-When you use ingress-nginx in Kubernetes, you MUST use `kubernetes/ingress-nginx` (which includes the Lua module) and the following configuration snippet for your `Ingress`.
-Variables set with `auth_request_set` are not `set`-able in plain nginx config when the location is processed via `proxy_pass` and then may only be processed by Lua.
-Note that `nginxinc/kubernetes-ingress` does not include the Lua module.
+When you use ingress-nginx in Kubernetes, you can configure the same behavior with the following annotations on your Ingress resource:
 
 ```yaml
-nginx.ingress.kubernetes.io/auth-response-headers: Authorization
-nginx.ingress.kubernetes.io/auth-signin: https://$host/oauth2/start?rd=$escaped_request_uri
-nginx.ingress.kubernetes.io/auth-url: https://$host/oauth2/auth
-nginx.ingress.kubernetes.io/configuration-snippet: |
-  auth_request_set $name_upstream_1 $upstream_cookie_name_1;
-
-  access_by_lua_block {
-    if ngx.var.name_upstream_1 ~= "" then
-      ngx.header["Set-Cookie"] = "name_1=" .. ngx.var.name_upstream_1 .. ngx.var.auth_cookie:match("(; .*)")
-    end
-  }
+nginx.ingress.kubernetes.io/auth-url: "https://<oauth2-proxy-fqdn>/oauth2/auth"
+nginx.ingress.kubernetes.io/auth-signin: "https://<oauth2-proxy-fqdn>/oauth2/start?rd=$escaped_request_uri"
 ```
+
+This minimal configuration works for standard authentication flows. Lua/cookie handling is only needed for advanced scenarios (e.g., multi-part cookies, custom session logic). See the official ingress-nginx example: https://kubernetes.github.io/ingress-nginx/examples/auth/oauth-external-auth/.
+
 It is recommended to use `--session-store-type=redis` when expecting large sessions/OIDC tokens (_e.g._ with MS Azure).
 
 You have to substitute *name* with the actual cookie name you configured via --cookie-name parameter. If you don't set a custom cookie name the variable  should be "$upstream_cookie__oauth2_proxy_1" instead of "$upstream_cookie_name_1" and the new cookie-name should be "_oauth2_proxy_1=" instead of "name_1=".
