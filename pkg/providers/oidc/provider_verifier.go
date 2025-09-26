@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 	k8serrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
@@ -132,6 +133,7 @@ func getVerifierBuilder(ctx context.Context, opts ProviderVerifierOptions) (veri
 		var err error
 
 		if opts.JWKsURL != "" {
+			ctx = oidc.ClientContext(ctx, requests.DefaultHTTPClient)
 			keySet = oidc.NewRemoteKeySet(ctx, opts.JWKsURL)
 		} else {
 			keySet, err = newKeySetFromStatic(opts.PublicKeyFiles)
