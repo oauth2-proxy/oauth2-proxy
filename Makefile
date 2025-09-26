@@ -29,6 +29,7 @@ GOLANGCILINT ?= golangci-lint
 
 BINARY := oauth2-proxy
 VERSION ?= $(shell git describe --always --dirty --tags 2>/dev/null || echo "undefined")
+MAJOR_VERSION := $(shell echo $(VERSION) | cut -d. -f1)
 # Allow to override image registry.
 REGISTRY   ?= quay.io/oauth2-proxy
 REPOSITORY ?= oauth2-proxy
@@ -77,19 +78,19 @@ build-docker: build-distroless build-alpine ## Build multi architecture docker i
 
 .PHONY: build-distroless
 build-distroless: ## Build multi architecture distroless based docker image
-	$(DOCKER_BUILDX_X_PLATFORM) -t $(REGISTRY)/$(REPOSITORY):latest -t $(REGISTRY)/$(REPOSITORY):${VERSION} .
+	$(DOCKER_BUILDX_X_PLATFORM) -t $(REGISTRY)/$(REPOSITORY):latest -t $(REGISTRY)/$(REPOSITORY):${VERSION} -t $(REGISTRY)/$(REPOSITORY):${MAJOR_VERSION} .
 
 .PHONY: build-alpine
 build-alpine: ## Build multi architecture alpine based docker image
-	$(DOCKER_BUILDX_X_PLATFORM_ALPINE) -t $(REGISTRY)/$(REPOSITORY):latest-alpine -t $(REGISTRY)/$(REPOSITORY):${VERSION}-alpine .
+	$(DOCKER_BUILDX_X_PLATFORM_ALPINE) -t $(REGISTRY)/$(REPOSITORY):latest-alpine -t $(REGISTRY)/$(REPOSITORY):${VERSION}-alpine -t $(REGISTRY)/$(REPOSITORY):${MAJOR_VERSION}-alpine .
 
 .PHONY: build-docker-all
 build-docker-all: build-docker ## Build docker images for all supported architectures in both flavours (distroless / alpine)
-	$(DOCKER_BUILDX) --platform linux/amd64   -t $(REGISTRY)/$(REPOSITORY):latest-amd64   -t $(REGISTRY)/$(REPOSITORY):${VERSION}-amd64 .
-	$(DOCKER_BUILDX) --platform linux/arm64   -t $(REGISTRY)/$(REPOSITORY):latest-arm64   -t $(REGISTRY)/$(REPOSITORY):${VERSION}-arm64 .
-	$(DOCKER_BUILDX) --platform linux/ppc64le -t $(REGISTRY)/$(REPOSITORY):latest-ppc64le -t $(REGISTRY)/$(REPOSITORY):${VERSION}-ppc64le .
-	$(DOCKER_BUILDX) --platform linux/arm/v7  -t $(REGISTRY)/$(REPOSITORY):latest-armv7   -t $(REGISTRY)/$(REPOSITORY):${VERSION}-armv7 .
-	$(DOCKER_BUILDX) --platform linux/s390x   -t $(REGISTRY)/$(REPOSITORY):latest-s390x -t $(REGISTRY)/$(REPOSITORY):${VERSION}-s390x .
+	$(DOCKER_BUILDX) --platform linux/amd64   -t $(REGISTRY)/$(REPOSITORY):latest-amd64   -t $(REGISTRY)/$(REPOSITORY):${VERSION}-amd64 -t $(REGISTRY)/$(REPOSITORY):${MAJOR_VERSION}-amd64 .
+	$(DOCKER_BUILDX) --platform linux/arm64   -t $(REGISTRY)/$(REPOSITORY):latest-arm64   -t $(REGISTRY)/$(REPOSITORY):${VERSION}-arm64 -t $(REGISTRY)/$(REPOSITORY):${MAJOR_VERSION}-arm64 .
+	$(DOCKER_BUILDX) --platform linux/ppc64le -t $(REGISTRY)/$(REPOSITORY):latest-ppc64le -t $(REGISTRY)/$(REPOSITORY):${VERSION}-ppc64le -t $(REGISTRY)/$(REPOSITORY):${MAJOR_VERSION}-ppc64le .
+	$(DOCKER_BUILDX) --platform linux/arm/v7  -t $(REGISTRY)/$(REPOSITORY):latest-armv7   -t $(REGISTRY)/$(REPOSITORY):${VERSION}-armv7 -t $(REGISTRY)/$(REPOSITORY):${MAJOR_VERSION}-armv7 .
+	$(DOCKER_BUILDX) --platform linux/s390x   -t $(REGISTRY)/$(REPOSITORY):latest-s390x -t $(REGISTRY)/$(REPOSITORY):${VERSION}-s390x -t $(REGISTRY)/$(REPOSITORY):${MAJOR_VERSION}-s390x .
 
 
 ##@ Publish
@@ -99,19 +100,19 @@ push-docker: push-distroless push-alpine ## Push multi architecture docker image
 
 .PHONY: push-distroless
 push-distroless: ## Push multi architecture distroless based docker image
-	$(DOCKER_BUILDX_PUSH_X_PLATFORM) -t $(REGISTRY)/$(REPOSITORY):latest -t $(REGISTRY)/$(REPOSITORY):${VERSION} .
+	$(DOCKER_BUILDX_PUSH_X_PLATFORM) -t $(REGISTRY)/$(REPOSITORY):latest -t $(REGISTRY)/$(REPOSITORY):${VERSION} -t $(REGISTRY)/$(REPOSITORY):${MAJOR_VERSION} .
 
 .PHONY: push-alpine
 push-alpine: ## Push multi architecture alpine based docker image
-	$(DOCKER_BUILDX_PUSH_X_PLATFORM_ALPINE) -t $(REGISTRY)/$(REPOSITORY):latest-alpine -t $(REGISTRY)/$(REPOSITORY):${VERSION}-alpine .
+	$(DOCKER_BUILDX_PUSH_X_PLATFORM_ALPINE) -t $(REGISTRY)/$(REPOSITORY):latest-alpine -t $(REGISTRY)/$(REPOSITORY):${VERSION}-alpine -t $(REGISTRY)/$(REPOSITORY):${MAJOR_VERSION}-alpine .
 
 .PHONY: push-docker-all
 push-docker-all: push-docker ## Push docker images for all supported architectures for both flavours (distroless / alpine)
-	$(DOCKER_BUILDX_PUSH) --platform linux/amd64   -t $(REGISTRY)/$(REPOSITORY):latest-amd64   -t $(REGISTRY)/$(REPOSITORY):${VERSION}-amd64 .
-	$(DOCKER_BUILDX_PUSH) --platform linux/arm64   -t $(REGISTRY)/$(REPOSITORY):latest-arm64   -t $(REGISTRY)/$(REPOSITORY):${VERSION}-arm64 .
-	$(DOCKER_BUILDX_PUSH) --platform linux/ppc64le -t $(REGISTRY)/$(REPOSITORY):latest-ppc64le -t $(REGISTRY)/$(REPOSITORY):${VERSION}-ppc64le .
-	$(DOCKER_BUILDX_PUSH) --platform linux/arm/v7  -t $(REGISTRY)/$(REPOSITORY):latest-armv7   -t $(REGISTRY)/$(REPOSITORY):${VERSION}-armv7 .
-	$(DOCKER_BUILDX_PUSH) --platform linux/s390x   -t $(REGISTRY)/$(REPOSITORY):latest-s390x -t $(REGISTRY)/$(REPOSITORY):${VERSION}-s390x .
+	$(DOCKER_BUILDX_PUSH) --platform linux/amd64   -t $(REGISTRY)/$(REPOSITORY):latest-amd64   -t $(REGISTRY)/$(REPOSITORY):${VERSION}-amd64 -t $(REGISTRY)/$(REPOSITORY):${MAJOR_VERSION}-amd64 .
+	$(DOCKER_BUILDX_PUSH) --platform linux/arm64   -t $(REGISTRY)/$(REPOSITORY):latest-arm64   -t $(REGISTRY)/$(REPOSITORY):${VERSION}-arm64 -t $(REGISTRY)/$(REPOSITORY):${MAJOR_VERSION}-arm64 .
+	$(DOCKER_BUILDX_PUSH) --platform linux/ppc64le -t $(REGISTRY)/$(REPOSITORY):latest-ppc64le -t $(REGISTRY)/$(REPOSITORY):${VERSION}-ppc64le -t $(REGISTRY)/$(REPOSITORY):${MAJOR_VERSION}-ppc64le .
+	$(DOCKER_BUILDX_PUSH) --platform linux/arm/v7  -t $(REGISTRY)/$(REPOSITORY):latest-armv7   -t $(REGISTRY)/$(REPOSITORY):${VERSION}-armv7 -t $(REGISTRY)/$(REPOSITORY):${MAJOR_VERSION}-armv7 .
+	$(DOCKER_BUILDX_PUSH) --platform linux/s390x   -t $(REGISTRY)/$(REPOSITORY):latest-s390x -t $(REGISTRY)/$(REPOSITORY):${VERSION}-s390x -t $(REGISTRY)/$(REPOSITORY):${MAJOR_VERSION}-s390x .
 
 
 ##@ Nightly scheduling
