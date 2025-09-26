@@ -33,6 +33,7 @@ type Options struct {
 	EmailDomains            []string `flag:"email-domain" cfg:"email_domains"`
 	WhitelistDomains        []string `flag:"whitelist-domain" cfg:"whitelist_domains"`
 	HtpasswdFile            string   `flag:"htpasswd-file" cfg:"htpasswd_file"`
+	RedirectSignUrl         string   `flag:"redirect-sign-url" cfg:"redirect-sign-url"`
 	HtpasswdUserGroups      []string `flag:"htpasswd-user-group" cfg:"htpasswd_user_groups"`
 
 	Cookie    Cookie         `cfg:",squash"`
@@ -140,6 +141,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.StringSlice("whitelist-domain", []string{}, "allowed domains for redirection after authentication. Prefix domain with a . or a *. to allow subdomains (eg .example.com, *.example.com)")
 	flagSet.String("authenticated-emails-file", "", "authenticate against emails via file (one per line)")
 	flagSet.String("htpasswd-file", "", "additionally authenticate against a htpasswd file. Entries must be created with \"htpasswd -B\" for bcrypt encryption")
+	flagSet.String("redirect-sign-url", "", "additionally sign url using http")
 	flagSet.StringSlice("htpasswd-user-group", []string{}, "the groups to be set on sessions for htpasswd users (may be given multiple times)")
 	flagSet.String("proxy-prefix", "/oauth2", "the url root path that this proxy should be nested under (e.g. /<oauth2>/sign_in)")
 	flagSet.String("ping-path", "/ping", "the ping endpoint that can be used for basic health checks")
