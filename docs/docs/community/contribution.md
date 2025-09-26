@@ -15,7 +15,9 @@ We suggest using [Visual Studio Code](https://code.visualstudio.com/docs/languag
 
 # Go version
 
-This project is currently still using go 1.22. You can follow the installation guide for go [here.](https://go.dev/doc/install) And you can find go version 1.22 in the archived section [here.](https://go.dev/dl/)
+See the `go.mod` file in the root of this repository for the version of Go used by this project.
+You can follow [the installation guide for Go](https://go.dev/doc/install),
+and you can find this specific Go version on [the Go downloads page](https://go.dev/dl/).
 
 # Preparing your fork
 Clone your fork, create a feature branch and update the depedencies to get started.
