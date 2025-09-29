@@ -45,6 +45,9 @@ type AlphaOptions struct {
 	// yet working.** [This feature is tracked in
 	// #925](https://github.com/oauth2-proxy/oauth2-proxy/issues/926)
 	Providers Providers `json:"providers,omitempty"`
+
+	// AWS IAM Options is used to configure IAM authentication for your redis instance.
+	RedisSessionAWSIAMConfig *AWSIAMConfig `json:"redisSessionAWSIAMConfig,omitempty"`
 }
 
 // MergeInto replaces alpha options in the Options struct with the values
@@ -56,6 +59,7 @@ func (a *AlphaOptions) MergeInto(opts *Options) {
 	opts.Server = a.Server
 	opts.MetricsServer = a.MetricsServer
 	opts.Providers = a.Providers
+	opts.Session.Redis.AWSIAMConfig = a.RedisSessionAWSIAMConfig
 }
 
 // ExtractFrom populates the fields in the AlphaOptions with the values from
@@ -67,4 +71,5 @@ func (a *AlphaOptions) ExtractFrom(opts *Options) {
 	a.Server = opts.Server
 	a.MetricsServer = opts.MetricsServer
 	a.Providers = opts.Providers
+	a.RedisSessionAWSIAMConfig = opts.Session.Redis.AWSIAMConfig
 }
