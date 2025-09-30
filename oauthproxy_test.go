@@ -99,6 +99,19 @@ func (tp *TestProvider) GetEmailAddress(_ context.Context, _ *sessions.SessionSt
 	return tp.EmailAddress, nil
 }
 
+func (tp *TestProvider) Redeem(ctx context.Context, redirectURL, code, codeVerifier string) (*sessions.SessionState, error) {
+	// Call the parent Redeem to get the basic session with access_token
+	session, err := tp.ProviderData.Redeem(ctx, redirectURL, code, codeVerifier)
+	if err != nil {
+		return nil, err
+	}
+
+	session.RefreshToken = "my_refresh_token"
+	session.IDToken = "my_id_token"
+
+	return session, nil
+}
+
 func (tp *TestProvider) ValidateSession(_ context.Context, _ *sessions.SessionState) bool {
 	return tp.ValidToken
 }
@@ -313,20 +326,22 @@ func TestPassGroupsHeadersWithGroups(t *testing.T) {
 	assert.Equal(t, []string{"a,b"}, req.Header["X-Forwarded-Groups"])
 }
 
-type PassAccessTokenTest struct {
+type PassTokensTest struct {
 	providerServer *httptest.Server
 	proxy          *OAuthProxy
 	opts           *options.Options
 }
 
-type PassAccessTokenTestOptions struct {
-	PassAccessToken bool
-	ValidToken      bool
-	ProxyUpstream   options.Upstream
+type PassTokensTestOptions struct {
+	PassAccessToken   bool
+	PassRefreshToken  bool
+	PassAuthorization bool
+	ValidToken        bool
+	ProxyUpstream     options.Upstream
 }
 
-func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) (*PassAccessTokenTest, error) {
-	patt := &PassAccessTokenTest{}
+func NewPassTokensTest(opts PassTokensTestOptions) (*PassTokensTest, error) {
+	patt := &PassTokensTest{}
 
 	patt.providerServer = httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -334,6 +349,16 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) (*PassAccessTokenTe
 			switch r.URL.Path {
 			case "/oauth/token":
 				payload = `{"access_token": "my_auth_token"}`
+			case "/refresh":
+				payload = r.Header.Get("X-Forwarded-Refresh-Token")
+				if payload == "" {
+					payload = "No refresh token found."
+				}
+			case "/authorization":
+				payload = r.Header.Get("Authorization")
+				if payload == "" {
+					payload = "No ID token found."
+				}
 			default:
 				payload = r.Header.Get("X-Forwarded-Access-Token")
 				if payload == "" {
@@ -362,20 +387,48 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) (*PassAccessTokenTe
 	}
 
 	patt.opts.Cookie.Secure = false
+	headers := []options.Header{}
 	if opts.PassAccessToken {
-		patt.opts.InjectRequestHeaders = []options.Header{
-			{
-				Name: "X-Forwarded-Access-Token",
-				Values: []options.HeaderValue{
-					{
-						ClaimSource: &options.ClaimSource{
-							Claim: "access_token",
-						},
+		headers = append(headers, options.Header{
+			Name: "X-Forwarded-Access-Token",
+			Values: []options.HeaderValue{
+				{
+					ClaimSource: &options.ClaimSource{
+						Claim: "access_token",
 					},
 				},
 			},
-		}
+		})
 	}
+
+	if opts.PassRefreshToken {
+		headers = append(headers, options.Header{
+			Name: "X-Forwarded-Refresh-Token",
+			Values: []options.HeaderValue{
+				{
+					ClaimSource: &options.ClaimSource{
+						Claim: "refresh_token",
+					},
+				},
+			},
+		})
+	}
+
+	if opts.PassAuthorization {
+		headers = append(headers, options.Header{
+			Name: "Authorization",
+			Values: []options.HeaderValue{
+				{
+					ClaimSource: &options.ClaimSource{
+						Claim:  "id_token",
+						Prefix: "Bearer ",
+					},
+				},
+			},
+		})
+	}
+
+	patt.opts.InjectRequestHeaders = headers
 
 	err := validation.Validate(patt.opts)
 	if err != nil {
@@ -397,11 +450,11 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) (*PassAccessTokenTe
 	return patt, nil
 }
 
-func (patTest *PassAccessTokenTest) Close() {
+func (patTest *PassTokensTest) Close() {
 	patTest.providerServer.Close()
 }
 
-func (patTest *PassAccessTokenTest) getCallbackEndpoint() (httpCode int, cookie string) {
+func (patTest *PassTokensTest) getCallbackEndpoint() (httpCode int, cookie string) {
 	rw := httptest.NewRecorder()
 
 	csrf, err := cookies.NewCSRF(patTest.proxy.CookieOptions, "")
@@ -439,7 +492,7 @@ func (patTest *PassAccessTokenTest) getCallbackEndpoint() (httpCode int, cookie 
 
 // getEndpointWithCookie makes a requests againt the oauthproxy with passed requestPath
 // and cookie and returns body and status code.
-func (patTest *PassAccessTokenTest) getEndpointWithCookie(cookie string, endpoint string) (httpCode int, accessToken string) {
+func (patTest *PassTokensTest) getEndpointWithCookie(cookie string, endpoint string) (httpCode int, accessToken string) {
 	cookieName := patTest.proxy.CookieOptions.Name
 	var value string
 	keyPrefix := cookieName + "="
@@ -473,7 +526,7 @@ func (patTest *PassAccessTokenTest) getEndpointWithCookie(cookie string, endpoin
 }
 
 func TestForwardAccessTokenUpstream(t *testing.T) {
-	patTest, err := NewPassAccessTokenTest(PassAccessTokenTestOptions{
+	patTest, err := NewPassTokensTest(PassTokensTestOptions{
 		PassAccessToken: true,
 		ValidToken:      true,
 	})
@@ -499,8 +552,64 @@ func TestForwardAccessTokenUpstream(t *testing.T) {
 	assert.Equal(t, "my_auth_token", payload)
 }
 
+func TestForwardRefreshTokenUpstream(t *testing.T) {
+	patTest, err := NewPassTokensTest(PassTokensTestOptions{
+		PassRefreshToken: true,
+		ValidToken:       true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(patTest.Close)
+
+	// A successful validation will redirect and set the auth cookie.
+	code, cookie := patTest.getCallbackEndpoint()
+	if code != 302 {
+		t.Fatalf("expected 302; got %d", code)
+	}
+	assert.NotNil(t, cookie)
+
+	// Now we make a regular request; the refresh_token from the cookie is
+	// forwarded as the "X-Forwarded-Refresh-Token" header. The token is
+	// read by the test provider server and written in the response body.
+	code, payload := patTest.getEndpointWithCookie(cookie, "/refresh")
+	if code != 200 {
+		t.Fatalf("expected 200; got %d", code)
+	}
+	assert.Equal(t, "my_refresh_token", payload)
+}
+
+func TestForwardIDTokenUpstream(t *testing.T) {
+	patTest, err := NewPassTokensTest(PassTokensTestOptions{
+		PassAuthorization: true,
+		PassAccessToken:   true,
+		PassRefreshToken:  true,
+		ValidToken:        true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(patTest.Close)
+
+	// A successful validation will redirect and set the auth cookie.
+	code, cookie := patTest.getCallbackEndpoint()
+	if code != 302 {
+		t.Fatalf("expected 302; got %d", code)
+	}
+	assert.NotNil(t, cookie)
+
+	// Now we make a regular request; the id_token from the cookie is
+	// forwarded as the "Authorization" header with Bearer prefix. The token is
+	// read by the test provider server and written in the response body.
+	code, payload := patTest.getEndpointWithCookie(cookie, "/authorization")
+	if code != 200 {
+		t.Fatalf("expected 200; got %d", code)
+	}
+	assert.Equal(t, "Bearer my_id_token", payload)
+}
+
 func TestStaticProxyUpstream(t *testing.T) {
-	patTest, err := NewPassAccessTokenTest(PassAccessTokenTestOptions{
+	patTest, err := NewPassTokensTest(PassTokensTestOptions{
 		PassAccessToken: true,
 		ValidToken:      true,
 		ProxyUpstream: options.Upstream{
@@ -531,7 +640,7 @@ func TestStaticProxyUpstream(t *testing.T) {
 }
 
 func TestDoNotForwardAccessTokenUpstream(t *testing.T) {
-	patTest, err := NewPassAccessTokenTest(PassAccessTokenTestOptions{
+	patTest, err := NewPassTokensTest(PassTokensTestOptions{
 		PassAccessToken: false,
 		ValidToken:      true,
 	})
@@ -557,7 +666,7 @@ func TestDoNotForwardAccessTokenUpstream(t *testing.T) {
 }
 
 func TestSessionValidationFailure(t *testing.T) {
-	patTest, err := NewPassAccessTokenTest(PassAccessTokenTestOptions{
+	patTest, err := NewPassTokensTest(PassTokensTestOptions{
 		ValidToken: false,
 	})
 	require.NoError(t, err)

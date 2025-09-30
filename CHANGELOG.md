@@ -8,6 +8,8 @@
 
 ## Changes since v7.12.0
 
+- [#TBD](https://github.com/oauth2-proxy/oauth2-proxy/pull/xxx) feat: add --pass-refresh-token (@carillonator)
+
 # V7.12.0
 
 ## Release Highlights
@@ -119,7 +121,7 @@ For detailed information, migration guidance, and security implications, see the
 - 🕵️‍♀️ Vulnerabilities have been addressed
   - [CVE-2025-22871](https://github.com/advisories/GHSA-g9pc-8g42-g6vq)
 - 🐛 Squashed some bugs
-  
+
 ## Important Notes
 
 ## Breaking Changes
