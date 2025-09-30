@@ -8,7 +8,7 @@
 
 ## Changes since v7.12.0
 
-- [#TBD](https://github.com/oauth2-proxy/oauth2-proxy/pull/xxx) feat: add --pass-refresh-token (@carillonator)
+- [#3217](https://github.com/oauth2-proxy/oauth2-proxy/pull/3217) feat: add --pass-refresh-token (@carillonator)
 
 # V7.12.0
 
