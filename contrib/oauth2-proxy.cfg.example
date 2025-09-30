@@ -59,6 +59,9 @@
 ## Pass OAuth Access token to upstream via "X-Forwarded-Access-Token"
 # pass_access_token = false
 
+## Pass OAuth Refresh token to upstream via "X-Forwarded-Refresh-Token"
+# pass_refresh_token = false
+
 ## Authenticated Email Addresses File (one email per line)
 # authenticated_emails_file = ""
 

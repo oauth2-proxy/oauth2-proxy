@@ -400,6 +400,18 @@ var _ = Describe("Legacy Options", func() {
 			},
 		}
 
+		xForwardedRefreshToken := Header{
+			Name:                 "X-Forwarded-Refresh-Token",
+			PreserveRequestValue: false,
+			Values: []HeaderValue{
+				{
+					ClaimSource: &ClaimSource{
+						Claim: "refresh_token",
+					},
+				},
+			},
+		}
+
 		basicAuthHeaderWithEmail := Header{
 			Name:                 "Authorization",
 			PreserveRequestValue: false,
@@ -499,6 +511,7 @@ var _ = Describe("Legacy Options", func() {
 				legacyHeaders: &LegacyHeaders{
 					PassBasicAuth:     false,
 					PassAccessToken:   false,
+					PassRefreshToken:  false,
 					PassUserHeaders:   false,
 					PassAuthorization: false,
 
@@ -517,6 +530,7 @@ var _ = Describe("Legacy Options", func() {
 				legacyHeaders: &LegacyHeaders{
 					PassBasicAuth:     true,
 					PassAccessToken:   false,
+					PassRefreshToken:  false,
 					PassUserHeaders:   false,
 					PassAuthorization: false,
 
@@ -543,6 +557,7 @@ var _ = Describe("Legacy Options", func() {
 				legacyHeaders: &LegacyHeaders{
 					PassBasicAuth:     true,
 					PassAccessToken:   false,
+					PassRefreshToken:  false,
 					PassUserHeaders:   false,
 					PassAuthorization: false,
 
@@ -569,6 +584,7 @@ var _ = Describe("Legacy Options", func() {
 				legacyHeaders: &LegacyHeaders{
 					PassBasicAuth:     true,
 					PassAccessToken:   false,
+					PassRefreshToken:  false,
 					PassUserHeaders:   false,
 					PassAuthorization: false,
 
@@ -594,6 +610,7 @@ var _ = Describe("Legacy Options", func() {
 				legacyHeaders: &LegacyHeaders{
 					PassBasicAuth:     true,
 					PassAccessToken:   false,
+					PassRefreshToken:  false,
 					PassUserHeaders:   true,
 					PassAuthorization: false,
 
@@ -620,6 +637,7 @@ var _ = Describe("Legacy Options", func() {
 				legacyHeaders: &LegacyHeaders{
 					PassBasicAuth:     false,
 					PassAccessToken:   false,
+					PassRefreshToken:  false,
 					PassUserHeaders:   true,
 					PassAuthorization: false,
 
@@ -643,6 +661,7 @@ var _ = Describe("Legacy Options", func() {
 				legacyHeaders: &LegacyHeaders{
 					PassBasicAuth:     false,
 					PassAccessToken:   false,
+					PassRefreshToken:  false,
 					PassUserHeaders:   true,
 					PassAuthorization: false,
 
@@ -666,6 +685,7 @@ var _ = Describe("Legacy Options", func() {
 				legacyHeaders: &LegacyHeaders{
 					PassBasicAuth:     false,
 					PassAccessToken:   false,
+					PassRefreshToken:  false,
 					PassUserHeaders:   false,
 					PassAuthorization: false,
 
@@ -689,6 +709,7 @@ var _ = Describe("Legacy Options", func() {
 				legacyHeaders: &LegacyHeaders{
 					PassBasicAuth:     false,
 					PassAccessToken:   true,
+					PassRefreshToken:  false,
 					PassUserHeaders:   false,
 					PassAuthorization: false,
 
@@ -709,6 +730,7 @@ var _ = Describe("Legacy Options", func() {
 				legacyHeaders: &LegacyHeaders{
 					PassBasicAuth:     false,
 					PassAccessToken:   true,
+					PassRefreshToken:  false,
 					PassUserHeaders:   false,
 					PassAuthorization: false,
 
@@ -735,6 +757,7 @@ var _ = Describe("Legacy Options", func() {
 				legacyHeaders: &LegacyHeaders{
 					PassBasicAuth:     false,
 					PassAccessToken:   true,
+					PassRefreshToken:  false,
 					PassUserHeaders:   false,
 					PassAuthorization: false,
 
@@ -751,10 +774,32 @@ var _ = Describe("Legacy Options", func() {
 				},
 				expectedResponseHeaders: []Header{},
 			}),
+			Entry("with passRefreshToken", legacyHeadersTableInput{
+				legacyHeaders: &LegacyHeaders{
+					PassBasicAuth:     false,
+					PassAccessToken:   false,
+					PassRefreshToken:  true,
+					PassUserHeaders:   false,
+					PassAuthorization: false,
+
+					SetBasicAuth:     false,
+					SetXAuthRequest:  false,
+					SetAuthorization: false,
+
+					PreferEmailToUser:    false,
+					BasicAuthPassword:    "",
+					SkipAuthStripHeaders: true,
+				},
+				expectedRequestHeaders: []Header{
+					xForwardedRefreshToken,
+				},
+				expectedResponseHeaders: []Header{},
+			}),
 			Entry("with authorization headers", legacyHeadersTableInput{
 				legacyHeaders: &LegacyHeaders{
 					PassBasicAuth:     false,
 					PassAccessToken:   false,
+					PassRefreshToken:  false,
 					PassUserHeaders:   false,
 					PassAuthorization: true,
 
@@ -777,6 +822,7 @@ var _ = Describe("Legacy Options", func() {
 				legacyHeaders: &LegacyHeaders{
 					PassBasicAuth:     false,
 					PassAccessToken:   false,
+					PassRefreshToken:  false,
 					PassUserHeaders:   false,
 					PassAuthorization: true,
 
