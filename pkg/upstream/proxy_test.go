@@ -382,6 +382,38 @@ var _ = Describe("Proxy Suite", func() {
 		)
 	})
 
+	Context("multiUpstreamProxy errors", func() {
+		type proxyErrorTableInput struct {
+			upstreams     options.UpstreamConfig
+			expectedError string
+		}
+
+		DescribeTable("NewProxy", func(in *proxyErrorTableInput) {
+			sigData := &options.SignatureData{Hash: crypto.SHA256, Key: "secret"}
+
+			writer := &pagewriter.WriterFuncs{
+				ProxyErrorFunc: func(rw http.ResponseWriter, _ *http.Request, _ error) {
+					rw.WriteHeader(502)
+					rw.Write([]byte("Proxy Error"))
+				},
+			}
+
+			_, err := NewProxy(in.upstreams, sigData, writer)
+			Expect(err).To(MatchError(in.expectedError))
+		},
+			Entry("regex matcher without rewrite target", &proxyErrorTableInput{
+				upstreams: options.UpstreamConfig{
+					Upstreams: []options.Upstream{{
+						ID:   "api",
+						Path: "^/api/$",
+						URI:  "http://example.com",
+					}},
+				},
+				expectedError: `could not register http upstream "api": mux: path must start with a slash, got "^/api/$"`,
+			}),
+		)
+	})
+
 	Context("sortByPathLongest", func() {
 		type sortByPathLongestTableInput struct {
 			input          []options.Upstream
