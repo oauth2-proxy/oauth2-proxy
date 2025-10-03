@@ -35,9 +35,6 @@ These images are considered unstable and therefore should **NOT** be used for pr
 
 ## Sponsors
 
-![Microsoft](https://upload.wikimedia.org/wikipedia/commons/9/96/Microsoft_logo_%282012%29.svg)
-Microsoft Azure credits for open source projects
-
 Would you like to sponsor the project then please contact us at [sponsors@oauth2-proxy.dev](mailto:sponsors@oauth2-proxy.dev)
 
 ## Getting Involved
@@ -81,6 +78,19 @@ See [open redirect vulnerability](https://github.com/oauth2-proxy/oauth2-proxy/s
 
 **2020-03-29:** This project was formerly hosted as `pusher/oauth2_proxy` but has been renamed to `oauth2-proxy/oauth2-proxy`. Going forward, all images shall be available at `quay.io/oauth2-proxy/oauth2-proxy` and binaries will be named `oauth2-proxy`.
 
+## Code of Conduct
+Participation in the OAuth2-Proxy project is governed by the [CNCF Code of Conduct](CODE_OF_CONDUCT.md).
+
 ## License
 
 OAuth2-Proxy is distributed under [The MIT License](LICENSE).
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Foauth2-proxy%2Foauth2-proxy.svg?type=large&issueType=license)](https://app.fossa.com/projects/git%2Bgithub.com%2Foauth2-proxy%2Foauth2-proxy?ref=badge_large&issueType=license)
+
+## Trademarks
+
+OAuth2-Proxy is a [Cloud Native Computing Foundation](https://cncf.io) Sandbox project.
+
+![CNCF](https://www.cncf.io/wp-content/uploads/2023/04/cncf-main-site-logo.svg)
+
+The Linux Foundation® (TLF) has registered trademarks and uses trademarks. For a list of TLF trademarks, see [Trademark Usage](https://www.linuxfoundation.org/legal/trademark-usage).
