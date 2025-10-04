@@ -1,5 +1,31 @@
-# Default owner should be a core org reviewers unless overridden by later rules in this file
-* @oauth2-proxy/reviewers
+# OAuth2-Proxy CODEOWNERS
+# This file maps repository paths to GitHub teams for review.
+# Syntax: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# --- Core Maintainers (project-wide) ---
+*                               @oauth2-proxy/maintainers
+
+# --- Core ---
+*                               @oauth2-proxy/core-reviewers
+
+# --- Documentation ---
+docs/                           @oauth2-proxy/documentation-reviewers
+
+# --- CI / Testing ---
+.devcontainer/                  @oauth2-proxy/ci-reviewers
+.github/                        @oauth2-proxy/ci-reviewers
+.vscode/                        @oauth2-proxy/ci-reviewers
+contrib/                        @oauth2-proxy/ci-reviewers
+go.mod                          @oauth2-proxy/ci-reviewers
+go.sum                          @oauth2-proxy/ci-reviewers
+
+# --- Configuration / API ---
+contrib/                        @oauth2-proxy/api-reviewers
+pkg/apis/                       @oauth2-proxy/api-reviewers
+
+
+# --- Provider --- 
+providers/                      @oauth2-proxy/provider-reviewers
 
 # login.gov provider
 # Note:  If @timothy-spencer terms out of his appointment, your best bet
@@ -7,17 +33,4 @@
 # in the login.gov team (https://login.gov/developers/), the cloud.gov team
 # (https://cloud.gov/docs/help/), or the 18F org (https://18f.gsa.gov/contact/
 # or the public devops channel at https://chat.18f.gov/).
-providers/logingov.go @timothy-spencer
-providers/logingov_test.go @timothy-spencer
-
-# Bitbucket provider
-providers/bitbucket.go @aledeganopix4d
-providers/bitbucket_test.go @aledeganopix4d
-
-# Nextcloud provider
-providers/nextcloud.go @Ramblurr
-providers/nextcloud_test.go @Ramblurr
-
-# DigitalOcean provider
-providers/digitalocean.go @kamaln7
-providers/digitalocean_test.go @kamaln7
+providers/logingov.*            @oauth2-proxy/provider-login-gov-reviewers
