@@ -67,11 +67,12 @@ var (
 	staticFiles embed.FS
 )
 
-// allowedRoute manages method + path based allowlists
+// allowedRoute manages method + path + domain based allowlists
 type allowedRoute struct {
-	method    string
-	negate    bool
-	pathRegex *regexp.Regexp
+	method      string
+	negate      bool
+	pathRegex   *regexp.Regexp
+	domainRegex *regexp.Regexp
 }
 
 type apiRoute struct {
@@ -464,7 +465,7 @@ func buildProviderName(p providers.Provider, override string) string {
 
 // buildRoutesAllowlist builds an []allowedRoute  list from either the legacy
 // SkipAuthRegex option (paths only support) or newer SkipAuthRoutes option
-// (method=path support)
+// (method=path and domain=domain_regex support)
 func buildRoutesAllowlist(opts *options.Options) ([]allowedRoute, error) {
 	routes := make([]allowedRoute, 0, len(opts.SkipAuthRegex)+len(opts.SkipAuthRoutes))
 
@@ -492,6 +493,23 @@ func buildRoutesAllowlist(opts *options.Options) ([]allowedRoute, error) {
 			method = ""
 			path = parts[0]
 		} else {
+			prefix := strings.ToLower(parts[0])
+			// Check if this is a domain-based route
+			if prefix == "domain" {
+				// Domain-based route: domain=regex
+				domainPattern := parts[1]
+				compiledDomainRegex, err := regexp.Compile(domainPattern)
+				if err != nil {
+					return nil, err
+				}
+				logger.Printf("Skipping auth - Domain: %s", domainPattern)
+				routes = append(routes, allowedRoute{
+					method:      "",
+					domainRegex: compiledDomainRegex,
+				})
+				continue
+			}
+			// Method-based route: method=path
 			method = strings.ToUpper(parts[0])
 			path = parts[1]
 		}
@@ -580,6 +598,11 @@ func isAllowedMethod(req *http.Request, route allowedRoute) bool {
 }
 
 func isAllowedPath(req *http.Request, route allowedRoute) bool {
+	// If there's no path regex, consider the path as allowed
+	if route.pathRegex == nil {
+		return true
+	}
+
 	matches := route.pathRegex.MatchString(requestutil.GetRequestPath(req))
 
 	if route.negate {
@@ -589,10 +612,20 @@ func isAllowedPath(req *http.Request, route allowedRoute) bool {
 	return matches
 }
 
-// IsAllowedRoute is used to check if the request method & path is allowed without auth
+func isAllowedDomain(req *http.Request, route allowedRoute) bool {
+	// If there's no domain regex, consider the domain as allowed
+	if route.domainRegex == nil {
+		return true
+	}
+
+	host := requestutil.GetRequestHost(req)
+	return route.domainRegex.MatchString(host)
+}
+
+// IsAllowedRoute is used to check if the request method, path, and domain are allowed without auth
 func (p *OAuthProxy) isAllowedRoute(req *http.Request) bool {
 	for _, route := range p.allowedRoutes {
-		if isAllowedMethod(req, route) && isAllowedPath(req, route) {
+		if isAllowedMethod(req, route) && isAllowedPath(req, route) && isAllowedDomain(req, route) {
 			return true
 		}
 	}
