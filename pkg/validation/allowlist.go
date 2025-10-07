@@ -36,15 +36,8 @@ func validateAuthRoutes(o *options.Options) []string {
 		if len(parts) == 1 {
 			regex = parts[0]
 		} else {
-			// Check if this is a domain-based route
-			prefix := strings.ToLower(parts[0])
-			if prefix == "domain" {
-				// For domain routes, validate the domain regex
-				regex = parts[1]
-			} else {
-				// For method-based routes, validate the path regex
-				regex = parts[1]
-			}
+			// For method or domain-based routes, validate the regex
+			regex = parts[1]
 		}
 		_, err := regexp.Compile(regex)
 		if err != nil {

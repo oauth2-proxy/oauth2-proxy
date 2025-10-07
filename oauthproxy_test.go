@@ -2396,7 +2396,7 @@ func Test_buildRoutesAllowlist(t *testing.T) {
 			shouldError: false,
 		},
 		{
-			name: "Mixed method and domain routes",
+			name:          "Mixed method and domain routes",
 			skipAuthRegex: []string{},
 			skipAuthRoutes: []string{
 				"GET=^/api/v1",
