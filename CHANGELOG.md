@@ -8,7 +8,7 @@
 
 ## Changes since v7.12.0
 
-- [#3224](https://github.com/oauth2-proxy/oauth2-proxy/pull/3224) fix: use GetSecret() in ticket.go makeCookie to respect cookie-secret-file (@stagswtf)
+- [#3228](https://github.com/oauth2-proxy/oauth2-proxy/pull/3228) fix: use GetSecret() in ticket.go makeCookie to respect cookie-secret-file (@stagswtf)
 
 # V7.12.0
 
@@ -18,6 +18,7 @@
   - [CVE-2025-47907](https://pkg.go.dev/vuln/GO-2025-3849)
 - 🦸 Support for Cidaas IDP
 - 🐛 Squashed some bugs
+
 
 ## Important Notes
 
@@ -37,6 +38,7 @@
 - 🏢 Support for SourceHut (sr.ht) provider
 - 🔍️ Support for more fine-grained control over the google admin-sdk scopes and optional google groups
 - 🐛 Squashed some bugs
+
 
 ## Important Notes
 
@@ -58,12 +60,12 @@ upstreams:
     rewriteTarget: /$1
 ```
 
+
 ## Breaking Changes
 
 If your configuration relies on matching query parameters in `skip_auth_routes` patterns, you must update your regex patterns to match paths only. Review all `skip_auth_routes` entries for potential impact.
 
 **Example of affected configuration:**
-
 ```yaml
 # This pattern previously matched both:
 # - /api/foo/status (intended)
@@ -86,10 +88,10 @@ For detailed information, migration guidance, and security implications, see the
 - [#3093](https://github.com/oauth2-proxy/oauth2-proxy/pull/3093) feat: differentiate between "no available key" and error for redis sessions (@nobletrout)
 - [GHSA-7rh7-c77v-6434](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-7rh7-c77v-6434) fix: skip_auth_routes bypass through query parameter inclusion
 
+
 # V7.10.0
 
 ## Release Highlights
-
 - 🏢 Support for multiple orgs using the GitHub / Gitea provider
 - 🔵 Golang version upgrade to v1.24.5
 - 🕵️‍♀️ Vulnerabilities have been addressed
@@ -113,7 +115,6 @@ For detailed information, migration guidance, and security implications, see the
 # V7.9.0
 
 ## Release Highlights
-
 - 📨 OAuth 2.0 Multiple Response Type Encoding
 - 📦️ Support for JWT encoded profile claims
 - 🔵 Golang version upgrade to v1.23.8
@@ -136,7 +137,6 @@ For detailed information, migration guidance, and security implications, see the
 # V7.8.2
 
 ## Release Highlights
-
 - 🐛 Cookie Expiration bug has been squashed
 - 🔵 Golang version upgrade to v1.23.7
 - 🕵️‍♀️ Vulnerabilities have been addressed
@@ -242,7 +242,6 @@ For detailed information, migration guidance, and security implications, see the
 - 📖 Improved docs
 
 ## Important Notes
-
 - Remove support of arm/v6 for distroless image runtime. Alpine tags still support arm/v6.
 
 ## Breaking Changes
@@ -300,7 +299,6 @@ For detailed information, migration guidance, and security implications, see the
 # V7.5.1
 
 ## Release Highlights
-
 - 🐛 Several bugs have been squashed
 - 🕵️‍♀️ Vulnerabilities have been addressed
 - 📖Improved docs
@@ -309,14 +307,13 @@ For detailed information, migration guidance, and security implications, see the
 
 - This release includes fixes for a number of CVEs, we recommend to upgrade as soon as possible.
 - The environment variable OAUTH2_PROXY_GOOGLE_GROUP has been deprecated in favor of OAUTH2_PROXY_GOOGLE_GROUPS. Next major release
-  will remove this option. This change makes sure that the configuration options follow the documentation.
+will remove this option. This change makes sure that the configuration options follow the documentation.
 
 ## Breaking Changes
 
 N/A
 
 ## Changes since v7.5.0
-
 - [#2220](https://github.com/oauth2-proxy/oauth2-proxy/pull/2220) Added binary and docker release platforms (@kvanzuijlen)
 - [#2221](https://github.com/oauth2-proxy/oauth2-proxy/pull/2221) Backwards compatible fix for wrong environment variable name (OAUTH2_PROXY_GOOGLE_GROUPS) (@kvanzuijlen)
 - [#1989](https://github.com/oauth2-proxy/oauth2-proxy/pull/1989) Fix default scope for keycloak-oidc provider (@tuunit)
@@ -328,7 +325,6 @@ N/A
 # V7.5.0
 
 ## Release Highlights
-
 - 🐛 Several bugs have been squashed
 - 🕵️‍♀️ Vulnerabilities have been addressed
 - ⭐️ Added a readiness endpoint to check if the application is ready to receive traffic
@@ -342,13 +338,10 @@ N/A
 - This release introduced a bug with the Keycloak OIDC provider causing no scopes to be send along with the request. Use v7.5.1 instead.
 
 ## Breaking Changes
-
 The following PR introduces a change to how auth routes are evaluated using the flags `skip-auth-route`/`skip-auth-regex`. The new behaviour uses the regex you specify to evaluate the full path including query parameters. For more details please read the detailed description [#2271](https://github.com/oauth2-proxy/oauth2-proxy/issues/2271)
-
 - [#2192](https://github.com/oauth2-proxy/oauth2-proxy/pull/2192) Use X-Forwarded-Uri if it exists for pathRegex match (@mzndr / @jawys)
 
 ## Changes since v7.4.0
-
 - [#2028](https://github.com/oauth2-proxy/oauth2-proxy/pull/2028) Update golang.org/x/net to v0.7.0 ato address GHSA-vvpx-j8f3-3w6h (@amrmahdi)
 - [#1873](https://github.com/oauth2-proxy/oauth2-proxy/pull/1873) Fix empty users with some OIDC providers (@babs)
 - [#1882](https://github.com/oauth2-proxy/oauth2-proxy/pull/1882) Make `htpasswd.GetUsers` racecondition safe (@babs)
@@ -404,8 +397,8 @@ N/A
 - [#1720](https://github.com/oauth2-proxy/oauth2-proxy/pull/1720) Extract roles from authToken, to allow using allowed roles with Keycloak. (@MrDeerly )
 - [#1774](https://github.com/oauth2-proxy/oauth2-proxy/pull/1774) Fix vulnerabilities CVE-2022-27191, CVE-2021-44716 and CVE-2022-29526. (@felipeconti)
 - [#1667](https://github.com/oauth2-proxy/oauth2-proxy/issues/1667) Rename configuration file flag for PKCE (@ChrisEke)
-  to remain consistent with CLI flags. You should specify `code_challenge_method` in your configuration instead of
-  `force_code_challenge_method`.
+to remain consistent with CLI flags. You should specify `code_challenge_method` in your configuration instead of
+`force_code_challenge_method`.
 - [#1708](https://github.com/oauth2-proxy/oauth2-proxy/pull/1708) Enable different CSRF cookies per request (@miguelborges99)
   - Add flag "--cookie-csrf-per-request" which activates an algorithm to name CSRF cookies differently per request.
     This feature allows parallel callbacks and by default it is disabled.
@@ -420,7 +413,6 @@ N/A
 - [#1815](https://github.com/oauth2-proxy/oauth2-proxy/pull/1815) Keycloak: save user and preferredUsername in session to populate headers for the backend (@babs)
 - [#1847](https://github.com/oauth2-proxy/oauth2-proxy/pull/1847) Update go-redis/redis to v9 (@arhamGH)
 -
-
 # V7.3.0
 
 ## Release Highlights
@@ -435,7 +427,7 @@ N/A
 ## Important Notes
 
 - [oauth2-proxy](https://quay.io/repository/oauth2-proxy/oauth2-proxy?tab=tags&tag=latest) separate image tags for each architecture is deprecated. Instead, images are cross compiled and pushed as the same tag for every platform.
-  If you are using an architecture specific tag (ex: v7.2.1-arm64) you should move to the generic tag instead (ex: v7.2.1 )
+If you are using an architecture specific tag (ex: v7.2.1-arm64) you should move to the generic tag instead (ex: v7.2.1 )
 - [#1478](https://github.com/oauth2-proxy/oauth2-proxy/pull/1478) Changes the UID and GID of the runtime user to `65532`.
   Which also is known as `nonroot` user in [distroless images](https://github.com/GoogleContainerTools/distroless).
 - This release includes fixes for a number of CVEs, we recomend to upgrade as soon as possible.
@@ -548,7 +540,7 @@ N/A
 - [#1207](https://github.com/oauth2-proxy/oauth2-proxy/pull/1207) Fix URI fragment handling on sign-in page, regression introduced in 7.1.0 (@tarvip)
 - [#1210](https://github.com/oauth2-proxy/oauth2-proxy/pull/1210) New Keycloak OIDC Provider (@pb82)
 - [#1244](https://github.com/oauth2-proxy/oauth2-proxy/pull/1244) Update Alpine image version to 3.14 (@ahovgaard)
-- [#1317](https://github.com/oauth2-proxy/oauth2-proxy/pull/1317) Fix incorrect `</form>` tag on the sing_in page when _not_ using a custom template (@jord1e)
+- [#1317](https://github.com/oauth2-proxy/oauth2-proxy/pull/1317) Fix incorrect `</form>` tag on the sing_in page when *not* using a custom template (@jord1e)
 - [#1330](https://github.com/oauth2-proxy/oauth2-proxy/pull/1330) Allow specifying URL as input for custom sign in logo (@MaikuMori)
 - [#1357](https://github.com/oauth2-proxy/oauth2-proxy/pull/1357) Fix unsafe access to session variable (@harzallah)
 - [#997](https://github.com/oauth2-proxy/oauth2-proxy/pull/997) Allow passing the raw url path when proxying upstream requests - e.g. /%2F/ (@FStelzer)
@@ -699,6 +691,7 @@ N/A
 - GitLab provider now supports restricting to members of a project
 - Keycloak provider now supports restricting users to members of a set of groups
 - (Alpha) Flexible header configuration allowing user defined mapping of session claims to header values
+
 
 ## Important Notes
 
