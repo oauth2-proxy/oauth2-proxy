@@ -286,7 +286,6 @@ func (p *MicrosoftEntraIDProvider) getTenantFromToken(session *sessions.SessionS
 
 	// Fall back to parsing the tenant ID from the issuer URL
 	value, exists, err := extractor.GetClaim("iss")
-
 	if !exists || err != nil {
 		return "", fmt.Errorf("iss claim does not exist in the token")
 	}
