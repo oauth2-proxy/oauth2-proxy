@@ -271,7 +271,14 @@ func (p *MicrosoftEntraIDProvider) getTenantFromToken(session *sessions.SessionS
 		return "", fmt.Errorf("unable to get claim extractor: %v", err)
 	}
 
-	value, exists, err := extractor.GetClaim("iss")
+	value, exists, err := extractor.GetClaim("tid")
+
+	if exists && err == nil {
+		return value, nil
+	}
+
+	// Fall back to iss claim
+	value, exists, err = extractor.GetClaim("iss")
 
 	if !exists || err != nil {
 		return "", fmt.Errorf("iss claim does not exist in the token")
