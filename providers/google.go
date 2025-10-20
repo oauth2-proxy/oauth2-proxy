@@ -70,19 +70,26 @@ var (
 	}
 
 	// Default Redeem URL for Google.
-	// Pre-parsed URL of https://www.googleapis.com/oauth2/v3/token.
+	// pulled from https://accounts.google.com/.well-known/openid-configuration
 	googleDefaultRedeemURL = &url.URL{
 		Scheme: "https",
-		Host:   "www.googleapis.com",
-		Path:   "/oauth2/v3/token",
+		Host:   "oauth2.googleapis.com",
+		Path:   "/token",
 	}
 
 	// Default Validation URL for Google.
-	// Pre-parsed URL of https://www.googleapis.com/oauth2/v1/tokeninfo.
+	// https://developers.google.com/identity/sign-in/android/backend-auth#calling-the-tokeninfo-endpoint
 	googleDefaultValidateURL = &url.URL{
 		Scheme: "https",
-		Host:   "www.googleapis.com",
-		Path:   "/oauth2/v1/tokeninfo",
+		Host:   "oauth2.googleapis.com",
+		Path:   "/tokeninfo",
+	}
+
+	// pulled from https://openidconnect.googleapis.com/v1/userinfo
+	googleDefaultProfileURL = &url.URL{
+		Scheme: "https",
+		Host:   "openidconnect.googleapis.com",
+		Path:   "/v1/userinfo",
 	}
 )
 
@@ -92,7 +99,7 @@ func NewGoogleProvider(p *ProviderData, opts options.GoogleOptions) (*GoogleProv
 		name:        googleProviderName,
 		loginURL:    googleDefaultLoginURL,
 		redeemURL:   googleDefaultRedeemURL,
-		profileURL:  nil,
+		profileURL:  googleDefaultProfileURL,
 		validateURL: googleDefaultValidateURL,
 		scope:       googleDefaultScope,
 	})

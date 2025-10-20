@@ -10,6 +10,7 @@
 
 - [#3197](https://github.com/oauth2-proxy/oauth2-proxy/pull/3197) fix: NewRemoteKeySet is not using DefaultHTTPClient (@rsrdesarrollo / @tuunit)
 - [#3292](https://github.com/oauth2-proxy/oauth2-proxy/pull/3292) chore(deps): upgrade gomod and bump to golang v1.25.5 (@tuunit)
+- [#3236](https://github.com/oauth2-proxy/oauth2-proxy/pull/3236) Updated the Google Provider's token endpoint to match Google OIDC's token endpoint. As listed in https://accounts.google.com/.well-known/openid-configuration this token endpoint provides additional claims in the id token such as profile photo and full name (@pixeldrew)
 
 # V7.13.0
 
