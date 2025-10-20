@@ -325,3 +325,83 @@ func TestGoogleProvider_getUserGroups(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"group1@example.com", "group2@example.com"}, groups)
 }
+
+func TestGoogleProvider_getUserInfo(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/admin/directory/v1/users/test@example.com" {
+			response := `{
+			  "kind": "admin#directory#user",
+			  "id": "",
+			  "etag": "\"\"",
+			  "primaryEmail": "test@example.com",
+			  "name": {
+				"givenName": "Test",
+				"familyName": "User",
+				"fullName": "Test User"
+			  },
+			  "isAdmin": false,
+			  "isDelegatedAdmin": false,
+			  "lastLoginTime": "",
+			  "creationTime": "",
+			  "agreedToTerms": true,
+			  "suspended": false,
+			  "archived": false,
+			  "changePasswordAtNextLogin": false,
+			  "ipWhitelisted": false,
+			  "emails": [
+				{
+				  "address": "test@example.com",
+				  "primary": true
+				}
+			  ],
+			  "externalIds": [
+				{
+				  "value": "test.user",
+				  "type": "organization"
+				}
+			  ],
+			  "organizations": [
+			  ],
+			  "phones": [
+			  ],
+			  "languages": [
+				{
+				  "languageCode": "en",
+				  "preference": "preferred"
+				}
+			  ],
+			  "aliases": [
+				"test.user@example.com"
+			  ],
+			  "nonEditableAliases": [
+				"test.user@example.com"
+			  ],
+			  "gender": {
+				"type": "male"
+			  },
+			  "customerId": "",
+			  "orgUnitPath": "/",
+			  "isMailboxSetup": true,
+			  "isEnrolledIn2Sv": true,
+			  "isEnforcedIn2Sv": false,
+			  "includeInGlobalAddressList": true,
+			  "thumbnailPhotoUrl": "",
+			  "thumbnailPhotoEtag": "\"\"",
+			  "recoveryEmail": "test.user@gmail.com",
+			  "recoveryPhone": "+55555555555"
+			}`
+			fmt.Fprintln(w, response)
+		} else {
+			http.NotFound(w, r)
+		}
+	}))
+	defer ts.Close()
+
+	client := &http.Client{}
+	adminService, err := admin.NewService(context.Background(), option.WithHTTPClient(client), option.WithEndpoint(ts.URL))
+	assert.NoError(t, err)
+
+	info, err := getUserInfo(adminService, "test@example.com")
+	assert.NoError(t, err)
+	assert.Equal(t, "test.user", info)
+}

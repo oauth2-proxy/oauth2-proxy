@@ -5,13 +5,15 @@ title: Google (default)
 
 ## Config Options
 
-| Flag                                           | Toml Field                                   | Type   | Description                                                                                      | Default                                            |
-| ---------------------------------------------- | -------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------ | -------------------------------------------------- |
-| `--google-admin-email`                         | `google_admin_email`                         | string | the google admin to impersonate for api calls                                                    |                                                    |
-| `--google-group`                               | `google_groups`                              | string | restrict logins to members of this google group (may be given multiple times). If not specified and service account or default credentials are configured, all user groups will be allowed.                   |                                                    |
-| `--google-service-account-json`                | `google_service_account_json`                | string | the path to the service account json credentials                                                 |                                                    |
-| `--google-use-application-default-credentials` | `google_use_application_default_credentials` | bool   | use application default credentials instead of service account json (i.e. GKE Workload Identity) |                                                    |
-| `--google-target-principal`                    | `google_target_principal`                    | bool   | the target principal to impersonate when using ADC                                               | defaults to the service account configured for ADC |
+| Flag                                            | Toml Field                                   | Type   | Description                                                                                                                                                                                 | Default                                             |
+|-------------------------------------------------|----------------------------------------------| ------ |---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------|
+| `--google-admin-email`                          | `google_admin_email`                         | string | the google admin to impersonate for api calls                                                                                                                                               |                                                     |
+| `--google-group`                                | `google_groups`                              | string | restrict logins to members of this google group (may be given multiple times). If not specified and service account or default credentials are configured, all user groups will be allowed. |                                                     |
+| `--google-service-account-json`                 | `google_service_account_json`                | string | the path to the service account json credentials                                                                                                                                            |                                                     |
+| `--google-use-application-default-credentials`  | `google_use_application_default_credentials` | bool   | use application default credentials instead of service account json (i.e. GKE Workload Identity)                                                                                            |                                                     |
+| `--google-target-principal`                     | `google_target_principal`                    | bool   | the target principal to impersonate when using ADC                                                                                                                                          | defaults to the service account configured for ADC  |
+| `--google-use-organization-id`                  | `google_use_organization_id`                 | bool   | use organization id as preferred username                                                                                                                                                   | false                                               |
+| `--google-admin-api-user-scope`                 | `google_admin_api_user_scope`                | string | the OAuth scope to use when querying the Google Admin SDK for organization id, can be 'readonly', 'user' or 'cloud'<br/>                                                                    | `readonly`                                          |
 
 ## Usage
 
@@ -73,3 +75,10 @@ can be leveraged through a feature called Workload Identity. Follow Google's [gu
 to set up Workload Identity.
 
 When deployed outside of GCP, [Workload Identity Federation](https://cloud.google.com/docs/authentication/provide-credentials-adc#wlif) might be an option.
+
+##### Using Organization ID as Preferred Username (optional)
+By default, the google provider uses the google id as username. If you would like to use an organization id instead, you can set the `google-use-organization-id` flag to true.
+This requires that the service account used to query the Google Admin SDK has one of the following scopes granted in step 5 above: 
+- `https://www.googleapis.com/auth/admin.directory.user.readonly`, 
+- `https://www.googleapis.com/auth/admin.directory.user` 
+- `https://www.googleapis.com/auth/cloud-platform` 
