@@ -252,6 +252,8 @@ Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 | `serviceAccountJson` | _string_ | ServiceAccountJSON is the path to the service account json credentials |
 | `useApplicationDefaultCredentials` | _bool_ | UseApplicationDefaultCredentials is a boolean whether to use Application Default Credentials instead of a ServiceAccountJSON |
 | `targetPrincipal` | _string_ | TargetPrincipal is the Google Service Account used for Application Default Credentials |
+| `useOrganizationId` | _bool_ | UseOrganizationId indicates whether to use the organization ID as the UserName claim |
+| `adminApiUserScope` | _string_ | user scope needed for fetching user organization information from admin api, can be one of cloud, user or readonly |
 
 ### Header
 
