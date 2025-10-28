@@ -10,7 +10,6 @@ import (
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/clock"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	"github.com/vmihailenco/msgpack/v5"
 )
@@ -47,7 +46,7 @@ type csrf struct {
 	CodeVerifier string `msgpack:"cv,omitempty"`
 
 	cookieOpts *options.Cookie
-	time       clock.Clock
+	clock      func() time.Time
 }
 
 // csrtStateTrim will indicate the length of the state trimmed for the name of the csrf cookie
@@ -70,6 +69,7 @@ func NewCSRF(opts *options.Cookie, codeVerifier string) (CSRF, error) {
 		CodeVerifier: codeVerifier,
 
 		cookieOpts: opts,
+		clock:      time.Now,
 	}, nil
 }
 
@@ -187,7 +187,7 @@ func ClearExtraCsrfCookies(opts *options.Cookie, rw http.ResponseWriter, req *ht
 
 	// delete the X oldest cookies
 	slices.SortStableFunc(decodedCookies, func(a, b *csrf) int {
-		return a.time.Now().Compare(b.time.Now())
+		return a.clock().Compare(b.clock())
 	})
 
 	for i := 0; i < len(decodedCookies)-opts.CSRFPerRequestLimit; i++ {
@@ -223,7 +223,7 @@ func (c *csrf) encodeCookie() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error getting cookie secret: %v", err)
 	}
-	return encryption.SignedValue(secret, c.cookieName(), encrypted, c.time.Now())
+	return encryption.SignedValue(secret, c.cookieName(), encrypted, c.clock())
 }
 
 // decodeCSRFCookie validates the signature then decrypts and decodes a CSRF
@@ -249,10 +249,10 @@ func decodeCSRFCookie(cookie *http.Cookie, opts *options.Cookie) (*csrf, error) 
 
 // unmarshalCSRF unmarshals decrypted data into a CSRF struct
 func unmarshalCSRF(decrypted []byte, opts *options.Cookie, csrfTime time.Time) (*csrf, error) {
-	clock := clock.Clock{}
-	clock.Set(csrfTime)
-
-	csrf := &csrf{cookieOpts: opts, time: clock}
+	csrf := &csrf{
+		cookieOpts: opts,
+		clock:      func() time.Time { return csrfTime },
+	}
 	if err := msgpack.Unmarshal(decrypted, csrf); err != nil {
 		return nil, fmt.Errorf("error unmarshalling data to CSRF: %v", err)
 	}

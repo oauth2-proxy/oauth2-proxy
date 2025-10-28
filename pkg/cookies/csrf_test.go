@@ -130,7 +130,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 		testNow := time.Unix(nowEpoch, 0)
 
 		BeforeEach(func() {
-			privateCSRF.time.Set(testNow)
+			privateCSRF.clock = func() time.Time { return testNow }
 
 			req = &http.Request{
 				Method: http.MethodGet,
@@ -146,7 +146,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 		})
 
 		AfterEach(func() {
-			privateCSRF.time.Reset()
+			privateCSRF.clock = time.Now
 		})
 
 		Context("SetCookie", func() {
@@ -173,7 +173,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 		Context("LoadCSRFCookie", func() {
 			BeforeEach(func() {
 				// we need to reset the time to ensure the cookie is valid
-				privateCSRF.time.Reset()
+				privateCSRF.clock = time.Now
 			})
 
 			It("should return error when no cookie is set", func() {
