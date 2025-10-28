@@ -39,7 +39,7 @@ services:
       httpbin: {}
 
   gitea:
-    image: gitea/gitea:1.24.5
+    image: gitea/gitea:1.24.7
     container_name: gitea
     environment:
       - USER_UID=1000
