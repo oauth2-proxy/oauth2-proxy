@@ -22,7 +22,7 @@ func TestCreatedAtNow(t *testing.T) {
 	ss := &SessionState{}
 
 	now := time.Unix(1234567890, 0)
-	ss.Clock.Set(now)
+	ss.Clock = func() time.Time { return now }
 
 	ss.CreatedAtNow()
 	g.Expect(*ss.CreatedAt).To(Equal(now))
@@ -33,9 +33,9 @@ func TestExpiresIn(t *testing.T) {
 	ss := &SessionState{}
 
 	now := time.Unix(1234567890, 0)
-	ss.Clock.Set(now)
+	ss.Clock = func() time.Time { return now }
 
-	ttl := time.Duration(743) * time.Second
+	ttl := 743 * time.Second
 	ss.ExpiresIn(ttl)
 
 	g.Expect(*ss.ExpiresOn).To(Equal(ss.CreatedAt.Add(ttl)))

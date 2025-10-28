@@ -1,13 +1,12 @@
 module github.com/oauth2-proxy/oauth2-proxy/v7
 
-go 1.24.6
+go 1.25.3
 
 require (
 	cloud.google.com/go/compute/metadata v0.7.0
 	github.com/Bose/minisentinel v0.0.0-20200130220412-917c5a9223bb
 	github.com/a8m/envsubst v1.4.3
 	github.com/alicebob/miniredis/v2 v2.35.0
-	github.com/benbjohnson/clock v1.3.5
 	github.com/bitly/go-simplejson v0.5.1
 	github.com/bsm/redislock v0.9.4
 	github.com/coreos/go-oidc/v3 v3.14.1

@@ -8,6 +8,10 @@
 
 ## Changes since v7.12.0
 
+- [#3228](https://github.com/oauth2-proxy/oauth2-proxy/pull/3228) fix: use GetSecret() in ticket.go makeCookie to respect cookie-secret-file (@stagswtf)
+- [#3244](https://github.com/oauth2-proxy/oauth2-proxy/pull/3244) chore(deps): upgrade to latest go1.25.3 (@tuunit)
+- [#3238](https://github.com/oauth2-proxy/oauth2-proxy/pull/3238) chore: Replace pkg/clock with narrowly targeted stub clocks (@dsymonds)
+
 # V7.12.0
 
 ## Release Highlights
@@ -119,7 +123,7 @@ For detailed information, migration guidance, and security implications, see the
 - 🕵️‍♀️ Vulnerabilities have been addressed
   - [CVE-2025-22871](https://github.com/advisories/GHSA-g9pc-8g42-g6vq)
 - 🐛 Squashed some bugs
-  
+
 ## Important Notes
 
 ## Breaking Changes
