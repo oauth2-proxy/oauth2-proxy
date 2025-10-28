@@ -235,13 +235,15 @@ func (t *ticket) makeCookie(req *http.Request, value string, expires time.Durati
 	if value != "" {
 		secret, err := t.options.GetSecret()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("retrieving secret failed: %w", err)
 		}
+
 		value, err = encryption.SignedValue(secret, t.options.Name, []byte(value), now)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("signing cookie value failed: %w", err)
 		}
 	}
+
 	return cookies.MakeCookieFromOptions(
 		req,
 		t.options.Name,
