@@ -11,6 +11,7 @@
 - [#3228](https://github.com/oauth2-proxy/oauth2-proxy/pull/3228) fix: use GetSecret() in ticket.go makeCookie to respect cookie-secret-file (@stagswtf)
 - [#3244](https://github.com/oauth2-proxy/oauth2-proxy/pull/3244) chore(deps): upgrade to latest go1.25.3 (@tuunit)
 - [#3238](https://github.com/oauth2-proxy/oauth2-proxy/pull/3238) chore: Replace pkg/clock with narrowly targeted stub clocks (@dsymonds)
+- [#3236](https://github.com/oauth2-proxy/oauth2-proxy/pull/3236) Updated the Google Provider's token endpoint to match Google OIDC's token endpoint. As listed in https://accounts.google.com/.well-known/openid-configuration this token endpoint provides additional claims in the id token such as profile photo and full name (@pixeldrew)
 
 # V7.12.0
 
