@@ -54,7 +54,7 @@ jobs:
         git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
     
     - name: Setup node
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version-file: docs/package.json
       
