@@ -233,12 +233,17 @@ func (t *ticket) clearCookie(rw http.ResponseWriter, req *http.Request) {
 // makeCookie makes a cookie, signing the value if present
 func (t *ticket) makeCookie(req *http.Request, value string, expires time.Duration, now time.Time) (*http.Cookie, error) {
 	if value != "" {
-		var err error
-		value, err = encryption.SignedValue(t.options.Secret, t.options.Name, []byte(value), now)
+		secret, err := t.options.GetSecret()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("retrieving secret failed: %w", err)
+		}
+
+		value, err = encryption.SignedValue(secret, t.options.Name, []byte(value), now)
+		if err != nil {
+			return nil, fmt.Errorf("signing cookie value failed: %w", err)
 		}
 	}
+
 	return cookies.MakeCookieFromOptions(
 		req,
 		t.options.Name,
