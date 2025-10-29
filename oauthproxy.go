@@ -1250,12 +1250,11 @@ func checkAllowedEmails(req *http.Request, s *sessionsapi.SessionState) bool {
 // encodeState builds the OAuth state param out of our nonce and
 // original application redirect
 func encodeState(nonce string, redirect string, encode bool) string {
-	redirectPart := redirect
 	if !encode {
-		redirectPart = url.QueryEscape(redirectPart)
+		redirect = url.QueryEscape(redirect)
 	}
 
-	rawString := fmt.Sprintf("%v:%v", nonce, redirectPart)
+	rawString := fmt.Sprintf("%v:%v", nonce, redirect)
 	if encode {
 		return base64.RawURLEncoding.EncodeToString([]byte(rawString))
 	}
