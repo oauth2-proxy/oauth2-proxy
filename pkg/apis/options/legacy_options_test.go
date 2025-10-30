@@ -3,6 +3,7 @@ package options
 import (
 	"time"
 
+	. "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options/testutil"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -132,7 +133,7 @@ var _ = Describe("Legacy Options", func() {
 
 			converted, err := legacyOpts.ToOptions()
 			Expect(err).ToNot(HaveOccurred())
-			Expect(converted).To(Equal(opts))
+			Expect(converted).To(EqualOpts(opts))
 		})
 	})
 

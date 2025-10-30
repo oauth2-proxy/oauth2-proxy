@@ -289,6 +289,7 @@ type LoginGovOptions struct {
 	PubJWKURL string `yaml:"pubjwkURL,omitempty"`
 }
 
+// Legacy default providers configuration
 func providerDefaults() Providers {
 	providers := Providers{
 		{
@@ -309,4 +310,73 @@ func providerDefaults() Providers {
 		},
 	}
 	return providers
+}
+
+// EnsureDefaults sets any default values for Providers fields.
+func (p Providers) EnsureDefaults() {
+	for i := range p {
+		p[i].EnsureDefaults()
+	}
+}
+
+// EnsureDefaults sets any default values for Provider fields.
+func (p *Provider) EnsureDefaults() {
+	if p.SkipClaimsFromProfileURL == nil {
+		p.SkipClaimsFromProfileURL = ptr.Ptr(false)
+	}
+	if p.UseSystemTrustStore == nil {
+		p.UseSystemTrustStore = ptr.Ptr(true)
+	}
+
+	p.OIDCConfig.EnsureDefaults()
+	p.MicrosoftEntraIDConfig.EnsureDefaults()
+	p.ADFSConfig.EnsureDefaults()
+	p.GoogleConfig.EnsureDefaults()
+}
+
+// EnsureDefaults sets any default values for OIDCOptions fields.
+func (o *OIDCOptions) EnsureDefaults() {
+	// Ensure OIDC defaults
+	if o.InsecureAllowUnverifiedEmail == nil {
+		o.InsecureAllowUnverifiedEmail = ptr.Ptr(false)
+	}
+	if o.InsecureSkipNonce == nil {
+		o.InsecureSkipNonce = ptr.Ptr(true)
+	}
+	if o.SkipDiscovery == nil {
+		o.SkipDiscovery = ptr.Ptr(false)
+	}
+	if o.UserIDClaim == "" {
+		o.UserIDClaim = OIDCEmailClaim
+	}
+	if o.EmailClaim == "" {
+		o.EmailClaim = OIDCEmailClaim
+	}
+	if o.GroupsClaim == "" {
+		o.GroupsClaim = OIDCGroupsClaim
+	}
+	if len(o.AudienceClaims) == 0 {
+		o.AudienceClaims = OIDCAudienceClaims
+	}
+}
+
+// EnsureDefaults sets any default values for MicrosoftEntraIDOptions fields.
+func (me *MicrosoftEntraIDOptions) EnsureDefaults() {
+	if me.FederatedTokenAuth == nil {
+		me.FederatedTokenAuth = ptr.Ptr(false)
+	}
+}
+
+// EnsureDefaults sets any default values for ADFSOptions fields.
+func (a *ADFSOptions) EnsureDefaults() {
+	if a.SkipScope == nil {
+		a.SkipScope = ptr.Ptr(false)
+	}
+}
+
+// EnsureDefaults sets any default values for GoogleOptions fields.
+func (g *GoogleOptions) EnsureDefaults() {
+	if g.UseApplicationDefaultCredentials == nil {
+		g.UseApplicationDefaultCredentials = ptr.Ptr(false)
+	}
 }

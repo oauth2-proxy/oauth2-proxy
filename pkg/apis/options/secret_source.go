@@ -12,3 +12,8 @@ type SecretSource struct {
 	// FromFile expects a path to a file containing the secret value.
 	FromFile string `yaml:"fromFile,omitempty"`
 }
+
+// EnsureDefaults sets any default values for SecretSource fields.
+func (ss *SecretSource) EnsureDefaults() {
+	// No defaults to set currently
+}

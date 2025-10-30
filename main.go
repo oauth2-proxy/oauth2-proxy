@@ -20,7 +20,7 @@ func main() {
 
 	// Because we parse early to determine alpha vs legacy config, we have to
 	// ignore any unknown flags for now
-	configFlagSet.ParseErrorsWhitelist.UnknownFlags = true
+	configFlagSet.ParseErrorsAllowlist.UnknownFlags = true
 
 	config := configFlagSet.String("config", "", "path to config file")
 	alphaConfig := configFlagSet.String("alpha-config", "", "path to alpha config file (use at your own risk - the structure in this config file may change between minor releases)")
@@ -78,6 +78,8 @@ func loadConfiguration(config, yamlConfig string, extraFlags *pflag.FlagSet, arg
 		return loadYamlOptions(yamlConfig, config, extraFlags, args)
 	}
 
+	opts.EnsureDefaults()
+
 	return opts, nil
 }
 
@@ -117,7 +119,7 @@ func loadYamlOptions(yamlConfig, config string, extraFlags *pflag.FlagSet, args 
 		return nil, fmt.Errorf("failed to load alpha options: %v", err)
 	}
 
-	alphaOpts.MergeInto(opts)
+	alphaOpts.MergeOptionsWithDefaults(opts)
 	return opts, nil
 }
 

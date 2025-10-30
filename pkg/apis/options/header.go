@@ -1,5 +1,7 @@
 package options
 
+import "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
+
 // Header represents an individual header that will be added to a request or
 // response header.
 type Header struct {
@@ -52,4 +54,29 @@ type ClaimSource struct {
 	// Note the value of claim will become the basic auth username and the
 	// basicAuthPassword will be used as the password value.
 	BasicAuthPassword *SecretSource `yaml:"basicAuthPassword,omitempty"`
+}
+
+// EnsureDefaults sets any default values for Header fields.
+func (h *Header) EnsureDefaults() {
+	if h.PreserveRequestValue == nil {
+		h.PreserveRequestValue = ptr.Ptr(false)
+	}
+	for i := range h.Values {
+		h.Values[i].EnsureDefaults()
+	}
+}
+
+// EnsureDefaults sets any default values for HeaderValue fields.
+func (hv *HeaderValue) EnsureDefaults() {
+	if hv.ClaimSource != nil {
+		hv.ClaimSource.EnsureDefaults()
+	}
+	if hv.SecretSource != nil {
+		hv.SecretSource.EnsureDefaults()
+	}
+}
+
+// EnsureDefaults sets any default values for ClaimSource fields.
+func (hc *ClaimSource) EnsureDefaults() {
+	// No defaults to set currently
 }

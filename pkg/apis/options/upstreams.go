@@ -1,6 +1,10 @@
 package options
 
-import "time"
+import (
+	"time"
+
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
+)
 
 const (
 	// DefaultUpstreamFlushInterval is the default value for the Upstream FlushInterval.
@@ -97,4 +101,39 @@ type Upstream struct {
 	// DisableKeepAlives disables HTTP keep-alive connections to the upstream server.
 	// Defaults to false.
 	DisableKeepAlives *bool `yaml:"disableKeepAlives,omitempty"`
+}
+
+// EnsureDefaults sets any default values for UpstreamConfig fields.
+func (uc *UpstreamConfig) EnsureDefaults() {
+	if uc.ProxyRawPath == nil {
+		uc.ProxyRawPath = ptr.Ptr(false)
+	}
+	for i := range uc.Upstreams {
+		uc.Upstreams[i].EnsureDefaults()
+	}
+}
+
+// EnsureDefaults sets any default values for Upstream fields.
+func (u *Upstream) EnsureDefaults() {
+	if u.InsecureSkipTLSVerify == nil {
+		u.InsecureSkipTLSVerify = ptr.Ptr(false)
+	}
+	if u.Static == nil {
+		u.Static = ptr.Ptr(false)
+	}
+	if u.FlushInterval == nil {
+		u.FlushInterval = ptr.Ptr(DefaultUpstreamFlushInterval)
+	}
+	if u.PassHostHeader == nil {
+		u.PassHostHeader = ptr.Ptr(true)
+	}
+	if u.ProxyWebSockets == nil {
+		u.ProxyWebSockets = ptr.Ptr(true)
+	}
+	if u.Timeout == nil {
+		u.Timeout = ptr.Ptr(DefaultUpstreamTimeout)
+	}
+	if u.DisableKeepAlives == nil {
+		u.DisableKeepAlives = ptr.Ptr(false)
+	}
 }

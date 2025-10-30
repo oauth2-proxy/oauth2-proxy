@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"os"
-	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	. "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options/testutil"
@@ -114,10 +113,6 @@ cookie_secure="false"
 redirect_url="http://localhost:4180/oauth2/callback"
 `
 
-	durationPtr := func(d time.Duration) *time.Duration {
-		return &d
-	}
-
 	testExpectedOptions := func() *options.Options {
 		opts, err := options.NewLegacyOptions().ToOptions()
 		Expect(err).ToNot(HaveOccurred())
@@ -133,10 +128,10 @@ redirect_url="http://localhost:4180/oauth2/callback"
 					ID:                    "/",
 					Path:                  "/",
 					URI:                   "http://httpbin",
-					FlushInterval:         durationPtr(options.DefaultUpstreamFlushInterval),
+					FlushInterval:         ptr.Ptr(options.DefaultUpstreamFlushInterval),
 					PassHostHeader:        ptr.Ptr(true),
 					ProxyWebSockets:       ptr.Ptr(true),
-					Timeout:               durationPtr(options.DefaultUpstreamTimeout),
+					Timeout:               ptr.Ptr(options.DefaultUpstreamTimeout),
 					InsecureSkipTLSVerify: ptr.Ptr(false),
 					DisableKeepAlives:     ptr.Ptr(false),
 				},

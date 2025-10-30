@@ -177,10 +177,6 @@ func (l *LegacyUpstreams) convert() (UpstreamConfig, error) {
 			// Force defaults compatible with static responses
 			upstream.URI = ""
 			upstream.InsecureSkipTLSVerify = ptr.Ptr(false)
-			upstream.PassHostHeader = nil
-			upstream.ProxyWebSockets = nil
-			upstream.FlushInterval = nil
-			upstream.Timeout = nil
 			upstream.DisableKeepAlives = ptr.Ptr(false)
 		case "unix":
 			upstream.Path = "/"

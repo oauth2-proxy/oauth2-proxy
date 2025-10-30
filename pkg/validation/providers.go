@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 )
 
 // validateProviders is the initial validation migration for multiple providrers
@@ -97,9 +96,9 @@ func validateGoogleConfig(provider options.Provider) []string {
 
 	hasAdminEmail := provider.GoogleConfig.AdminEmail != ""
 	hasSAJSON := provider.GoogleConfig.ServiceAccountJSON != ""
-	useADC := ptr.Deref(provider.GoogleConfig.UseApplicationDefaultCredentials, false)
+	useADC := provider.GoogleConfig.UseApplicationDefaultCredentials
 
-	if !hasAdminEmail && !hasSAJSON && !useADC {
+	if !hasAdminEmail && !hasSAJSON && !(*useADC) {
 		return msgs
 	}
 
@@ -108,7 +107,7 @@ func validateGoogleConfig(provider options.Provider) []string {
 	}
 
 	_, err := os.Stat(provider.GoogleConfig.ServiceAccountJSON)
-	if !useADC {
+	if !(*useADC) {
 		if !hasSAJSON {
 			msgs = append(msgs, "missing setting: google-service-account-json or google-use-application-default-credentials")
 		} else if err != nil {
