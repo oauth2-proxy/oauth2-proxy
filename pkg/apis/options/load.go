@@ -12,7 +12,7 @@ import (
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 // Load reads in the config file at the path given, then merges in environment

@@ -10,7 +10,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/version"
 	"github.com/spf13/pflag"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 func main() {
