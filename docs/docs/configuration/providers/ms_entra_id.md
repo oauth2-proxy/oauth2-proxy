@@ -13,6 +13,7 @@ The provider is OIDC-compliant, so all the OIDC parameters are honored. Addition
 | --------------------------- | -------------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
 | `--entra-id-allowed-tenant` | `entra_id_allowed_tenants` | string \| list | List of allowed tenants. In case of multi-tenant apps, incoming tokens are issued by different issuers and OIDC issuer verification needs to be disabled. When not specified, all tenants are allowed. Redundant for single-tenant apps (regular ID token validation matches the issuer). |         |
 | `--entra-id-federated-token-auth` | `entra_id_federated_token_auth` | boolean | Enable oAuth2 client authentication with federated token projected by Entra Workload Identity plugin, instead of client secret.   | false |
+| `--allowed-role` | `allowed_roles` | string \| list | Restrict logins to users with this app role (may be given multiple times). Works with the keycloak-oidc and ms-entra-id provider. |         |
 
 ## Configure App registration
 To begin, create an App registration, set a redirect URI, and generate a secret. All account types are supported, including single-tenant, multi-tenant, multi-tenant with Microsoft accounts, and Microsoft accounts only.
