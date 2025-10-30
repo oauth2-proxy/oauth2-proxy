@@ -54,7 +54,7 @@ func newHTTPUpstreamProxy(upstream options.Upstream, u *url.URL, sigData *option
 	// Set up a WebSocket proxy if required
 	var wsProxy http.Handler
 	if upstream.ProxyWebSockets == nil || *upstream.ProxyWebSockets {
-		wsProxy = newWebSocketReverseProxy(u, upstream.InsecureSkipTLSVerify)
+		wsProxy = newWebSocketReverseProxy(u, *upstream.InsecureSkipTLSVerify)
 	}
 
 	var auth hmacauth.HmacAuth
@@ -137,19 +137,19 @@ func newReverseProxy(target *url.URL, upstream options.Upstream, errorHandler Pr
 
 	// Change default duration for waiting for an upstream response
 	if upstream.Timeout != nil {
-		transport.ResponseHeaderTimeout = upstream.Timeout.Duration()
+		transport.ResponseHeaderTimeout = *upstream.Timeout
 	}
 
 	// Configure options on the SingleHostReverseProxy
 	if upstream.FlushInterval != nil {
-		proxy.FlushInterval = upstream.FlushInterval.Duration()
+		proxy.FlushInterval = *upstream.FlushInterval
 	} else {
 		proxy.FlushInterval = options.DefaultUpstreamFlushInterval
 	}
 
 	// InsecureSkipVerify is a configurable option we allow
 	/* #nosec G402 */
-	if upstream.InsecureSkipTLSVerify {
+	if *upstream.InsecureSkipTLSVerify {
 		transport.TLSClientConfig.InsecureSkipVerify = true
 	}
 
@@ -168,7 +168,7 @@ func newReverseProxy(target *url.URL, upstream options.Upstream, errorHandler Pr
 
 	// Pass on DisableKeepAlives to the transport settings
 	// to allow for disabling HTTP keep-alive connections
-	transport.DisableKeepAlives = upstream.DisableKeepAlives
+	transport.DisableKeepAlives = *upstream.DisableKeepAlives
 
 	// Apply the customized transport to our proxy before returning it
 	proxy.Transport = transport

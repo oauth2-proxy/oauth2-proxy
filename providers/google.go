@@ -102,7 +102,7 @@ func NewGoogleProvider(p *ProviderData, opts options.GoogleOptions) (*GoogleProv
 		},
 	}
 
-	if opts.ServiceAccountJSON != "" || opts.UseApplicationDefaultCredentials {
+	if opts.ServiceAccountJSON != "" || *opts.UseApplicationDefaultCredentials {
 		provider.configureGroups(opts)
 	}
 
@@ -259,7 +259,7 @@ var possibleScopesList = [...]string{
 }
 
 func getOauth2TokenSource(ctx context.Context, opts options.GoogleOptions, scope string) oauth2.TokenSource {
-	if opts.UseApplicationDefaultCredentials {
+	if *opts.UseApplicationDefaultCredentials {
 		ts, err := impersonate.CredentialsTokenSource(ctx, impersonate.CredentialsConfig{
 			TargetPrincipal: getTargetPrincipal(ctx, opts),
 			Scopes:          []string{scope},
