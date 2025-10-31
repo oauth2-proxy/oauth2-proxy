@@ -75,11 +75,14 @@ func loadConfiguration(config, yamlConfig string, extraFlags *pflag.FlagSet, arg
 
 	if yamlConfig != "" {
 		logger.Printf("WARNING: You are using alpha configuration. The structure in this configuration file may change without notice. You MUST remove conflicting options from your existing configuration.")
-		return loadYamlOptions(yamlConfig, config, extraFlags, args)
+		opts, err = loadYamlOptions(yamlConfig, config, extraFlags, args)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load yaml options: %w", err)
+		}
 	}
 
+	// Ensure defaults after loading configuration
 	opts.EnsureDefaults()
-
 	return opts, nil
 }
 

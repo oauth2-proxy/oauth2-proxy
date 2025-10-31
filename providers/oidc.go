@@ -12,6 +12,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	"golang.org/x/oauth2"
 )
 
@@ -50,7 +51,7 @@ func NewOIDCProvider(p *ProviderData, opts options.OIDCOptions) *OIDCProvider {
 
 	return &OIDCProvider{
 		ProviderData: p,
-		SkipNonce:    *opts.InsecureSkipNonce,
+		SkipNonce:    ptr.Deref(opts.InsecureSkipNonce, false),
 	}
 }
 

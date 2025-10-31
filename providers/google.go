@@ -19,6 +19,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	admin "google.golang.org/api/admin/directory/v1"
@@ -108,9 +109,7 @@ func NewGoogleProvider(p *ProviderData, opts options.GoogleOptions) (*GoogleProv
 		},
 	}
 
-	if opts.UseOrganizationID || opts.ServiceAccountJSON != "" || *opts.UseApplicationDefaultCredentials {
-		provider.configureGroups(opts)
-
+	if opts.UseOrganizationID || opts.ServiceAccountJSON != "" || ptr.Deref(opts.UseApplicationDefaultCredentials, false) {
 		// reuse admin service to avoid multiple calls for token
 		var adminService *admin.Service
 
@@ -133,7 +132,7 @@ func NewGoogleProvider(p *ProviderData, opts options.GoogleOptions) (*GoogleProv
 			}
 		}
 
-		if opts.ServiceAccountJSON != "" || opts.UseApplicationDefaultCredentials {
+		if opts.ServiceAccountJSON != "" || ptr.Deref(opts.UseApplicationDefaultCredentials, false) {
 			if adminService == nil {
 				adminService = getAdminService(opts)
 			}
@@ -305,7 +304,7 @@ var possibleScopesList = [...]string{
 }
 
 func getOauth2TokenSource(ctx context.Context, opts options.GoogleOptions, scope string) oauth2.TokenSource {
-	if *opts.UseApplicationDefaultCredentials {
+	if ptr.Deref(opts.UseApplicationDefaultCredentials, false) {
 		ts, err := impersonate.CredentialsTokenSource(ctx, impersonate.CredentialsConfig{
 			TargetPrincipal: getTargetPrincipal(ctx, opts),
 			Scopes:          strings.Split(scope, " "),

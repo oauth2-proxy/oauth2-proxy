@@ -14,6 +14,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/app/pagewriter"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 )
 
 // ProxyErrorHandler is a function that will be used to render error pages when
@@ -27,12 +28,12 @@ func NewProxy(upstreams options.UpstreamConfig, sigData *options.SignatureData, 
 		serveMux: mux.NewRouter(),
 	}
 
-	if *upstreams.ProxyRawPath {
+	if ptr.Deref(upstreams.ProxyRawPath, false) {
 		m.serveMux.UseEncodedPath()
 	}
 
 	for _, upstream := range sortByPathLongest(upstreams.Upstreams) {
-		if *upstream.Static {
+		if ptr.Deref(upstream.Static, false) {
 			if err := m.registerStaticResponseHandler(upstream, writer); err != nil {
 				return nil, fmt.Errorf("could not register static upstream %q: %v", upstream.ID, err)
 			}
@@ -74,7 +75,7 @@ func (m *multiUpstreamProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request
 
 // registerStaticResponseHandler registers a static response handler with at the given path.
 func (m *multiUpstreamProxy) registerStaticResponseHandler(upstream options.Upstream, writer pagewriter.Writer) error {
-	logger.Printf("mapping path %q => static response %d", upstream.Path, derefStaticCode(upstream.StaticCode))
+	logger.Printf("mapping path %q => static response %d", upstream.Path, ptr.Deref(upstream.StaticCode, 200))
 	return m.registerHandler(upstream, newStaticResponseHandler(upstream.ID, upstream.StaticCode), writer)
 }
 

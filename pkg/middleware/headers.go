@@ -9,6 +9,7 @@ import (
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/header"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 )
 
 func NewRequestHeaderInjector(headers []options.Header) (alice.Constructor, error) {
@@ -27,7 +28,7 @@ func NewRequestHeaderInjector(headers []options.Header) (alice.Constructor, erro
 func newStripHeaders(headers []options.Header) alice.Constructor {
 	headersToStrip := []options.Header{}
 	for _, header := range headers {
-		if !(*header.PreserveRequestValue) {
+		if !ptr.Deref(header.PreserveRequestValue, false) {
 			headersToStrip = append(headersToStrip, header)
 		}
 	}

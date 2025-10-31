@@ -123,6 +123,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 		opts.RawRedirectURL = "http://localhost:4180/oauth2/callback"
 
 		opts.UpstreamServers = options.UpstreamConfig{
+			ProxyRawPath: ptr.Ptr(false),
 			Upstreams: []options.Upstream{
 				{
 					ID:                    "/",
@@ -132,6 +133,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 					PassHostHeader:        ptr.Ptr(true),
 					ProxyWebSockets:       ptr.Ptr(true),
 					Timeout:               ptr.Ptr(options.DefaultUpstreamTimeout),
+					Static:                ptr.Ptr(false),
 					InsecureSkipTLSVerify: ptr.Ptr(false),
 					DisableKeepAlives:     ptr.Ptr(false),
 				},
@@ -139,7 +141,8 @@ redirect_url="http://localhost:4180/oauth2/callback"
 		}
 
 		authHeader := options.Header{
-			Name: "Authorization",
+			Name:                 "Authorization",
+			PreserveRequestValue: ptr.Ptr(false),
 			Values: []options.HeaderValue{
 				{
 					ClaimSource: &options.ClaimSource{
@@ -153,10 +156,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 			},
 		}
 
-		authHeader.PreserveRequestValue = ptr.Ptr(false)
 		opts.InjectRequestHeaders = append([]options.Header{authHeader}, opts.InjectRequestHeaders...)
-
-		authHeader.PreserveRequestValue = nil
 		opts.InjectResponseHeaders = append(opts.InjectResponseHeaders, authHeader)
 
 		opts.Providers = options.Providers{
@@ -185,6 +185,12 @@ redirect_url="http://localhost:4180/oauth2/callback"
 					InsecureAllowUnverifiedEmail:   ptr.Ptr(false),
 					InsecureSkipIssuerVerification: ptr.Ptr(false),
 					SkipDiscovery:                  ptr.Ptr(false),
+				},
+				MicrosoftEntraIDConfig: options.MicrosoftEntraIDOptions{
+					FederatedTokenAuth: ptr.Ptr(false),
+				},
+				ADFSConfig: options.ADFSOptions{
+					SkipScope: ptr.Ptr(false),
 				},
 				LoginURLParameters: []options.LoginURLParameter{
 					{Name: "approval_prompt", Default: []string{"force"}},
@@ -254,7 +260,8 @@ redirect_url="http://localhost:4180/oauth2/callback"
 				Expect(err).ToNot(HaveOccurred())
 			}
 			Expect(in.expectedOptions).ToNot(BeNil())
-			Expect(opts).To(EqualOpts(in.expectedOptions()))
+			expectedOpts := in.expectedOptions()
+			Expect(opts).To(EqualOpts(expectedOpts))
 		},
 		Entry("with legacy configuration", loadConfigurationTableInput{
 			configContent:   testCoreConfig + testLegacyConfig,

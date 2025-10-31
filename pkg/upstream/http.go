@@ -54,7 +54,7 @@ func newHTTPUpstreamProxy(upstream options.Upstream, u *url.URL, sigData *option
 
 	// Set up a WebSocket proxy if required
 	var wsProxy http.Handler
-	if *upstream.ProxyWebSockets {
+	if ptr.Deref(upstream.ProxyWebSockets, false) {
 		wsProxy = newWebSocketReverseProxy(u, upstream.InsecureSkipTLSVerify)
 	}
 
@@ -150,14 +150,14 @@ func newReverseProxy(target *url.URL, upstream options.Upstream, errorHandler Pr
 
 	// InsecureSkipVerify is a configurable option we allow
 	/* #nosec G402 */
-	if *upstream.InsecureSkipTLSVerify {
+	if ptr.Deref(upstream.InsecureSkipTLSVerify, false) {
 		transport.TLSClientConfig.InsecureSkipVerify = true
 	}
 
 	// Ensure we always pass the original request path
 	setProxyDirector(proxy)
 
-	if upstream.PassHostHeader != nil && !(*upstream.PassHostHeader) {
+	if !ptr.Deref(upstream.PassHostHeader, false) {
 		setProxyUpstreamHostHeader(proxy, target)
 	}
 
@@ -169,7 +169,7 @@ func newReverseProxy(target *url.URL, upstream options.Upstream, errorHandler Pr
 
 	// Pass on DisableKeepAlives to the transport settings
 	// to allow for disabling HTTP keep-alive connections
-	transport.DisableKeepAlives = *upstream.DisableKeepAlives
+	transport.DisableKeepAlives = ptr.Deref(upstream.DisableKeepAlives, false)
 
 	// Apply the customized transport to our proxy before returning it
 	proxy.Transport = transport

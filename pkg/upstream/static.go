@@ -6,15 +6,14 @@ import (
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 )
-
-const defaultStaticResponseCode = 200
 
 // newStaticResponseHandler creates a new staticResponseHandler that serves a
 // a static response code.
 func newStaticResponseHandler(upstream string, code *int) http.Handler {
 	return &staticResponseHandler{
-		code:     derefStaticCode(code),
+		code:     ptr.Deref(code, 200),
 		upstream: upstream,
 	}
 }
@@ -37,12 +36,4 @@ func (s *staticResponseHandler) ServeHTTP(rw http.ResponseWriter, req *http.Requ
 	if err != nil {
 		logger.Errorf("Error writing static response: %v", err)
 	}
-}
-
-// derefStaticCode returns the derefenced value, or the default if the value is nil
-func derefStaticCode(code *int) int {
-	if code != nil {
-		return *code
-	}
-	return defaultStaticResponseCode
 }
