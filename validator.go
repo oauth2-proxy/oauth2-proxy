@@ -9,6 +9,7 @@ import (
 	"unsafe"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/watcher"
 )
 
 // UserMap holds information from the authenticated emails file
@@ -26,7 +27,7 @@ func NewUserMap(usersFile string, done <-chan bool, onUpdate func()) *UserMap {
 	atomic.StorePointer(&um.m, unsafe.Pointer(&m)) // #nosec G103
 	if usersFile != "" {
 		logger.Printf("using authenticated emails file %s", usersFile)
-		WatchForUpdates(usersFile, done, func() {
+		watcher.WatchFileForUpdates(usersFile, done, func() {
 			um.LoadAuthenticatedEmailsFile()
 			onUpdate()
 		})
@@ -115,12 +116,15 @@ func isEmailValidWithDomains(email string, allowedDomains []string) bool {
 			return true
 		}
 
-		// allow if the domain is prefixed with . and
+		// allow if the domain is prefixed with . or *. and
 		// the last element (split on @) has the suffix as the domain
 		atoms := strings.Split(email, "@")
-		if strings.HasPrefix(domain, ".") && strings.HasSuffix(atoms[len(atoms)-1], domain) {
+
+		if (strings.HasPrefix(domain, ".") && strings.HasSuffix(atoms[len(atoms)-1], domain)) ||
+			(strings.HasPrefix(domain, "*.") && strings.HasSuffix(atoms[len(atoms)-1], domain[1:])) {
 			return true
 		}
 	}
+
 	return false
 }

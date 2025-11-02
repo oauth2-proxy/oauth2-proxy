@@ -7,13 +7,15 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options/util"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
-	"golang.org/x/sync/errgroup"
 )
 
 // Server represents an HTTP or HTTPS server.
@@ -35,6 +37,9 @@ type Opts struct {
 
 	// TLS is the TLS configuration for the server.
 	TLS *options.TLS
+
+	// Let testing infrastructure circumvent parsing file descriptors
+	fdFiles []*os.File
 }
 
 // NewServer creates a new Server from the options given.
@@ -42,6 +47,11 @@ func NewServer(opts Opts) (Server, error) {
 	s := &server{
 		handler: opts.Handler,
 	}
+
+	if len(opts.fdFiles) > 0 {
+		s.fdFiles = opts.fdFiles
+	}
+
 	if err := s.setupListener(opts); err != nil {
 		return nil, fmt.Errorf("error setting up listener: %v", err)
 	}
@@ -58,6 +68,9 @@ type server struct {
 
 	listener    net.Listener
 	tlsListener net.Listener
+
+	// ensure activation.Files are called once
+	fdFiles []*os.File
 }
 
 // setupListener sets the server listener if the HTTP server is enabled.
@@ -69,16 +82,47 @@ func (s *server) setupListener(opts Opts) error {
 		return nil
 	}
 
+	// Use fd: as a prefix for systemd socket activation, it's generic
+	// enough and short.
+	// The most common usage would be --http-address fd:3.
+	// This causes oauth2-proxy to just assume that the third fd passed
+	// to the program is indeed a net.Listener and starts using it
+	// without setting up a new listener.
+	if strings.HasPrefix(strings.ToLower(opts.BindAddress), "fd:") {
+		return s.checkSystemdSocketSupport(opts)
+	}
+
 	networkType := getNetworkScheme(opts.BindAddress)
 	listenAddr := getListenAddress(opts.BindAddress)
 
 	listener, err := net.Listen(networkType, listenAddr)
 	if err != nil {
-		return fmt.Errorf("listen (%s, %s) failed: %v", networkType, listenAddr, err)
+		return fmt.Errorf("listen (%s, %s) failed: %w", networkType, listenAddr, err)
 	}
 	s.listener = listener
 
 	return nil
+}
+
+func parseCipherSuites(names []string) ([]uint16, error) {
+	cipherNameMap := make(map[string]uint16)
+
+	for _, cipherSuite := range tls.CipherSuites() {
+		cipherNameMap[cipherSuite.Name] = cipherSuite.ID
+	}
+	for _, cipherSuite := range tls.InsecureCipherSuites() {
+		cipherNameMap[cipherSuite.Name] = cipherSuite.ID
+	}
+
+	result := make([]uint16, len(names))
+	for i, name := range names {
+		id, present := cipherNameMap[name]
+		if !present {
+			return nil, fmt.Errorf("unknown TLS cipher suite name specified %q", name)
+		}
+		result[i] = id
+	}
+	return result, nil
 }
 
 // setupTLSListener sets the server TLS listener if the HTTPS server is enabled.
@@ -91,7 +135,7 @@ func (s *server) setupTLSListener(opts Opts) error {
 	}
 
 	config := &tls.Config{
-		MinVersion: tls.VersionTLS12,
+		MinVersion: tls.VersionTLS12, // default, override below
 		MaxVersion: tls.VersionTLS13,
 		NextProtos: []string{"http/1.1"},
 	}
@@ -103,6 +147,25 @@ func (s *server) setupTLSListener(opts Opts) error {
 		return fmt.Errorf("could not load certificate: %v", err)
 	}
 	config.Certificates = []tls.Certificate{cert}
+
+	if len(opts.TLS.CipherSuites) > 0 {
+		cipherSuites, err := parseCipherSuites(opts.TLS.CipherSuites)
+		if err != nil {
+			return fmt.Errorf("could not parse cipher suites: %v", err)
+		}
+		config.CipherSuites = cipherSuites
+	}
+
+	if len(opts.TLS.MinVersion) > 0 {
+		switch opts.TLS.MinVersion {
+		case "TLS1.2":
+			config.MinVersion = tls.VersionTLS12
+		case "TLS1.3":
+			config.MinVersion = tls.VersionTLS13
+		default:
+			return errors.New("unknown TLS MinVersion config provided")
+		}
+	}
 
 	listenAddr := getListenAddress(opts.SecureBindAddress)
 
@@ -146,7 +209,7 @@ func (s *server) Start(ctx context.Context) error {
 // When the given context is cancelled the server will be shutdown.
 // If any errors occur, only the first error will be returned.
 func (s *server) startServer(ctx context.Context, listener net.Listener) error {
-	srv := &http.Server{Handler: s.handler}
+	srv := &http.Server{Handler: s.handler, ReadHeaderTimeout: time.Minute}
 	g, groupCtx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {

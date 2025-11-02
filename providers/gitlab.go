@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
@@ -30,26 +31,33 @@ type GitLabProvider struct {
 var _ Provider = (*GitLabProvider)(nil)
 
 // NewGitLabProvider initiates a new GitLabProvider
-func NewGitLabProvider(p *ProviderData) *GitLabProvider {
-	p.ProviderName = gitlabProviderName
+func NewGitLabProvider(p *ProviderData, opts options.Provider) (*GitLabProvider, error) {
+	p.setProviderDefaults(providerDefaults{
+		name: gitlabProviderName,
+	})
+
 	if p.Scope == "" {
 		p.Scope = gitlabDefaultScope
 	}
 
-	oidcProvider := &OIDCProvider{
-		ProviderData: p,
-		SkipNonce:    false,
-	}
+	oidcProvider := NewOIDCProvider(p, opts.OIDCConfig)
 
-	return &GitLabProvider{
+	provider := &GitLabProvider{
 		OIDCProvider:    oidcProvider,
 		oidcRefreshFunc: oidcProvider.RefreshSession,
 	}
+	provider.setAllowedGroups(opts.GitLabConfig.Group)
+
+	if err := provider.setAllowedProjects(opts.GitLabConfig.Projects); err != nil {
+		return nil, fmt.Errorf("could not configure allowed projects: %v", err)
+	}
+
+	return provider, nil
 }
 
-// SetAllowedProjects adds Gitlab projects to the AllowedGroups list
+// setAllowedProjects adds Gitlab projects to the AllowedGroups list
 // and tracks them to do a project API lookup during `EnrichSession`.
-func (p *GitLabProvider) SetAllowedProjects(projects []string) error {
+func (p *GitLabProvider) setAllowedProjects(projects []string) error {
 	for _, project := range projects {
 		gp, err := newGitlabProject(project)
 		if err != nil {
@@ -159,7 +167,7 @@ func (p *GitLabProvider) getUserinfo(ctx context.Context, s *sessions.SessionSta
 	var userinfo gitlabUserinfo
 	err := requests.New(userinfoURL.String()).
 		WithContext(ctx).
-		SetHeader("Authorization", "Bearer "+s.AccessToken).
+		SetHeader("Authorization", tokenTypeBearer+" "+s.AccessToken).
 		Do().
 		UnmarshalInto(&userinfo)
 	if err != nil {
@@ -238,7 +246,7 @@ func (p *GitLabProvider) getProjectInfo(ctx context.Context, s *sessions.Session
 
 	err := requests.New(fmt.Sprintf("%s%s", endpointURL.String(), url.QueryEscape(project))).
 		WithContext(ctx).
-		SetHeader("Authorization", "Bearer "+s.AccessToken).
+		SetHeader("Authorization", tokenTypeBearer+" "+s.AccessToken).
 		Do().
 		UnmarshalInto(&projectInfo)
 	if err != nil {

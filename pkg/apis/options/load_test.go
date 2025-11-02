@@ -3,12 +3,11 @@ package options
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"time"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options/testutil"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/spf13/pflag"
 )
@@ -22,6 +21,7 @@ var _ = Describe("Load", func() {
 			PassHostHeader:  true,
 			ProxyWebSockets: true,
 			FlushInterval:   DefaultUpstreamFlushInterval,
+			Timeout:         DefaultUpstreamTimeout,
 		},
 
 		LegacyHeaders: LegacyHeaders{
@@ -42,19 +42,22 @@ var _ = Describe("Load", func() {
 			UserIDClaim:           "email",
 			OIDCEmailClaim:        "email",
 			OIDCGroupsClaim:       "groups",
+			OIDCAudienceClaims:    []string{"aud"},
 			InsecureOIDCSkipNonce: true,
 		},
 
 		Options: Options{
-			ProxyPrefix:        "/oauth2",
-			PingPath:           "/ping",
-			RealClientIPHeader: "X-Real-IP",
-			ForceHTTPS:         false,
-			Cookie:             cookieDefaults(),
-			Session:            sessionOptionsDefaults(),
-			Templates:          templatesDefaults(),
-			SkipAuthPreflight:  false,
-			Logging:            loggingDefaults(),
+			BearerTokenLoginFallback: true,
+			ProxyPrefix:              "/oauth2",
+			PingPath:                 "/ping",
+			ReadyPath:                "/ready",
+			RealClientIPHeader:       "X-Real-IP",
+			ForceHTTPS:               false,
+			Cookie:                   cookieDefaults(),
+			Session:                  sessionOptionsDefaults(),
+			Templates:                templatesDefaults(),
+			SkipAuthPreflight:        false,
+			Logging:                  loggingDefaults(),
 		},
 	}
 
@@ -116,7 +119,7 @@ var _ = Describe("Load", func() {
 
 				if o.configFile != nil {
 					By("Creating a config file")
-					configFile, err := ioutil.TempFile("", "oauth2-proxy-test-legacy-config-file")
+					configFile, err := os.CreateTemp("", "oauth2-proxy-test-legacy-config-file")
 					Expect(err).ToNot(HaveOccurred())
 					defer configFile.Close()
 
@@ -156,7 +159,7 @@ var _ = Describe("Load", func() {
 				} else {
 					Expect(err).ToNot(HaveOccurred())
 				}
-				Expect(input).To(Equal(o.expectedOutput))
+				Expect(input).To(EqualOpts(o.expectedOutput))
 			},
 			Entry("with just a config file", &testOptionsTableInput{
 				configFile: testOptionsConfigBytes,
@@ -279,7 +282,7 @@ var _ = Describe("Load", func() {
 			Entry("with an invalid config file", &testOptionsTableInput{
 				configFile:     []byte(`slice_option = foo`),
 				flagSet:        func() *pflag.FlagSet { return testOptionsFlagSet },
-				expectedErr:    fmt.Errorf("unable to load config file: While parsing config: (1, 16): never reached"),
+				expectedErr:    fmt.Errorf("unable to load config file: While parsing config: toml: expected 'false'"),
 				expectedOutput: &TestOptions{},
 			}),
 			Entry("with an invalid flagset", &testOptionsTableInput{
@@ -326,7 +329,7 @@ var _ = Describe("Load", func() {
 			Entry("with an unknown option in the config file", &testOptionsTableInput{
 				configFile:  []byte(`unknown_option="foo"`),
 				flagSet:     func() *pflag.FlagSet { return testOptionsFlagSet },
-				expectedErr: fmt.Errorf("error unmarshalling config: 1 error(s) decoding:\n\n* '' has invalid keys: unknown_option"),
+				expectedErr: fmt.Errorf("error unmarshalling config: decoding failed due to the following error(s):\n\n'' has invalid keys: unknown_option"),
 				// Viper will unmarshal before returning the error, so this is the default output
 				expectedOutput: &TestOptions{
 					StringOption: "default",
@@ -384,11 +387,16 @@ sub:
 
 		DescribeTable("LoadYAML",
 			func(in loadYAMLTableInput) {
-				var configFileName string
+				// Set the required environment variables before running the test
+				os.Setenv("TESTUSER", "Alice")
 
+				// Unset the environment variables after running the test
+				defer os.Unsetenv("TESTUSER")
+
+				var configFileName string
 				if in.configFile != nil {
 					By("Creating a config file")
-					configFile, err := ioutil.TempFile("", "oauth2-proxy-test-config-file")
+					configFile, err := os.CreateTemp("", "oauth2-proxy-test-config-file")
 					Expect(err).ToNot(HaveOccurred())
 					defer configFile.Close()
 
@@ -405,13 +413,14 @@ sub:
 				} else {
 					input = &TestOptions{}
 				}
+
 				err := LoadYAML(configFileName, input)
 				if in.expectedErr != nil {
 					Expect(err).To(MatchError(in.expectedErr.Error()))
 				} else {
 					Expect(err).ToNot(HaveOccurred())
 				}
-				Expect(input).To(Equal(in.expectedOutput))
+				Expect(input).To(EqualOpts(in.expectedOutput))
 			},
 			Entry("with a valid input", loadYAMLTableInput{
 				configFile: testOptionsConfigBytesFull,
@@ -462,7 +471,46 @@ sub:
 				configFile:     []byte(`stringSliceOption: "a"`),
 				input:          &TestOptions{},
 				expectedOutput: &TestOptions{},
-				expectedErr:    errors.New("error unmarshalling config: error unmarshaling JSON: while decoding JSON: json: cannot unmarshal string into Go struct field TestOptions.StringSliceOption of type []string"),
+				expectedErr:    errors.New("error unmarshalling config: error unmarshaling JSON: while decoding JSON: json: cannot unmarshal string into Go struct field TestOptions.TestOptionSubStruct.StringSliceOption of type []string"),
+			}),
+			Entry("with a config file containing environment variable references", loadYAMLTableInput{
+				configFile: []byte("stringOption: ${TESTUSER}"),
+				input:      &TestOptions{},
+				expectedOutput: &TestOptions{
+					StringOption: "Alice",
+				},
+			}),
+			Entry("with a config file containing env variable references, with a fallback value", loadYAMLTableInput{
+				configFile: []byte("stringOption: ${TESTUSER2=Bob}"),
+				input:      &TestOptions{},
+				expectedOutput: &TestOptions{
+					StringOption: "Bob",
+				},
+			}),
+			Entry("with a config file containing $ signs for things other than environment variables", loadYAMLTableInput{
+				configFile: []byte(`
+stringOption: /$1
+stringSliceOption:
+- /$1
+- ^/(.*)$
+- api/$1
+- api/(.*)$
+- ^/api/(.*)$
+- /api/$1`),
+				input: &TestOptions{},
+				expectedOutput: &TestOptions{
+					StringOption: "/$1",
+					TestOptionSubStruct: TestOptionSubStruct{
+						StringSliceOption: []string{
+							"/$1",
+							"^/(.*)$",
+							"api/$1",
+							"api/(.*)$",
+							"^/api/(.*)$",
+							"/api/$1",
+						},
+					},
+				},
 			}),
 		)
 	})
@@ -486,7 +534,7 @@ injectResponseHeaders:
 `)
 
 		By("Creating a config file")
-		configFile, err := ioutil.TempFile("", "oauth2-proxy-test-alpha-config-file")
+		configFile, err := os.CreateTemp("", "oauth2-proxy-test-alpha-config-file")
 		Expect(err).ToNot(HaveOccurred())
 		defer configFile.Close()
 

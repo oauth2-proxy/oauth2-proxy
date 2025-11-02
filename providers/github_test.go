@@ -7,12 +7,13 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
 )
 
-func testGitHubProvider(hostname string) *GitHubProvider {
+func testGitHubProvider(hostname string, opts options.GitHubOptions) *GitHubProvider {
 	p := NewGitHubProvider(
 		&ProviderData{
 			ProviderName: "",
@@ -20,7 +21,8 @@ func testGitHubProvider(hostname string) *GitHubProvider {
 			RedeemURL:    &url.URL{},
 			ProfileURL:   &url.URL{},
 			ValidateURL:  &url.URL{},
-			Scope:        ""})
+			Scope:        ""},
+		opts)
 	if hostname != "" {
 		updateURL(p.Data().LoginURL, hostname)
 		updateURL(p.Data().RedeemURL, hostname)
@@ -32,11 +34,16 @@ func testGitHubProvider(hostname string) *GitHubProvider {
 
 func testGitHubBackend(payloads map[string][]string) *httptest.Server {
 	pathToQueryMap := map[string][]string{
-		"/repo/oauth2-proxy/oauth2-proxy":                       {""},
+		"/":                                {""},
+		"/repos/oauth2-proxy/oauth2-proxy": {""},
 		"/repos/oauth2-proxy/oauth2-proxy/collaborators/mbland": {""},
 		"/user":        {""},
 		"/user/emails": {""},
+		"/user/teams":  {"page=1&per_page=100", "page=2&per_page=100", "page=3&per_page=100"},
 		"/user/orgs":   {"page=1&per_page=100", "page=2&per_page=100", "page=3&per_page=100"},
+		// GitHub Enterprise Server API
+		"/api/v3":             {""},
+		"/api/v3/user/emails": {""},
 	}
 
 	return httptest.NewServer(http.HandlerFunc(
@@ -71,13 +78,13 @@ func TestNewGitHubProvider(t *testing.T) {
 	g := NewWithT(t)
 
 	// Test that defaults are set when calling for a new provider with nothing set
-	providerData := NewGitHubProvider(&ProviderData{}).Data()
+	providerData := NewGitHubProvider(&ProviderData{}, options.GitHubOptions{}).Data()
 	g.Expect(providerData.ProviderName).To(Equal("GitHub"))
-	g.Expect(providerData.LoginURL.String()).To(Equal("https://github.com/login/oauth/authorize"))
-	g.Expect(providerData.RedeemURL.String()).To(Equal("https://github.com/login/oauth/access_token"))
+	g.Expect(providerData.LoginURL.String()).To(Equal(githubDefaultLoginURL.String()))
+	g.Expect(providerData.RedeemURL.String()).To(Equal(githubDefaultRedeemURL.String()))
 	g.Expect(providerData.ProfileURL.String()).To(Equal(""))
 	g.Expect(providerData.ValidateURL.String()).To(Equal("https://api.github.com/"))
-	g.Expect(providerData.Scope).To(Equal("user:email"))
+	g.Expect(providerData.Scope).To(Equal("user:email read:org"))
 }
 
 func TestGitHubProviderOverrides(t *testing.T) {
@@ -95,7 +102,8 @@ func TestGitHubProviderOverrides(t *testing.T) {
 				Scheme: "https",
 				Host:   "api.example.com",
 				Path:   "/"},
-			Scope: "profile"})
+			Scope: "profile"},
+		options.GitHubOptions{})
 	assert.NotEqual(t, nil, p)
 	assert.Equal(t, "GitHub", p.Data().ProviderName)
 	assert.Equal(t, "https://example.com/login/oauth/authorize",
@@ -114,7 +122,7 @@ func TestGitHubProvider_getEmail(t *testing.T) {
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testGitHubProvider(bURL.Host)
+	p := testGitHubProvider(bURL.Host, options.GitHubOptions{})
 
 	session := CreateAuthorizedSession()
 	err := p.getEmail(context.Background(), session)
@@ -129,7 +137,7 @@ func TestGitHubProvider_getEmailNotVerified(t *testing.T) {
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testGitHubProvider(bURL.Host)
+	p := testGitHubProvider(bURL.Host, options.GitHubOptions{})
 
 	session := CreateAuthorizedSession()
 	err := p.getEmail(context.Background(), session)
@@ -149,13 +157,144 @@ func TestGitHubProvider_getEmailWithOrg(t *testing.T) {
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testGitHubProvider(bURL.Host)
-	p.Org = "testorg1"
+	p := testGitHubProvider(bURL.Host,
+		options.GitHubOptions{
+			Org: "testorg1",
+		},
+	)
 
 	session := CreateAuthorizedSession()
 	err := p.getEmail(context.Background(), session)
 	assert.NoError(t, err)
 	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
+}
+
+func TestGitHubProvider_checkRestrictionsOrg(t *testing.T) {
+	b := testGitHubBackend(map[string][]string{
+		"/user/emails": {`[ {"email": "john.doe@example", "verified": true, "primary": true} ]`},
+		"/user/orgs": {
+			`[ { "login": "test-org-1" } ]`,
+			`[ { "login": "test-org-2" } ]`,
+			`[ ]`,
+		},
+		"/user/teams": {
+			`[ { "name":"test-team-1", "slug":"test-team-1", "organization": { "login": "test-org-1" } } ]`,
+			`[ { "name":"test-team-2", "slug":"test-team-2", "organization": { "login": "test-org-2" } } ]`,
+			`[ ]`,
+		},
+	})
+	defer b.Close()
+
+	// This test should succeed, because of the valid organization.
+	bURL, _ := url.Parse(b.URL)
+	p := testGitHubProvider(bURL.Host,
+		options.GitHubOptions{
+			Org: "test-org-1",
+		},
+	)
+
+	var err error
+	session := CreateAuthorizedSession()
+	err = p.getOrgAndTeam(context.Background(), session)
+	assert.NoError(t, err)
+	err = p.checkRestrictions(context.Background(), session)
+	assert.NoError(t, err)
+
+	// This part should fail, because user is not part of the organization
+	p = testGitHubProvider(bURL.Host,
+		options.GitHubOptions{
+			Org: "test-org-1-fail",
+		},
+	)
+
+	err = p.checkRestrictions(context.Background(), session)
+	assert.Error(t, err)
+}
+
+func TestGitHubProvider_checkRestrictionsOrgTeam(t *testing.T) {
+	b := testGitHubBackend(map[string][]string{
+		"/user/emails": {`[ {"email": "john.doe@example", "verified": true, "primary": true} ]`},
+		"/user/orgs": {
+			`[ { "login": "test-org-1" } ]`,
+			`[ { "login": "test-org-2" } ]`,
+			`[ ]`,
+		},
+		"/user/teams": {
+			`[ { "name":"test-team-1", "slug":"test-team-1", "organization": { "login": "test-org-1" } } ]`,
+			`[ { "name":"test-team-2", "slug":"test-team-2", "organization": { "login": "test-org-2" } } ]`,
+			`[ ]`,
+		},
+	})
+	defer b.Close()
+
+	// This test should succeed, because of the valid Org and Team combination.
+	bURL, _ := url.Parse(b.URL)
+	p := testGitHubProvider(bURL.Host,
+		options.GitHubOptions{
+			Org:  "test-org-1",
+			Team: "test-team-1",
+		},
+	)
+
+	var err error
+	session := CreateAuthorizedSession()
+	err = p.getOrgAndTeam(context.Background(), session)
+	assert.NoError(t, err)
+	err = p.checkRestrictions(context.Background(), session)
+	assert.NoError(t, err)
+
+	// This part should fail, because user is not part of the organization and the team
+	p = testGitHubProvider(bURL.Host,
+		options.GitHubOptions{
+			Org:  "test-org-1-fail",
+			Team: "test-team-1-fail",
+		},
+	)
+
+	err = p.checkRestrictions(context.Background(), session)
+	assert.Error(t, err)
+}
+
+func TestGitHubProvider_checkRestrictionsTeam(t *testing.T) {
+	b := testGitHubBackend(map[string][]string{
+		"/user/emails": {`[ {"email": "john.doe@example", "verified": true, "primary": true} ]`},
+		"/user/orgs": {
+			`[ { "login": "test-org-1" } ]`,
+			`[ { "login": "test-org-2" } ]`,
+			`[ ]`,
+		},
+		"/user/teams": {
+			`[ { "name":"test-team-1", "slug":"test-team-1", "organization": { "login": "test-org-1" } } ]`,
+			`[ { "name":"test-team-2", "slug":"test-team-2", "organization": { "login": "test-org-2" } } ]`,
+			`[ ]`,
+		},
+	})
+	defer b.Close()
+
+	// This test should succeed, because of the valid org:slug combination.
+	bURL, _ := url.Parse(b.URL)
+	p := testGitHubProvider(bURL.Host,
+		options.GitHubOptions{
+			Team: "test-org-1:test-team-1, test-org-2:test-team-2-fail",
+		},
+	)
+
+	var err error
+	session := CreateAuthorizedSession()
+	err = p.getOrgAndTeam(context.Background(), session)
+	assert.NoError(t, err)
+	err = p.checkRestrictions(context.Background(), session)
+	assert.NoError(t, err)
+
+	// This part should fail, because user is not part of the organization:team combination
+	p = testGitHubProvider(bURL.Host,
+		options.GitHubOptions{
+			Team: "test-org-1-fail:test-team-1-fail, test-org-2-fail:test-team-2-fail",
+		},
+	)
+
+	err = p.checkRestrictions(context.Background(), session)
+	assert.Error(t, err)
 }
 
 func TestGitHubProvider_getEmailWithWriteAccessToPublicRepo(t *testing.T) {
@@ -166,8 +305,12 @@ func TestGitHubProvider_getEmailWithWriteAccessToPublicRepo(t *testing.T) {
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testGitHubProvider(bURL.Host)
-	p.SetRepo("oauth2-proxy/oauth2-proxy", "")
+	p := testGitHubProvider(bURL.Host,
+		options.GitHubOptions{
+			Repo:  "oauth2-proxy/oauth2-proxy",
+			Token: "token",
+		},
+	)
 
 	session := CreateAuthorizedSession()
 	err := p.getEmail(context.Background(), session)
@@ -183,8 +326,12 @@ func TestGitHubProvider_getEmailWithReadOnlyAccessToPrivateRepo(t *testing.T) {
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testGitHubProvider(bURL.Host)
-	p.SetRepo("oauth2-proxy/oauth2-proxy", "")
+	p := testGitHubProvider(bURL.Host,
+		options.GitHubOptions{
+			Repo:  "oauth2-proxy/oauth2-proxy",
+			Token: "token",
+		},
+	)
 
 	session := CreateAuthorizedSession()
 	err := p.getEmail(context.Background(), session)
@@ -200,8 +347,12 @@ func TestGitHubProvider_getEmailWithWriteAccessToPrivateRepo(t *testing.T) {
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testGitHubProvider(bURL.Host)
-	p.SetRepo("oauth2-proxy/oauth2-proxy", "")
+	p := testGitHubProvider(bURL.Host,
+		options.GitHubOptions{
+			Repo:  "oauth2-proxy/oauth2-proxy",
+			Token: "token",
+		},
+	)
 
 	session := CreateAuthorizedSession()
 	err := p.getEmail(context.Background(), session)
@@ -209,19 +360,22 @@ func TestGitHubProvider_getEmailWithWriteAccessToPrivateRepo(t *testing.T) {
 	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
 }
 
-func TestGitHubProvider_getEmailWithNoAccessToPrivateRepo(t *testing.T) {
+func TestGitHubProvider_checkRestrictionsWithNoAccessToPrivateRepo(t *testing.T) {
 	b := testGitHubBackend(map[string][]string{
-		"/repo/oauth2-proxy/oauth2-proxy": {`{}`},
+		"/repos/oauth2-proxy/oauth2-proxy": {`{}`},
 	})
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testGitHubProvider(bURL.Host)
-	p.SetRepo("oauth2-proxy/oauth2-proxy", "")
+	p := testGitHubProvider(bURL.Host,
+		options.GitHubOptions{
+			Repo: "oauth2-proxy/oauth2-proxy",
+		},
+	)
 
 	session := CreateAuthorizedSession()
-	err := p.getEmail(context.Background(), session)
-	assert.NoError(t, err)
+	err := p.checkRestrictions(context.Background(), session)
+	assert.Error(t, err)
 	assert.Empty(t, session.Email)
 }
 
@@ -232,8 +386,12 @@ func TestGitHubProvider_getEmailWithToken(t *testing.T) {
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testGitHubProvider(bURL.Host)
-	p.SetRepo("oauth2-proxy/oauth2-proxy", "token")
+	p := testGitHubProvider(bURL.Host,
+		options.GitHubOptions{
+			Repo:  "oauth2-proxy/oauth2-proxy",
+			Token: "token",
+		},
+	)
 
 	session := CreateAuthorizedSession()
 	err := p.getEmail(context.Background(), session)
@@ -248,7 +406,7 @@ func TestGitHubProvider_getEmailFailedRequest(t *testing.T) {
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testGitHubProvider(bURL.Host)
+	p := testGitHubProvider(bURL.Host, options.GitHubOptions{})
 
 	// We'll trigger a request failure by using an unexpected access
 	// token. Alternatively, we could allow the parsing of the payload as
@@ -266,7 +424,7 @@ func TestGitHubProvider_getEmailNotPresentInPayload(t *testing.T) {
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testGitHubProvider(bURL.Host)
+	p := testGitHubProvider(bURL.Host, options.GitHubOptions{})
 
 	session := CreateAuthorizedSession()
 	err := p.getEmail(context.Background(), session)
@@ -281,7 +439,7 @@ func TestGitHubProvider_getUser(t *testing.T) {
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testGitHubProvider(bURL.Host)
+	p := testGitHubProvider(bURL.Host, options.GitHubOptions{})
 
 	session := CreateAuthorizedSession()
 	err := p.getUser(context.Background(), session)
@@ -297,8 +455,12 @@ func TestGitHubProvider_getUserWithRepoAndToken(t *testing.T) {
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testGitHubProvider(bURL.Host)
-	p.SetRepo("oauth2-proxy/oauth2-proxy", "token")
+	p := testGitHubProvider(bURL.Host,
+		options.GitHubOptions{
+			Repo:  "oauth2-proxy/oauth2-proxy",
+			Token: "token",
+		},
+	)
 
 	session := CreateAuthorizedSession()
 	err := p.getUser(context.Background(), session)
@@ -311,8 +473,12 @@ func TestGitHubProvider_getUserWithRepoAndTokenWithoutPushAccess(t *testing.T) {
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testGitHubProvider(bURL.Host)
-	p.SetRepo("oauth2-proxy/oauth2-proxy", "token")
+	p := testGitHubProvider(bURL.Host,
+		options.GitHubOptions{
+			Repo:  "oauth2-proxy/oauth2-proxy",
+			Token: "token",
+		},
+	)
 
 	session := CreateAuthorizedSession()
 	err := p.getUser(context.Background(), session)
@@ -328,8 +494,11 @@ func TestGitHubProvider_getEmailWithUsername(t *testing.T) {
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testGitHubProvider(bURL.Host)
-	p.SetUsers([]string{"mbland", "octocat"})
+	p := testGitHubProvider(bURL.Host,
+		options.GitHubOptions{
+			Users: []string{"mbland", "octocat"},
+		},
+	)
 
 	session := CreateAuthorizedSession()
 	err := p.getEmail(context.Background(), session)
@@ -337,7 +506,7 @@ func TestGitHubProvider_getEmailWithUsername(t *testing.T) {
 	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
 }
 
-func TestGitHubProvider_getEmailWithNotAllowedUsername(t *testing.T) {
+func TestGitHubProvider_checkRestrictionsWithNotAllowedUsername(t *testing.T) {
 	b := testGitHubBackend(map[string][]string{
 		"/user":        {`{"email": "michael.bland@gsa.gov", "login": "mbland"}`},
 		"/user/emails": {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
@@ -345,11 +514,14 @@ func TestGitHubProvider_getEmailWithNotAllowedUsername(t *testing.T) {
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testGitHubProvider(bURL.Host)
-	p.SetUsers([]string{"octocat"})
+	p := testGitHubProvider(bURL.Host,
+		options.GitHubOptions{
+			Users: []string{"octocat"},
+		},
+	)
 
 	session := CreateAuthorizedSession()
-	err := p.getEmail(context.Background(), session)
+	err := p.checkRestrictions(context.Background(), session)
 	assert.Error(t, err)
 	assert.Empty(t, session.Email)
 }
@@ -366,9 +538,12 @@ func TestGitHubProvider_getEmailWithUsernameAndNotBelongToOrg(t *testing.T) {
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testGitHubProvider(bURL.Host)
-	p.SetOrgTeam("not_belong_to", "")
-	p.SetUsers([]string{"mbland"})
+	p := testGitHubProvider(bURL.Host,
+		options.GitHubOptions{
+			Org:   "not_belog_to",
+			Users: []string{"mbland"},
+		},
+	)
 
 	session := CreateAuthorizedSession()
 	err := p.getEmail(context.Background(), session)
@@ -385,12 +560,63 @@ func TestGitHubProvider_getEmailWithUsernameAndNoAccessToPrivateRepo(t *testing.
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testGitHubProvider(bURL.Host)
-	p.SetRepo("oauth2-proxy/oauth2-proxy", "")
-	p.SetUsers([]string{"mbland"})
+	p := testGitHubProvider(bURL.Host,
+		options.GitHubOptions{
+			Repo:  "oauth2-proxy/oauth2-proxy",
+			Token: "token",
+			Users: []string{"mbland"},
+		},
+	)
 
 	session := CreateAuthorizedSession()
 	err := p.getEmail(context.Background(), session)
 	assert.NoError(t, err)
 	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
+}
+
+func TestGitHubProvider_ValidateSessionWithBaseUrl(t *testing.T) {
+	b := testGitHubBackend(map[string][]string{
+		"/": {`[]`},
+	})
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testGitHubProvider(bURL.Host, options.GitHubOptions{})
+
+	session := CreateAuthorizedSession()
+
+	valid := p.ValidateSession(context.Background(), session)
+	assert.True(t, valid)
+}
+
+func TestGitHubProvider_ValidateSessionWithEnterpriseBaseUrl(t *testing.T) {
+	b := testGitHubBackend(map[string][]string{
+		"/api/v3": {`[]`},
+	})
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testGitHubProvider(bURL.Host, options.GitHubOptions{})
+	p.ValidateURL.Path = "/api/v3"
+
+	session := CreateAuthorizedSession()
+
+	valid := p.ValidateSession(context.Background(), session)
+	assert.True(t, valid)
+}
+
+func TestGitHubProvider_ValidateSessionWithUserEmails(t *testing.T) {
+	b := testGitHubBackend(map[string][]string{
+		"/user/emails": {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
+	})
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testGitHubProvider(bURL.Host, options.GitHubOptions{})
+	p.ValidateURL.Path = "/user/emails"
+
+	session := CreateAuthorizedSession()
+
+	valid := p.ValidateSession(context.Background(), session)
+	assert.True(t, valid)
 }

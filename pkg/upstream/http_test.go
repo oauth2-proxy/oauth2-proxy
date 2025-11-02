@@ -3,7 +3,6 @@ package upstream
 import (
 	"bytes"
 	"crypto"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -16,16 +15,14 @@ import (
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/middleware"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"golang.org/x/net/websocket"
 )
 
 var _ = Describe("HTTP Upstream Suite", func() {
-
-	const flushInterval5s = options.Duration(5 * time.Second)
-	const flushInterval1s = options.Duration(1 * time.Second)
+	defaultFlushInterval := options.Duration(options.DefaultUpstreamFlushInterval)
+	defaultTimeout := options.Duration(options.DefaultUpstreamTimeout)
 	truth := true
 	falsum := false
 
@@ -62,12 +59,15 @@ var _ = Describe("HTTP Upstream Suite", func() {
 
 			flush := options.Duration(1 * time.Second)
 
+			timeout := options.Duration(options.DefaultUpstreamTimeout)
+
 			upstream := options.Upstream{
 				ID:                    in.id,
 				PassHostHeader:        &in.passUpstreamHostHeader,
 				ProxyWebSockets:       &falsum,
 				InsecureSkipTLSVerify: false,
 				FlushInterval:         &flush,
+				Timeout:               &timeout,
 			}
 
 			Expect(in.serverAddr).ToNot(BeNil())
@@ -311,6 +311,29 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			},
 			expectedUpstream: "passExistingHostHeader",
 		}),
+		Entry("request using UNIX socket upstream", &httpUpstreamTableInput{
+			id:           "unix-upstream",
+			serverAddr:   &unixServerAddr,
+			target:       "http://example.localhost/file",
+			method:       "GET",
+			body:         []byte{},
+			errorHandler: nil,
+			expectedResponse: testHTTPResponse{
+				code: 200,
+				header: map[string][]string{
+					contentType: {applicationJSON},
+				},
+				request: testHTTPRequest{
+					Method:     "GET",
+					URL:        "http://example.localhost/file",
+					Header:     map[string][]string{},
+					Body:       []byte{},
+					Host:       "example.localhost",
+					RequestURI: "http://example.localhost/file",
+				},
+			},
+			expectedUpstream: "unix-upstream",
+		}),
 	)
 
 	It("ServeHTTP, when not passing a host header", func() {
@@ -318,13 +341,13 @@ var _ = Describe("HTTP Upstream Suite", func() {
 		req = middlewareapi.AddRequestScope(req, &middlewareapi.RequestScope{})
 		rw := httptest.NewRecorder()
 
-		flush := options.Duration(1 * time.Second)
 		upstream := options.Upstream{
 			ID:                    "noPassHost",
 			PassHostHeader:        &falsum,
 			ProxyWebSockets:       &falsum,
 			InsecureSkipTLSVerify: false,
-			FlushInterval:         &flush,
+			FlushInterval:         &defaultFlushInterval,
+			Timeout:               &defaultTimeout,
 		}
 
 		u, err := url.Parse(serverAddr)
@@ -349,11 +372,13 @@ var _ = Describe("HTTP Upstream Suite", func() {
 	})
 
 	type newUpstreamTableInput struct {
-		proxyWebSockets bool
-		flushInterval   options.Duration
-		skipVerify      bool
-		sigData         *options.SignatureData
-		errorHandler    func(http.ResponseWriter, *http.Request, error)
+		proxyWebSockets   bool
+		flushInterval     options.Duration
+		skipVerify        bool
+		sigData           *options.SignatureData
+		errorHandler      func(http.ResponseWriter, *http.Request, error)
+		timeout           options.Duration
+		disableKeepAlives bool
 	}
 
 	DescribeTable("newHTTPUpstreamProxy",
@@ -366,6 +391,8 @@ var _ = Describe("HTTP Upstream Suite", func() {
 				FlushInterval:         &in.flushInterval,
 				InsecureSkipTLSVerify: in.skipVerify,
 				ProxyWebSockets:       &in.proxyWebSockets,
+				Timeout:               &in.timeout,
+				DisableKeepAlives:     in.disableKeepAlives,
 			}
 
 			handler := newHTTPUpstreamProxy(upstream, u, in.sigData, in.errorHandler)
@@ -380,49 +407,75 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			proxy, ok := upstreamProxy.handler.(*httputil.ReverseProxy)
 			Expect(ok).To(BeTrue())
 			Expect(proxy.FlushInterval).To(Equal(in.flushInterval.Duration()))
+			transport, ok := proxy.Transport.(*http.Transport)
+			Expect(ok).To(BeTrue())
+			Expect(transport.ResponseHeaderTimeout).To(Equal(in.timeout.Duration()))
 			Expect(proxy.ErrorHandler != nil).To(Equal(in.errorHandler != nil))
 			if in.skipVerify {
-				Expect(proxy.Transport).To(Equal(&http.Transport{
-					TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-				}))
+				Expect(transport.TLSClientConfig.InsecureSkipVerify).To(Equal(true))
+			}
+			if in.disableKeepAlives {
+				Expect(transport.DisableKeepAlives).To(Equal(true))
 			}
 		},
 		Entry("with proxy websockets", &newUpstreamTableInput{
 			proxyWebSockets: true,
-			flushInterval:   flushInterval1s,
+			flushInterval:   defaultFlushInterval,
 			skipVerify:      false,
 			sigData:         nil,
 			errorHandler:    nil,
+			timeout:         defaultTimeout,
 		}),
 		Entry("with a non standard flush interval", &newUpstreamTableInput{
 			proxyWebSockets: false,
-			flushInterval:   flushInterval5s,
+			flushInterval:   options.Duration(5 * time.Second),
 			skipVerify:      false,
 			sigData:         nil,
 			errorHandler:    nil,
+			timeout:         defaultTimeout,
 		}),
 		Entry("with a InsecureSkipTLSVerify", &newUpstreamTableInput{
 			proxyWebSockets: false,
-			flushInterval:   flushInterval1s,
+			flushInterval:   defaultFlushInterval,
 			skipVerify:      true,
 			sigData:         nil,
 			errorHandler:    nil,
+			timeout:         defaultTimeout,
 		}),
 		Entry("with a SignatureData", &newUpstreamTableInput{
 			proxyWebSockets: false,
-			flushInterval:   flushInterval1s,
+			flushInterval:   defaultFlushInterval,
 			skipVerify:      false,
 			sigData:         &options.SignatureData{Hash: crypto.SHA256, Key: "secret"},
 			errorHandler:    nil,
+			timeout:         defaultTimeout,
 		}),
 		Entry("with an error handler", &newUpstreamTableInput{
 			proxyWebSockets: false,
-			flushInterval:   flushInterval1s,
+			flushInterval:   defaultFlushInterval,
 			skipVerify:      false,
 			sigData:         nil,
 			errorHandler: func(rw http.ResponseWriter, req *http.Request, arg3 error) {
 				rw.WriteHeader(502)
 			},
+			timeout: defaultTimeout,
+		}),
+		Entry("with a non-default timeout", &newUpstreamTableInput{
+			proxyWebSockets: false,
+			flushInterval:   defaultFlushInterval,
+			skipVerify:      false,
+			sigData:         nil,
+			errorHandler:    nil,
+			timeout:         options.Duration(5 * time.Second),
+		}),
+		Entry("with a DisableKeepAlives", &newUpstreamTableInput{
+			proxyWebSockets:   false,
+			flushInterval:     defaultFlushInterval,
+			skipVerify:        false,
+			sigData:           nil,
+			errorHandler:      nil,
+			timeout:           defaultTimeout,
+			disableKeepAlives: true,
 		}),
 	)
 
@@ -431,12 +484,14 @@ var _ = Describe("HTTP Upstream Suite", func() {
 
 		BeforeEach(func() {
 			flush := options.Duration(1 * time.Second)
+			timeout := options.Duration(options.DefaultUpstreamTimeout)
 			upstream := options.Upstream{
 				ID:                    "websocketProxy",
 				PassHostHeader:        &truth,
 				ProxyWebSockets:       &truth,
 				InsecureSkipTLSVerify: false,
 				FlushInterval:         &flush,
+				Timeout:               &timeout,
 			}
 
 			u, err := url.Parse(serverAddr)

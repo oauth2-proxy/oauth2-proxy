@@ -3,14 +3,13 @@ package pagewriter
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -50,16 +49,16 @@ var _ = Describe("Writer", func() {
 					AppError:    "Some debug error",
 				})
 
-				body, err := ioutil.ReadAll(recorder.Result().Body)
+				body, err := io.ReadAll(recorder.Result().Body)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(body)).To(HavePrefix("\n<!DOCTYPE html>"))
 			})
 
 			It("Writes the default sign in template", func() {
 				recorder := httptest.NewRecorder()
-				writer.WriteSignInPage(recorder, request, "/redirect")
+				writer.WriteSignInPage(recorder, request, "/redirect", http.StatusOK)
 
-				body, err := ioutil.ReadAll(recorder.Result().Body)
+				body, err := io.ReadAll(recorder.Result().Body)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(body)).To(HavePrefix("\n<!DOCTYPE html>"))
 			})
@@ -70,14 +69,14 @@ var _ = Describe("Writer", func() {
 
 			BeforeEach(func() {
 				var err error
-				customDir, err = ioutil.TempDir("", "oauth2-proxy-pagewriter-test")
+				customDir, err = os.MkdirTemp("", "oauth2-proxy-pagewriter-test")
 				Expect(err).ToNot(HaveOccurred())
 
 				templateHTML := `Custom Template`
 				signInFile := filepath.Join(customDir, signInTemplateName)
-				Expect(ioutil.WriteFile(signInFile, []byte(templateHTML), 0600)).To(Succeed())
+				Expect(os.WriteFile(signInFile, []byte(templateHTML), 0600)).To(Succeed())
 				errorFile := filepath.Join(customDir, errorTemplateName)
-				Expect(ioutil.WriteFile(errorFile, []byte(templateHTML), 0600)).To(Succeed())
+				Expect(os.WriteFile(errorFile, []byte(templateHTML), 0600)).To(Succeed())
 
 				opts.TemplatesPath = customDir
 
@@ -97,16 +96,16 @@ var _ = Describe("Writer", func() {
 					AppError:    "Some debug error",
 				})
 
-				body, err := ioutil.ReadAll(recorder.Result().Body)
+				body, err := io.ReadAll(recorder.Result().Body)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(body)).To(Equal("Custom Template"))
 			})
 
 			It("Writes the custom sign in template", func() {
 				recorder := httptest.NewRecorder()
-				writer.WriteSignInPage(recorder, request, "/redirect")
+				writer.WriteSignInPage(recorder, request, "/redirect", http.StatusOK)
 
-				body, err := ioutil.ReadAll(recorder.Result().Body)
+				body, err := io.ReadAll(recorder.Result().Body)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(body)).To(Equal("Custom Template"))
 			})
@@ -117,12 +116,12 @@ var _ = Describe("Writer", func() {
 
 			BeforeEach(func() {
 				var err error
-				customDir, err = ioutil.TempDir("", "oauth2-proxy-pagewriter-test")
+				customDir, err = os.MkdirTemp("", "oauth2-proxy-pagewriter-test")
 				Expect(err).ToNot(HaveOccurred())
 
 				templateHTML := `{{ Custom Broken Template`
 				signInFile := filepath.Join(customDir, signInTemplateName)
-				Expect(ioutil.WriteFile(signInFile, []byte(templateHTML), 0600)).To(Succeed())
+				Expect(os.WriteFile(signInFile, []byte(templateHTML), 0600)).To(Succeed())
 
 				opts.TemplatesPath = customDir
 			})
@@ -151,11 +150,11 @@ var _ = Describe("Writer", func() {
 				rw := httptest.NewRecorder()
 				req := httptest.NewRequest("", "/sign-in", nil)
 				redirectURL := "<redirectURL>"
-				in.writer.WriteSignInPage(rw, req, redirectURL)
+				in.writer.WriteSignInPage(rw, req, redirectURL, http.StatusOK)
 
 				Expect(rw.Result().StatusCode).To(Equal(in.expectedStatus))
 
-				body, err := ioutil.ReadAll(rw.Result().Body)
+				body, err := io.ReadAll(rw.Result().Body)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(body)).To(Equal(in.expectedBody))
 			},
@@ -166,9 +165,9 @@ var _ = Describe("Writer", func() {
 			}),
 			Entry("With an override function", writerFuncsTableInput{
 				writer: &WriterFuncs{
-					SignInPageFunc: func(rw http.ResponseWriter, req *http.Request, redirectURL string) {
+					SignInPageFunc: func(rw http.ResponseWriter, req *http.Request, redirectURL string, statusCode int) {
 						rw.WriteHeader(202)
-						rw.Write([]byte(fmt.Sprintf("%s %s", req.URL.Path, redirectURL)))
+						fmt.Fprintf(rw, "%s %s", req.URL.Path, redirectURL)
 					},
 				},
 				expectedStatus: 202,
@@ -188,7 +187,7 @@ var _ = Describe("Writer", func() {
 
 				Expect(rw.Result().StatusCode).To(Equal(in.expectedStatus))
 
-				body, err := ioutil.ReadAll(rw.Result().Body)
+				body, err := io.ReadAll(rw.Result().Body)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(body)).To(Equal(in.expectedBody))
 			},
@@ -201,7 +200,7 @@ var _ = Describe("Writer", func() {
 				writer: &WriterFuncs{
 					ErrorPageFunc: func(rw http.ResponseWriter, opts ErrorPageOpts) {
 						rw.WriteHeader(503)
-						rw.Write([]byte(fmt.Sprintf("%s %s", opts.RequestID, opts.RedirectURL)))
+						fmt.Fprintf(rw, "%s %s", opts.RequestID, opts.RedirectURL)
 					},
 				},
 				expectedStatus: 503,
@@ -218,7 +217,7 @@ var _ = Describe("Writer", func() {
 
 				Expect(rw.Result().StatusCode).To(Equal(in.expectedStatus))
 
-				body, err := ioutil.ReadAll(rw.Result().Body)
+				body, err := io.ReadAll(rw.Result().Body)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(body)).To(Equal(in.expectedBody))
 			},
@@ -231,7 +230,7 @@ var _ = Describe("Writer", func() {
 				writer: &WriterFuncs{
 					ProxyErrorFunc: func(rw http.ResponseWriter, req *http.Request, proxyErr error) {
 						rw.WriteHeader(503)
-						rw.Write([]byte(fmt.Sprintf("%s %v", req.URL.Path, proxyErr)))
+						fmt.Fprintf(rw, "%s %v", req.URL.Path, proxyErr)
 					},
 				},
 				expectedStatus: 503,
@@ -257,7 +256,7 @@ var _ = Describe("Writer", func() {
 
 				Expect(rw.Result().StatusCode).To(Equal(in.expectedStatus))
 
-				body, err := ioutil.ReadAll(rw.Result().Body)
+				body, err := io.ReadAll(rw.Result().Body)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(body)).To(Equal(in.expectedBody))
 			},

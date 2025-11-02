@@ -6,8 +6,7 @@ import (
 	"github.com/Bose/minisentinel"
 	"github.com/alicebob/miniredis/v2"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -192,8 +191,10 @@ var _ = Describe("Sessions", func() {
 		invalidPasswordDelMsg     = "unable to delete the redis initialization key: WRONGPASS invalid username-password pair"
 		unreachableRedisSetMsg    = "unable to set a redis initialization key: dial tcp 127.0.0.1:65535: connect: connection refused"
 		unreachableRedisDelMsg    = "unable to delete the redis initialization key: dial tcp 127.0.0.1:65535: connect: connection refused"
-		unreachableSentinelSetMsg = "unable to set a redis initialization key: redis: all sentinels are unreachable"
-		unrechableSentinelDelMsg  = "unable to delete the redis initialization key: redis: all sentinels are unreachable"
+		unreachableSentinelSetMsg = "unable to set a redis initialization key: redis: all sentinels specified in configuration are unreachable: redis: nil"
+		unrechableSentinelDelMsg  = "unable to delete the redis initialization key: redis: all sentinels specified in configuration are unreachable: redis: nil"
+		refusedSentinelSetMsg     = "unable to set a redis initialization key: redis: all sentinels specified in configuration are unreachable: dial tcp 127.0.0.1:65535: connect: connection refused"
+		refusedSentinelDelMsg     = "unable to delete the redis initialization key: redis: all sentinels specified in configuration are unreachable: dial tcp 127.0.0.1:65535: connect: connection refused"
 	)
 
 	type redisStoreTableInput struct {
@@ -390,7 +391,7 @@ var _ = Describe("Sessions", func() {
 					},
 				},
 			},
-			errStrings: []string{unreachableSentinelSetMsg, unrechableSentinelDelMsg},
+			errStrings: []string{refusedSentinelSetMsg, refusedSentinelDelMsg},
 		}),
 		Entry("sentinel and cluster both enabled fails", &redisStoreTableInput{
 			opts: &options.Options{

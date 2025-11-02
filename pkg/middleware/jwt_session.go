@@ -13,12 +13,13 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
-const jwtRegexFormat = `^ey[IJ][a-zA-Z0-9_-]*\.ey[IJ][a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]+$`
+const jwtRegexFormat = `^ey[a-zA-Z0-9_-]*\.ey[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]+$`
 
-func NewJwtSessionLoader(sessionLoaders []middlewareapi.TokenToSessionFunc) alice.Constructor {
+func NewJwtSessionLoader(sessionLoaders []middlewareapi.TokenToSessionFunc, bearerTokenLoginFallback bool) alice.Constructor {
 	js := &jwtSessionLoader{
-		jwtRegex:       regexp.MustCompile(jwtRegexFormat),
-		sessionLoaders: sessionLoaders,
+		jwtRegex:        regexp.MustCompile(jwtRegexFormat),
+		sessionLoaders:  sessionLoaders,
+		denyInvalidJWTs: !bearerTokenLoginFallback,
 	}
 	return js.loadSession
 }
@@ -26,14 +27,16 @@ func NewJwtSessionLoader(sessionLoaders []middlewareapi.TokenToSessionFunc) alic
 // jwtSessionLoader is responsible for loading sessions from JWTs in
 // Authorization headers.
 type jwtSessionLoader struct {
-	jwtRegex       *regexp.Regexp
-	sessionLoaders []middlewareapi.TokenToSessionFunc
+	jwtRegex        *regexp.Regexp
+	sessionLoaders  []middlewareapi.TokenToSessionFunc
+	denyInvalidJWTs bool
 }
 
 // loadSession attempts to load a session from a JWT stored in an Authorization
 // header within the request.
 // If no authorization header is found, or the header is invalid, no session
 // will be loaded and the request will be passed to the next handler.
+// Or if the JWT is invalid and denyInvalidJWTs, return 403 now.
 // If a session was loaded by a previous handler, it will not be replaced.
 func (j *jwtSessionLoader) loadSession(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
@@ -49,6 +52,10 @@ func (j *jwtSessionLoader) loadSession(next http.Handler) http.Handler {
 		session, err := j.getJwtSession(req)
 		if err != nil {
 			logger.Errorf("Error retrieving session from token in Authorization header: %v", err)
+			if j.denyInvalidJWTs {
+				http.Error(rw, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+				return
+			}
 		}
 
 		// Add the session to the scope if it was found
@@ -58,7 +65,7 @@ func (j *jwtSessionLoader) loadSession(next http.Handler) http.Handler {
 }
 
 // getJwtSession loads a session based on a JWT token in the authorization header.
-// (see the config options skip-jwt-bearer-tokens and extra-jwt-issuers)
+// (see the config options skip-jwt-bearer-tokens, extra-jwt-issuers, and bearer-token-login-fallback)
 func (j *jwtSessionLoader) getJwtSession(req *http.Request) (*sessionsapi.SessionState, error) {
 	auth := req.Header.Get("Authorization")
 	if auth == "" {
@@ -114,9 +121,8 @@ func (j *jwtSessionLoader) getBasicToken(token string) (string, error) {
 
 	// check user, user+password, or just password for a token
 	if j.jwtRegex.MatchString(user) {
-		// Support blank passwords or magic `x-oauth-basic` passwords - nothing else
-		/* #nosec G101 */
-		if password == "" || password == "x-oauth-basic" {
+		if password == "x-oauth-basic" || // #nosec G101 -- Support blank passwords or magic `x-oauth-basic` passwords, nothing else
+			password == "" {
 			return user, nil
 		}
 	} else if j.jwtRegex.MatchString(password) {

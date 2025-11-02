@@ -5,13 +5,11 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"time"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/clock"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
-	"github.com/pierrec/lz4"
-	"github.com/vmihailenco/msgpack/v4"
+	"github.com/pierrec/lz4/v4"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 // SessionState is used to store information about the currently authenticated user session
@@ -31,8 +29,15 @@ type SessionState struct {
 	PreferredUsername string   `msgpack:"pu,omitempty"`
 
 	// Internal helpers, not serialized
-	Clock clock.Clock `msgpack:"-"`
-	Lock  Lock        `msgpack:"-"`
+	Clock func() time.Time `msgpack:"-"` // override for time.Now, for testing
+	Lock  Lock             `msgpack:"-"`
+}
+
+func (s *SessionState) now() time.Time {
+	if s.Clock != nil {
+		return s.Clock()
+	}
+	return time.Now()
 }
 
 func (s *SessionState) ObtainLock(ctx context.Context, expiration time.Duration) error {
@@ -65,7 +70,7 @@ func (s *SessionState) PeekLock(ctx context.Context) (bool, error) {
 
 // CreatedAtNow sets a SessionState's CreatedAt to now
 func (s *SessionState) CreatedAtNow() {
-	now := s.Clock.Now()
+	now := s.now()
 	s.CreatedAt = &now
 }
 
@@ -86,7 +91,7 @@ func (s *SessionState) ExpiresIn(d time.Duration) {
 
 // IsExpired checks whether the session has expired
 func (s *SessionState) IsExpired() bool {
-	if s.ExpiresOn != nil && !s.ExpiresOn.IsZero() && s.ExpiresOn.Before(s.Clock.Now()) {
+	if s.ExpiresOn != nil && !s.ExpiresOn.IsZero() && s.ExpiresOn.Before(s.now()) {
 		return true
 	}
 	return false
@@ -95,7 +100,7 @@ func (s *SessionState) IsExpired() bool {
 // Age returns the age of a session
 func (s *SessionState) Age() time.Duration {
 	if s.CreatedAt != nil && !s.CreatedAt.IsZero() {
-		return s.Clock.Now().Truncate(time.Second).Sub(*s.CreatedAt)
+		return s.now().Truncate(time.Second).Sub(*s.CreatedAt)
 	}
 	return 0
 }
@@ -209,10 +214,10 @@ func DecodeSessionState(data []byte, c encryption.Cipher, compressed bool) (*Ses
 func lz4Compress(payload []byte) ([]byte, error) {
 	buf := new(bytes.Buffer)
 	zw := lz4.NewWriter(nil)
-	zw.Header = lz4.Header{
-		BlockMaxSize:     65536,
-		CompressionLevel: 0,
-	}
+	zw.Apply(
+		lz4.BlockSizeOption(lz4.BlockSize(65536)),
+		lz4.CompressionLevelOption(lz4.Fast),
+	)
 	zw.Reset(buf)
 
 	reader := bytes.NewReader(payload)
@@ -225,7 +230,7 @@ func lz4Compress(payload []byte) ([]byte, error) {
 		return nil, fmt.Errorf("error closing lz4 writer: %w", err)
 	}
 
-	compressed, err := ioutil.ReadAll(buf)
+	compressed, err := io.ReadAll(buf)
 	if err != nil {
 		return nil, fmt.Errorf("error reading lz4 buffer: %w", err)
 	}
@@ -244,7 +249,7 @@ func lz4Decompress(compressed []byte) ([]byte, error) {
 		return nil, fmt.Errorf("error copying lz4 stream to buffer: %w", err)
 	}
 
-	payload, err := ioutil.ReadAll(buf)
+	payload, err := io.ReadAll(buf)
 	if err != nil {
 		return nil, fmt.Errorf("error reading lz4 buffer: %w", err)
 	}

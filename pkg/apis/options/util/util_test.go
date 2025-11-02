@@ -1,12 +1,11 @@
 package util
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -20,9 +19,9 @@ var _ = Describe("GetSecretValue", func() {
 		os.Setenv(secretEnvKey, secretEnvValue)
 
 		var err error
-		fileDir, err = ioutil.TempDir("", "oauth2-proxy-util-get-secret-value")
+		fileDir, err = os.MkdirTemp("", "oauth2-proxy-util-get-secret-value")
 		Expect(err).ToNot(HaveOccurred())
-		Expect(ioutil.WriteFile(path.Join(fileDir, "secret-file"), secretFileValue, 0600)).To(Succeed())
+		Expect(os.WriteFile(path.Join(fileDir, "secret-file"), secretFileValue, 0600)).To(Succeed())
 	})
 
 	AfterEach(func() {

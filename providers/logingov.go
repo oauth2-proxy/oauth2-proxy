@@ -5,15 +5,18 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"errors"
 	"fmt"
 	"math/big"
 	"net/url"
+	"os"
 	"time"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/go-jose/go-jose/v3"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
-	"gopkg.in/square/go-jose.v2"
 )
 
 // LoginGovProvider represents an OIDC based Identity Provider
@@ -35,8 +38,8 @@ var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 func randSeq(n int) string {
 	b := make([]rune, n)
 	for i := range b {
-		max := big.NewInt(int64(len(letters)))
-		bigN, err := rand.Int(rand.Reader, max)
+		maxInt := big.NewInt(int64(len(letters)))
+		bigN, err := rand.Int(rand.Reader, maxInt)
 		if err != nil {
 			// This should never happen
 			panic(err)
@@ -78,19 +81,59 @@ var (
 )
 
 // NewLoginGovProvider initiates a new LoginGovProvider
-func NewLoginGovProvider(p *ProviderData) *LoginGovProvider {
+func NewLoginGovProvider(p *ProviderData, opts options.LoginGovOptions) (*LoginGovProvider, error) {
 	p.setProviderDefaults(providerDefaults{
 		name:        loginGovProviderName,
 		loginURL:    loginGovDefaultLoginURL,
 		redeemURL:   loginGovDefaultRedeemURL,
 		profileURL:  loginGovDefaultProfileURL,
-		validateURL: nil,
+		validateURL: loginGovDefaultProfileURL,
 		scope:       loginGovDefaultScope,
 	})
-	return &LoginGovProvider{
+	provider := &LoginGovProvider{
 		ProviderData: p,
 		Nonce:        randSeq(32),
 	}
+
+	if err := provider.configure(opts); err != nil {
+		return nil, fmt.Errorf("could not configure login.gov provider: %v", err)
+	}
+	return provider, nil
+}
+
+func (p *LoginGovProvider) configure(opts options.LoginGovOptions) error {
+	pubJWKURL, err := url.Parse(opts.PubJWKURL)
+	if err != nil {
+		return fmt.Errorf("could not parse Public JWK URL: %v", err)
+	}
+	p.PubJWKURL = pubJWKURL
+
+	// JWT key can be supplied via env variable or file in the filesystem, but not both.
+	switch {
+	case opts.JWTKey != "" && opts.JWTKeyFile != "":
+		return errors.New("cannot set both jwt-key and jwt-key-file options")
+	case opts.JWTKey == "" && opts.JWTKeyFile == "":
+		return errors.New("login.gov provider requires a private key for signing JWTs")
+	case opts.JWTKey != "":
+		// The JWT Key is in the commandline argument
+		signKey, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(opts.JWTKey))
+		if err != nil {
+			return fmt.Errorf("could not parse RSA Private Key PEM: %v", err)
+		}
+		p.JWTKey = signKey
+	case opts.JWTKeyFile != "":
+		// The JWT key is in the filesystem
+		keyData, err := os.ReadFile(opts.JWTKeyFile)
+		if err != nil {
+			return fmt.Errorf("could not read key file: %v", opts.JWTKeyFile)
+		}
+		signKey, err := jwt.ParseRSAPrivateKeyFromPEM(keyData)
+		if err != nil {
+			return fmt.Errorf("could not parse private key from PEM file: %v", opts.JWTKeyFile)
+		}
+		p.JWTKey = signKey
+	}
+	return nil
 }
 
 type loginGovCustomClaims struct {
@@ -103,12 +146,12 @@ type loginGovCustomClaims struct {
 	Birthdate     string `json:"birthdate"`
 	AtHash        string `json:"at_hash"`
 	CHash         string `json:"c_hash"`
-	jwt.StandardClaims
+	jwt.RegisteredClaims
 }
 
 // checkNonce checks the nonce in the id_token
 func checkNonce(idToken string, p *LoginGovProvider) (err error) {
-	token, err := jwt.ParseWithClaims(idToken, &loginGovCustomClaims{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(idToken, &loginGovCustomClaims{}, func(_ *jwt.Token) (interface{}, error) {
 		var pubkeys jose.JSONWebKeySet
 		rerr := requests.New(p.PubJWKURL.String()).Do().UnmarshalInto(&pubkeys)
 		if rerr != nil {
@@ -139,7 +182,7 @@ func emailFromUserInfo(ctx context.Context, accessToken string, userInfoEndpoint
 	// query the user info endpoint for user attributes
 	err := requests.New(userInfoEndpoint).
 		WithContext(ctx).
-		SetHeader("Authorization", "Bearer "+accessToken).
+		SetHeader("Authorization", tokenTypeBearer+" "+accessToken).
 		Do().
 		UnmarshalInto(&emailData)
 	if err != nil {
@@ -159,17 +202,16 @@ func emailFromUserInfo(ctx context.Context, accessToken string, userInfoEndpoint
 }
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
-func (p *LoginGovProvider) Redeem(ctx context.Context, _, code string) (*sessions.SessionState, error) {
+func (p *LoginGovProvider) Redeem(ctx context.Context, _, code, codeVerifier string) (*sessions.SessionState, error) {
 	if code == "" {
 		return nil, ErrMissingCode
 	}
 
-	claims := &jwt.StandardClaims{
+	claims := &jwt.RegisteredClaims{
 		Issuer:    p.ClientID,
 		Subject:   p.ClientID,
-		Audience:  p.RedeemURL.String(),
-		ExpiresAt: time.Now().Add(5 * time.Minute).Unix(),
-		Id:        randSeq(32),
+		Audience:  jwt.ClaimStrings{p.RedeemURL.String()},
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(5 * time.Minute)),
 	}
 	token := jwt.NewWithClaims(jwt.GetSigningMethod("RS256"), claims)
 	ss, err := token.SignedString(p.JWTKey)
@@ -182,6 +224,9 @@ func (p *LoginGovProvider) Redeem(ctx context.Context, _, code string) (*session
 	params.Add("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
 	params.Add("code", code)
 	params.Add("grant_type", "authorization_code")
+	if codeVerifier != "" {
+		params.Add("code_verifier", codeVerifier)
+	}
 
 	// Get the token from the body that we got from the token endpoint.
 	var jsonResponse struct {
@@ -227,13 +272,17 @@ func (p *LoginGovProvider) Redeem(ctx context.Context, _, code string) (*session
 }
 
 // GetLoginURL overrides GetLoginURL to add login.gov parameters
-func (p *LoginGovProvider) GetLoginURL(redirectURI, state, _ string) string {
-	extraParams := url.Values{}
-	if p.AcrValues == "" {
+func (p *LoginGovProvider) GetLoginURL(redirectURI, state, _ string, extraParams url.Values) string {
+	if len(extraParams["acr_values"]) == 0 {
 		acr := "http://idmanagement.gov/ns/assurance/loa/1"
 		extraParams.Add("acr_values", acr)
 	}
 	extraParams.Add("nonce", p.Nonce)
 	a := makeLoginURL(p.ProviderData, redirectURI, state, extraParams)
 	return a.String()
+}
+
+// ValidateSession validates the AccessToken
+func (p *LoginGovProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
+	return validateToken(ctx, p, s.AccessToken, makeOIDCHeader(s.AccessToken))
 }

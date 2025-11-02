@@ -3,12 +3,14 @@ package options
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"reflect"
+	"regexp"
 	"strings"
 
+	"github.com/a8m/envsubst"
 	"github.com/ghodss/yaml"
-	"github.com/mitchellh/mapstructure"
+	"github.com/go-viper/mapstructure/v2"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
@@ -17,7 +19,9 @@ import (
 // variables (prefixed with `OAUTH2_PROXY`) and finally merges in flags from the flagSet.
 // If a config value is unset and the flag has a non-zero value default, this default will be used.
 // Eg. A field defined:
-//    FooBar `cfg:"foo_bar" flag:"foo-bar"`
+//
+//	FooBar `cfg:"foo_bar" flag:"foo-bar"`
+//
 // Can be set in the config file as `foo_bar="baz"`, in the environment as `OAUTH2_PROXY_FOO_BAR=baz`,
 // or via the command line flag `--foo-bar=baz`.
 func Load(configFileName string, flagSet *pflag.FlagSet, into interface{}) error {
@@ -41,8 +45,8 @@ func Load(configFileName string, flagSet *pflag.FlagSet, into interface{}) error
 		return fmt.Errorf("unable to register flags: %w", err)
 	}
 
-	// UnmarhsalExact will return an error if the config includes options that are
-	// not mapped to felds of the into struct
+	// UnmarshalExact will return an error if the config includes options that are
+	// not mapped to fields of the into struct
 	err = v.UnmarshalExact(into, decodeFromCfgTag)
 	if err != nil {
 		return fmt.Errorf("error unmarshalling config: %w", err)
@@ -138,25 +142,52 @@ func isUnexported(name string) bool {
 
 // LoadYAML will load a YAML based configuration file into the options interface provided.
 func LoadYAML(configFileName string, into interface{}) error {
-	v := viper.New()
-	v.SetConfigFile(configFileName)
-	v.SetConfigType("yaml")
-	v.SetTypeByDefaultValue(true)
-
-	if configFileName == "" {
-		return errors.New("no configuration file provided")
-	}
-
-	data, err := ioutil.ReadFile(configFileName)
+	buffer, err := loadAndParseYaml(configFileName)
 	if err != nil {
-		return fmt.Errorf("unable to load config file: %w", err)
+		return err
 	}
 
 	// UnmarshalStrict will return an error if the config includes options that are
-	// not mapped to felds of the into struct
-	if err := yaml.UnmarshalStrict(data, into, yaml.DisallowUnknownFields); err != nil {
+	// not mapped to fields of the into struct
+	if err := yaml.UnmarshalStrict(buffer, into, yaml.DisallowUnknownFields); err != nil {
 		return fmt.Errorf("error unmarshalling config: %w", err)
 	}
 
 	return nil
+}
+
+// loadAndParseYaml reads the config from the filesystem and
+// execute the environment variable substitution
+func loadAndParseYaml(configFileName string) ([]byte, error) {
+	if configFileName == "" {
+		return nil, errors.New("no configuration file provided")
+	}
+
+	unparsedBuffer, err := os.ReadFile(configFileName)
+	if err != nil {
+		return nil, fmt.Errorf("unable to load config file: %w", err)
+	}
+
+	modifiedBuffer, err := normalizeSubstitution(unparsedBuffer)
+	if err != nil {
+		return nil, fmt.Errorf("error normalizing substitution string : %w", err)
+	}
+
+	buffer, err := envsubst.Bytes(modifiedBuffer)
+	if err != nil {
+		return nil, fmt.Errorf("error in substituting env variables : %w", err)
+	}
+
+	return buffer, nil
+}
+
+// normalizeSubstitution normalizes dollar signs ($) with numerals like
+// $1 or $2 properly by correctly escaping them
+func normalizeSubstitution(unparsedBuffer []byte) ([]byte, error) {
+	unparsedString := string(unparsedBuffer)
+
+	regexPattern := regexp.MustCompile(`\$(\d+)`)
+
+	substitutedString := regexPattern.ReplaceAllString(unparsedString, `$$$$1`)
+	return []byte(substitutedString), nil
 }

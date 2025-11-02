@@ -57,6 +57,8 @@ func NewDigitalOceanProvider(p *ProviderData) *DigitalOceanProvider {
 		validateURL: digitalOceanDefaultProfileURL,
 		scope:       digitalOceanDefaultScope,
 	})
+	p.getAuthorizationHeaderFunc = makeOIDCHeader
+
 	return &DigitalOceanProvider{ProviderData: p}
 }
 
@@ -70,7 +72,7 @@ func (p *DigitalOceanProvider) GetEmailAddress(ctx context.Context, s *sessions.
 		WithContext(ctx).
 		WithHeaders(makeOIDCHeader(s.AccessToken)).
 		Do().
-		UnmarshalJSON()
+		UnmarshalSimpleJSON()
 	if err != nil {
 		return "", err
 	}

@@ -23,3 +23,17 @@
   margin: 0 calc(-1 * var(--ifm-pre-padding));
   padding: 0 var(--ifm-pre-padding);
 }
+
+.videoBlock {
+  position: relative;
+  padding-bottom: 75%;
+  height: 0;
+}
+
+.videoBlock iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}

@@ -2,7 +2,7 @@ package validation
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 )
@@ -46,38 +46,96 @@ func validateProvider(provider options.Provider, providerIDs map[string]struct{}
 		msgs = append(msgs, "provider missing setting: client-id")
 	}
 
-	// login.gov uses a signed JWT to authenticate, not a client-secret
-	if provider.Type != "login.gov" {
-		if provider.ClientSecret == "" && provider.ClientSecretFile == "" {
-			msgs = append(msgs, "missing setting: client-secret or client-secret-file")
-		}
-		if provider.ClientSecret == "" && provider.ClientSecretFile != "" {
-			_, err := ioutil.ReadFile(provider.ClientSecretFile)
-			if err != nil {
-				msgs = append(msgs, "could not read client secret file: "+provider.ClientSecretFile)
-			}
-		}
+	if providerRequiresClientSecret(provider) {
+		msgs = append(msgs, validateClientSecret(provider)...)
 	}
 
-	msgs = append(msgs, validateGoogleConfig(provider)...)
+	if provider.Type == "google" {
+		msgs = append(msgs, validateGoogleConfig(provider)...)
+	}
+
+	if provider.Type == "entra-id" {
+		msgs = append(msgs, validateEntraConfig(provider)...)
+	}
+
+	return msgs
+}
+
+// providerRequiresClientSecret checks if provider requires client secret to be set
+// or it can be omitted in favor of JWT token to authenticate oAuth client
+func providerRequiresClientSecret(provider options.Provider) bool {
+	if provider.Type == "entra-id" && provider.MicrosoftEntraIDConfig.FederatedTokenAuth {
+		return false
+	}
+
+	if provider.Type == "login.gov" {
+		return false
+	}
+
+	return true
+}
+
+func validateClientSecret(provider options.Provider) []string {
+	msgs := []string{}
+
+	if provider.ClientSecret == "" && provider.ClientSecretFile == "" {
+		msgs = append(msgs, "missing setting: client-secret or client-secret-file")
+	}
+	if provider.ClientSecret == "" && provider.ClientSecretFile != "" {
+		_, err := os.ReadFile(provider.ClientSecretFile)
+		if err != nil {
+			msgs = append(msgs, "could not read client secret file: "+provider.ClientSecretFile)
+		}
+	}
 
 	return msgs
 }
 
 func validateGoogleConfig(provider options.Provider) []string {
 	msgs := []string{}
-	if len(provider.GoogleConfig.Groups) > 0 ||
-		provider.GoogleConfig.AdminEmail != "" ||
-		provider.GoogleConfig.ServiceAccountJSON != "" {
-		if len(provider.GoogleConfig.Groups) < 1 {
-			msgs = append(msgs, "missing setting: google-group")
+
+	hasAdminEmail := provider.GoogleConfig.AdminEmail != ""
+	hasSAJSON := provider.GoogleConfig.ServiceAccountJSON != ""
+	useADC := provider.GoogleConfig.UseApplicationDefaultCredentials
+
+	if !hasAdminEmail && !hasSAJSON && !useADC {
+		return msgs
+	}
+
+	if !hasAdminEmail {
+		msgs = append(msgs, "missing setting: google-admin-email")
+	}
+
+	_, err := os.Stat(provider.GoogleConfig.ServiceAccountJSON)
+	if !useADC {
+		if !hasSAJSON {
+			msgs = append(msgs, "missing setting: google-service-account-json or google-use-application-default-credentials")
+		} else if err != nil {
+			msgs = append(msgs, fmt.Sprintf("Google credentials file not found: %s", provider.GoogleConfig.ServiceAccountJSON))
 		}
-		if provider.GoogleConfig.AdminEmail == "" {
-			msgs = append(msgs, "missing setting: google-admin-email")
+	} else if hasSAJSON {
+		msgs = append(msgs, "invalid setting: can't use both google-service-account-json and google-use-application-default-credentials")
+	}
+
+	return msgs
+}
+
+func validateEntraConfig(provider options.Provider) []string {
+	msgs := []string{}
+
+	if provider.MicrosoftEntraIDConfig.FederatedTokenAuth {
+		federatedTokenPath := os.Getenv("AZURE_FEDERATED_TOKEN_FILE")
+
+		if federatedTokenPath == "" {
+			msgs = append(msgs, "entra federated token authentication is enabled, but AZURE_FEDERATED_TOKEN_FILE variable is not set, check your workload identity configuration.")
+			return msgs
 		}
-		if provider.GoogleConfig.ServiceAccountJSON == "" {
-			msgs = append(msgs, "missing setting: google-service-account-json")
+
+		_, err := os.ReadFile(federatedTokenPath)
+		if err != nil {
+			msgs = append(msgs, "could not read entra federated token file")
 		}
 	}
+
 	return msgs
 }
