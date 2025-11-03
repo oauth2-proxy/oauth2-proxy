@@ -1,6 +1,7 @@
 package validation
 
 import (
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -29,9 +30,23 @@ func TestValidateCookie(t *testing.T) {
 		"a.cba.localhost",
 	}
 
+	// Create a temporary file for the valid secret file test
+	tmpfile, err := os.CreateTemp("", "cookie-secret-test")
+	if err != nil {
+		t.Fatalf("Failed to create temporary file: %v", err)
+	}
+	defer os.Remove(tmpfile.Name())
+
+	// Write a valid 32-byte secret to the file
+	_, err = tmpfile.Write([]byte(validSecret))
+	if err != nil {
+		t.Fatalf("Failed to write to temporary file: %v", err)
+	}
+	tmpfile.Close()
+
 	invalidNameMsg := "invalid cookie name: \"_oauth2;proxy\""
 	longNameMsg := "cookie name should be under 256 characters: cookie name is 260 characters"
-	missingSecretMsg := "missing setting: cookie-secret"
+	missingSecretMsg := "missing setting: cookie-secret or cookie-secret-file"
 	invalidSecretMsg := "cookie_secret must be 16, 24, or 32 bytes to create an AES cipher, but is 6 bytes"
 	invalidBase64SecretMsg := "cookie_secret must be 16, 24, or 32 bytes to create an AES cipher, but is 10 bytes"
 	refreshLongerThanExpireMsg := "cookie_refresh (\"1h0m0s\") must be less than cookie_expire (\"15m0s\")"
@@ -255,6 +270,53 @@ func TestValidateCookie(t *testing.T) {
 				refreshLongerThanExpireMsg,
 				invalidSameSiteMsg,
 			},
+		},
+		{
+			name: "with session cookie configuration",
+			cookie: options.Cookie{
+				Name:     validName,
+				Secret:   validSecret,
+				Domains:  domains,
+				Path:     "",
+				Expire:   0,
+				Refresh:  15 * time.Minute,
+				Secure:   true,
+				HTTPOnly: false,
+				SameSite: "",
+			},
+			errStrings: []string{},
+		},
+		{
+			name: "with valid secret file",
+			cookie: options.Cookie{
+				Name:       validName,
+				Secret:     "",
+				SecretFile: tmpfile.Name(),
+				Domains:    domains,
+				Path:       "",
+				Expire:     24 * time.Hour,
+				Refresh:    0,
+				Secure:     true,
+				HTTPOnly:   true,
+				SameSite:   "",
+			},
+			errStrings: []string{},
+		},
+		{
+			name: "with nonexistent secret file",
+			cookie: options.Cookie{
+				Name:       validName,
+				Secret:     "",
+				SecretFile: "/nonexistent/file.txt",
+				Domains:    domains,
+				Path:       "",
+				Expire:     24 * time.Hour,
+				Refresh:    0,
+				Secure:     true,
+				HTTPOnly:   true,
+				SameSite:   "",
+			},
+			errStrings: []string{"could not read cookie secret file: /nonexistent/file.txt"},
 		},
 	}
 

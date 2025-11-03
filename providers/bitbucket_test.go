@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
@@ -21,15 +22,12 @@ func testBitbucketProvider(hostname, team string, repository string) *BitbucketP
 			RedeemURL:    &url.URL{},
 			ProfileURL:   &url.URL{},
 			ValidateURL:  &url.URL{},
-			Scope:        ""})
-
-	if team != "" {
-		p.SetTeam(team)
-	}
-
-	if repository != "" {
-		p.SetRepository(repository)
-	}
+			Scope:        ""},
+		options.BitbucketOptions{
+			Team:       team,
+			Repository: repository,
+		},
+	)
 
 	if hostname != "" {
 		updateURL(p.Data().LoginURL, hostname)
@@ -65,7 +63,7 @@ func TestNewBitbucketProvider(t *testing.T) {
 	g := NewWithT(t)
 
 	// Test that defaults are set when calling for a new provider with nothing set
-	providerData := NewBitbucketProvider(&ProviderData{}).Data()
+	providerData := NewBitbucketProvider(&ProviderData{}, options.BitbucketOptions{}).Data()
 	g.Expect(providerData.ProviderName).To(Equal("Bitbucket"))
 	g.Expect(providerData.LoginURL.String()).To(Equal("https://bitbucket.org/site/oauth2/authorize"))
 	g.Expect(providerData.RedeemURL.String()).To(Equal("https://bitbucket.org/site/oauth2/access_token"))
@@ -101,7 +99,8 @@ func TestBitbucketProviderOverrides(t *testing.T) {
 				Scheme: "https",
 				Host:   "example.com",
 				Path:   "/api/v3/user"},
-			Scope: "profile"})
+			Scope: "profile"},
+		options.BitbucketOptions{})
 	assert.NotEqual(t, nil, p)
 	assert.Equal(t, "Bitbucket", p.Data().ProviderName)
 	assert.Equal(t, "https://example.com/oauth/auth",

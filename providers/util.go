@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/bitly/go-simplejson"
 	"golang.org/x/oauth2"
 )
 
@@ -39,14 +38,6 @@ func makeLoginURL(p *ProviderData, redirectURI, state string, extraParams url.Va
 	a := *p.LoginURL
 	params, _ := url.ParseQuery(a.RawQuery)
 	params.Set("redirect_uri", redirectURI)
-	if p.AcrValues != "" {
-		params.Add("acr_values", p.AcrValues)
-	}
-	if p.Prompt != "" {
-		params.Set("prompt", p.Prompt)
-	} else { // Legacy variant of the prompt param:
-		params.Set("approval_prompt", p.ApprovalPrompt)
-	}
 	params.Add("scope", p.Scope)
 	params.Set("client_id", p.ClientID)
 	params.Set("response_type", "code")
@@ -82,19 +73,4 @@ func formatGroup(rawGroup interface{}) (string, error) {
 		return "", err
 	}
 	return string(jsonGroup), nil
-}
-
-// coerceArray extracts a field from simplejson.Json that might be a
-// singleton or a list and coerces it into a list.
-func coerceArray(sj *simplejson.Json, key string) []interface{} {
-	array, err := sj.Get(key).Array()
-	if err == nil {
-		return array
-	}
-
-	single := sj.Get(key).Interface()
-	if single == nil {
-		return nil
-	}
-	return []interface{}{single}
 }

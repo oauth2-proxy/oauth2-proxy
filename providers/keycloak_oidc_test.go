@@ -6,38 +6,62 @@ import (
 	"fmt"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
 )
 
 const (
+	idTokenHeader        = "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJjV1IteTRzRVU1MjZVelk1SFd6UEZJbWdMMWRKUllfQ0gyY1FFRXh4UGN3In0"
+	idTokenSignature     = "Rh0zQGhWAm-2hn5JTWB3Lzuk9Ahpzs7As7ks-1VInl4"
 	accessTokenHeader    = "ewogICJhbGciOiAiUlMyNTYiLAogICJ0eXAiOiAiSldUIgp9"
-	accessTokenPayload   = "eyJyZWFsbV9hY2Nlc3MiOiB7InJvbGVzIjogWyJ3cml0ZSJdfSwgInJlc291cmNlX2FjY2VzcyI6IHsiZGVmYXVsdCI6IHsicm9sZXMiOiBbInJlYWQiXX19fQ"
 	accessTokenSignature = "dyt0CoTl4WoVjAHI9Q_CwSKhl6d_9rhM3NrXuJttkao"
+	defaultAudienceClaim = "aud"
+	mockClientID         = "cd6d4fae-f6a6-4a34-8454-2c6b598e9532"
+)
+
+var (
+	accessTokenPayload = base64.RawURLEncoding.EncodeToString([]byte(
+		fmt.Sprintf(`{"%s": "%s", "realm_access": {"roles": ["write"]}, "resource_access": {"default": {"roles": ["read"]}}}`, defaultAudienceClaim, mockClientID)))
+
+	idTokenPayload = base64.RawURLEncoding.EncodeToString([]byte(
+		fmt.Sprintf(`{"%s": "%s"}`, defaultAudienceClaim, mockClientID)))
 )
 
 type DummyKeySet struct{}
 
-func (DummyKeySet) VerifySignature(_ context.Context, _ string) (payload []byte, err error) {
-	p, _ := base64.RawURLEncoding.DecodeString(accessTokenPayload)
+func (DummyKeySet) VerifySignature(_ context.Context, jwt string) (payload []byte, err error) {
+	parts := strings.Split(jwt, ".")
+	p, _ := base64.RawURLEncoding.DecodeString(parts[1])
 	return p, nil
 }
 
-func getAccessToken() string {
+func makeIDToken() string {
+	return fmt.Sprintf("%s.%s.%s", idTokenHeader, idTokenPayload, idTokenSignature)
+}
+
+func makeAccessToken() string {
 	return fmt.Sprintf("%s.%s.%s", accessTokenHeader, accessTokenPayload, accessTokenSignature)
 }
 
 func newTestKeycloakOIDCSetup() (*httptest.Server, *KeycloakOIDCProvider) {
-	redeemURL, server := newOIDCServer([]byte(fmt.Sprintf(`{"email": "new@thing.com", "expires_in": 300, "access_token": "%v"}`, getAccessToken())))
-	provider := newKeycloakOIDCProvider(redeemURL)
+	redeemURL, server := newOIDCServer([]byte(fmt.Sprintf(`{"email": "new@thing.com", "expires_in": 300, "id_token": "%v", "access_token": "%v"}`, makeIDToken(), makeAccessToken())))
+	provider := newKeycloakOIDCProvider(redeemURL, options.Provider{})
 	return server, provider
 }
 
-func newKeycloakOIDCProvider(serverURL *url.URL) *KeycloakOIDCProvider {
+func newKeycloakOIDCProvider(serverURL *url.URL, opts options.Provider) *KeycloakOIDCProvider {
+	verificationOptions := internaloidc.IDTokenVerificationOptions{
+		AudienceClaims: []string{defaultAudienceClaim},
+		ClientID:       mockClientID,
+	}
 	p := NewKeycloakOIDCProvider(
 		&ProviderData{
 			LoginURL: &url.URL{
@@ -56,7 +80,8 @@ func newKeycloakOIDCProvider(serverURL *url.URL) *KeycloakOIDCProvider {
 				Scheme: "https",
 				Host:   "keycloak-oidc.com",
 				Path:   "/api/v3/user"},
-			Scope: "openid email profile"})
+		},
+		opts)
 
 	if serverURL != nil {
 		p.RedeemURL.Scheme = serverURL.Scheme
@@ -64,12 +89,12 @@ func newKeycloakOIDCProvider(serverURL *url.URL) *KeycloakOIDCProvider {
 	}
 
 	keyset := DummyKeySet{}
-	p.Verifier = oidc.NewVerifier("", keyset, &oidc.Config{
+	p.Verifier = internaloidc.NewVerifier(oidc.NewVerifier("", keyset, &oidc.Config{
 		ClientID:          "client",
 		SkipIssuerCheck:   true,
 		SkipClientIDCheck: true,
 		SkipExpiryCheck:   true,
-	})
+	}), verificationOptions)
 	p.EmailClaim = "email"
 	p.GroupsClaim = "groups"
 	return p
@@ -78,21 +103,32 @@ func newKeycloakOIDCProvider(serverURL *url.URL) *KeycloakOIDCProvider {
 var _ = Describe("Keycloak OIDC Provider Tests", func() {
 	Context("New Provider Init", func() {
 		It("creates new keycloak oidc provider with expected defaults", func() {
-			p := newKeycloakOIDCProvider(nil)
+			p := newKeycloakOIDCProvider(nil, options.Provider{})
 			providerData := p.Data()
 			Expect(providerData.ProviderName).To(Equal(keycloakOIDCProviderName))
 			Expect(providerData.LoginURL.String()).To(Equal("https://keycloak-oidc.com/oauth/auth"))
 			Expect(providerData.RedeemURL.String()).To(Equal("https://keycloak-oidc.com/oauth/token"))
 			Expect(providerData.ProfileURL.String()).To(Equal("https://keycloak-oidc.com/api/v3/user"))
 			Expect(providerData.ValidateURL.String()).To(Equal("https://keycloak-oidc.com/api/v3/user"))
-			Expect(providerData.Scope).To(Equal("openid email profile"))
+			Expect(providerData.Scope).To(Equal(oidcDefaultScope))
+		})
+		It("creates new keycloak oidc provider with custom scope", func() {
+			p := NewKeycloakOIDCProvider(&ProviderData{Scope: "openid email"}, options.Provider{})
+			providerData := p.Data()
+
+			Expect(providerData.ProviderName).To(Equal(keycloakOIDCProviderName))
+			Expect(providerData.Scope).To(Equal("openid email"))
+			Expect(providerData.Scope).NotTo(Equal(oidcDefaultScope))
 		})
 	})
 
 	Context("Allowed Roles", func() {
 		It("should prefix allowed roles and add them to groups", func() {
-			p := newKeycloakOIDCProvider(nil)
-			p.AddAllowedRoles([]string{"admin", "editor"})
+			p := newKeycloakOIDCProvider(nil, options.Provider{
+				KeycloakConfig: options.KeycloakOptions{
+					Roles: []string{"admin", "editor"},
+				},
+			})
 			Expect(p.AllowedGroups).To(HaveKey("role:admin"))
 			Expect(p.AllowedGroups).To(HaveKey("role:editor"))
 		})
@@ -111,16 +147,16 @@ var _ = Describe("Keycloak OIDC Provider Tests", func() {
 				User:         "already",
 				Email:        "a@b.com",
 				Groups:       nil,
-				IDToken:      idToken,
-				AccessToken:  getAccessToken(),
+				IDToken:      makeIDToken(),
+				AccessToken:  makeAccessToken(),
 				RefreshToken: refreshToken,
 			}
 			expectedSession := &sessions.SessionState{
 				User:         "already",
 				Email:        "a@b.com",
 				Groups:       []string{"role:write", "role:default:read"},
-				IDToken:      idToken,
-				AccessToken:  getAccessToken(),
+				IDToken:      makeIDToken(),
+				AccessToken:  makeAccessToken(),
 				RefreshToken: refreshToken,
 			}
 
@@ -141,16 +177,16 @@ var _ = Describe("Keycloak OIDC Provider Tests", func() {
 				User:         "already",
 				Email:        "a@b.com",
 				Groups:       []string{"existing", "group"},
-				IDToken:      idToken,
-				AccessToken:  getAccessToken(),
+				IDToken:      makeIDToken(),
+				AccessToken:  makeAccessToken(),
 				RefreshToken: refreshToken,
 			}
 			expectedSession := &sessions.SessionState{
 				User:         "already",
 				Email:        "a@b.com",
 				Groups:       []string{"existing", "group", "role:write", "role:default:read"},
-				IDToken:      idToken,
-				AccessToken:  getAccessToken(),
+				IDToken:      makeIDToken(),
+				AccessToken:  makeAccessToken(),
 				RefreshToken: refreshToken,
 			}
 
@@ -173,8 +209,8 @@ var _ = Describe("Keycloak OIDC Provider Tests", func() {
 				User:         "already",
 				Email:        "a@b.com",
 				Groups:       nil,
-				IDToken:      idToken,
-				AccessToken:  getAccessToken(),
+				IDToken:      makeIDToken(),
+				AccessToken:  makeAccessToken(),
 				RefreshToken: refreshToken,
 			}
 
@@ -186,4 +222,22 @@ var _ = Describe("Keycloak OIDC Provider Tests", func() {
 			Expect(existingSession.Groups).To(BeEquivalentTo([]string{"role:write", "role:default:read"}))
 		})
 	})
+
+	Context("Create new session from token", func() {
+		It("should create a session and extract roles ", func() {
+			server, provider := newTestKeycloakOIDCSetup()
+			url, err := url.Parse(server.URL)
+			Expect(err).To(BeNil())
+			defer server.Close()
+
+			provider.ProfileURL = url
+
+			session, err := provider.CreateSessionFromToken(context.Background(), makeAccessToken())
+			Expect(err).To(BeNil())
+			Expect(session.ExpiresOn).ToNot(BeNil())
+			Expect(session.CreatedAt).ToNot(BeNil())
+			Expect(session.Groups).To(BeEquivalentTo([]string{"role:write", "role:default:read"}))
+		})
+	})
+
 })

@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <title>Sign In</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.1/css/bulma.min.css">
+    <link rel="stylesheet" href="{{.ProxyPrefix}}/static/css/bulma.min.css">
 
     <style>
       body {
@@ -18,13 +18,35 @@
       .logo-box {
         margin: 1.5rem 3rem;
       }
+      .alert {
+        padding: 5px;
+        background-color: #f44336; /* Red */
+        color: white;
+        margin-bottom: 5px;
+        border-radius: 5px
+      }
+      /* The close button */
+      .closebtn {
+        margin-left: 10px;
+        color: white;
+        font-weight: bold;
+        float: right;
+        font-size: 22px;
+        line-height: 20px;
+        cursor: pointer;
+        transition: 0.3s;
+      }
+      /* When moving the mouse over the close button */
+      .closebtn:hover {
+        color: black;
+      }
       footer a {
         text-decoration: underline;
       }
     </style>
   </head>
   <body class="has-background-light">
-  <section class="section">
+  <section class="section has-background-light">
     <div class="box block sign-in-box has-text-centered">
       {{ if .LogoData }}
       <div class="block logo-box">
@@ -62,6 +84,18 @@
         <button class="button is-primary">Sign in</button>
       </form>
       {{ end }}
+
+      {{ if eq .StatusCode 400 401 }}
+      <div class="alert">
+        <span class="closebtn" onclick="this.parentElement.style.display='none';">&times;</span>
+        {{ if eq .StatusCode 400 }}
+        {{.StatusCode}}: Username cannot be empty
+        {{ else }}
+        {{.StatusCode}}: Invalid Username or Password
+        {{ end }}
+      </div> 
+      {{ end }}
+
     </div>
   </section>
 

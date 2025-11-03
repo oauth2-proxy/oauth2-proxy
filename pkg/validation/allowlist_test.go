@@ -1,8 +1,7 @@
 package validation
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -29,7 +28,7 @@ var _ = Describe("Allowlist", func() {
 			opts := &options.Options{
 				SkipAuthRoutes: r.routes,
 			}
-			Expect(validateRoutes(opts)).To(ConsistOf(r.errStrings))
+			Expect(validateAuthRoutes(opts)).To(ConsistOf(r.errStrings))
 		},
 		Entry("Valid regex routes", &validateRoutesTableInput{
 			routes: []string{
@@ -61,7 +60,7 @@ var _ = Describe("Allowlist", func() {
 			opts := &options.Options{
 				SkipAuthRegex: r.regexes,
 			}
-			Expect(validateRegexes(opts)).To(ConsistOf(r.errStrings))
+			Expect(validateAuthRegexes(opts)).To(ConsistOf(r.errStrings))
 		},
 		Entry("Valid regex routes", &validateRegexesTableInput{
 			regexes: []string{

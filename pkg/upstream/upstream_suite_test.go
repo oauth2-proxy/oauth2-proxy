@@ -3,8 +3,9 @@ package upstream
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -12,16 +13,18 @@ import (
 	"testing"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"golang.org/x/net/websocket"
 )
 
 var (
-	filesDir      string
-	server        *httptest.Server
-	serverAddr    string
-	invalidServer = "http://::1"
+	filesDir       string
+	server         *httptest.Server
+	serverAddr     string
+	unixServer     *httptest.Server
+	unixServerAddr string
+	invalidServer  = "http://::1"
 )
 
 func TestUpstreamSuite(t *testing.T) {
@@ -35,21 +38,28 @@ func TestUpstreamSuite(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	// Set up files for serving via file servers
-	dir, err := ioutil.TempDir("", "oauth2-proxy-upstream-suite")
+	dir, err := os.MkdirTemp("", "oauth2-proxy-upstream-suite")
 	Expect(err).ToNot(HaveOccurred())
-	Expect(ioutil.WriteFile(path.Join(dir, "foo"), []byte("foo"), 0644)).To(Succeed())
-	Expect(ioutil.WriteFile(path.Join(dir, "bar"), []byte("bar"), 0644)).To(Succeed())
+	Expect(os.WriteFile(path.Join(dir, "foo"), []byte("foo"), 0644)).To(Succeed())
+	Expect(os.WriteFile(path.Join(dir, "bar"), []byte("bar"), 0644)).To(Succeed())
 	Expect(os.Mkdir(path.Join(dir, "subdir"), os.ModePerm)).To(Succeed())
-	Expect(ioutil.WriteFile(path.Join(dir, "subdir", "baz"), []byte("baz"), 0644)).To(Succeed())
+	Expect(os.WriteFile(path.Join(dir, "subdir", "baz"), []byte("baz"), 0644)).To(Succeed())
 	filesDir = dir
 
 	// Set up a webserver that reflects requests
 	server = httptest.NewServer(&testHTTPUpstream{})
 	serverAddr = fmt.Sprintf("http://%s", server.Listener.Addr().String())
+
+	unixServer = httptest.NewUnstartedServer(&testHTTPUpstream{})
+	unixListener, _ := net.Listen("unix", path.Join(filesDir, "test.sock"))
+	unixServer.Listener = unixListener
+	unixServer.Start()
+	unixServerAddr = fmt.Sprintf("unix://%s", path.Join(filesDir, "test.sock"))
 })
 
 var _ = AfterSuite(func() {
 	server.Close()
+	unixServer.Close()
 	Expect(os.RemoveAll(filesDir)).To(Succeed())
 })
 
@@ -148,7 +158,7 @@ func toTestHTTPRequest(req *http.Request) (testHTTPRequest, error) {
 	requestBody := []byte{}
 	if req.Body != http.NoBody {
 		var err error
-		requestBody, err = ioutil.ReadAll(req.Body)
+		requestBody, err = io.ReadAll(req.Body)
 		if err != nil {
 			return testHTTPRequest{}, err
 		}

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -18,7 +17,7 @@ type ValidatorTest struct {
 func NewValidatorTest(t *testing.T) *ValidatorTest {
 	vt := &ValidatorTest{}
 	var err error
-	f, err := ioutil.TempFile("", "test_auth_emails_")
+	f, err := os.CreateTemp("", "test_auth_emails_")
 	if err != nil {
 		t.Fatalf("failed to create temp file: %v", err)
 	}
@@ -154,9 +153,23 @@ func TestValidatorCases(t *testing.T) {
 			expectedAuthZ:  false,
 		},
 		{
+			name:           "EmailNotInCorrect1stSubDomainsNotInEmailsWildcard",
+			allowedEmails:  []string{"xyzzy@example.com", "plugh@example.com"},
+			allowedDomains: []string{"*.example0.com", "*.example1.com"},
+			email:          "foo.bar@example0.com",
+			expectedAuthZ:  false,
+		},
+		{
 			name:           "EmailInFirstDomain",
 			allowedEmails:  []string{"xyzzy@example.com", "plugh@example.com"},
 			allowedDomains: []string{".example0.com", ".example1.com"},
+			email:          "foo@bar.example0.com",
+			expectedAuthZ:  true,
+		},
+		{
+			name:           "EmailInFirstDomainWildcard",
+			allowedEmails:  []string{"xyzzy@example.com", "plugh@example.com"},
+			allowedDomains: []string{"*.example0.com", "*.example1.com"},
 			email:          "foo@bar.example0.com",
 			expectedAuthZ:  true,
 		},
@@ -175,9 +188,23 @@ func TestValidatorCases(t *testing.T) {
 			expectedAuthZ:  true,
 		},
 		{
+			name:           "EmailInSecondDomainWildcard",
+			allowedEmails:  []string{"xyzzy@example.com", "plugh@example.com"},
+			allowedDomains: []string{"*.example0.com", "*.example1.com"},
+			email:          "baz@quux.example1.com",
+			expectedAuthZ:  true,
+		},
+		{
 			name:           "EmailInFirstEmailList",
 			allowedEmails:  []string{"xyzzy@example.com", "plugh@example.com"},
 			allowedDomains: []string{".example0.com", ".example1.com"},
+			email:          "xyzzy@example.com",
+			expectedAuthZ:  true,
+		},
+		{
+			name:           "EmailInFirstEmailListWildcard",
+			allowedEmails:  []string{"xyzzy@example.com", "plugh@example.com"},
+			allowedDomains: []string{"*.example0.com", "*.example1.com"},
 			email:          "xyzzy@example.com",
 			expectedAuthZ:  true,
 		},
@@ -368,6 +395,13 @@ func TestValidatorCases(t *testing.T) {
 			email:          "foo@evilcompany.com",
 			allowedEmails:  []string(nil),
 			allowedDomains: []string{"company.com"},
+			expectedAuthZ:  false,
+		},
+		{
+			name:           "CheckForEqualityNotSuffixWildcard",
+			email:          "foo@evilcompany.com",
+			allowedEmails:  []string(nil),
+			allowedDomains: []string{"*.company.com"},
 			expectedAuthZ:  false,
 		},
 	}

@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/bsm/redislock"
-	"github.com/go-redis/redis/v8"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/redis/go-redis/v9"
 )
 
 const LockSuffix = "lock"

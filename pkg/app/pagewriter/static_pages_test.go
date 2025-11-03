@@ -3,14 +3,14 @@ package pagewriter
 import (
 	"errors"
 	"html/template"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -27,11 +27,11 @@ var _ = Describe("Static Pages", func() {
 			template: errorTmpl,
 		}
 
-		customDir, err = ioutil.TempDir("", "oauth2-proxy-static-pages-test")
+		customDir, err = os.MkdirTemp("", "oauth2-proxy-static-pages-test")
 		Expect(err).ToNot(HaveOccurred())
 
 		robotsTxtFile := filepath.Join(customDir, robotsTxtName)
-		Expect(ioutil.WriteFile(robotsTxtFile, []byte(customRobots), 0400)).To(Succeed())
+		Expect(os.WriteFile(robotsTxtFile, []byte(customRobots), 0400)).To(Succeed())
 
 		request = httptest.NewRequest("", "http://127.0.0.1/", nil)
 		request = middlewareapi.AddRequestScope(request, &middlewareapi.RequestScope{
@@ -58,7 +58,7 @@ var _ = Describe("Static Pages", func() {
 					recorder := httptest.NewRecorder()
 					pageWriter.WriteRobotsTxt(recorder, request)
 
-					body, err := ioutil.ReadAll(recorder.Result().Body)
+					body, err := io.ReadAll(recorder.Result().Body)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(string(body)).To(Equal(customRobots))
 
@@ -81,7 +81,7 @@ var _ = Describe("Static Pages", func() {
 					recorder := httptest.NewRecorder()
 					pageWriter.WriteRobotsTxt(recorder, request)
 
-					body, err := ioutil.ReadAll(recorder.Result().Body)
+					body, err := io.ReadAll(recorder.Result().Body)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(string(body)).To(Equal(string(defaultRobotsTxt)))
 
@@ -94,7 +94,7 @@ var _ = Describe("Static Pages", func() {
 					}
 					pageWriter.WriteRobotsTxt(recorder, request)
 
-					body, err := ioutil.ReadAll(recorder.Result().Body)
+					body, err := io.ReadAll(recorder.Result().Body)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(string(body)).To(Equal(string("Internal Server Error")))
 

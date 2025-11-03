@@ -14,7 +14,7 @@ import (
 
 // MakeCookieFromOptions constructs a cookie based on the given *options.CookieOptions,
 // value and creation time
-func MakeCookieFromOptions(req *http.Request, name string, value string, opts *options.Cookie, expiration time.Duration, now time.Time) *http.Cookie {
+func MakeCookieFromOptions(req *http.Request, name string, value string, opts *options.Cookie, expiration time.Duration) *http.Cookie {
 	domain := GetCookieDomain(req, opts.Domains)
 	// If nothing matches, create the cookie with the shortest domain
 	if domain == "" && len(opts.Domains) > 0 {
@@ -30,10 +30,15 @@ func MakeCookieFromOptions(req *http.Request, name string, value string, opts *o
 		Value:    value,
 		Path:     opts.Path,
 		Domain:   domain,
-		Expires:  now.Add(expiration),
 		HttpOnly: opts.HTTPOnly,
 		Secure:   opts.Secure,
 		SameSite: ParseSameSite(opts.SameSite),
+	}
+
+	if expiration > time.Duration(0) {
+		c.MaxAge = int(expiration.Seconds())
+	} else if expiration < time.Duration(0) {
+		c.MaxAge = -1
 	}
 
 	warnInvalidDomain(c, req)

@@ -26,13 +26,13 @@ type ValidateSessionTestProvider struct {
 
 var _ Provider = (*ValidateSessionTestProvider)(nil)
 
-func (tp *ValidateSessionTestProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
+func (tp *ValidateSessionTestProvider) GetEmailAddress(_ context.Context, _ *sessions.SessionState) (string, error) {
 	return "", errors.New("not implemented")
 }
 
 // Note that we're testing the internal validateToken() used to implement
 // several Provider's ValidateSession() implementations
-func (tp *ValidateSessionTestProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
+func (tp *ValidateSessionTestProvider) ValidateSession(_ context.Context, _ *sessions.SessionState) bool {
 	return false
 }
 
@@ -130,6 +130,13 @@ func TestValidateSessionExpiredToken(t *testing.T) {
 	defer vtTest.Close()
 	vtTest.responseCode = 401
 	assert.Equal(t, false, validateToken(context.Background(), vtTest.provider, "foobar", nil))
+}
+
+func TestValidateSessionValidateURLWithQueryParams(t *testing.T) {
+	vtTest := NewValidateSessionTest()
+	defer vtTest.Close()
+	vtTest.provider.Data().ValidateURL, _ = url.Parse(vtTest.provider.Data().ValidateURL.String() + "?query_param1=true&query_param2=test")
+	assert.Equal(t, true, validateToken(context.Background(), vtTest.provider, "foobar", nil))
 }
 
 func TestStripTokenNotPresent(t *testing.T) {

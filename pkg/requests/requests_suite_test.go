@@ -3,14 +3,14 @@ package requests
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -82,7 +82,7 @@ func toTestHTTPRequest(req *http.Request) (testHTTPRequest, error) {
 	requestBody := []byte{}
 	if req.Body != http.NoBody {
 		var err error
-		requestBody, err = ioutil.ReadAll(req.Body)
+		requestBody, err = io.ReadAll(req.Body)
 		if err != nil {
 			return testHTTPRequest{}, err
 		}
