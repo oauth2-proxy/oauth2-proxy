@@ -36,6 +36,7 @@ These images are considered unstable and therefore should **NOT** be used for pr
 ## Sponsors
 
 ![Microsoft](https://upload.wikimedia.org/wikipedia/commons/9/96/Microsoft_logo_%282012%29.svg)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Foauth2-proxy%2Foauth2-proxy.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Foauth2-proxy%2Foauth2-proxy?ref=badge_shield)
 Microsoft Azure credits for open source projects
 
 Would you like to sponsor the project then please contact us at [sponsors@oauth2-proxy.dev](mailto:sponsors@oauth2-proxy.dev)
@@ -84,3 +85,6 @@ See [open redirect vulnerability](https://github.com/oauth2-proxy/oauth2-proxy/s
 ## License
 
 OAuth2-Proxy is distributed under [The MIT License](LICENSE).
+
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Foauth2-proxy%2Foauth2-proxy.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Foauth2-proxy%2Foauth2-proxy?ref=badge_large)
