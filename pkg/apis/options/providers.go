@@ -68,6 +68,8 @@ type Provider struct {
 	LoginURL string `json:"loginURL,omitempty"`
 	// LoginURLParameters defines the parameters that can be passed from the start URL to the IdP login URL
 	LoginURLParameters []LoginURLParameter `json:"loginURLParameters,omitempty"`
+	// AuthRequestResponseMode defines the response mode to request during authorization request
+	AuthRequestResponseMode string `json:"authRequestResponseMode,omitempty"`
 	// RedeemURL is the token redemption endpoint
 	RedeemURL string `json:"redeemURL,omitempty"`
 	// ProfileURL is the profile access endpoint
@@ -109,6 +111,9 @@ const (
 	// BitbucketProvider is the provider type for Bitbucket
 	BitbucketProvider ProviderType = "bitbucket"
 
+	// CidaasProvider is the provider type for Cidaas IDP
+	CidaasProvider ProviderType = "cidaas"
+
 	// DigitalOceanProvider is the provider type for DigitalOcean
 	DigitalOceanProvider ProviderType = "digitalocean"
 
@@ -141,6 +146,9 @@ const (
 
 	// OIDCProvider is the provider type for OIDC
 	OIDCProvider ProviderType = "oidc"
+
+	// SourceHutProvider is the provider type for SourceHut
+	SourceHutProvider ProviderType = "sourcehut"
 )
 
 type KeycloakOptions struct {

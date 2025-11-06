@@ -63,14 +63,14 @@ func RunSessionStoreTests(newSS NewSessionStoreFunc, persistentFastForward Persi
 
 			// Set default options in CookieOptions
 			cookieOpts := &options.Cookie{
-				NamePrefix: "_oauth2_proxy",
-				Path:       "/",
-				Expire:     time.Duration(168) * time.Hour,
-				Refresh:    time.Duration(1) * time.Hour,
-				Secure:     true,
-				HTTPOnly:   true,
-				SameSite:   "",
-				Secret:     string(cookieSecret),
+				Name:     "_oauth2_proxy",
+				Path:     "/",
+				Expire:   time.Duration(168) * time.Hour,
+				Refresh:  time.Duration(1) * time.Hour,
+				Secure:   true,
+				HTTPOnly: true,
+				SameSite: "",
+				Secret:   string(cookieSecret),
 			}
 
 			expires := time.Now().Add(1 * time.Hour)
@@ -112,7 +112,7 @@ func RunSessionStoreTests(newSS NewSessionStoreFunc, persistentFastForward Persi
 		Context("with non-default options", func() {
 			BeforeEach(func() {
 				input.cookieOpts = &options.Cookie{
-					NamePrefix:      "_cookie_name",
+					Name:            "_cookie_name",
 					Path:            "/path",
 					Expire:          time.Duration(72) * time.Hour,
 					Refresh:         time.Duration(2) * time.Hour,
@@ -145,10 +145,10 @@ func CheckCookieOptions(in *testInput) {
 
 		It("have the correct name set", func() {
 			if len(cookies) == 1 {
-				Expect(cookies[0].Name).To(Equal(in.cookieOpts.NamePrefix))
+				Expect(cookies[0].Name).To(Equal(in.cookieOpts.Name))
 			} else {
 				for _, cookie := range cookies {
-					Expect(cookie.Name).To(ContainSubstring(in.cookieOpts.NamePrefix))
+					Expect(cookie.Name).To(ContainSubstring(in.cookieOpts.Name))
 				}
 			}
 		})
@@ -383,9 +383,9 @@ func SessionStoreInterfaceTests(in *testInput) {
 			BeforeEach(func() {
 				By("Using a valid cookie with a different providers session encoding")
 				broken := "BrokenSessionFromADifferentSessionImplementation"
-				value, err := encryption.SignedValue(in.cookieOpts.Secret, in.cookieOpts.NamePrefix, []byte(broken), time.Now())
+				value, err := encryption.SignedValue(in.cookieOpts.Secret, in.cookieOpts.Name, []byte(broken), time.Now())
 				Expect(err).ToNot(HaveOccurred())
-				cookie := cookiesapi.MakeCookieFromOptions(in.request, in.cookieOpts.NamePrefix, value, in.cookieOpts, in.cookieOpts.Expire)
+				cookie := cookiesapi.MakeCookieFromOptions(in.request, in.cookieOpts.Name, value, in.cookieOpts, in.cookieOpts.Expire)
 				in.request.AddCookie(cookie)
 
 				err = in.ss().Save(in.response, in.request, in.session)

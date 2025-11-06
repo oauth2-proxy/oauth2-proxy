@@ -37,6 +37,8 @@ type ProviderData struct {
 	ClientSecret      string
 	ClientSecretFile  string
 	Scope             string
+	// The response mode requested from the provider or empty for default ("query")
+	AuthRequestResponseMode string
 	// The picked CodeChallenge Method or empty if none.
 	CodeChallengeMethod string
 	// Code challenge methods supported by the Provider

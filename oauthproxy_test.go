@@ -487,7 +487,7 @@ func (patTest *PassAccessTokenTest) getCallbackEndpoint() (httpCode int, cookie 
 // getEndpointWithCookie makes a requests againt the oauthproxy with passed requestPath
 // and cookie and returns body and status code.
 func (patTest *PassAccessTokenTest) getEndpointWithCookie(cookie string, endpoint string) (httpCode int, accessToken string) {
-	cookieName := patTest.proxy.CookieOptions.NamePrefix
+	cookieName := patTest.proxy.CookieOptions.Name
 	var value string
 	keyPrefix := cookieName + "="
 
@@ -1834,7 +1834,7 @@ func TestAjaxForbiddendRequest(t *testing.T) {
 func TestClearSplitCookie(t *testing.T) {
 	opts := baseTestOptions()
 	opts.Cookie.Secret = base64CookieSecret
-	opts.Cookie.NamePrefix = "oauth2"
+	opts.Cookie.Name = "oauth2"
 	opts.Cookie.DomainTemplates = []string{"abc"}
 	err := validation.Validate(opts)
 	assert.NoError(t, err)
@@ -1870,7 +1870,7 @@ func TestClearSplitCookie(t *testing.T) {
 
 func TestClearSingleCookie(t *testing.T) {
 	opts := baseTestOptions()
-	opts.Cookie.NamePrefix = "oauth2"
+	opts.Cookie.Name = "oauth2"
 	opts.Cookie.DomainTemplates = []string{"abc"}
 	store, err := sessionscookie.NewCookieSessionStore(&opts.Session, &opts.Cookie)
 	if err != nil {

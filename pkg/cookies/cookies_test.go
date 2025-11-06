@@ -131,7 +131,7 @@ var _ = Describe("Cookie Tests", func() {
 				name:  validName,
 				value: "1",
 				opts: options.Cookie{
-					NamePrefix:      validName,
+					Name:            validName,
 					Secret:          validSecret,
 					DomainTemplates: domainTemplates,
 					Path:            "",

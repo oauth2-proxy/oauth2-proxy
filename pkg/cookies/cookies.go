@@ -18,14 +18,14 @@ import (
 func CookieName(ctx context.Context, opts *options.Cookie) string {
 	providerID := utils.ProviderIDFromContext(ctx)
 	if providerID == "" {
-		return opts.NamePrefix
+		return opts.Name
 	}
 
 	// appending hex format of sha256 sum of providerid
 	// sha256 to keep the length of cookie name constant and deterministic
 	// hex for alphanumeric characters only
 	suffix := fmt.Sprintf("%x", sha256.Sum256([]byte(providerID)))
-	return fmt.Sprintf("%s_%s", opts.NamePrefix, suffix)
+	return fmt.Sprintf("%s_%s", opts.Name, suffix)
 }
 
 // MakeCookieFromOptions constructs a cookie based on the given *options.CookieOptions,

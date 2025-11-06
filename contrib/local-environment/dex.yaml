@@ -1,7 +1,7 @@
 # This configuration is intended to be used with the docker-compose testing
 # environment.
-# This should configure Dex to run on port 4190 and provides a static login
-issuer: http://dex.localtest.me:4190/dex
+# This should configure Dex to run on port 5556 and provides a static login
+issuer: http://dex.localtest.me:5556/dex
 storage:
   type: etcd
   config:
@@ -9,7 +9,7 @@ storage:
     - http://etcd:2379
     namespace: dex/
 web:
-  http: 0.0.0.0:4190
+  http: 0.0.0.0:5556
 oauth2:
   skipApprovalScreen: true
 expiry:

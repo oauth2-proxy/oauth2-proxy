@@ -1,6 +1,7 @@
 package validation
 
 import (
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -12,8 +13,8 @@ import (
 func TestValidateCookie(t *testing.T) {
 	alphabet := "abcdefghijklmnopqrstuvwxyz"
 
-	validNamePrefix := "_oauth2_proxy"
-	invalidNamePrefix := "_oauth2;proxy" // Separater character not allowed
+	validName := "_oauth2_proxy"
+	invalidName := "_oauth2;proxy" // Separater character not allowed
 	// 10 times the alphabet should be longer than 256 characters
 	longName := strings.Repeat(alphabet, 10)
 	validSecret := "secretthirtytwobytes+abcdefghijk"
@@ -29,9 +30,23 @@ func TestValidateCookie(t *testing.T) {
 		"a.cba.localhost",
 	}
 
-	invalidNamePrefixMsg := "invalid cookie name prefix: \"_oauth2;proxy\""
+	// Create a temporary file for the valid secret file test
+	tmpfile, err := os.CreateTemp("", "cookie-secret-test")
+	if err != nil {
+		t.Fatalf("Failed to create temporary file: %v", err)
+	}
+	defer os.Remove(tmpfile.Name())
+
+	// Write a valid 32-byte secret to the file
+	_, err = tmpfile.Write([]byte(validSecret))
+	if err != nil {
+		t.Fatalf("Failed to write to temporary file: %v", err)
+	}
+	tmpfile.Close()
+
+	invalidNameMsg := "invalid cookie name prefix: \"_oauth2;proxy\""
 	longNamePrefixMsg := "cookie name prefix should be under 191 characters: cookie name prefix is 260 characters"
-	missingSecretMsg := "missing setting: cookie-secret"
+	missingSecretMsg := "missing setting: cookie-secret or cookie-secret-file"
 	invalidSecretMsg := "cookie_secret must be 16, 24, or 32 bytes to create an AES cipher, but is 6 bytes"
 	invalidBase64SecretMsg := "cookie_secret must be 16, 24, or 32 bytes to create an AES cipher, but is 10 bytes"
 	refreshLongerThanExpireMsg := "cookie_refresh (\"1h0m0s\") must be less than cookie_expire (\"15m0s\")"
@@ -45,7 +60,7 @@ func TestValidateCookie(t *testing.T) {
 		{
 			name: "with valid configuration",
 			cookie: options.Cookie{
-				NamePrefix:      validNamePrefix,
+				Name:            validName,
 				Secret:          validSecret,
 				DomainTemplates: domains,
 				Path:            "",
@@ -60,7 +75,7 @@ func TestValidateCookie(t *testing.T) {
 		{
 			name: "with no cookie secret",
 			cookie: options.Cookie{
-				NamePrefix:      validNamePrefix,
+				Name:            validName,
 				Secret:          "",
 				DomainTemplates: emptyDomains,
 				Path:            "",
@@ -77,7 +92,7 @@ func TestValidateCookie(t *testing.T) {
 		{
 			name: "with an invalid cookie secret",
 			cookie: options.Cookie{
-				NamePrefix:      validNamePrefix,
+				Name:            validName,
 				Secret:          invalidSecret,
 				DomainTemplates: emptyDomains,
 				Path:            "",
@@ -94,7 +109,7 @@ func TestValidateCookie(t *testing.T) {
 		{
 			name: "with a valid Base64 secret",
 			cookie: options.Cookie{
-				NamePrefix:      validNamePrefix,
+				Name:            validName,
 				Secret:          validBase64Secret,
 				DomainTemplates: emptyDomains,
 				Path:            "",
@@ -109,7 +124,7 @@ func TestValidateCookie(t *testing.T) {
 		{
 			name: "with an invalid Base64 secret",
 			cookie: options.Cookie{
-				NamePrefix:      validNamePrefix,
+				Name:            validName,
 				Secret:          invalidBase64Secret,
 				DomainTemplates: emptyDomains,
 				Path:            "",
@@ -126,7 +141,7 @@ func TestValidateCookie(t *testing.T) {
 		{
 			name: "with an invalid name",
 			cookie: options.Cookie{
-				NamePrefix:      invalidNamePrefix,
+				Name:            invalidName,
 				Secret:          validSecret,
 				DomainTemplates: emptyDomains,
 				Path:            "",
@@ -137,13 +152,13 @@ func TestValidateCookie(t *testing.T) {
 				SameSite:        "",
 			},
 			errStrings: []string{
-				invalidNamePrefixMsg,
+				invalidNameMsg,
 			},
 		},
 		{
 			name: "with a name that is too long",
 			cookie: options.Cookie{
-				NamePrefix:      longName,
+				Name:            longName,
 				Secret:          validSecret,
 				DomainTemplates: emptyDomains,
 				Path:            "",
@@ -160,7 +175,7 @@ func TestValidateCookie(t *testing.T) {
 		{
 			name: "with refresh longer than expire",
 			cookie: options.Cookie{
-				NamePrefix:      validNamePrefix,
+				Name:            validName,
 				Secret:          validSecret,
 				DomainTemplates: emptyDomains,
 				Path:            "",
@@ -177,7 +192,7 @@ func TestValidateCookie(t *testing.T) {
 		{
 			name: "with samesite \"none\"",
 			cookie: options.Cookie{
-				NamePrefix:      validNamePrefix,
+				Name:            validName,
 				Secret:          validSecret,
 				DomainTemplates: emptyDomains,
 				Path:            "",
@@ -192,7 +207,7 @@ func TestValidateCookie(t *testing.T) {
 		{
 			name: "with samesite \"lax\"",
 			cookie: options.Cookie{
-				NamePrefix:      validNamePrefix,
+				Name:            validName,
 				Secret:          validSecret,
 				DomainTemplates: emptyDomains,
 				Path:            "",
@@ -207,7 +222,7 @@ func TestValidateCookie(t *testing.T) {
 		{
 			name: "with samesite \"strict\"",
 			cookie: options.Cookie{
-				NamePrefix:      validNamePrefix,
+				Name:            validName,
 				Secret:          validSecret,
 				DomainTemplates: emptyDomains,
 				Path:            "",
@@ -222,7 +237,7 @@ func TestValidateCookie(t *testing.T) {
 		{
 			name: "with samesite \"invalid\"",
 			cookie: options.Cookie{
-				NamePrefix:      validNamePrefix,
+				Name:            validName,
 				Secret:          validSecret,
 				DomainTemplates: emptyDomains,
 				Path:            "",
@@ -239,7 +254,7 @@ func TestValidateCookie(t *testing.T) {
 		{
 			name: "with a combination of configuration errors",
 			cookie: options.Cookie{
-				NamePrefix:      invalidNamePrefix,
+				Name:            invalidName,
 				Secret:          invalidSecret,
 				DomainTemplates: domains,
 				Path:            "",
@@ -250,7 +265,7 @@ func TestValidateCookie(t *testing.T) {
 				SameSite:        "invalid",
 			},
 			errStrings: []string{
-				invalidNamePrefixMsg,
+				invalidNameMsg,
 				invalidSecretMsg,
 				refreshLongerThanExpireMsg,
 				invalidSameSiteMsg,
@@ -259,7 +274,7 @@ func TestValidateCookie(t *testing.T) {
 		{
 			name: "with session cookie configuration",
 			cookie: options.Cookie{
-				NamePrefix:      "",
+				Name:            "",
 				Secret:          validSecret,
 				DomainTemplates: domains,
 				Path:            "",
@@ -270,6 +285,38 @@ func TestValidateCookie(t *testing.T) {
 				SameSite:        "",
 			},
 			errStrings: []string{},
+		},
+		{
+			name: "with valid secret file",
+			cookie: options.Cookie{
+				Name:            validName,
+				Secret:          "",
+				SecretFile:      tmpfile.Name(),
+				DomainTemplates: domains,
+				Path:            "",
+				Expire:          24 * time.Hour,
+				Refresh:         0,
+				Secure:          true,
+				HTTPOnly:        true,
+				SameSite:        "",
+			},
+			errStrings: []string{},
+		},
+		{
+			name: "with nonexistent secret file",
+			cookie: options.Cookie{
+				Name:            validName,
+				Secret:          "",
+				SecretFile:      "/nonexistent/file.txt",
+				DomainTemplates: domains,
+				Path:            "",
+				Expire:          24 * time.Hour,
+				Refresh:         0,
+				Secure:          true,
+				HTTPOnly:        true,
+				SameSite:        "",
+			},
+			errStrings: []string{"could not read cookie secret file: /nonexistent/file.txt"},
 		},
 	}
 

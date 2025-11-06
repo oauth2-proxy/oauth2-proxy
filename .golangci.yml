@@ -1,46 +1,69 @@
-run:
-  deadline: 120s
+version: "2"
 linters:
+  default: none
   enable:
+    - bodyclose
+    - copyloopvar
+    - dogsled
+    - goconst
+    - gocritic
+    - goprintffuncname
+    - gosec
     - govet
     - ineffassign
-    - goconst
-    - gofmt
-    - goimports
-    - gosec
-    - gosimple
-    - staticcheck
-    - typecheck
-    - unused
-    - bodyclose
-    - dogsled
-    - goprintffuncname
     - misspell
     - prealloc
-    - copyloopvar
-    - stylecheck
-    - unconvert
-    - gocritic
     - revive
-  disable-all: true
-issues:
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - scopelint
-        - bodyclose
-        - unconvert
-        - gocritic
-        - gosec
-        - goconst
-        - revive
-    - path: _test\.go
-      linters:
-        - revive
-      text: "dot-imports:"
-    # If we have tests in shared test folders, these can be less strictly linted
-    - path: tests/.*_tests\.go
-      linters:
-        - revive
-        - bodyclose
-        - stylecheck
+    - staticcheck
+    - unconvert
+    - unused
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - bodyclose
+          - goconst
+          - gocritic
+          - gosec
+          - revive
+          - scopelint
+          - unconvert
+        path: _test\.go
+      - linters:
+          - revive
+        path: _test\.go
+        text: 'dot-imports:'
+      # # If we have tests in shared test folders, these can be less strictly linted
+      - linters:
+          - bodyclose
+          - revive
+          - staticcheck
+        path: tests/.*_tests\.go
+      # See https://github.com/oauth2-proxy/oauth2-proxy/issues/3060
+      # https://staticcheck.dev/docs/checks/#QF1008
+      - linters:
+          - staticcheck
+        text: QF1008
+      - linters:
+          - revive
+        path: util/.*\.go$
+        text: "var-naming: avoid meaningless package names"
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

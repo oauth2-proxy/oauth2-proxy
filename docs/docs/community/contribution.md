@@ -15,7 +15,9 @@ We suggest using [Visual Studio Code](https://code.visualstudio.com/docs/languag
 
 # Go version
 
-This project is currently still using go 1.22. You can follow the installation guide for go [here.](https://go.dev/doc/install) And you can find go version 1.22 in the archived section [here.](https://go.dev/dl/)
+See the `go.mod` file in the root of this repository for the version of Go used by this project.
+You can follow [the installation guide for Go](https://go.dev/doc/install),
+and you can find this specific Go version on [the Go downloads page](https://go.dev/dl/).
 
 # Preparing your fork
 Clone your fork, create a feature branch and update the depedencies to get started.
@@ -68,11 +70,22 @@ For starting oauth2-proxy locally open the debugging tab and create the `launch.
 
 Before you can start your local version of oauth2-proxy, you will have to use the provided docker compose files to start a local upstream service and identity provider. We suggest using [httpbin](https://hub.docker.com/r/kennethreitz/httpbin) as your upstream for testing as it allows for request and response introspection of all things HTTP.
 
-Open a terminal and switch to the `contrib/local-environment` directory.
+Inside the `contrib/local-environment` directory you can use the `Makefile` for
+starting different example setups:
 
-- Dex as your IdP: `docker compose -f docker-compose.yaml up dex etcd httpbin`
-- Keycloak as your IdP: `docker compose -f docker-compose-keycloak.yaml up keycloak httpbin`
+- Dex as your IdP: `make up` or `make down`
+- Dex as your IdP using the alpha-config: `make alpha-config-up`
+- Keycloak as your IdP: `make keycloak-up`
+- Dex as your IdP & nginx reverse proxy: `make nginx-up`
+- and many more...
 
-The username for both is `admin@example.com` and password is `password`.
+Check out the `Makefile` to see what is available.
 
-Start oauth2-proxy from the debug tab and open http://oauth2-proxy.localtest.me:4180/ for testing.
+The username and password for all setups is usually `admin@example.com` and `password`.
+
+The docker compose setups expose the services with a dynamic reverse DNS resolver: localtest.me
+
+- OAuth2-Proxy: http://oauth2-proxy.localtest.me:4180
+- Upstream: http://httpbin.localtest.me:8080
+- Dex: http://dex.localtest.me:5556
+

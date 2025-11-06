@@ -31,10 +31,11 @@ type LegacyOptions struct {
 func NewLegacyOptions() *LegacyOptions {
 	return &LegacyOptions{
 		LegacyUpstreams: LegacyUpstreams{
-			PassHostHeader:  true,
-			ProxyWebSockets: true,
-			FlushInterval:   DefaultUpstreamFlushInterval,
-			Timeout:         DefaultUpstreamTimeout,
+			PassHostHeader:    true,
+			ProxyWebSockets:   true,
+			FlushInterval:     DefaultUpstreamFlushInterval,
+			Timeout:           DefaultUpstreamTimeout,
+			DisableKeepAlives: false,
 		},
 
 		LegacyHeaders: LegacyHeaders{
@@ -105,6 +106,7 @@ type LegacyUpstreams struct {
 	SSLUpstreamInsecureSkipVerify bool          `flag:"ssl-upstream-insecure-skip-verify" cfg:"ssl_upstream_insecure_skip_verify"`
 	Upstreams                     []string      `flag:"upstream" cfg:"upstreams"`
 	Timeout                       time.Duration `flag:"upstream-timeout" cfg:"upstream_timeout"`
+	DisableKeepAlives             bool          `flag:"disable-keep-alives" cfg:"disable_keep_alives"`
 }
 
 func legacyUpstreamsFlagSet() *pflag.FlagSet {
@@ -116,6 +118,7 @@ func legacyUpstreamsFlagSet() *pflag.FlagSet {
 	flagSet.Bool("ssl-upstream-insecure-skip-verify", false, "skip validation of certificates presented when using HTTPS upstreams")
 	flagSet.StringSlice("upstream", []string{}, "the http url(s) of the upstream endpoint, file:// paths for static files or static://<status_code> for static response. Routing is based on the path")
 	flagSet.Duration("upstream-timeout", DefaultUpstreamTimeout, "maximum amount of time the server will wait for a response from the upstream")
+	flagSet.Bool("disable-keep-alives", false, "disable HTTP keep-alive connections to the upstream server")
 
 	return flagSet
 }
@@ -144,6 +147,7 @@ func (l *LegacyUpstreams) convert() (UpstreamConfig, error) {
 			ProxyWebSockets:       &l.ProxyWebSockets,
 			FlushInterval:         &flushInterval,
 			Timeout:               &timeout,
+			DisableKeepAlives:     l.DisableKeepAlives,
 		}
 
 		switch u.Scheme {
@@ -176,6 +180,7 @@ func (l *LegacyUpstreams) convert() (UpstreamConfig, error) {
 			upstream.ProxyWebSockets = nil
 			upstream.FlushInterval = nil
 			upstream.Timeout = nil
+			upstream.DisableKeepAlives = false
 		case "unix":
 			upstream.Path = "/"
 		}
@@ -524,6 +529,7 @@ type LegacyProvider struct {
 	OIDCExtraAudiences                 []string `flag:"oidc-extra-audience" cfg:"oidc_extra_audiences"`
 	OIDCPublicKeyFiles                 []string `flag:"oidc-public-key-file" cfg:"oidc_public_key_files"`
 	LoginURL                           string   `flag:"login-url" cfg:"login_url"`
+	AuthRequestResponseMode            string   `flag:"auth-request-response-mode" cfg:"auth_request_response_mode"`
 	RedeemURL                          string   `flag:"redeem-url" cfg:"redeem_url"`
 	ProfileURL                         string   `flag:"profile-url" cfg:"profile_url"`
 	SkipClaimsFromProfileURL           bool     `flag:"skip-claims-from-profile-url" cfg:"skip_claims_from_profile_url"`
@@ -586,6 +592,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("login-url", "", "Authentication endpoint")
 	flagSet.String("redeem-url", "", "Token redemption endpoint")
 	flagSet.String("profile-url", "", "Profile access endpoint")
+	flagSet.String("auth-request-response-mode", "", "Authorization request response mode")
 	flagSet.Bool("skip-claims-from-profile-url", false, "Skip loading missing claims from profile URL")
 	flagSet.String("resource", "", "The resource that is protected (Azure AD only)")
 	flagSet.String("validate-url", "", "Access token validation endpoint")
@@ -684,6 +691,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		AllowedGroups:            l.AllowedGroups,
 		CodeChallengeMethod:      l.CodeChallengeMethod,
 		BackendLogoutURL:         l.BackendLogoutURL,
+		AuthRequestResponseMode:  l.AuthRequestResponseMode,
 	}
 
 	// This part is out of the switch section for all providers that support OIDC

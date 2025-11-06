@@ -47,16 +47,17 @@ var _ = Describe("Load", func() {
 		},
 
 		Options: Options{
-			ProxyPrefix:        "/oauth2",
-			PingPath:           "/ping",
-			ReadyPath:          "/ready",
-			RealClientIPHeader: "X-Real-IP",
-			ForceHTTPS:         false,
-			Cookie:             cookieDefaults(),
-			Session:            sessionOptionsDefaults(),
-			Templates:          templatesDefaults(),
-			SkipAuthPreflight:  false,
-			Logging:            loggingDefaults(),
+			BearerTokenLoginFallback: true,
+			ProxyPrefix:              "/oauth2",
+			PingPath:                 "/ping",
+			ReadyPath:                "/ready",
+			RealClientIPHeader:       "X-Real-IP",
+			ForceHTTPS:               false,
+			Cookie:                   cookieDefaults(),
+			Session:                  sessionOptionsDefaults(),
+			Templates:                templatesDefaults(),
+			SkipAuthPreflight:        false,
+			Logging:                  loggingDefaults(),
 		},
 	}
 
@@ -328,7 +329,7 @@ var _ = Describe("Load", func() {
 			Entry("with an unknown option in the config file", &testOptionsTableInput{
 				configFile:  []byte(`unknown_option="foo"`),
 				flagSet:     func() *pflag.FlagSet { return testOptionsFlagSet },
-				expectedErr: fmt.Errorf("error unmarshalling config: 1 error(s) decoding:\n\n* '' has invalid keys: unknown_option"),
+				expectedErr: fmt.Errorf("error unmarshalling config: decoding failed due to the following error(s):\n\n'' has invalid keys: unknown_option"),
 				// Viper will unmarshal before returning the error, so this is the default output
 				expectedOutput: &TestOptions{
 					StringOption: "default",
@@ -484,6 +485,31 @@ sub:
 				input:      &TestOptions{},
 				expectedOutput: &TestOptions{
 					StringOption: "Bob",
+				},
+			}),
+			Entry("with a config file containing $ signs for things other than environment variables", loadYAMLTableInput{
+				configFile: []byte(`
+stringOption: /$1
+stringSliceOption:
+- /$1
+- ^/(.*)$
+- api/$1
+- api/(.*)$
+- ^/api/(.*)$
+- /api/$1`),
+				input: &TestOptions{},
+				expectedOutput: &TestOptions{
+					StringOption: "/$1",
+					TestOptionSubStruct: TestOptionSubStruct{
+						StringSliceOption: []string{
+							"/$1",
+							"^/(.*)$",
+							"api/$1",
+							"api/(.*)$",
+							"^/api/(.*)$",
+							"/api/$1",
+						},
+					},
 				},
 			}),
 		)

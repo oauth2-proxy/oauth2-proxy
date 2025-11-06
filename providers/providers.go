@@ -45,6 +45,8 @@ func NewProvider(providerConfig options.Provider) (Provider, error) {
 		return NewMicrosoftEntraIDProvider(providerData, providerConfig), nil
 	case options.BitbucketProvider:
 		return NewBitbucketProvider(providerData, providerConfig.BitbucketConfig), nil
+	case options.CidaasProvider:
+		return NewCIDAASProvider(providerData, providerConfig), nil
 	case options.DigitalOceanProvider:
 		return NewDigitalOceanProvider(providerData), nil
 	case options.FacebookProvider:
@@ -67,6 +69,8 @@ func NewProvider(providerConfig options.Provider) (Provider, error) {
 		return NewNextcloudProvider(providerData), nil
 	case options.OIDCProvider:
 		return NewOIDCProvider(providerData, providerConfig.OIDCConfig), nil
+	case options.SourceHutProvider:
+		return NewSourceHutProvider(providerData), nil
 	default:
 		return nil, fmt.Errorf("unknown provider type %q", providerConfig.Type)
 	}
@@ -74,10 +78,11 @@ func NewProvider(providerConfig options.Provider) (Provider, error) {
 
 func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, error) {
 	p := &ProviderData{
-		Scope:            providerConfig.Scope,
-		ClientID:         providerConfig.ClientID,
-		ClientSecret:     providerConfig.ClientSecret,
-		ClientSecretFile: providerConfig.ClientSecretFile,
+		Scope:                   providerConfig.Scope,
+		ClientID:                providerConfig.ClientID,
+		ClientSecret:            providerConfig.ClientSecret,
+		ClientSecretFile:        providerConfig.ClientSecretFile,
+		AuthRequestResponseMode: providerConfig.AuthRequestResponseMode,
 	}
 
 	needsVerifier, err := providerRequiresOIDCProviderVerifier(providerConfig.Type)
@@ -182,9 +187,11 @@ func parseCodeChallengeMethod(providerConfig options.Provider) string {
 func providerRequiresOIDCProviderVerifier(providerType options.ProviderType) (bool, error) {
 	switch providerType {
 	case options.BitbucketProvider, options.DigitalOceanProvider, options.FacebookProvider, options.GitHubProvider,
-		options.GoogleProvider, options.KeycloakProvider, options.LinkedInProvider, options.LoginGovProvider, options.NextCloudProvider:
+		options.GoogleProvider, options.KeycloakProvider, options.LinkedInProvider, options.LoginGovProvider,
+		options.NextCloudProvider, options.SourceHutProvider:
 		return false, nil
-	case options.ADFSProvider, options.AzureProvider, options.GitLabProvider, options.KeycloakOIDCProvider, options.OIDCProvider, options.MicrosoftEntraIDProvider:
+	case options.OIDCProvider, options.ADFSProvider, options.AzureProvider, options.CidaasProvider,
+		options.GitLabProvider, options.KeycloakOIDCProvider, options.MicrosoftEntraIDProvider:
 		return true, nil
 	default:
 		return false, fmt.Errorf("unknown provider type: %s", providerType)

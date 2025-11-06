@@ -40,7 +40,7 @@ var _ = Describe("Session Ticket Tests", func() {
 					id:     "dummy-0123456789abcdef",
 					secret: []byte("0123456789abcdef"),
 					options: &options.Cookie{
-						NamePrefix: "dummy",
+						Name: "dummy",
 					},
 				},
 				encodedTicket: fmt.Sprintf("v2.%s.%s",
@@ -64,7 +64,7 @@ var _ = Describe("Session Ticket Tests", func() {
 	Context("saveSession", func() {
 		It("uses the passed save function", func() {
 			ctx := context.Background()
-			t, err := newTicket(ctx, &options.Cookie{NamePrefix: "dummy"})
+			t, err := newTicket(ctx, &options.Cookie{Name: "dummy"})
 			Expect(err).ToNot(HaveOccurred())
 
 			c, err := t.makeCipher()
@@ -85,7 +85,7 @@ var _ = Describe("Session Ticket Tests", func() {
 
 		It("errors when the saveFunc errors", func() {
 			ctx := context.Background()
-			t, err := newTicket(ctx, &options.Cookie{NamePrefix: "dummy"})
+			t, err := newTicket(ctx, &options.Cookie{Name: "dummy"})
 			Expect(err).ToNot(HaveOccurred())
 
 			err = t.saveSession(
@@ -100,7 +100,7 @@ var _ = Describe("Session Ticket Tests", func() {
 	Context("loadSession", func() {
 		It("uses the passed load function", func() {
 			ctx := context.Background()
-			t, err := newTicket(ctx, &options.Cookie{NamePrefix: "dummy"})
+			t, err := newTicket(ctx, &options.Cookie{Name: "dummy"})
 			Expect(err).ToNot(HaveOccurred())
 
 			c, err := t.makeCipher()
@@ -123,7 +123,7 @@ var _ = Describe("Session Ticket Tests", func() {
 
 		It("errors when the loadFunc errors", func() {
 			ctx := context.Background()
-			t, err := newTicket(ctx, &options.Cookie{NamePrefix: "dummy"})
+			t, err := newTicket(ctx, &options.Cookie{Name: "dummy"})
 			Expect(err).ToNot(HaveOccurred())
 
 			data, err := t.loadSession(
@@ -141,7 +141,7 @@ var _ = Describe("Session Ticket Tests", func() {
 	Context("clearSession", func() {
 		It("uses the passed clear function", func() {
 			ctx := context.Background()
-			t, err := newTicket(ctx, &options.Cookie{NamePrefix: "dummy"})
+			t, err := newTicket(ctx, &options.Cookie{Name: "dummy"})
 			Expect(err).ToNot(HaveOccurred())
 
 			var tracker string
@@ -155,7 +155,7 @@ var _ = Describe("Session Ticket Tests", func() {
 
 		It("errors when the clearFunc errors", func() {
 			ctx := context.Background()
-			t, err := newTicket(ctx, &options.Cookie{NamePrefix: "dummy"})
+			t, err := newTicket(ctx, &options.Cookie{Name: "dummy"})
 			Expect(err).ToNot(HaveOccurred())
 
 			err = t.clearSession(func(k string) error {

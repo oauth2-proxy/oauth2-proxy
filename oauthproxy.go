@@ -166,6 +166,10 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		for _, issuer := range opts.ExtraJwtIssuers {
 			logger.Printf("Skipping JWT tokens from extra JWT issuer: %q", issuer)
 		}
+		if !opts.BearerTokenLoginFallback {
+			logger.Println("Denying requests with invalid JWT tokens")
+		}
+
 	}
 	redirectURL := opts.GetRedirectURL()
 	if redirectURL.Path == "" {
@@ -178,7 +182,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		refresh = fmt.Sprintf("after %s", opts.Cookie.Refresh)
 	}
 
-	logger.Printf("Cookie settings: name_prefix:%s secure(https):%v httponly:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s", opts.Cookie.NamePrefix, opts.Cookie.Secure, opts.Cookie.HTTPOnly, opts.Cookie.Expire, strings.Join(opts.Cookie.DomainTemplates, ","), opts.Cookie.Path, opts.Cookie.SameSite, refresh)
+	logger.Printf("Cookie settings: name_prefix:%s secure(https):%v httponly:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s", opts.Cookie.Name, opts.Cookie.Secure, opts.Cookie.HTTPOnly, opts.Cookie.Expire, strings.Join(opts.Cookie.DomainTemplates, ","), opts.Cookie.Path, opts.Cookie.SameSite, refresh)
 
 	trustedIPs := ip.NewNetSet()
 	for _, ipStr := range opts.TrustedIPs {
@@ -441,7 +445,7 @@ func buildSessionChain(opts *options.Options, sessionStore sessionsapi.SessionSt
 				middlewareapi.CreateTokenToSessionFunc(verifier.Verify))
 		}
 
-		chain = chain.Append(middleware.NewJwtSessionLoader(sessionLoaders))
+		chain = chain.Append(middleware.NewJwtSessionLoader(sessionLoaders, opts.BearerTokenLoginFallback))
 	}
 
 	if validator != nil {
@@ -610,7 +614,7 @@ func isAllowedMethod(req *http.Request, route allowedRoute) bool {
 }
 
 func isAllowedPath(req *http.Request, route allowedRoute) bool {
-	matches := route.pathRegex.MatchString(requestutil.GetRequestURI(req))
+	matches := route.pathRegex.MatchString(requestutil.GetRequestPath(req))
 
 	if route.negate {
 		return !matches
@@ -670,12 +674,6 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 	}
 
 	prepareNoCache(rw)
-	err := p.ClearSessionCookie(rw, req)
-	if err != nil {
-		logger.Printf("Error clearing session cookie: %v", err)
-		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
-		return
-	}
 	rw.WriteHeader(code)
 
 	redirectURL, err := p.appDirector.GetRedirect(req)
@@ -687,6 +685,10 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 
 	if redirectURL == p.SignInPath {
 		redirectURL = "/"
+	}
+
+	if err := p.ClearSessionCookie(rw, req); err != nil {
+		logger.Printf("Error clearing session cookie: %v", err)
 	}
 
 	p.pageWriter.WriteSignInPage(rw, req, redirectURL, code)
@@ -905,13 +907,12 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, pro
 		csrf.HashOIDCNonce(),
 		extraParams,
 	)
-
+	cookies.ClearExtraCsrfCookies(p.CookieOptions, rw, req)
 	if _, err := csrf.SetCookie(rw, req); err != nil {
 		logger.Errorf("Error setting CSRF cookie: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
-
 	http.Redirect(rw, req, loginURL, http.StatusFound)
 }
 

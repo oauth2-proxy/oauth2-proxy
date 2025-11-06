@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -13,7 +14,7 @@ import (
 )
 
 func validateCookie(o options.Cookie) []string {
-	msgs := validateCookieSecret(o.Secret)
+	msgs := validateCookieSecret(o.Secret, o.SecretFile)
 
 	if o.Expire != time.Duration(0) && o.Refresh >= o.Expire {
 		msgs = append(msgs, fmt.Sprintf(
@@ -41,18 +42,36 @@ func validateCookieNamePrefix(o options.Cookie) []string {
 
 	cookie := &http.Cookie{Name: cookieName}
 	if cookie.String() == "" {
-		msgs = append(msgs, fmt.Sprintf("invalid cookie name prefix: %q", o.NamePrefix))
+		msgs = append(msgs, fmt.Sprintf("invalid cookie name prefix: %q", o.Name))
 	}
 
-	if len(o.NamePrefix) > maxLength {
-		msgs = append(msgs, fmt.Sprintf("cookie name prefix should be under %d characters: cookie name prefix is %d characters", maxLength, len(o.NamePrefix)))
+	if len(o.Name) > maxLength {
+		msgs = append(msgs, fmt.Sprintf("cookie name prefix should be under %d characters: cookie name prefix is %d characters", maxLength, len(o.Name)))
 	}
 	return msgs
 }
 
-func validateCookieSecret(secret string) []string {
-	if secret == "" {
-		return []string{"missing setting: cookie-secret"}
+func validateCookieSecret(secret string, secretFile string) []string {
+	if secret == "" && secretFile == "" {
+		return []string{"missing setting: cookie-secret or cookie-secret-file"}
+	}
+	if secret == "" && secretFile != "" {
+		fileData, err := os.ReadFile(secretFile)
+		if err != nil {
+			return []string{"could not read cookie secret file: " + secretFile}
+		}
+		// Validate the file content as a secret
+		secretBytes := encryption.SecretBytes(string(fileData))
+		switch len(secretBytes) {
+		case 16, 24, 32:
+			// Valid secret size found
+			return []string{}
+		}
+		// Invalid secret size found, return a message
+		return []string{fmt.Sprintf(
+			"cookie_secret from file must be 16, 24, or 32 bytes to create an AES cipher, but is %d bytes",
+			len(secretBytes)),
+		}
 	}
 
 	secretBytes := encryption.SecretBytes(secret)

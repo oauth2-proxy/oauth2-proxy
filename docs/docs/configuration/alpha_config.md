@@ -182,9 +182,9 @@ They may change between releases without notice.
 | `injectResponseHeaders` | _[[]Header](#header)_ | InjectResponseHeaders is used to configure headers that should be added<br/>to responses from the proxy.<br/>This is typically used when using the proxy as an external authentication<br/>provider in conjunction with another proxy such as NGINX and its<br/>auth_request module.<br/>Headers may source values from either the authenticated user's session<br/>or from a static secret value. |
 | `server` | _[Server](#server)_ | Server is used to configure the HTTP(S) server for the proxy application.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
 | `metricsServer` | _[Server](#server)_ | MetricsServer is used to configure the HTTP(S) server for metrics.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
-| `providers` | _[Providers](#providers)_ | Providers is used to configure multiple providers. |
-| `providerLoader` | _[ProviderLoader](#providerloader)_ | ProviderLoader is used to allow multi-provider in oauth2-proxy.<br/>You can choose between single, config and postgres types. |
-| `providerMatcher` | _[ProviderMatcher](#providermatcher)_ | ProviderMatcher is used to configure the provider-id matching rules for extracting provider-id from request<br/>which will then in turn cause providerLoader to load provider identifying from its ID.<br/>The rules define where to look for provider-id in request header, host, query or path or their precedence. |
+| `providers` | _[Providers](#providers)_ | Providers is used to configure your provider. **Multiple-providers is not<br/>yet working.** [This feature is tracked in<br/>#925](https://github.com/oauth2-proxy/oauth2-proxy/issues/926) |
+| `providerLoader` | _[ProviderLoader](#providerloader)_ | ProviderLoader is used to allow multiple providers in oauth2-proxy.<br/>You can choose between single, config and postgres types. |
+| `providerMatcher` | _[ProviderMatcher](#providermatcher)_ | ProviderMatcher is used to configure the provider-id matching rules for extracting provider-id from request<br/>which will then in turn cause providerLoader to load provider/provider identifying from its ID.<br/>The rules define where to look for provider-id in request header, host, query or path or their precedence. |
 
 ### AzureOptions
 
@@ -495,6 +495,7 @@ Provider holds all configuration for a single provider
 | `useSystemTrustStore` | _bool_ | UseSystemTrustStore determines if your custom CA files and the system trust store are used<br/>If set to true, your custom CA files and the system trust store are used otherwise only your custom CA files. |
 | `loginURL` | _string_ | LoginURL is the authentication endpoint |
 | `loginURLParameters` | _[[]LoginURLParameter](#loginurlparameter)_ | LoginURLParameters defines the parameters that can be passed from the start URL to the IdP login URL |
+| `authRequestResponseMode` | _string_ | AuthRequestResponseMode defines the response mode to request during authorization request |
 | `redeemURL` | _string_ | RedeemURL is the token redemption endpoint |
 | `profileURL` | _string_ | ProfileURL is the profile access endpoint |
 | `skipClaimsFromProfileURL` | _bool_ | SkipClaimsFromProfileURL allows to skip request to Profile URL for resolving claims not present in id_token<br/>default set to 'false' |
@@ -513,8 +514,40 @@ Provider holds all configuration for a single provider
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `Type` | _string_ | Type defines the type of ProviderLoader which can be single, config and postgres.<br/>"single" referes to the single provider.<br/>"config" refers to multiple providers loaded from config file.<br/>"postgres" refers to storing provider configuration in a postgres store and load/delete providers while the service<br/> is alive. |
+| `Type` | _string_ | Type defines the type of ProviderLoader which can be single, config and postgres.<br/>"single" referes to the single provider.<br/>"config" refers to multiple providers loaded from config file.<br/>"postgres" refers to storing provider configuration in a podtgres store and load/delete<br/>providers while the service is alive. |
 | `PostgresLoader` | _[PostgresLoader](#postgresloader)_ | PostgresLoader contains configuration settings for PostgesLoader Type. |
+
+### ProviderMatcher
+
+(**Appears on:** [AlphaOptions](#alphaoptions))
+
+
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `rules` | _[[]ProviderMatcherRule](#providermatcherrule)_ | Rules define the rules for finding provider id in the incoming request |
+
+### ProviderMatcherRule
+
+(**Appears on:** [ProviderMatcher](#providermatcher))
+
+ProviderMatcherRule is the structure to define rule for finding provider id in request
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `source` | _[ProviderMatcherRuleSource](#providermatcherrulesource)_ | Source defines which part of the HTTP request contains the provider id |
+| `expr` | _string_ | Expr defines the regex expression to match and extract provider id from the source |
+| `captureGroup` | _int_ | CaptureGroup or sub-match referes to the index that is actually the provider id |
+| `queryParam` | _string_ | QueryParam defines the query parameter containing provider-id in case source is 'query' |
+| `header` | _string_ | Header defines the header key in case source is 'header' |
+| `jwtClaim` | _string_ | JWT Claim defines the json field containing provider id in jwt token e.g provider.id |
+
+### ProviderMatcherRuleSource
+#### (`string` alias)
+
+(**Appears on:** [ProviderMatcherRule](#providermatcherrule))
+
+Source defines the source i-e "host", "path", "query" or "header"
 
 ### ProviderType
 #### (`string` alias)
@@ -534,7 +567,6 @@ and oidc.
 
 Providers is a collection of definitions for providers.
 
-
 ### Redis
 
 (**Appears on:** [PostgresLoader](#postgresloader))
@@ -543,12 +575,13 @@ Providers is a collection of definitions for providers.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `ConnectionURL` | _string_ | ConnectionURL is the host URL. |
-| `Password` | _string_ | Password required to allow connection with redis store. |
-| `UseSentinel` | _bool_ | UseSentinels will allow to use sentinels in case its value is set to true. |
-| `SentinelPassword` | _string_ | SentinelPassword contains password for authorizing use of sentinel. |
-| `SentinelMasterName` | _string_ | SentinelMasterName is the name given to master. |
-| `SentinelConnectionURLs` | _[]string_ | SnetinelConnectionURLs contains the list of URLs used for connecting with the redis instances<br/>to be included in the sentinel. |
+| `ConnectionURL` | _string_ |  |
+| `Username` | _string_ |  |
+| `Password` | _string_ |  |
+| `UseSentinel` | _bool_ |  |
+| `SentinelPassword` | _string_ |  |
+| `SentinelMasterName` | _string_ |  |
+| `SentinelConnectionURLs` | _[]string_ |  |
 | `UseCluster` | _bool_ | UseCluster sets the flag for using redis cluster or not. |
 | `ClusterConnectionURLs` | _[]string_ | ClusterConnectionURLs contains the list of URLs of redis instances to be included in the<br/>cluster. |
 | `CAPath` | _string_ | CAPath defines the path to certificates. |
@@ -565,12 +598,13 @@ RedisStoreOptions contains configuration options for the RedisSessionStore.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `ConnectionURL` | _string_ | ConnectionURL is the host URL. |
-| `Password` | _string_ | Password required to allow connection with redis store. |
-| `UseSentinel` | _bool_ | UseSentinels will allow to use sentinels in case its value is set to true. |
-| `SentinelPassword` | _string_ | SentinelPassword contains password for authorizing use of sentinel. |
-| `SentinelMasterName` | _string_ | SentinelMasterName is the name given to master. |
-| `SentinelConnectionURLs` | _[]string_ | SnetinelConnectionURLs contains the list of URLs used for connecting with the redis instances<br/>to be included in the sentinel. |
+| `ConnectionURL` | _string_ |  |
+| `Username` | _string_ |  |
+| `Password` | _string_ |  |
+| `UseSentinel` | _bool_ |  |
+| `SentinelPassword` | _string_ |  |
+| `SentinelMasterName` | _string_ |  |
+| `SentinelConnectionURLs` | _[]string_ |  |
 | `UseCluster` | _bool_ | UseCluster sets the flag for using redis cluster or not. |
 | `ClusterConnectionURLs` | _[]string_ | ClusterConnectionURLs contains the list of URLs of redis instances to be included in the<br/>cluster. |
 | `CAPath` | _string_ | CAPath defines the path to certificates. |
@@ -616,39 +650,6 @@ as well as an optional minimal TLS version that is acceptable.
 | `MinVersion` | _string_ | MinVersion is the minimal TLS version that is acceptable.<br/>E.g. Set to "TLS1.3" to select TLS version 1.3 |
 | `CipherSuites` | _[]string_ | CipherSuites is a list of TLS cipher suites that are allowed.<br/>E.g.:<br/>- TLS_RSA_WITH_RC4_128_SHA<br/>- TLS_RSA_WITH_AES_256_GCM_SHA384<br/>If not specified, the default Go safe cipher list is used.<br/>List of valid cipher suites can be found in the [crypto/tls documentation](https://pkg.go.dev/crypto/tls#pkg-constants). |
 
-### ProviderMatcher
-
-(**Appears on:** [AlphaOptions](#alphaoptions))
-
-
-
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| `rules` | _[[]ProviderMatcherRule](#providermatcherrule)_ | Rules define the rules for finding provider id in the incoming request |
-
-### ProviderMatcherRule
-
-(**Appears on:** [ProviderMatcher](#providermatcher))
-
-ProviderMatcherRule is the structure to define rule for finding provider id in request
-
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| `source` | _[ProviderMatcherRuleSource](#providermatcherrulesource)_ | Source defines which part of the HTTP request contains the provider id |
-| `expr` | _string_ | Expr defines the regex expression to match and extract provider id from the source |
-| `captureGroup` | _int_ | CaptureGroup or sub-match referes to the index that is actually the provider id |
-| `queryParam` | _string_ | QueryParam defines the query parameter containing provider-id in case source is 'query' |
-| `header` | _string_ | Header defines the header key in case source is 'header' |
-| `jwtClaim` | _string_ | JWT Claim defines the json field containing provider id in jwt token e.g provider.id |
-
-### ProviderMatcherRuleSource
-#### (`string` alias)
-
-(**Appears on:** [ProviderMatcherRule](#providermatcherrule))
-
-Source defines the source i-e "host", "path", "query" or "header"
-
-
 ### URLParameterRule
 
 (**Appears on:** [LoginURLParameter](#loginurlparameter))
@@ -683,6 +684,7 @@ Requests will be proxied to this upstream if the path matches the request path.
 | `passHostHeader` | _bool_ | PassHostHeader determines whether the request host header should be proxied<br/>to the upstream server.<br/>Defaults to true. |
 | `proxyWebSockets` | _bool_ | ProxyWebSockets enables proxying of websockets to upstream servers<br/>Defaults to true. |
 | `timeout` | _[Duration](#duration)_ | Timeout is the maximum duration the server will wait for a response from the upstream server.<br/>Defaults to 30 seconds. |
+| `disableKeepAlives` | _bool_ | DisableKeepAlives disables HTTP keep-alive connections to the upstream server.<br/>Defaults to false. |
 
 ### UpstreamConfig
 

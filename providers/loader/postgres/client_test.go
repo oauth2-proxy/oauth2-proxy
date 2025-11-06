@@ -267,7 +267,7 @@ func NewMockHTTPServer(httpMethod string, apiRoute string, rawQuery string, expe
 
 		if r.URL.EscapedPath() != apiRoute {
 			w.WriteHeader(http.StatusBadRequest)
-			_, _ = w.Write([]byte(fmt.Sprintf("Bad ApiPath, '%s'", r.URL.EscapedPath())))
+			_, _ = fmt.Fprintf(w, "Bad ApiPath, '%s'", r.URL.EscapedPath())
 			return
 		}
 		if r.URL.RawQuery != rawQuery {
