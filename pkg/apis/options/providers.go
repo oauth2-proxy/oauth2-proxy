@@ -230,6 +230,10 @@ type GoogleOptions struct {
 	UseApplicationDefaultCredentials bool `json:"useApplicationDefaultCredentials,omitempty"`
 	// TargetPrincipal is the Google Service Account used for Application Default Credentials
 	TargetPrincipal string `json:"targetPrincipal,omitempty"`
+	// UseOrganizationId indicates whether to use the organization ID as the UserName claim
+	UseOrganizationID bool `json:"useOrganizationID,omitempty"`
+	// admin scope needed for fetching user organization information from admin api, can be one of cloud, user or defaults to readonly
+	AdminAPIUserScope string `json:"adminAPIUserScope,omitempty"`
 }
 
 type OIDCOptions struct {
