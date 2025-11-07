@@ -43,7 +43,7 @@ const (
 
 	// DefaultUseSystemTrustStore is the default value
 	// for Provider.UseSystemTrustStore
-	DefaultUseSystemTrustStore bool = true
+	DefaultUseSystemTrustStore bool = false
 )
 
 // OIDCAudienceClaims is the generic audience claim list used by the OIDC provider.

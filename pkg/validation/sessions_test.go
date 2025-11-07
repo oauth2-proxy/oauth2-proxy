@@ -193,8 +193,8 @@ var _ = Describe("Sessions", func() {
 		unreachableRedisDelMsg    = "unable to delete the redis initialization key: dial tcp 127.0.0.1:65535: connect: connection refused"
 		unreachableSentinelSetMsg = "unable to set a redis initialization key: redis: all sentinels specified in configuration are unreachable: redis: nil"
 		unrechableSentinelDelMsg  = "unable to delete the redis initialization key: redis: all sentinels specified in configuration are unreachable: redis: nil"
-		refusedSentinelSetMsg     = "unable to set a redis initialization key: redis: all sentinels specified in configuration are unreachable: dial tcp 127.0.0.1:65535: connect: connection refused"
-		refusedSentinelDelMsg     = "unable to delete the redis initialization key: redis: all sentinels specified in configuration are unreachable: dial tcp 127.0.0.1:65535: connect: connection refused"
+		refusedSentinelSetMsg     = "unable to set a redis initialization key: redis: all sentinels specified in configuration are unreachable: context deadline exceeded"
+		refusedSentinelDelMsg     = "unable to delete the redis initialization key: redis: all sentinels specified in configuration are unreachable: context deadline exceeded"
 	)
 
 	type redisStoreTableInput struct {

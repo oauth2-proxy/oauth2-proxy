@@ -41,7 +41,10 @@ func CreateTokenToSessionFunc(verify VerifyFunc) TokenToSessionFunc {
 			claims.Email = claims.Subject
 		}
 
-		if !ptr.Deref(claims.Verified, false) {
+		// Ensure email is verified
+		// If the email is not verified, return an error
+		// If the email_verified claim is missing, assume it is verified
+		if !ptr.Deref(claims.Verified, true) {
 			return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
 		}
 

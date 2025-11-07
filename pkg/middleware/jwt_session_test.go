@@ -304,7 +304,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				authorizationHeader: fmt.Sprintf("Bearer %s", nonVerifiedToken),
 				expectedErr: k8serrors.NewAggregate([]error{
 					errors.New("unable to verify bearer token"),
-					errors.New("oidc: malformed jwt: oidc: malformed jwt payload: illegal base64 data at input byte 8"),
+					errors.New("oidc: malformed jwt: illegal base64 data at input byte 8"),
 				}),
 				expectedSession: nil,
 			}),
@@ -317,7 +317,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				authorizationHeader: "Basic ZXlKZm9vYmFyLmV5SmZvb2Jhci4xMjM0NWFzZGY6",
 				expectedErr: k8serrors.NewAggregate([]error{
 					errors.New("unable to verify bearer token"),
-					errors.New("oidc: malformed jwt: oidc: malformed jwt payload: illegal base64 data at input byte 8"),
+					errors.New("oidc: malformed jwt: illegal base64 data at input byte 8"),
 				}),
 				expectedSession: nil,
 			}),

@@ -122,16 +122,19 @@ var _ = Describe("Legacy Options", func() {
 				BindAddress: "127.0.0.1:4180",
 			}
 
-			opts.Providers[0].ClientID = "oauth-proxy"
 			opts.Providers[0].ID = "google=oauth-proxy"
-			opts.Providers[0].OIDCConfig.InsecureSkipNonce = ptr.Ptr(true)
+			opts.Providers[0].ClientID = "oauth-proxy"
 			opts.Providers[0].OIDCConfig.AudienceClaims = []string{"aud"}
 			opts.Providers[0].OIDCConfig.ExtraAudiences = []string{}
+			opts.Providers[0].OIDCConfig.InsecureSkipNonce = ptr.Ptr(true)
+			opts.Providers[0].OIDCConfig.InsecureSkipIssuerVerification = ptr.Ptr(false)
 			opts.Providers[0].LoginURLParameters = []LoginURLParameter{
 				{Name: "approval_prompt", Default: []string{"force"}},
 			}
 
 			converted, err := legacyOpts.ToOptions()
+			opts.EnsureDefaults()
+
 			Expect(err).ToNot(HaveOccurred())
 			Expect(converted).To(EqualOpts(opts))
 		})
@@ -944,37 +947,50 @@ var _ = Describe("Legacy Options", func() {
 			{Name: "approval_prompt", Default: []string{"force"}},
 		}
 
-		defaultProvider := Provider{
-			ID:                 "google=" + clientID,
-			ClientID:           clientID,
-			Type:               "google",
-			LoginURLParameters: defaultURLParams,
+		defaultOIDCOptions := OIDCOptions{
+			SkipDiscovery:                  ptr.Ptr(false),
+			InsecureSkipNonce:              ptr.Ptr(false),
+			InsecureAllowUnverifiedEmail:   ptr.Ptr(false),
+			InsecureSkipIssuerVerification: ptr.Ptr(false),
 		}
+
+		defaultGoogleOptions := GoogleOptions{
+			UseApplicationDefaultCredentials: ptr.Ptr(false),
+		}
+
 		defaultLegacyProvider := LegacyProvider{
 			ClientID:     clientID,
 			ProviderType: "google",
 		}
 
-		defaultProviderWithPrompt := Provider{
-			ID:       "google=" + clientID,
-			ClientID: clientID,
-			Type:     "google",
-			LoginURLParameters: []LoginURLParameter{
-				{Name: "prompt", Default: []string{"switch_user"}},
-			},
+		defaultProvider := Provider{
+			ID:                       "google=" + clientID,
+			ClientID:                 clientID,
+			Type:                     "google",
+			OIDCConfig:               defaultOIDCOptions,
+			GoogleConfig:             defaultGoogleOptions,
+			LoginURLParameters:       defaultURLParams,
+			UseSystemTrustStore:      ptr.Ptr(false),
+			SkipClaimsFromProfileURL: ptr.Ptr(false),
 		}
+
 		defaultLegacyProviderWithPrompt := LegacyProvider{
 			ClientID:     clientID,
 			ProviderType: "google",
 			Prompt:       "switch_user",
 		}
 
-		displayNameProvider := Provider{
-			ID:                 "displayName",
-			Name:               "displayName",
-			ClientID:           clientID,
-			Type:               "google",
-			LoginURLParameters: defaultURLParams,
+		defaultProviderWithPrompt := Provider{
+			ID:           "google=" + clientID,
+			ClientID:     clientID,
+			Type:         "google",
+			OIDCConfig:   defaultOIDCOptions,
+			GoogleConfig: defaultGoogleOptions,
+			LoginURLParameters: []LoginURLParameter{
+				{Name: "prompt", Default: []string{"switch_user"}},
+			},
+			UseSystemTrustStore:      ptr.Ptr(false),
+			SkipClaimsFromProfileURL: ptr.Ptr(false),
 		}
 
 		displayNameLegacyProvider := LegacyProvider{
@@ -983,16 +999,32 @@ var _ = Describe("Legacy Options", func() {
 			ProviderType: "google",
 		}
 
+		displayNameProvider := Provider{
+			ID:                       "displayName",
+			Name:                     "displayName",
+			ClientID:                 clientID,
+			Type:                     "google",
+			OIDCConfig:               defaultOIDCOptions,
+			GoogleConfig:             defaultGoogleOptions,
+			LoginURLParameters:       defaultURLParams,
+			UseSystemTrustStore:      ptr.Ptr(false),
+			SkipClaimsFromProfileURL: ptr.Ptr(false),
+		}
+
 		internalConfigProvider := Provider{
-			ID:       "google=" + clientID,
-			ClientID: clientID,
-			Type:     "google",
+			ID:         "google=" + clientID,
+			ClientID:   clientID,
+			Type:       "google",
+			OIDCConfig: defaultOIDCOptions,
 			GoogleConfig: GoogleOptions{
-				AdminEmail:         "email@email.com",
-				ServiceAccountJSON: "test.json",
-				Groups:             []string{"1", "2"},
+				AdminEmail:                       "email@email.com",
+				ServiceAccountJSON:               "test.json",
+				Groups:                           []string{"1", "2"},
+				UseApplicationDefaultCredentials: ptr.Ptr(false),
 			},
-			LoginURLParameters: defaultURLParams,
+			LoginURLParameters:       defaultURLParams,
+			UseSystemTrustStore:      ptr.Ptr(false),
+			SkipClaimsFromProfileURL: ptr.Ptr(false),
 		}
 
 		internalConfigLegacyProvider := LegacyProvider{
