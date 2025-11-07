@@ -55,28 +55,28 @@ func validateUpstream(upstream options.Upstream, ids, paths map[string]struct{})
 func validateStaticUpstream(upstream options.Upstream) []string {
 	msgs := []string{}
 
-	if !ptr.Deref(upstream.Static, false) && upstream.StaticCode != nil {
+	if !ptr.Deref(upstream.Static, options.DefaultUpstreamStatic) && upstream.StaticCode != nil {
 		msgs = append(msgs, fmt.Sprintf("upstream %q has staticCode (%d), but is not a static upstream, set 'static' for a static response", upstream.ID, *upstream.StaticCode))
 	}
 
 	// Checks after this only make sense when the upstream is static
-	if !ptr.Deref(upstream.Static, false) {
+	if !ptr.Deref(upstream.Static, options.DefaultUpstreamStatic) {
 		return msgs
 	}
 
 	if upstream.URI != "" {
 		msgs = append(msgs, fmt.Sprintf("upstream %q has uri, but is a static upstream, this will have no effect.", upstream.ID))
 	}
-	if ptr.Deref(upstream.InsecureSkipTLSVerify, false) {
+	if ptr.Deref(upstream.InsecureSkipTLSVerify, options.DefaultUpsteamInsecureSkipTLSVerify) {
 		msgs = append(msgs, fmt.Sprintf("upstream %q has insecureSkipTLSVerify, but is a static upstream, this will have no effect.", upstream.ID))
 	}
 	if ptr.Deref(upstream.FlushInterval, options.DefaultUpstreamFlushInterval) != options.DefaultUpstreamFlushInterval {
 		msgs = append(msgs, fmt.Sprintf("upstream %q has flushInterval, but is a static upstream, this will have no effect.", upstream.ID))
 	}
-	if ptr.Deref(upstream.PassHostHeader, false) {
+	if ptr.Deref(upstream.PassHostHeader, options.DefaultUpstreamPassHostHeader) {
 		msgs = append(msgs, fmt.Sprintf("upstream %q has passHostHeader, but is a static upstream, this will have no effect.", upstream.ID))
 	}
-	if ptr.Deref(upstream.ProxyWebSockets, false) {
+	if ptr.Deref(upstream.ProxyWebSockets, options.DefaultUpstreamProxyWebSockets) {
 		msgs = append(msgs, fmt.Sprintf("upstream %q has proxyWebSockets, but is a static upstream, this will have no effect.", upstream.ID))
 	}
 
@@ -86,13 +86,13 @@ func validateStaticUpstream(upstream options.Upstream) []string {
 func validateUpstreamURI(upstream options.Upstream) []string {
 	msgs := []string{}
 
-	if !ptr.Deref(upstream.Static, false) && upstream.URI == "" {
+	if !ptr.Deref(upstream.Static, options.DefaultUpstreamStatic) && upstream.URI == "" {
 		msgs = append(msgs, fmt.Sprintf("upstream %q has empty uri: uris are required for all non-static upstreams", upstream.ID))
 		return msgs
 	}
 
 	// Checks after this only make sense the upstream is not static
-	if !ptr.Deref(upstream.Static, false) {
+	if !ptr.Deref(upstream.Static, options.DefaultUpstreamStatic) {
 		return msgs
 	}
 

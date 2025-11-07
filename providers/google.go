@@ -109,7 +109,7 @@ func NewGoogleProvider(p *ProviderData, opts options.GoogleOptions) (*GoogleProv
 		},
 	}
 
-	if opts.UseOrganizationID || opts.ServiceAccountJSON != "" || ptr.Deref(opts.UseApplicationDefaultCredentials, false) {
+	if opts.UseOrganizationID || opts.ServiceAccountJSON != "" || ptr.Deref(opts.UseApplicationDefaultCredentials, options.DefaultUseApplicationDefaultCredentials) {
 		// reuse admin service to avoid multiple calls for token
 		var adminService *admin.Service
 
@@ -132,7 +132,7 @@ func NewGoogleProvider(p *ProviderData, opts options.GoogleOptions) (*GoogleProv
 			}
 		}
 
-		if opts.ServiceAccountJSON != "" || ptr.Deref(opts.UseApplicationDefaultCredentials, false) {
+		if opts.ServiceAccountJSON != "" || ptr.Deref(opts.UseApplicationDefaultCredentials, options.DefaultUseApplicationDefaultCredentials) {
 			if adminService == nil {
 				adminService = getAdminService(opts)
 			}
@@ -304,7 +304,7 @@ var possibleScopesList = [...]string{
 }
 
 func getOauth2TokenSource(ctx context.Context, opts options.GoogleOptions, scope string) oauth2.TokenSource {
-	if ptr.Deref(opts.UseApplicationDefaultCredentials, false) {
+	if ptr.Deref(opts.UseApplicationDefaultCredentials, options.DefaultUseApplicationDefaultCredentials) {
 		ts, err := impersonate.CredentialsTokenSource(ctx, impersonate.CredentialsConfig{
 			TargetPrincipal: getTargetPrincipal(ctx, opts),
 			Scopes:          strings.Split(scope, " "),

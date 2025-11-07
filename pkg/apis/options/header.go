@@ -2,6 +2,11 @@ package options
 
 import "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 
+const (
+	// DefaultHeaderPreserveRequestValue is the default value for Header.PreserveRequestValue
+	DefaultHeaderPreserveRequestValue bool = false
+)
+
 // Header represents an individual header that will be added to a request or
 // response header.
 type Header struct {
@@ -59,7 +64,7 @@ type ClaimSource struct {
 // EnsureDefaults sets any default values for Header fields.
 func (h *Header) EnsureDefaults() {
 	if h.PreserveRequestValue == nil {
-		h.PreserveRequestValue = ptr.Ptr(false)
+		h.PreserveRequestValue = ptr.Ptr(DefaultHeaderPreserveRequestValue)
 	}
 	for i := range h.Values {
 		h.Values[i].EnsureDefaults()

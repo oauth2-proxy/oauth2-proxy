@@ -51,7 +51,7 @@ func NewOIDCProvider(p *ProviderData, opts options.OIDCOptions) *OIDCProvider {
 
 	return &OIDCProvider{
 		ProviderData: p,
-		SkipNonce:    ptr.Deref(opts.InsecureSkipNonce, false),
+		SkipNonce:    ptr.Deref(opts.InsecureSkipNonce, options.DefaultInsecureSkipNonce),
 	}
 }
 

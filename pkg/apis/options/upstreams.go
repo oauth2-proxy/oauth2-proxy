@@ -1,6 +1,7 @@
 package options
 
 import (
+	"net/http"
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
@@ -8,10 +9,31 @@ import (
 
 const (
 	// DefaultUpstreamFlushInterval is the default value for the Upstream FlushInterval.
-	DefaultUpstreamFlushInterval = 1 * time.Second
+	DefaultUpstreamFlushInterval time.Duration = 1 * time.Second
 
 	// DefaultUpstreamTimeout is the maximum duration a network dial to a upstream server for a response.
-	DefaultUpstreamTimeout = 30 * time.Second
+	DefaultUpstreamTimeout time.Duration = 30 * time.Second
+
+	// DefaultUpstreamStatic determines if upstreams are static by default.
+	DefaultUpstreamStatic bool = false
+
+	// DefaultUpstreamStaticCode is the default response code for static upstreams.
+	DefaultUpstreamStaticCode int = http.StatusOK // 200
+
+	// DefaultUpstreamProxyRawPath determines if upstreams will proxy the raw url path by default.
+	DefaultUpstreamProxyRawPath bool = false
+
+	// DefaultUpstreamInsecureSkipTLSVerify determines if upstreams will skip TLS verification by default.
+	DefaultUpsteamInsecureSkipTLSVerify bool = false
+
+	// DefaultUpstreamPassHostHeader determines if upstreams will pass the host header by default.
+	DefaultUpstreamPassHostHeader bool = true
+
+	// DefaultUpstreamProxyWebSockets determines if upstreams will proxy websockets by default.
+	DefaultUpstreamProxyWebSockets bool = true
+
+	// DefaultUpstreamDisableKeepAlives determines if upstreams will disable keep-alives by default.
+	DefaultUpstreamDisableKeepAlives bool = false
 )
 
 // UpstreamConfig is a collection of definitions for upstream servers.
@@ -106,7 +128,7 @@ type Upstream struct {
 // EnsureDefaults sets any default values for UpstreamConfig fields.
 func (uc *UpstreamConfig) EnsureDefaults() {
 	if uc.ProxyRawPath == nil {
-		uc.ProxyRawPath = ptr.Ptr(false)
+		uc.ProxyRawPath = ptr.Ptr(DefaultUpstreamProxyRawPath)
 	}
 	for i := range uc.Upstreams {
 		uc.Upstreams[i].EnsureDefaults()
@@ -116,24 +138,24 @@ func (uc *UpstreamConfig) EnsureDefaults() {
 // EnsureDefaults sets any default values for Upstream fields.
 func (u *Upstream) EnsureDefaults() {
 	if u.InsecureSkipTLSVerify == nil {
-		u.InsecureSkipTLSVerify = ptr.Ptr(false)
+		u.InsecureSkipTLSVerify = ptr.Ptr(DefaultUpsteamInsecureSkipTLSVerify)
 	}
 	if u.Static == nil {
-		u.Static = ptr.Ptr(false)
+		u.Static = ptr.Ptr(DefaultUpstreamStatic)
 	}
 	if u.FlushInterval == nil {
 		u.FlushInterval = ptr.Ptr(DefaultUpstreamFlushInterval)
 	}
 	if u.PassHostHeader == nil {
-		u.PassHostHeader = ptr.Ptr(true)
+		u.PassHostHeader = ptr.Ptr(DefaultUpstreamPassHostHeader)
 	}
 	if u.ProxyWebSockets == nil {
-		u.ProxyWebSockets = ptr.Ptr(true)
+		u.ProxyWebSockets = ptr.Ptr(DefaultUpstreamProxyWebSockets)
 	}
 	if u.Timeout == nil {
 		u.Timeout = ptr.Ptr(DefaultUpstreamTimeout)
 	}
 	if u.DisableKeepAlives == nil {
-		u.DisableKeepAlives = ptr.Ptr(false)
+		u.DisableKeepAlives = ptr.Ptr(DefaultUpstreamDisableKeepAlives)
 	}
 }

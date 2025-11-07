@@ -52,7 +52,7 @@ func NewMicrosoftEntraIDProvider(p *ProviderData, opts options.Provider) *Micros
 		OIDCProvider: NewOIDCProvider(p, opts.OIDCConfig),
 
 		multiTenantAllowedTenants: opts.MicrosoftEntraIDConfig.AllowedTenants,
-		federatedTokenAuth:        ptr.Deref(opts.MicrosoftEntraIDConfig.FederatedTokenAuth, false),
+		federatedTokenAuth:        ptr.Deref(opts.MicrosoftEntraIDConfig.FederatedTokenAuth, options.DefaultMicrosoftEntraIDUseFederatedToken),
 		microsoftGraphURL:         microsoftGraphURL,
 	}
 }

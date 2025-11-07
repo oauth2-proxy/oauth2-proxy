@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 )
@@ -13,7 +14,7 @@ import (
 // a static response code.
 func newStaticResponseHandler(upstream string, code *int) http.Handler {
 	return &staticResponseHandler{
-		code:     ptr.Deref(code, 200),
+		code:     ptr.Deref(code, options.DefaultUpstreamStaticCode),
 		upstream: upstream,
 	}
 }

@@ -51,7 +51,7 @@ func NewADFSProvider(p *ProviderData, opts options.Provider) *ADFSProvider {
 
 	return &ADFSProvider{
 		OIDCProvider:    oidcProvider,
-		skipScope:       ptr.Deref(opts.ADFSConfig.SkipScope, false),
+		skipScope:       ptr.Deref(opts.ADFSConfig.SkipScope, options.DefaultADFSSkipScope),
 		oidcEnrichFunc:  oidcProvider.EnrichSession,
 		oidcRefreshFunc: oidcProvider.RefreshSession,
 	}

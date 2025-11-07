@@ -99,8 +99,8 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 			IssuerURL:              providerConfig.OIDCConfig.IssuerURL,
 			JWKsURL:                providerConfig.OIDCConfig.JwksURL,
 			PublicKeyFiles:         providerConfig.OIDCConfig.PublicKeyFiles,
-			SkipDiscovery:          ptr.Deref(providerConfig.OIDCConfig.SkipDiscovery, false),
-			SkipIssuerVerification: ptr.Deref(providerConfig.OIDCConfig.InsecureSkipIssuerVerification, false),
+			SkipDiscovery:          ptr.Deref(providerConfig.OIDCConfig.SkipDiscovery, options.DefaultSkipDiscovery),
+			SkipIssuerVerification: ptr.Deref(providerConfig.OIDCConfig.InsecureSkipIssuerVerification, options.DefaultInsecureSkipIssuerVerification),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("error building OIDC ProviderVerifier: %v", err)
@@ -144,10 +144,10 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 	}
 
 	// Make the OIDC options available to all providers that support it
-	p.AllowUnverifiedEmail = ptr.Deref(providerConfig.OIDCConfig.InsecureAllowUnverifiedEmail, false)
+	p.AllowUnverifiedEmail = ptr.Deref(providerConfig.OIDCConfig.InsecureAllowUnverifiedEmail, options.DefaultInsecureAllowUnverifiedEmail)
 	p.EmailClaim = providerConfig.OIDCConfig.EmailClaim
 	p.GroupsClaim = providerConfig.OIDCConfig.GroupsClaim
-	p.SkipClaimsFromProfileURL = ptr.Deref(providerConfig.SkipClaimsFromProfileURL, false)
+	p.SkipClaimsFromProfileURL = ptr.Deref(providerConfig.SkipClaimsFromProfileURL, options.DefaultSkipClaimsFromProfileURL)
 
 	// Set PKCE enabled or disabled based on discovery and force options
 	p.CodeChallengeMethod = parseCodeChallengeMethod(providerConfig)

@@ -4,10 +4,46 @@ import "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 
 const (
 	// OIDCEmailClaim is the generic email claim used by the OIDC provider.
-	OIDCEmailClaim = "email"
+	OIDCEmailClaim string = "email"
 
 	// OIDCGroupsClaim is the generic groups claim used by the OIDC provider.
-	OIDCGroupsClaim = "groups"
+	OIDCGroupsClaim string = "groups"
+
+	// DefaultSkipDiscovery is the default value
+	// for OIDCOptions.SkipDiscovery
+	DefaultSkipDiscovery bool = false
+
+	// DefaultInsecureSkipNonce is the default value
+	// for OIDCOptions.InsecureSkipNonce
+	DefaultInsecureSkipNonce bool = true
+
+	// DefaultInsecureAllowUnverifiedEmail is the default value
+	// for OIDCOptions.InsecureAllowUnverifiedEmail
+	DefaultInsecureAllowUnverifiedEmail bool = false
+
+	// DefaultInsecureSkipIssuerVerification is the default value
+	// for OIDCOptions.InsecureSkipIssuerVerification
+	DefaultInsecureSkipIssuerVerification bool = false
+
+	// DefaultSkipClaimsFromProfileURL is the default value
+	// for Provider.SkipClaimsFromProfileURL
+	DefaultSkipClaimsFromProfileURL bool = false
+
+	// DefaultADFSSkipScope is the default value
+	// for ADFSOptions.SkipScope
+	DefaultADFSSkipScope bool = false
+
+	// DefaultMicrosoftEntraIDUseFederatedToken is the default value
+	// for MicrosoftEntraIDOptions.FederatedTokenAuth
+	DefaultMicrosoftEntraIDUseFederatedToken bool = false
+
+	// DefaultGoogleUseApplicationDefaultCredentials is the default values
+	// for GoogleOptions.UseApplicationDefaultCredentials
+	DefaultUseApplicationDefaultCredentials bool = false
+
+	// DefaultUseSystemTrustStore is the default value
+	// for Provider.UseSystemTrustStore
+	DefaultUseSystemTrustStore bool = true
 )
 
 // OIDCAudienceClaims is the generic audience claim list used by the OIDC provider.
@@ -298,9 +334,9 @@ func providerDefaults() Providers {
 				Tenant: "common",
 			},
 			OIDCConfig: OIDCOptions{
-				InsecureAllowUnverifiedEmail: ptr.Ptr(false),
-				InsecureSkipNonce:            ptr.Ptr(true),
-				SkipDiscovery:                ptr.Ptr(false),
+				InsecureAllowUnverifiedEmail: ptr.Ptr(DefaultInsecureAllowUnverifiedEmail),
+				InsecureSkipNonce:            ptr.Ptr(DefaultInsecureSkipNonce),
+				SkipDiscovery:                ptr.Ptr(DefaultSkipDiscovery),
 				UserIDClaim:                  OIDCEmailClaim, // Deprecated: Use OIDCEmailClaim
 				EmailClaim:                   OIDCEmailClaim,
 				GroupsClaim:                  OIDCGroupsClaim,
@@ -322,10 +358,10 @@ func (p Providers) EnsureDefaults() {
 // EnsureDefaults sets any default values for Provider fields.
 func (p *Provider) EnsureDefaults() {
 	if p.SkipClaimsFromProfileURL == nil {
-		p.SkipClaimsFromProfileURL = ptr.Ptr(false)
+		p.SkipClaimsFromProfileURL = ptr.Ptr(DefaultSkipClaimsFromProfileURL)
 	}
 	if p.UseSystemTrustStore == nil {
-		p.UseSystemTrustStore = ptr.Ptr(true)
+		p.UseSystemTrustStore = ptr.Ptr(DefaultUseSystemTrustStore)
 	}
 
 	p.OIDCConfig.EnsureDefaults()
@@ -338,13 +374,13 @@ func (p *Provider) EnsureDefaults() {
 func (o *OIDCOptions) EnsureDefaults() {
 	// Ensure OIDC defaults
 	if o.InsecureAllowUnverifiedEmail == nil {
-		o.InsecureAllowUnverifiedEmail = ptr.Ptr(false)
+		o.InsecureAllowUnverifiedEmail = ptr.Ptr(DefaultInsecureAllowUnverifiedEmail)
 	}
 	if o.InsecureSkipNonce == nil {
-		o.InsecureSkipNonce = ptr.Ptr(true)
+		o.InsecureSkipNonce = ptr.Ptr(DefaultInsecureSkipNonce)
 	}
 	if o.SkipDiscovery == nil {
-		o.SkipDiscovery = ptr.Ptr(false)
+		o.SkipDiscovery = ptr.Ptr(DefaultSkipDiscovery)
 	}
 	if o.UserIDClaim == "" {
 		o.UserIDClaim = OIDCEmailClaim
@@ -363,20 +399,20 @@ func (o *OIDCOptions) EnsureDefaults() {
 // EnsureDefaults sets any default values for MicrosoftEntraIDOptions fields.
 func (me *MicrosoftEntraIDOptions) EnsureDefaults() {
 	if me.FederatedTokenAuth == nil {
-		me.FederatedTokenAuth = ptr.Ptr(false)
+		me.FederatedTokenAuth = ptr.Ptr(DefaultMicrosoftEntraIDUseFederatedToken)
 	}
 }
 
 // EnsureDefaults sets any default values for ADFSOptions fields.
 func (a *ADFSOptions) EnsureDefaults() {
 	if a.SkipScope == nil {
-		a.SkipScope = ptr.Ptr(false)
+		a.SkipScope = ptr.Ptr(DefaultADFSSkipScope)
 	}
 }
 
 // EnsureDefaults sets any default values for GoogleOptions fields.
 func (g *GoogleOptions) EnsureDefaults() {
 	if g.UseApplicationDefaultCredentials == nil {
-		g.UseApplicationDefaultCredentials = ptr.Ptr(false)
+		g.UseApplicationDefaultCredentials = ptr.Ptr(DefaultUseApplicationDefaultCredentials)
 	}
 }
