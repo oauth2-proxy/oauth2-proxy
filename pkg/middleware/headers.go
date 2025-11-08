@@ -53,6 +53,11 @@ func flattenHeaders(headers http.Header) {
 func stripHeaders(headers []options.Header, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		for _, header := range headers {
+			if header.InsecureSkipHeaderNormalization {
+				req.Header.Del(header.Name)
+				continue
+			}
+
 			stripNormalizedHeader(req, header)
 		}
 		next.ServeHTTP(rw, req)

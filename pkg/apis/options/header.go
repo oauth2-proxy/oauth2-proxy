@@ -13,6 +13,16 @@ type Header struct {
 	// Defaults to false (headers that match this header will be stripped).
 	PreserveRequestValue bool `json:"preserveRequestValue,omitempty"`
 
+	// InsecureSkipHeaderNormalization disables normalizing the header name
+	// According to RFC 7230 Section 3.2 there aren't any rules about
+	// capitalization of header names, but the standard practice is to use
+	// Title-Case (e.g. X-Forwarded-For). By default, header names will be
+	// normalized to Title-Case and any incoming headers that match will be
+	// treated as the same header. Additionally underscores (_) in header names
+	// will be converted to dashes (-) when normalizing.
+	// Defaults to false (header names will be normalized).
+	InsecureSkipHeaderNormalization bool `json:"InsecureSkipHeaderNormalization,omitempty"`
+
 	// Values contains the desired values for this header
 	Values []HeaderValue `json:"values,omitempty"`
 }
