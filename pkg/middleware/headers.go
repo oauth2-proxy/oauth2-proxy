@@ -25,10 +25,10 @@ func NewRequestHeaderInjector(headers []options.Header) (alice.Constructor, erro
 }
 
 func newStripHeaders(headers []options.Header) alice.Constructor {
-	headersToStrip := []string{}
+	headersToStrip := []options.Header{}
 	for _, header := range headers {
 		if !header.PreserveRequestValue {
-			headersToStrip = append(headersToStrip, header.Name)
+			headersToStrip = append(headersToStrip, header)
 		}
 	}
 
@@ -50,10 +50,10 @@ func flattenHeaders(headers http.Header) {
 	}
 }
 
-func stripHeaders(headers []string, next http.Handler) http.Handler {
+func stripHeaders(headers []options.Header, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		for _, header := range headers {
-			req.Header.Del(header)
+			stripNormalizedHeader(req, header)
 		}
 		next.ServeHTTP(rw, req)
 	})
@@ -112,4 +112,33 @@ func injectResponseHeaders(injector header.Injector, next http.Handler) http.Han
 		flattenHeaders(rw.Header())
 		next.ServeHTTP(rw, req)
 	})
+}
+
+// normalizeHeaderName normalizes the header name by lowercasing it
+// and replacing underscores with hyphens.
+func normalizeHeaderName(headerName string) string {
+	headerName = strings.ToLower(headerName)
+	headerName = strings.ReplaceAll(headerName, "_", "-")
+	return headerName
+}
+
+// stripNormalizedHeader removes any headers from the request that match
+// the normalized version of the provided header's name.
+func stripNormalizedHeader(req *http.Request, header options.Header) {
+	normalizedName := normalizeHeaderName(header.Name)
+
+	toBeDeleted := []string{}
+	for h := range req.Header {
+		if normalizeHeaderName(h) == normalizedName {
+			// necessary to avoid modifying the map while iterating
+			toBeDeleted = append(toBeDeleted, h)
+		}
+	}
+
+	for _, h := range toBeDeleted {
+		// necessary because req.Header.Del accesses the map via
+		// the header's canonicalized name. We need to delete by
+		// the original name.
+		delete(req.Header, h)
+	}
 }

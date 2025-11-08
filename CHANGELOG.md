@@ -12,6 +12,7 @@
 - [#3244](https://github.com/oauth2-proxy/oauth2-proxy/pull/3244) chore(deps): upgrade to latest go1.25.3 (@tuunit)
 - [#3238](https://github.com/oauth2-proxy/oauth2-proxy/pull/3238) chore: Replace pkg/clock with narrowly targeted stub clocks (@dsymonds)
 - [#3237](https://github.com/oauth2-proxy/oauth2-proxy/pull/3237) - feat: add option to use organization id for preferred username in Google Provider (@pixeldrew)
+- [GHSA-vjrc-mh2v-45x6](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-vjrc-mh2v-45x6) fix: request header smuggling by stripping all normalized header variants (@tuunit)
 
 # V7.12.0
 
