@@ -5,7 +5,7 @@ title: Installation
 
 1.  Choose how to deploy:
 
-    a. Using a [Prebuilt Binary](https://github.com/oauth2-proxy/oauth2-proxy/releases) (current release is `v7.12.0`)
+    a. Using a [Prebuilt Binary](https://github.com/oauth2-proxy/oauth2-proxy/releases) (current release is `v7.13.0`)
 
     b. Using Go to install the latest release
     ```bash

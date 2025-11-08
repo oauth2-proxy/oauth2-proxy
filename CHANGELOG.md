@@ -6,6 +6,16 @@
 
 ## Breaking Changes
 
+## Changes since v7.13.0
+
+# V7.13.0
+
+## Release Highlights
+
+## Important Notes
+
+## Breaking Changes
+
 ## Changes since v7.12.0
 
 - [#3228](https://github.com/oauth2-proxy/oauth2-proxy/pull/3228) fix: use GetSecret() in ticket.go makeCookie to respect cookie-secret-file (@stagswtf)
