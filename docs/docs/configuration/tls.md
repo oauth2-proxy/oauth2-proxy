@@ -36,6 +36,9 @@ There are two recommended configurations:
     If not specified, the defaults from [`crypto/tls`](https://pkg.go.dev/crypto/tls#CipherSuites) of the currently used `go` version for building `oauth2-proxy` will be used.
     A complete list of valid TLS cipher suite names can be found in [`crypto/tls`](https://pkg.go.dev/crypto/tls#pkg-constants).
 
+3.  The TLS server certificate and key can be reloaded without restarting `oauth2-proxy` by sending a `SIGHUP` to a running `oauth2-proxy` process.
+    If the `oauth2-proxy` server encounters a failure while reloading the certificate or key, the existing certificate and key will remain unchanged and an error will be logged.  
+
 ### Terminate TLS at Reverse Proxy, e.g. Nginx
 
 1.  Configure SSL Termination with [Nginx](http://nginx.org/) (example config below), Amazon ELB, Google Cloud Platform Load Balancing, or ...
