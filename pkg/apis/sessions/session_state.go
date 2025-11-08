@@ -29,8 +29,9 @@ type SessionState struct {
 	PreferredUsername string   `msgpack:"pu,omitempty"`
 
 	// Internal helpers, not serialized
-	Clock func() time.Time `msgpack:"-"` // override for time.Now, for testing
-	Lock  Lock             `msgpack:"-"`
+	Clock     func() time.Time `msgpack:"-"` // override for time.Now, for testing
+	Lock      Lock             `msgpack:"-"`
+	Refreshed bool             `msgpack:"-"` // indicates whether the session was refreshed
 }
 
 func (s *SessionState) now() time.Time {
