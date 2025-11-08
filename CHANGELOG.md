@@ -6,6 +6,29 @@
 
 ## Breaking Changes
 
+## Changes since v7.13.0
+
+# V7.13.0
+
+## Release Highlights
+
+- 🕵️‍♀️ Vulnerabilities have been addressd
+  - [CVE-2025-47912](https://nvd.nist.gov/vuln/detail/CVE-2025-47912)
+  - [CVE-2025-58183](https://nvd.nist.gov/vuln/detail/CVE-2025-58183)
+  - [CVE-2025-58186](https://nvd.nist.gov/vuln/detail/CVE-2025-58186)
+  - [CVE-2025-64484](https://nvd.nist.gov/vuln/detail/CVE-2025-64484)
+- 🐛 Squashed some bugs
+
+## Important Notes
+
+By default all specified headers will now be normalized, meaning that both capitalization and the use of underscores (_) versus dashes (-) will be ignored when matching headers to be stripped. For example, both `X-Forwarded-For` and `X_Forwarded-for` will now be treated as equivalent and stripped away.
+
+Please read our security advisory for CVE-2025-64484: [GHSA-vjrc-mh2v-45x6](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-vjrc-mh2v-45x6)
+
+Furthermore, we now use the access_token for validating refreshed sessions in OIDC providers instead of the id_token. This is to align with the [OIDC specification](https://openid.net/specs/openid-connect-core-1_0.html#RefreshTokens) which states that id_tokens are not guaranteed to be issued when using refresh tokens. In future releases we might remove the id_token validation for sessions completely.
+
+## Breaking Changes
+
 ## Changes since v7.12.0
 
 - [#3228](https://github.com/oauth2-proxy/oauth2-proxy/pull/3228) fix: use GetSecret() in ticket.go makeCookie to respect cookie-secret-file (@stagswtf)
