@@ -4,6 +4,7 @@
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![Maintainability](https://api.codeclimate.com/v1/badges/a58ff79407212e2beacb/maintainability)](https://codeclimate.com/github/oauth2-proxy/oauth2-proxy/maintainability)
 [![Test Coverage](https://api.codeclimate.com/v1/badges/a58ff79407212e2beacb/test_coverage)](https://codeclimate.com/github/oauth2-proxy/oauth2-proxy/test_coverage)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Foauth2-proxy%2Foauth2-proxy.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Foauth2-proxy%2Foauth2-proxy?ref=badge_shield)
 
 ![OAuth2 Proxy](docs/static/img/logos/OAuth2_Proxy_horizontal.svg)
 
@@ -36,7 +37,6 @@ These images are considered unstable and therefore should **NOT** be used for pr
 ## Sponsors
 
 ![Microsoft](https://upload.wikimedia.org/wikipedia/commons/9/96/Microsoft_logo_%282012%29.svg)
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Foauth2-proxy%2Foauth2-proxy.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Foauth2-proxy%2Foauth2-proxy?ref=badge_shield)
 Microsoft Azure credits for open source projects
 
 Would you like to sponsor the project then please contact us at [sponsors@oauth2-proxy.dev](mailto:sponsors@oauth2-proxy.dev)
