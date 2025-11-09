@@ -8,9 +8,9 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/mbland/hmacauth"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/authentication/hmacauth"
 )
 
 const (
@@ -86,7 +86,7 @@ func (h *httpUpstreamProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request)
 	// A scope should always be injected before this handler is called.
 	scope.Upstream = h.upstream
 
-	// TODO (@NickMeves) - Deprecate GAP-Signature & remove GAP-Auth
+	// TODO (@tuunit) - Deprecate GAP-Signature & remove GAP-Auth
 	if h.auth != nil {
 		req.Header.Set("GAP-Auth", rw.Header().Get("GAP-Auth"))
 		h.auth.SignRequest(req)
