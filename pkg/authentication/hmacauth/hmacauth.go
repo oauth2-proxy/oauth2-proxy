@@ -6,9 +6,9 @@ import (
 	"crypto/hmac"
 	"encoding/base64"
 	"errors"
-	"io/ioutil"
+	"fmt"
+	"io"
 	"net/http"
-	"strconv"
 	"strings"
 )
 
@@ -57,7 +57,7 @@ func init() {
 		// Note that both sides of the client/server connection must
 		// have an algorithm available in order to successfully
 		// authenticate using that algorithm
-		if algorithm.Available() == false {
+		if !algorithm.Available() {
 			delete(supportedAlgorithms, name)
 		}
 	}
@@ -79,8 +79,7 @@ func DigestNameToCryptoHash(name string) (result crypto.Hash, err error) {
 func CryptoHashToDigestName(id crypto.Hash) (result string, err error) {
 	var supported bool
 	if result, supported = algorithmName[id]; !supported {
-		err = errors.New("hmacauth: unsupported crypto.Hash #" +
-			strconv.Itoa(int(id)))
+		err = fmt.Errorf("hmacauth: unsupported crypto.Hash #%d", id)
 	}
 	return
 }
@@ -96,11 +95,11 @@ type hmacAuth struct {
 // authenticate HTTP requests based on the supplied parameters.
 func NewHmacAuth(hash crypto.Hash, key []byte, header string,
 	headers []string) HmacAuth {
-	if hash.Available() == false {
+	if !hash.Available() {
 		var name string
 		var supported bool
 		if name, supported = algorithmName[hash]; !supported {
-			name = "#" + strconv.Itoa(int(hash))
+			name = fmt.Sprintf("#%d", hash)
 		}
 		panic("hmacauth: hash algorithm " + name + " is unavailable")
 	}
@@ -154,8 +153,8 @@ func requestSignature(auth *hmacAuth, req *http.Request,
 	_, _ = h.Write([]byte(auth.StringToSign(req)))
 
 	if req.Body != nil {
-		reqBody, _ := ioutil.ReadAll(req.Body)
-		req.Body = ioutil.NopCloser(bytes.NewBuffer(reqBody))
+		reqBody, _ := io.ReadAll(req.Body)
+		req.Body = io.NopCloser(bytes.NewBuffer(reqBody))
 		_, _ = h.Write(reqBody)
 	}
 

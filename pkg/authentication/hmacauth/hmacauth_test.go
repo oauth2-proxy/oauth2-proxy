@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"crypto"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -104,7 +103,7 @@ func TestRequestSignaturePost(t *testing.T) {
 	assert.Equal(t, h.RequestSignature(req),
 		"sha1 K4IrVDtMCRwwW8Oms0VyZWMjXHI=")
 
-	if requestBody, err := ioutil.ReadAll(req.Body); err != nil {
+	if requestBody, err := io.ReadAll(req.Body); err != nil {
 		panic(err)
 	} else {
 		assert.Equal(t, string(requestBody), body)
@@ -247,15 +246,16 @@ type SignatureAuthenticator struct {
 func (v *SignatureAuthenticator) Authenticate(
 	w http.ResponseWriter, r *http.Request) {
 	result, headerSig, computedSig := v.auth.AuthenticateRequest(r)
-	if result == ResultNoSignature {
+	switch result {
+	case ResultNoSignature:
 		w.Write([]byte("no signature received"))
-	} else if result == ResultMatch {
+	case ResultMatch:
 		w.Write([]byte("signatures match"))
-	} else if result == ResultMismatch {
+	case ResultMismatch:
 		w.Write([]byte("signatures do not match:" +
 			"\n  received: " + headerSig +
 			"\n  computed: " + computedSig))
-	} else {
+	default:
 		panic("Unknown result value: " + result.String())
 	}
 }
@@ -287,7 +287,7 @@ func TestSendAuthenticatedPostRequestToServer(t *testing.T) {
 		http.HandlerFunc(authenticator.Authenticate))
 
 	req, err := http.NewRequest("POST", upstream.URL+"/foo/bar",
-		ioutil.NopCloser(&fakeNetConn{reqBody: payload}))
+		io.NopCloser(&fakeNetConn{reqBody: payload}))
 	if err != nil {
 		panic(err)
 	}
@@ -296,7 +296,7 @@ func TestSendAuthenticatedPostRequestToServer(t *testing.T) {
 		panic(err)
 	} else {
 		assert.Equal(t, response.StatusCode, http.StatusOK)
-		responseBody, _ := ioutil.ReadAll(response.Body)
+		responseBody, _ := io.ReadAll(response.Body)
 		assert.Equal(t, "signatures match", string(responseBody))
 	}
 }
