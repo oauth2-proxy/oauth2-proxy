@@ -17,6 +17,7 @@ import (
 // ProviderVerifier represents the OIDC discovery and verification process
 type ProviderVerifier interface {
 	DiscoveryEnabled() bool
+	JwksURL() string
 	Provider() DiscoveryProvider
 	Verifier() IDTokenVerifier
 }
@@ -120,6 +121,7 @@ func NewProviderVerifier(ctx context.Context, opts ProviderVerifierOptions) (Pro
 
 	return &providerVerifier{
 		discoveryEnabled: !opts.SkipDiscovery,
+		jwksURL:          opts.JWKsURL,
 		provider:         provider,
 		verifier:         verifier,
 	}, nil
@@ -215,6 +217,7 @@ func newVerifierBuilder(issuerURL string, keySet oidc.KeySet, supportedSigningAl
 // providerVerifier is an implementation of the ProviderVerifier interface
 type providerVerifier struct {
 	discoveryEnabled bool
+	jwksURL          string
 	provider         DiscoveryProvider
 	verifier         IDTokenVerifier
 }
@@ -233,4 +236,9 @@ func (p *providerVerifier) Provider() DiscoveryProvider {
 // Verifier returns the ID token verifier
 func (p *providerVerifier) Verifier() IDTokenVerifier {
 	return p.verifier
+}
+
+// JwksURL retuns the jwks url used for the provider
+func (p *providerVerifier) JwksURL() string {
+	return p.jwksURL
 }
