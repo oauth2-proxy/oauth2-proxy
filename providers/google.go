@@ -54,7 +54,7 @@ type claims struct {
 
 const (
 	googleProviderName = "Google"
-	googleDefaultScope = "profile email"
+	googleDefaultScope = "profile email openid"
 )
 
 var (
