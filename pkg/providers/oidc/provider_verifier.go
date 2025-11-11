@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 	k8serrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
@@ -127,6 +128,8 @@ func NewProviderVerifier(ctx context.Context, opts ProviderVerifierOptions) (Pro
 type verifierBuilder func(*oidc.Config) *oidc.IDTokenVerifier
 
 func getVerifierBuilder(ctx context.Context, opts ProviderVerifierOptions) (verifierBuilder, DiscoveryProvider, error) {
+	ctx = oidc.ClientContext(ctx, requests.DefaultHTTPClient)
+
 	if opts.SkipDiscovery {
 		var keySet oidc.KeySet
 		var err error
