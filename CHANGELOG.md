@@ -9,6 +9,7 @@
 ## Changes since v7.13.0
 
 - [#3197](https://github.com/oauth2-proxy/oauth2-proxy/pull/3197) fix: NewRemoteKeySet is not using DefaultHTTPClient (@rsrdesarrollo / @tuunit)
+- [#2869](https://github.com/oauth2-proxy/oauth2-proxy/pull/2869) feat: pass along oidc config to verifier (@brian-mcnamara)
 
 # V7.13.0
 
