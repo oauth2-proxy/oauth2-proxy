@@ -39,9 +39,10 @@ func NewLegacyOptions() *LegacyOptions {
 		},
 
 		LegacyHeaders: LegacyHeaders{
-			PassBasicAuth:        true,
-			PassUserHeaders:      true,
-			SkipAuthStripHeaders: true,
+			PassBasicAuth:           true,
+			PassUserHeaders:         true,
+			SkipAuthStripHeaders:    true,
+			AuthorizationHeaderName: "Authorization",
 		},
 
 		LegacyServer: LegacyServer{
@@ -89,6 +90,7 @@ func (l *LegacyOptions) ToOptions() (*Options, error) {
 	l.Options.Server, l.Options.MetricsServer = l.LegacyServer.convert()
 
 	l.Options.LegacyPreferEmailToUser = l.LegacyHeaders.PreferEmailToUser
+
 	l.Options.AuthorizationHeaderName = l.LegacyHeaders.AuthorizationHeaderName
 
 	providers, err := l.LegacyProvider.convert()
