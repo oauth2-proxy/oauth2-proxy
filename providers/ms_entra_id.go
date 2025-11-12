@@ -47,13 +47,16 @@ func NewMicrosoftEntraIDProvider(p *ProviderData, opts options.Provider) *Micros
 		name: microsoftEntraIDProviderName,
 	})
 
-	return &MicrosoftEntraIDProvider{
+	provider := &MicrosoftEntraIDProvider{
 		OIDCProvider: NewOIDCProvider(p, opts.OIDCConfig),
 
 		multiTenantAllowedTenants: opts.MicrosoftEntraIDConfig.AllowedTenants,
 		federatedTokenAuth:        opts.MicrosoftEntraIDConfig.FederatedTokenAuth,
 		microsoftGraphURL:         microsoftGraphURL,
 	}
+	provider.addAllowedRoles(opts.MicrosoftEntraIDConfig.Roles)
+
+	return provider
 }
 
 // EnrichSession checks for group overage after calling generic EnrichSession
@@ -74,7 +77,7 @@ func (p *MicrosoftEntraIDProvider) EnrichSession(ctx context.Context, session *s
 		}
 	}
 
-	return nil
+	return p.extractRoles(session)
 }
 
 // ValidateSession checks for allowed tenants (e.g. for multi-tenant apps) and passes through to generic ValidateSession
@@ -154,7 +157,7 @@ func (p *MicrosoftEntraIDProvider) RefreshSession(ctx context.Context, s *sessio
 		return false, fmt.Errorf("unable to redeem refresh token: %v", err)
 	}
 
-	return true, nil
+	return true, p.extractRoles(s)
 }
 
 // redeemRefreshTokenWithFederatedToken uses a RefreshToken and federated credentials with the RedeemURL to refresh the
@@ -319,4 +322,46 @@ func (p *MicrosoftEntraIDProvider) fetchToken(ctx context.Context, params url.Va
 	}
 
 	return token.WithExtra(rawResponse), nil
+}
+
+// addAllowedRoles sets app roles that are authorized.
+// Assumes `SetAllowedGroups` is already called on groups and appends to that
+// with `role:` prefixed roles.
+func (p *MicrosoftEntraIDProvider) addAllowedRoles(roles []string) {
+	if p.AllowedGroups == nil {
+		p.AllowedGroups = make(map[string]struct{})
+	}
+	for _, role := range roles {
+		p.AllowedGroups[formatAppRole(role)] = struct{}{}
+	}
+}
+
+type rolesClaim struct {
+	Roles []string `json:"roles"`
+}
+
+func (p *MicrosoftEntraIDProvider) extractRoles(s *sessions.SessionState) error {
+	// Get 'roles' claim from access token payload
+	payload, err := extractAccessTokenPayload(s)
+	if err != nil {
+		return fmt.Errorf("couldn't extract access token payload: %w", err)
+	}
+
+	var claim rolesClaim
+	if err := json.Unmarshal(payload, &claim); err != nil {
+		return fmt.Errorf("unable to unmarshal roles claim from access token payload: %w", err)
+	}
+
+	var roles []string
+	roles = append(roles, claim.Roles...)
+
+	// Add to groups list with `role:` prefix to distinguish from groups
+	for _, role := range roles {
+		s.Groups = append(s.Groups, formatAppRole(role))
+	}
+	return nil
+}
+
+func formatAppRole(role string) string {
+	return fmt.Sprintf("role:%s", role)
 }

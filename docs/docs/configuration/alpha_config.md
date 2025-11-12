@@ -398,6 +398,7 @@ character.
 | ----- | ---- | ----------- |
 | `allowedTenants` | _[]string_ | AllowedTenants is a list of allowed tenants. In case of multi-tenant apps, incoming tokens are<br/>issued by different issuers and OIDC issuer verification needs to be disabled.<br/>When not specified, all tenants are allowed. Redundant for single-tenant apps<br/>(regular ID token validation matches the issuer). |
 | `federatedTokenAuth` | _bool_ | FederatedTokenAuth enable oAuth2 client authentication with federated token projected<br/>by Entra Workload Identity plugin, instead of client secret. |
+| `roles` | _[]string_ | Role enables to restrict login to users with app role |
 
 ### OIDCOptions
 

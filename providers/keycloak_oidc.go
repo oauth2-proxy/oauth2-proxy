@@ -2,10 +2,8 @@ package providers
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
@@ -110,19 +108,14 @@ type accessClaims struct {
 }
 
 func (p *KeycloakOIDCProvider) getAccessClaims(s *sessions.SessionState) (*accessClaims, error) {
-	parts := strings.Split(s.AccessToken, ".")
-	if len(parts) < 2 {
-		return nil, fmt.Errorf("malformed access token, expected 3 parts got %d", len(parts))
-	}
-
-	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	payload, err := extractAccessTokenPayload(s)
 	if err != nil {
-		return nil, fmt.Errorf("malformed access token, couldn't extract jwt payload: %v", err)
+		return nil, fmt.Errorf("couldn't extract access token payload: %w", err)
 	}
 
 	var claims accessClaims
 	if err := json.Unmarshal(payload, &claims); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to unmarshal access claims from access token payload: %w", err)
 	}
 	return &claims, nil
 }
