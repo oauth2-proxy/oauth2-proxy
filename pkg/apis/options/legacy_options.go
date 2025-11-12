@@ -89,6 +89,7 @@ func (l *LegacyOptions) ToOptions() (*Options, error) {
 	l.Options.Server, l.Options.MetricsServer = l.LegacyServer.convert()
 
 	l.Options.LegacyPreferEmailToUser = l.LegacyHeaders.PreferEmailToUser
+	l.Options.AuthorizationHeaderName = l.LegacyHeaders.AuthorizationHeaderName
 
 	providers, err := l.LegacyProvider.convert()
 	if err != nil {
@@ -201,9 +202,10 @@ type LegacyHeaders struct {
 	SetXAuthRequest  bool `flag:"set-xauthrequest" cfg:"set_xauthrequest"`
 	SetAuthorization bool `flag:"set-authorization-header" cfg:"set_authorization_header"`
 
-	PreferEmailToUser    bool   `flag:"prefer-email-to-user" cfg:"prefer_email_to_user"`
-	BasicAuthPassword    string `flag:"basic-auth-password" cfg:"basic_auth_password"`
-	SkipAuthStripHeaders bool   `flag:"skip-auth-strip-headers" cfg:"skip_auth_strip_headers"`
+	PreferEmailToUser       bool   `flag:"prefer-email-to-user" cfg:"prefer_email_to_user"`
+	BasicAuthPassword       string `flag:"basic-auth-password" cfg:"basic_auth_password"`
+	AuthorizationHeaderName string `flag:"authorization-header-name" cfg:"authorization_header_name"`
+	SkipAuthStripHeaders    bool   `flag:"skip-auth-strip-headers" cfg:"skip_auth_strip_headers"`
 }
 
 func legacyHeadersFlagSet() *pflag.FlagSet {
@@ -220,6 +222,7 @@ func legacyHeadersFlagSet() *pflag.FlagSet {
 
 	flagSet.Bool("prefer-email-to-user", false, "Prefer to use the Email address as the Username when passing information to upstream. Will only use Username if Email is unavailable, eg. htaccess authentication. Used in conjunction with -pass-basic-auth and -pass-user-headers")
 	flagSet.String("basic-auth-password", "", "the password to set when passing the HTTP Basic Auth header")
+	flagSet.String("authorization-header-name", "Authorization", "name of the authorization header to use instead of Authorization")
 	flagSet.Bool("skip-auth-strip-headers", true, "strips X-Forwarded-* style authentication headers & Authorization header if they would be set by oauth2-proxy")
 
 	return flagSet
@@ -235,7 +238,7 @@ func (l *LegacyHeaders) getRequestHeaders() []Header {
 	requestHeaders := []Header{}
 
 	if l.PassBasicAuth && l.BasicAuthPassword != "" {
-		requestHeaders = append(requestHeaders, getBasicAuthHeader(l.PreferEmailToUser, l.BasicAuthPassword))
+		requestHeaders = append(requestHeaders, getBasicAuthHeader(l.PreferEmailToUser, l.BasicAuthPassword, l.AuthorizationHeaderName))
 	}
 
 	// In the old implementation, PassUserHeaders is a subset of PassBasicAuth
@@ -249,7 +252,7 @@ func (l *LegacyHeaders) getRequestHeaders() []Header {
 	}
 
 	if l.PassAuthorization {
-		requestHeaders = append(requestHeaders, getAuthorizationHeader())
+		requestHeaders = append(requestHeaders, getAuthorizationHeader(l.AuthorizationHeaderName))
 	}
 
 	for i := range requestHeaders {
@@ -270,24 +273,28 @@ func (l *LegacyHeaders) getResponseHeaders() []Header {
 	}
 
 	if l.SetBasicAuth {
-		responseHeaders = append(responseHeaders, getBasicAuthHeader(l.PreferEmailToUser, l.BasicAuthPassword))
+		responseHeaders = append(responseHeaders, getBasicAuthHeader(l.PreferEmailToUser, l.BasicAuthPassword, l.AuthorizationHeaderName))
 	}
 
 	if l.SetAuthorization {
-		responseHeaders = append(responseHeaders, getAuthorizationHeader())
+		responseHeaders = append(responseHeaders, getAuthorizationHeader(l.AuthorizationHeaderName))
 	}
 
 	return responseHeaders
 }
 
-func getBasicAuthHeader(preferEmailToUser bool, basicAuthPassword string) Header {
+func getBasicAuthHeader(preferEmailToUser bool, basicAuthPassword string, headerName string) Header {
 	claim := "user"
 	if preferEmailToUser {
 		claim = "email"
 	}
 
+	if headerName == "" {
+		headerName = "Authorization"
+	}
+
 	return Header{
-		Name: "Authorization",
+		Name: headerName,
 		Values: []HeaderValue{
 			{
 				ClaimSource: &ClaimSource{
@@ -368,9 +375,13 @@ func getPassAccessTokenHeader() Header {
 	}
 }
 
-func getAuthorizationHeader() Header {
+func getAuthorizationHeader(headerName string) Header {
+	if headerName == "" {
+		headerName = "Authorization"
+	}
+
 	return Header{
-		Name: "Authorization",
+		Name: headerName,
 		Values: []HeaderValue{
 			{
 				ClaimSource: &ClaimSource{
