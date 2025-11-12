@@ -100,6 +100,7 @@ func (o *Options) SetRealClientIPParser(s ipapi.RealClientIPParser)       { o.re
 func NewOptions() *Options {
 	return &Options{
 		BearerTokenLoginFallback: true,
+		AuthorizationHeaderName:  "Authorization",
 		ProxyPrefix:              "/oauth2",
 		Providers:                providerDefaults(),
 		PingPath:                 "/ping",
@@ -131,6 +132,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Bool("skip-auth-preflight", false, "will skip authentication for OPTIONS requests")
 	flagSet.Bool("ssl-insecure-skip-verify", false, "skip validation of certificates presented when using HTTPS providers")
 	flagSet.Bool("skip-jwt-bearer-tokens", false, "will skip requests that have verified JWT bearer tokens (default false)")
+	flagSet.String("authorization-header-name", "Authorization", "name of the authorization header to use instead of Authorization")
 	flagSet.Bool("bearer-token-login-fallback", true, "if skip-jwt-bearer-tokens is set, fall back to normal login redirect with an invalid JWT. If false, 403 instead")
 	flagSet.Bool("force-json-errors", false, "will force JSON errors instead of HTTP error pages or redirects")
 	flagSet.Bool("encode-state", false, "will encode oauth state with base64")
