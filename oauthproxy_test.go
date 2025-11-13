@@ -15,9 +15,9 @@ import (
 	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
-	"github.com/mbland/hmacauth"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/authentication/hmacauth"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/cookies"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
@@ -2938,12 +2938,75 @@ func TestProxyAllowedGroups(t *testing.T) {
 		name               string
 		allowedGroups      []string
 		groups             []string
+		querystring        string
 		expectUnauthorized bool
 	}{
-		{"NoAllowedGroups", []string{}, []string{}, false},
-		{"NoAllowedGroupsUserHasGroups", []string{}, []string{"a", "b"}, false},
-		{"UserInAllowedGroup", []string{"a"}, []string{"a", "b"}, false},
-		{"UserNotInAllowedGroup", []string{"a"}, []string{"c"}, true},
+		{
+			name:               "NoAllowedGroups",
+			allowedGroups:      []string{},
+			groups:             []string{},
+			querystring:        "",
+			expectUnauthorized: false},
+		{
+			name:               "NoAllowedGroupsUserHasGroups",
+			allowedGroups:      []string{},
+			groups:             []string{"a", "b"},
+			querystring:        "",
+			expectUnauthorized: false},
+		{
+			name:               "UserInAllowedGroup",
+			allowedGroups:      []string{"a"},
+			groups:             []string{"a", "b"},
+			querystring:        "",
+			expectUnauthorized: false},
+		{
+			name:               "UserNotInAllowedGroup",
+			allowedGroups:      []string{"a"},
+			groups:             []string{"c"},
+			querystring:        "",
+			expectUnauthorized: true},
+		{
+			name:               "UserInQuerystringGroup",
+			allowedGroups:      []string{"a", "b"},
+			groups:             []string{"a", "c"},
+			querystring:        "?allowed_groups=a",
+			expectUnauthorized: false},
+		{
+			name:               "UserInMultiParamQuerystringGroup",
+			allowedGroups:      []string{"a", "b"},
+			groups:             []string{"b"},
+			querystring:        "?allowed_groups=a&allowed_groups=b,d",
+			expectUnauthorized: false},
+		{
+			name:               "UserInOnlyQuerystringGroup",
+			allowedGroups:      []string{},
+			groups:             []string{"a", "c"},
+			querystring:        "?allowed_groups=a,b",
+			expectUnauthorized: false},
+		{
+			name:               "UserInDelimitedQuerystringGroup",
+			allowedGroups:      []string{"a", "b", "c"},
+			groups:             []string{"c"},
+			querystring:        "?allowed_groups=a,c",
+			expectUnauthorized: false},
+		{
+			name:               "UserNotInQuerystringGroup",
+			allowedGroups:      []string{},
+			groups:             []string{"c"},
+			querystring:        "?allowed_groups=a,b",
+			expectUnauthorized: true},
+		{
+			name:               "UserInConfigGroupNotInQuerystringGroup",
+			allowedGroups:      []string{"a", "b", "c"},
+			groups:             []string{"c"},
+			querystring:        "?allowed_groups=a,b",
+			expectUnauthorized: true},
+		{
+			name:               "UserInQuerystringGroupNotInConfigGroup",
+			allowedGroups:      []string{"a", "b"},
+			groups:             []string{"c"},
+			querystring:        "?allowed_groups=b,c",
+			expectUnauthorized: true},
 	}
 
 	for _, tt := range tests {
@@ -2979,7 +3042,7 @@ func TestProxyAllowedGroups(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			test.req, _ = http.NewRequest("GET", "/", nil)
+			test.req, _ = http.NewRequest("GET", fmt.Sprintf("/%s", tt.querystring), nil)
 
 			test.req.Header.Add("accept", applicationJSON)
 			err = test.SaveSession(session)

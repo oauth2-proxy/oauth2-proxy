@@ -510,6 +510,8 @@ type LegacyProvider struct {
 	GoogleServiceAccountJSON               string   `flag:"google-service-account-json" cfg:"google_service_account_json"`
 	GoogleUseApplicationDefaultCredentials bool     `flag:"google-use-application-default-credentials" cfg:"google_use_application_default_credentials"`
 	GoogleTargetPrincipal                  string   `flag:"google-target-principal" cfg:"google_target_principal"`
+	GoogleUseOrganizationID                bool     `flag:"google-use-organization-id" cfg:"google_use_organization_id"`
+	GoogleAdminAPIUserScope                string   `flag:"google-admin-api-user-scope" cfg:"google_admin_api_user_scope"`
 
 	// These options allow for other providers besides Google, with
 	// potential overrides.
@@ -623,6 +625,8 @@ func legacyGoogleFlagSet() *pflag.FlagSet {
 	flagSet.String("google-service-account-json", "", "the path to the service account json credentials")
 	flagSet.String("google-use-application-default-credentials", "", "use application default credentials instead of service account json (i.e. GKE Workload Identity)")
 	flagSet.String("google-target-principal", "", "the target principal to impersonate when using ADC")
+	flagSet.String("google-use-organization-id", "", "use organization id as preferred username")
+	flagSet.String("google-admin-api-user-scope", "", "authorization scope required to call users.get, can be one of ")
 
 	return flagSet
 }
@@ -770,6 +774,8 @@ func (l *LegacyProvider) convert() (Providers, error) {
 			ServiceAccountJSON:               l.GoogleServiceAccountJSON,
 			UseApplicationDefaultCredentials: l.GoogleUseApplicationDefaultCredentials,
 			TargetPrincipal:                  l.GoogleTargetPrincipal,
+			UseOrganizationID:                l.GoogleUseOrganizationID,
+			AdminAPIUserScope:                l.GoogleAdminAPIUserScope,
 		}
 	case "entra-id":
 		provider.MicrosoftEntraIDConfig = MicrosoftEntraIDOptions{

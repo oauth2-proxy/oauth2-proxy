@@ -7,7 +7,6 @@ import (
 	"io"
 	"time"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/clock"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	"github.com/pierrec/lz4/v4"
 	"github.com/vmihailenco/msgpack/v5"
@@ -30,8 +29,16 @@ type SessionState struct {
 	PreferredUsername string   `msgpack:"pu,omitempty"`
 
 	// Internal helpers, not serialized
-	Clock clock.Clock `msgpack:"-"`
-	Lock  Lock        `msgpack:"-"`
+	Clock     func() time.Time `msgpack:"-"` // override for time.Now, for testing
+	Lock      Lock             `msgpack:"-"`
+	Refreshed bool             `msgpack:"-"` // indicates whether the session was refreshed
+}
+
+func (s *SessionState) now() time.Time {
+	if s.Clock != nil {
+		return s.Clock()
+	}
+	return time.Now()
 }
 
 func (s *SessionState) ObtainLock(ctx context.Context, expiration time.Duration) error {
@@ -64,7 +71,7 @@ func (s *SessionState) PeekLock(ctx context.Context) (bool, error) {
 
 // CreatedAtNow sets a SessionState's CreatedAt to now
 func (s *SessionState) CreatedAtNow() {
-	now := s.Clock.Now()
+	now := s.now()
 	s.CreatedAt = &now
 }
 
@@ -85,7 +92,7 @@ func (s *SessionState) ExpiresIn(d time.Duration) {
 
 // IsExpired checks whether the session has expired
 func (s *SessionState) IsExpired() bool {
-	if s.ExpiresOn != nil && !s.ExpiresOn.IsZero() && s.ExpiresOn.Before(s.Clock.Now()) {
+	if s.ExpiresOn != nil && !s.ExpiresOn.IsZero() && s.ExpiresOn.Before(s.now()) {
 		return true
 	}
 	return false
@@ -94,7 +101,7 @@ func (s *SessionState) IsExpired() bool {
 // Age returns the age of a session
 func (s *SessionState) Age() time.Duration {
 	if s.CreatedAt != nil && !s.CreatedAt.IsZero() {
-		return s.Clock.Now().Truncate(time.Second).Sub(*s.CreatedAt)
+		return s.now().Truncate(time.Second).Sub(*s.CreatedAt)
 	}
 	return 0
 }

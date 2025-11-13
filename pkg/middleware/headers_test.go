@@ -205,6 +205,50 @@ var _ = Describe("Headers Suite", func() {
 			expectedHeaders: nil,
 			expectedErr:     "error building request header injector: error building request injector: error building injector for header \"X-Auth-Request-Authorization\": error loading basicAuthPassword: secret source is invalid: exactly one entry required, specify either value, fromEnv or fromFile",
 		}),
+		Entry("strips normalized variants before injecting", headersTableInput{
+			headers: []options.Header{
+				{
+					Name: "X-Auth-Request-User",
+					Values: []options.HeaderValue{
+						{
+							ClaimSource: &options.ClaimSource{Claim: "user"},
+						},
+					},
+				},
+			},
+			initialHeaders: http.Header{
+				"X-Auth-Request-User": []string{"old"},
+				"X-Auth_Request_User": []string{"evil"},
+			},
+			session: &sessionsapi.SessionState{User: "user-123"},
+			expectedHeaders: http.Header{
+				"X-Auth-Request-User": []string{"user-123"},
+			},
+			expectedErr: "",
+		}),
+		Entry("doesn't strip normalized variants before injecting", headersTableInput{
+			headers: []options.Header{
+				{
+					Name:                            "X-Auth-Request-User",
+					InsecureSkipHeaderNormalization: true,
+					Values: []options.HeaderValue{
+						{
+							ClaimSource: &options.ClaimSource{Claim: "user"},
+						},
+					},
+				},
+			},
+			initialHeaders: http.Header{
+				"X-Auth-Request-User": []string{"old"},
+				"X-Auth_Request_User": []string{"evil"},
+			},
+			session: &sessionsapi.SessionState{User: "user-123"},
+			expectedHeaders: http.Header{
+				"X-Auth-Request-User": []string{"user-123"},
+				"X-Auth_Request_User": []string{"evil"},
+			},
+			expectedErr: "",
+		}),
 	)
 
 	DescribeTable("the response header injector",

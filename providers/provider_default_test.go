@@ -17,8 +17,9 @@ func TestRefresh(t *testing.T) {
 	now := time.Unix(1234567890, 10)
 	expires := time.Unix(1234567890, 0)
 
-	ss := &sessions.SessionState{}
-	ss.Clock.Set(now)
+	ss := &sessions.SessionState{
+		Clock: func() time.Time { return now },
+	}
 	ss.SetExpiresOn(expires)
 
 	refreshed, err := p.RefreshSession(context.Background(), ss)

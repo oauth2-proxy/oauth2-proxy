@@ -128,7 +128,7 @@ var _ = Describe("CSRF Cookie with non-fixed name Tests", func() {
 		testNow := time.Unix(nowEpoch, 0)
 
 		BeforeEach(func() {
-			privateCSRF.time.Set(testNow)
+			privateCSRF.clock = func() time.Time { return testNow }
 
 			req = &http.Request{
 				Method: http.MethodGet,
@@ -144,7 +144,7 @@ var _ = Describe("CSRF Cookie with non-fixed name Tests", func() {
 		})
 
 		AfterEach(func() {
-			privateCSRF.time.Reset()
+			privateCSRF.clock = time.Now
 		})
 
 		Context("SetCookie", func() {
@@ -200,17 +200,17 @@ var _ = Describe("CSRF Cookie with non-fixed name Tests", func() {
 				publicCSRF1, err := NewCSRF(cookieOpts, "verifier")
 				Expect(err).ToNot(HaveOccurred())
 				privateCSRF1 := publicCSRF1.(*csrf)
-				privateCSRF1.time.Set(testNow)
+				privateCSRF1.clock = func() time.Time { return testNow }
 
 				publicCSRF2, err := NewCSRF(cookieOpts, "verifier")
 				Expect(err).ToNot(HaveOccurred())
 				privateCSRF2 := publicCSRF2.(*csrf)
-				privateCSRF2.time.Set(testNow.Add(time.Minute))
+				privateCSRF2.clock = func() time.Time { return testNow.Add(time.Minute) }
 
 				publicCSRF3, err := NewCSRF(cookieOpts, "verifier")
 				Expect(err).ToNot(HaveOccurred())
 				privateCSRF3 := publicCSRF3.(*csrf)
-				privateCSRF3.time.Set(testNow.Add(time.Minute * 2))
+				privateCSRF3.clock = func() time.Time { return testNow.Add(time.Minute * 2) }
 
 				cookies := []string{}
 				for _, csrf := range []*csrf{privateCSRF1, privateCSRF2, privateCSRF3} {
