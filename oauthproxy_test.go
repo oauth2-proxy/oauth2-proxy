@@ -1920,6 +1920,127 @@ func TestGetJwtSession(t *testing.T) {
 	assert.Equal(t, test.rw.Header().Get("X-Auth-Request-Email"), "john@example.com")
 }
 
+func TestGetJwtSessionCustomAuthorizationHeaderName(t *testing.T) {
+	goodJwt := "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9." +
+		"eyJzdWIiOiIxMjM0NTY3ODkwIiwiYXVkIjoiaHR0cHM6Ly90ZXN0Lm15YXBwLmNvbSIsIm5hbWUiOiJKb2huIERvZSIsImVtY" +
+		"WlsIjoiam9obkBleGFtcGxlLmNvbSIsImlzcyI6Imh0dHBzOi8vaXNzdWVyLmV4YW1wbGUuY29tIiwiaWF0IjoxNTUzNjkxMj" +
+		"E1LCJleHAiOjE5MTIxNTE4MjF9." +
+		"rLVyzOnEldUq_pNkfa-WiV8TVJYWyZCaM2Am_uo8FGg11zD7l-qmz3x1seTvqpH6Y0Ty00fmv6dJnGnC8WMnPXQiodRTfhBSe" +
+		"OKZMu0HkMD2sg52zlKkbfLTO6ic5VnbVgwjjrB8am_Ta6w7kyFUaB5C1BsIrrLMldkWEhynbb8"
+
+	keyset := NoOpKeySet{}
+	verifier := oidc.NewVerifier("https://issuer.example.com", keyset,
+		&oidc.Config{ClientID: "https://test.myapp.com", SkipExpiryCheck: true,
+			SkipClientIDCheck: true})
+	verificationOptions := internaloidc.IDTokenVerificationOptions{
+		AudienceClaims: []string{"aud"},
+		ClientID:       "https://test.myapp.com",
+		ExtraAudiences: []string{},
+	}
+	internalVerifier := internaloidc.NewVerifier(verifier, verificationOptions)
+
+	test, err := NewAuthOnlyEndpointTest("", func(opts *options.Options) {
+		opts.AuthorizationHeaderName = "Authorization-Custom"
+		opts.InjectRequestHeaders = []options.Header{
+			{
+				Name: "Authorization-Custom",
+				Values: []options.HeaderValue{
+					{
+						ClaimSource: &options.ClaimSource{
+							Claim:  "id_token",
+							Prefix: "Bearer ",
+						},
+					},
+				},
+			},
+			{
+				Name: "X-Forwarded-User",
+				Values: []options.HeaderValue{
+					{
+						ClaimSource: &options.ClaimSource{
+							Claim: "user",
+						},
+					},
+				},
+			},
+			{
+				Name: "X-Forwarded-Email",
+				Values: []options.HeaderValue{
+					{
+						ClaimSource: &options.ClaimSource{
+							Claim: "email",
+						},
+					},
+				},
+			},
+		}
+
+		opts.InjectResponseHeaders = []options.Header{
+			{
+				Name: "Authorization-Custom",
+				Values: []options.HeaderValue{
+					{
+						ClaimSource: &options.ClaimSource{
+							Claim:  "id_token",
+							Prefix: "Bearer ",
+						},
+					},
+				},
+			},
+			{
+				Name: "X-Auth-Request-User",
+				Values: []options.HeaderValue{
+					{
+						ClaimSource: &options.ClaimSource{
+							Claim: "user",
+						},
+					},
+				},
+			},
+			{
+				Name: "X-Auth-Request-Email",
+				Values: []options.HeaderValue{
+					{
+						ClaimSource: &options.ClaimSource{
+							Claim: "email",
+						},
+					},
+				},
+			},
+		}
+		opts.SkipJwtBearerTokens = true
+		opts.AuthorizationHeaderName = "Authorization-Custom"
+		opts.SetJWTBearerVerifiers(append(opts.GetJWTBearerVerifiers(), internalVerifier))
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	tp, _ := test.proxy.provider.(*TestProvider)
+	tp.GroupValidator = func(s string) bool {
+		return true
+	}
+
+	authHeader := fmt.Sprintf("Bearer %s", goodJwt)
+	test.req.Header = map[string][]string{
+		"Authorization-Custom": {authHeader},
+	}
+
+	test.proxy.ServeHTTP(test.rw, test.req)
+	if test.rw.Code >= 400 {
+		t.Fatalf("expected 3xx got %d", test.rw.Code)
+	}
+
+	// Check PassAuthorization, should overwrite Basic header
+	assert.Equal(t, test.req.Header.Get("Authorization-Custom"), authHeader)
+	assert.Equal(t, test.req.Header.Get("X-Forwarded-User"), "1234567890")
+	assert.Equal(t, test.req.Header.Get("X-Forwarded-Email"), "john@example.com")
+
+	// SetAuthorization and SetXAuthRequest
+	assert.Equal(t, test.rw.Header().Get("Authorization-Custom"), authHeader)
+	assert.Equal(t, test.rw.Header().Get("X-Auth-Request-User"), "1234567890")
+	assert.Equal(t, test.rw.Header().Get("X-Auth-Request-Email"), "john@example.com")
+}
+
 func Test_prepareNoCache(t *testing.T) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		prepareNoCache(w)

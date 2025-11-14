@@ -406,11 +406,11 @@ func buildSessionChain(opts *options.Options, provider providers.Provider, sessi
 				middlewareapi.CreateTokenToSessionFunc(verifier.Verify))
 		}
 
-		chain = chain.Append(middleware.NewJwtSessionLoader(sessionLoaders, opts.BearerTokenLoginFallback))
+		chain = chain.Append(middleware.NewJwtSessionLoader(sessionLoaders, opts.BearerTokenLoginFallback, opts.AuthorizationHeaderName))
 	}
 
 	if validator != nil {
-		chain = chain.Append(middleware.NewBasicAuthSessionLoader(validator, opts.HtpasswdUserGroups, opts.LegacyPreferEmailToUser))
+		chain = chain.Append(middleware.NewBasicAuthSessionLoader(validator, opts.HtpasswdUserGroups, opts.LegacyPreferEmailToUser, opts.AuthorizationHeaderName))
 	}
 
 	chain = chain.Append(middleware.NewStoredSessionLoader(&middleware.StoredSessionLoaderOptions{
@@ -1119,6 +1119,7 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 
 	if session == nil {
 		return nil, ErrNeedsLogin
+
 	}
 
 	invalidEmail := session.Email != "" && !p.Validator(session.Email)
