@@ -173,7 +173,7 @@ var _ = Describe("ADFS Provider Tests", func() {
 				ProtectedResource: resource,
 				Scope:             "",
 			}, options.Provider{
-				ADFSConfig: options.ADFSOptions{SkipScope: ptr.Ptr(true)},
+				ADFSConfig: options.ADFSOptions{SkipScope: ptr.To(true)},
 			})
 
 			result := p.GetLoginURL("https://example.com/adfs/oauth2/", "", "", url.Values{})

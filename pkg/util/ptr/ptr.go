@@ -1,7 +1,7 @@
 package ptr
 
-// Ptr generically returns a pointer to the given value.
-func Ptr[T any](v T) *T {
+// To generically returns a pointer to the given value.
+func To[T any](v T) *T {
 	return &v
 }
 

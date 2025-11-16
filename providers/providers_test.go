@@ -82,7 +82,7 @@ func TestSkipOIDCDiscovery(t *testing.T) {
 		ClientSecretFile: clientSecret,
 		OIDCConfig: options.OIDCOptions{
 			IssuerURL:     msIssuerURL,
-			SkipDiscovery: ptr.Ptr(true),
+			SkipDiscovery: ptr.To(true),
 		},
 	}
 
@@ -109,7 +109,7 @@ func TestURLsCorrectlyParsed(t *testing.T) {
 		RedeemURL:        msTokenURL,
 		OIDCConfig: options.OIDCOptions{
 			IssuerURL:     msIssuerURL,
-			SkipDiscovery: ptr.Ptr(true),
+			SkipDiscovery: ptr.To(true),
 			JwksURL:       msKeysURL,
 		},
 	}
@@ -217,7 +217,7 @@ func TestScope(t *testing.T) {
 			AllowedGroups:    tc.allowedGroups,
 			OIDCConfig: options.OIDCOptions{
 				IssuerURL:     msIssuerURL,
-				SkipDiscovery: ptr.Ptr(true),
+				SkipDiscovery: ptr.To(true),
 				JwksURL:       msKeysURL,
 			},
 		}
@@ -298,7 +298,7 @@ func TestEmailClaimCorrectlySet(t *testing.T) {
 				RedeemURL:        msTokenURL,
 				OIDCConfig: options.OIDCOptions{
 					IssuerURL:     msIssuerURL,
-					SkipDiscovery: ptr.Ptr(true),
+					SkipDiscovery: ptr.To(true),
 					JwksURL:       msKeysURL,
 					UserIDClaim:   tc.userIDClaim,
 					EmailClaim:    tc.emailClaim,

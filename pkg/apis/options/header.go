@@ -64,7 +64,7 @@ type ClaimSource struct {
 // EnsureDefaults sets any default values for Header fields.
 func (h *Header) EnsureDefaults() {
 	if h.PreserveRequestValue == nil {
-		h.PreserveRequestValue = ptr.Ptr(DefaultHeaderPreserveRequestValue)
+		h.PreserveRequestValue = ptr.To(DefaultHeaderPreserveRequestValue)
 	}
 	for i := range h.Values {
 		h.Values[i].EnsureDefaults()

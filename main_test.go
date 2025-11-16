@@ -123,26 +123,26 @@ redirect_url="http://localhost:4180/oauth2/callback"
 		opts.RawRedirectURL = "http://localhost:4180/oauth2/callback"
 
 		opts.UpstreamServers = options.UpstreamConfig{
-			ProxyRawPath: ptr.Ptr(false),
+			ProxyRawPath: ptr.To(false),
 			Upstreams: []options.Upstream{
 				{
 					ID:                    "/",
 					Path:                  "/",
 					URI:                   "http://httpbin",
-					FlushInterval:         ptr.Ptr(options.DefaultUpstreamFlushInterval),
-					PassHostHeader:        ptr.Ptr(true),
-					ProxyWebSockets:       ptr.Ptr(true),
-					Timeout:               ptr.Ptr(options.DefaultUpstreamTimeout),
-					Static:                ptr.Ptr(false),
-					InsecureSkipTLSVerify: ptr.Ptr(false),
-					DisableKeepAlives:     ptr.Ptr(false),
+					FlushInterval:         ptr.To(options.DefaultUpstreamFlushInterval),
+					PassHostHeader:        ptr.To(true),
+					ProxyWebSockets:       ptr.To(true),
+					Timeout:               ptr.To(options.DefaultUpstreamTimeout),
+					Static:                ptr.To(false),
+					InsecureSkipTLSVerify: ptr.To(false),
+					DisableKeepAlives:     ptr.To(false),
 				},
 			},
 		}
 
 		authHeader := options.Header{
 			Name:                 "Authorization",
-			PreserveRequestValue: ptr.Ptr(false),
+			PreserveRequestValue: ptr.To(false),
 			Values: []options.HeaderValue{
 				{
 					ClaimSource: &options.ClaimSource{
@@ -165,11 +165,11 @@ redirect_url="http://localhost:4180/oauth2/callback"
 				Type:                     "google",
 				ClientSecret:             "b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK",
 				ClientID:                 "oauth2-proxy",
-				UseSystemTrustStore:      ptr.Ptr(false),
-				SkipClaimsFromProfileURL: ptr.Ptr(false),
+				UseSystemTrustStore:      ptr.To(false),
+				SkipClaimsFromProfileURL: ptr.To(false),
 				GoogleConfig: options.GoogleOptions{
 					AdminEmail:                       "admin@example.com",
-					UseApplicationDefaultCredentials: ptr.Ptr(false),
+					UseApplicationDefaultCredentials: ptr.To(false),
 					TargetPrincipal:                  "principal",
 				},
 				AzureConfig: options.AzureOptions{
@@ -181,16 +181,16 @@ redirect_url="http://localhost:4180/oauth2/callback"
 					UserIDClaim:                    "email",
 					AudienceClaims:                 []string{"aud"},
 					ExtraAudiences:                 []string{},
-					InsecureSkipNonce:              ptr.Ptr(true),
-					InsecureAllowUnverifiedEmail:   ptr.Ptr(false),
-					InsecureSkipIssuerVerification: ptr.Ptr(false),
-					SkipDiscovery:                  ptr.Ptr(false),
+					InsecureSkipNonce:              ptr.To(true),
+					InsecureAllowUnverifiedEmail:   ptr.To(false),
+					InsecureSkipIssuerVerification: ptr.To(false),
+					SkipDiscovery:                  ptr.To(false),
 				},
 				MicrosoftEntraIDConfig: options.MicrosoftEntraIDOptions{
-					FederatedTokenAuth: ptr.Ptr(false),
+					FederatedTokenAuth: ptr.To(false),
 				},
 				ADFSConfig: options.ADFSOptions{
-					SkipScope: ptr.Ptr(false),
+					SkipScope: ptr.To(false),
 				},
 				LoginURLParameters: []options.LoginURLParameter{
 					{Name: "approval_prompt", Default: []string{"force"}},

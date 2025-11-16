@@ -61,19 +61,19 @@ var _ = Describe("Proxy Suite", func() {
 						{
 							ID:         "static-backend",
 							Path:       "/static/",
-							Static:     ptr.Ptr(true),
+							Static:     ptr.To(true),
 							StaticCode: &ok,
 						},
 						{
 							ID:         "static-backend-no-trailing-slash",
 							Path:       "/static",
-							Static:     ptr.Ptr(true),
+							Static:     ptr.To(true),
 							StaticCode: &accepted,
 						},
 						{
 							ID:         "static-backend-long",
 							Path:       "/static/long",
-							Static:     ptr.Ptr(true),
+							Static:     ptr.To(true),
 							StaticCode: &accepted,
 						},
 						{
@@ -84,7 +84,7 @@ var _ = Describe("Proxy Suite", func() {
 						{
 							ID:         "single-path-backend",
 							Path:       "/single-path",
-							Static:     ptr.Ptr(true),
+							Static:     ptr.To(true),
 							StaticCode: &ok,
 						},
 						{
@@ -347,7 +347,7 @@ var _ = Describe("Proxy Suite", func() {
 				upstream: "",
 			}),
 			Entry("containing an escaped '/' with ProxyRawPath", &proxyTableInput{
-				upstreams: options.UpstreamConfig{ProxyRawPath: ptr.Ptr(true)},
+				upstreams: options.UpstreamConfig{ProxyRawPath: ptr.To(true)},
 				target:    "http://example.localhost/%2F/test1/%2F/test2",
 				response: testHTTPResponse{
 					code: 404,

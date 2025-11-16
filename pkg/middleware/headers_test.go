@@ -116,7 +116,7 @@ var _ = Describe("Headers Suite", func() {
 			headers: []options.Header{
 				{
 					Name:                 "Claim",
-					PreserveRequestValue: ptr.Ptr(true),
+					PreserveRequestValue: ptr.To(true),
 					Values: []options.HeaderValue{
 						{
 							ClaimSource: &options.ClaimSource{
@@ -161,7 +161,7 @@ var _ = Describe("Headers Suite", func() {
 			headers: []options.Header{
 				{
 					Name:                 "Claim",
-					PreserveRequestValue: ptr.Ptr(true),
+					PreserveRequestValue: ptr.To(true),
 					Values: []options.HeaderValue{
 						{
 							ClaimSource: &options.ClaimSource{
@@ -386,7 +386,7 @@ var _ = Describe("Headers Suite", func() {
 			headers: []options.Header{
 				{
 					Name:                 "Claim",
-					PreserveRequestValue: ptr.Ptr(true),
+					PreserveRequestValue: ptr.To(true),
 					Values: []options.HeaderValue{
 						{
 							ClaimSource: &options.ClaimSource{
@@ -433,7 +433,7 @@ var _ = Describe("Headers Suite", func() {
 			headers: []options.Header{
 				{
 					Name:                 "Claim",
-					PreserveRequestValue: ptr.Ptr(true),
+					PreserveRequestValue: ptr.To(true),
 					Values: []options.HeaderValue{
 						{
 							ClaimSource: &options.ClaimSource{

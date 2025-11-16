@@ -507,7 +507,7 @@ func TestStaticProxyUpstream(t *testing.T) {
 		ProxyUpstream: options.Upstream{
 			ID:     "static-proxy",
 			Path:   "/static-proxy",
-			Static: ptr.Ptr(true),
+			Static: ptr.To(true),
 		},
 	})
 	if err != nil {
@@ -2224,7 +2224,7 @@ func TestTrustedIPs(t *testing.T) {
 					{
 						ID:     "static",
 						Path:   "/",
-						Static: ptr.Ptr(true),
+						Static: ptr.To(true),
 					},
 				},
 			}

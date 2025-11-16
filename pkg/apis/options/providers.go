@@ -334,9 +334,9 @@ func providerDefaults() Providers {
 				Tenant: "common",
 			},
 			OIDCConfig: OIDCOptions{
-				InsecureAllowUnverifiedEmail: ptr.Ptr(DefaultInsecureAllowUnverifiedEmail),
-				InsecureSkipNonce:            ptr.Ptr(DefaultInsecureSkipNonce),
-				SkipDiscovery:                ptr.Ptr(DefaultSkipDiscovery),
+				InsecureAllowUnverifiedEmail: ptr.To(DefaultInsecureAllowUnverifiedEmail),
+				InsecureSkipNonce:            ptr.To(DefaultInsecureSkipNonce),
+				SkipDiscovery:                ptr.To(DefaultSkipDiscovery),
 				UserIDClaim:                  OIDCEmailClaim, // Deprecated: Use OIDCEmailClaim
 				EmailClaim:                   OIDCEmailClaim,
 				GroupsClaim:                  OIDCGroupsClaim,
@@ -358,10 +358,10 @@ func (p Providers) EnsureDefaults() {
 // EnsureDefaults sets any default values for Provider fields.
 func (p *Provider) EnsureDefaults() {
 	if p.SkipClaimsFromProfileURL == nil {
-		p.SkipClaimsFromProfileURL = ptr.Ptr(DefaultSkipClaimsFromProfileURL)
+		p.SkipClaimsFromProfileURL = ptr.To(DefaultSkipClaimsFromProfileURL)
 	}
 	if p.UseSystemTrustStore == nil {
-		p.UseSystemTrustStore = ptr.Ptr(DefaultUseSystemTrustStore)
+		p.UseSystemTrustStore = ptr.To(DefaultUseSystemTrustStore)
 	}
 
 	p.OIDCConfig.EnsureDefaults()
@@ -374,13 +374,13 @@ func (p *Provider) EnsureDefaults() {
 func (o *OIDCOptions) EnsureDefaults() {
 	// Ensure OIDC defaults
 	if o.InsecureAllowUnverifiedEmail == nil {
-		o.InsecureAllowUnverifiedEmail = ptr.Ptr(DefaultInsecureAllowUnverifiedEmail)
+		o.InsecureAllowUnverifiedEmail = ptr.To(DefaultInsecureAllowUnverifiedEmail)
 	}
 	if o.InsecureSkipNonce == nil {
-		o.InsecureSkipNonce = ptr.Ptr(DefaultInsecureSkipNonce)
+		o.InsecureSkipNonce = ptr.To(DefaultInsecureSkipNonce)
 	}
 	if o.SkipDiscovery == nil {
-		o.SkipDiscovery = ptr.Ptr(DefaultSkipDiscovery)
+		o.SkipDiscovery = ptr.To(DefaultSkipDiscovery)
 	}
 	if o.UserIDClaim == "" {
 		o.UserIDClaim = OIDCEmailClaim
@@ -399,20 +399,20 @@ func (o *OIDCOptions) EnsureDefaults() {
 // EnsureDefaults sets any default values for MicrosoftEntraIDOptions fields.
 func (me *MicrosoftEntraIDOptions) EnsureDefaults() {
 	if me.FederatedTokenAuth == nil {
-		me.FederatedTokenAuth = ptr.Ptr(DefaultMicrosoftEntraIDUseFederatedToken)
+		me.FederatedTokenAuth = ptr.To(DefaultMicrosoftEntraIDUseFederatedToken)
 	}
 }
 
 // EnsureDefaults sets any default values for ADFSOptions fields.
 func (a *ADFSOptions) EnsureDefaults() {
 	if a.SkipScope == nil {
-		a.SkipScope = ptr.Ptr(DefaultADFSSkipScope)
+		a.SkipScope = ptr.To(DefaultADFSSkipScope)
 	}
 }
 
 // EnsureDefaults sets any default values for GoogleOptions fields.
 func (g *GoogleOptions) EnsureDefaults() {
 	if g.UseApplicationDefaultCredentials == nil {
-		g.UseApplicationDefaultCredentials = ptr.Ptr(DefaultUseApplicationDefaultCredentials)
+		g.UseApplicationDefaultCredentials = ptr.To(DefaultUseApplicationDefaultCredentials)
 	}
 }

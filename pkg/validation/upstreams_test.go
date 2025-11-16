@@ -26,7 +26,7 @@ var _ = Describe("Upstreams", func() {
 	validStaticUpstream := options.Upstream{
 		ID:     "validStaticUpstream",
 		Path:   "/validStaticUpstream",
-		Static: ptr.Ptr(true),
+		Static: ptr.To(true),
 	}
 	validFileUpstream := options.Upstream{
 		ID:   "validFileUpstream",
@@ -145,11 +145,11 @@ var _ = Describe("Upstreams", func() {
 						ID:                    "foo",
 						Path:                  "/foo",
 						URI:                   "ftp://foo",
-						Static:                ptr.Ptr(true),
+						Static:                ptr.To(true),
 						FlushInterval:         &flushInterval,
-						PassHostHeader:        ptr.Ptr(true),
-						ProxyWebSockets:       ptr.Ptr(true),
-						InsecureSkipTLSVerify: ptr.Ptr(true),
+						PassHostHeader:        ptr.To(true),
+						ProxyWebSockets:       ptr.To(true),
+						InsecureSkipTLSVerify: ptr.To(true),
 					},
 				},
 			},

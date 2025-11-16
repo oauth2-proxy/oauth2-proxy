@@ -63,8 +63,8 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			upstream := options.Upstream{
 				ID:                    in.id,
 				PassHostHeader:        &in.passUpstreamHostHeader,
-				ProxyWebSockets:       ptr.Ptr(false),
-				InsecureSkipTLSVerify: ptr.Ptr(false),
+				ProxyWebSockets:       ptr.To(false),
+				InsecureSkipTLSVerify: ptr.To(false),
 				FlushInterval:         &flush,
 				Timeout:               &timeout,
 			}
@@ -342,9 +342,9 @@ var _ = Describe("HTTP Upstream Suite", func() {
 
 		upstream := options.Upstream{
 			ID:                    "noPassHost",
-			PassHostHeader:        ptr.Ptr(false),
-			ProxyWebSockets:       ptr.Ptr(false),
-			InsecureSkipTLSVerify: ptr.Ptr(false),
+			PassHostHeader:        ptr.To(false),
+			ProxyWebSockets:       ptr.To(false),
+			InsecureSkipTLSVerify: ptr.To(false),
 			FlushInterval:         &defaultFlushInterval,
 			Timeout:               &defaultTimeout,
 		}
@@ -486,9 +486,9 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			timeout := options.DefaultUpstreamTimeout
 			upstream := options.Upstream{
 				ID:                    "websocketProxy",
-				PassHostHeader:        ptr.Ptr(true),
-				ProxyWebSockets:       ptr.Ptr(true),
-				InsecureSkipTLSVerify: ptr.Ptr(false),
+				PassHostHeader:        ptr.To(true),
+				ProxyWebSockets:       ptr.To(true),
+				InsecureSkipTLSVerify: ptr.To(false),
 				FlushInterval:         &flush,
 				Timeout:               &timeout,
 			}

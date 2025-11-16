@@ -25,7 +25,7 @@ func TestAzureEntraOIDCProviderNewMultiTenant(t *testing.T) {
 	provider := NewMicrosoftEntraIDProvider(&ProviderData{},
 		options.Provider{OIDCConfig: options.OIDCOptions{
 			IssuerURL:                      "https://login.microsoftonline.com/common/v2.0",
-			InsecureSkipIssuerVerification: ptr.Ptr(true),
+			InsecureSkipIssuerVerification: ptr.To(true),
 		}},
 	)
 	g.Expect(provider.Data().ProviderName).To(Equal("Microsoft Entra ID"))
@@ -91,8 +91,8 @@ func TestAzureEntraOIDCProviderValidateSessionAllowedTenants(t *testing.T) {
 		options.Provider{
 			OIDCConfig: options.OIDCOptions{
 				IssuerURL:                      "https://login.microsoftonline.com/common/v2.0",
-				InsecureSkipIssuerVerification: ptr.Ptr(true),
-				InsecureSkipNonce:              ptr.Ptr(true),
+				InsecureSkipIssuerVerification: ptr.To(true),
+				InsecureSkipNonce:              ptr.To(true),
 			},
 			MicrosoftEntraIDConfig: options.MicrosoftEntraIDOptions{
 				AllowedTenants: []string{"85d7d600-7804-4d92-8d43-9c33c21c130c"},

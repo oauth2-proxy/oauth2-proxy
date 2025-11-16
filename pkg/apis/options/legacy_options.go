@@ -166,7 +166,7 @@ func (l *LegacyUpstreams) convert() (UpstreamConfig, error) {
 				logger.Errorf("unable to convert %q to int, use default \"200\"", u.Host)
 				responseCode = 200
 			}
-			upstream.Static = ptr.Ptr(true)
+			upstream.Static = ptr.To(true)
 			upstream.StaticCode = &responseCode
 
 			// This is not allowed to be empty and must be unique
@@ -177,8 +177,8 @@ func (l *LegacyUpstreams) convert() (UpstreamConfig, error) {
 
 			// Force defaults compatible with static responses
 			upstream.URI = ""
-			upstream.InsecureSkipTLSVerify = ptr.Ptr(false)
-			upstream.DisableKeepAlives = ptr.Ptr(false)
+			upstream.InsecureSkipTLSVerify = ptr.To(false)
+			upstream.DisableKeepAlives = ptr.To(false)
 			upstream.PassHostHeader = nil
 			upstream.ProxyWebSockets = nil
 			upstream.FlushInterval = nil
@@ -255,7 +255,7 @@ func (l *LegacyHeaders) getRequestHeaders() []Header {
 	}
 
 	for i := range requestHeaders {
-		requestHeaders[i].PreserveRequestValue = ptr.Ptr(!l.SkipAuthStripHeaders)
+		requestHeaders[i].PreserveRequestValue = ptr.To(!l.SkipAuthStripHeaders)
 	}
 
 	return requestHeaders
@@ -290,7 +290,7 @@ func getBasicAuthHeader(preferEmailToUser bool, basicAuthPassword string) Header
 
 	return Header{
 		Name:                 "Authorization",
-		PreserveRequestValue: ptr.Ptr(false),
+		PreserveRequestValue: ptr.To(false),
 		Values: []HeaderValue{
 			{
 				ClaimSource: &ClaimSource{
@@ -309,7 +309,7 @@ func getPassUserHeaders(preferEmailToUser bool) []Header {
 	headers := []Header{
 		{
 			Name:                 "X-Forwarded-Groups",
-			PreserveRequestValue: ptr.Ptr(false),
+			PreserveRequestValue: ptr.To(false),
 			Values: []HeaderValue{
 				{
 					ClaimSource: &ClaimSource{
@@ -324,7 +324,7 @@ func getPassUserHeaders(preferEmailToUser bool) []Header {
 		return append(headers,
 			Header{
 				Name:                 "X-Forwarded-User",
-				PreserveRequestValue: ptr.Ptr(false),
+				PreserveRequestValue: ptr.To(false),
 				Values: []HeaderValue{
 					{
 						ClaimSource: &ClaimSource{
@@ -339,7 +339,7 @@ func getPassUserHeaders(preferEmailToUser bool) []Header {
 	return append(headers,
 		Header{
 			Name:                 "X-Forwarded-User",
-			PreserveRequestValue: ptr.Ptr(false),
+			PreserveRequestValue: ptr.To(false),
 			Values: []HeaderValue{
 				{
 					ClaimSource: &ClaimSource{
@@ -350,7 +350,7 @@ func getPassUserHeaders(preferEmailToUser bool) []Header {
 		},
 		Header{
 			Name:                 "X-Forwarded-Email",
-			PreserveRequestValue: ptr.Ptr(false),
+			PreserveRequestValue: ptr.To(false),
 			Values: []HeaderValue{
 				{
 					ClaimSource: &ClaimSource{
@@ -365,7 +365,7 @@ func getPassUserHeaders(preferEmailToUser bool) []Header {
 func getPassAccessTokenHeader() Header {
 	return Header{
 		Name:                 "X-Forwarded-Access-Token",
-		PreserveRequestValue: ptr.Ptr(false),
+		PreserveRequestValue: ptr.To(false),
 		Values: []HeaderValue{
 			{
 				ClaimSource: &ClaimSource{
@@ -379,7 +379,7 @@ func getPassAccessTokenHeader() Header {
 func getAuthorizationHeader() Header {
 	return Header{
 		Name:                 "Authorization",
-		PreserveRequestValue: ptr.Ptr(false),
+		PreserveRequestValue: ptr.To(false),
 		Values: []HeaderValue{
 			{
 				ClaimSource: &ClaimSource{
@@ -394,7 +394,7 @@ func getAuthorizationHeader() Header {
 func getPreferredUsernameHeader() Header {
 	return Header{
 		Name:                 "X-Forwarded-Preferred-Username",
-		PreserveRequestValue: ptr.Ptr(false),
+		PreserveRequestValue: ptr.To(false),
 		Values: []HeaderValue{
 			{
 				ClaimSource: &ClaimSource{
@@ -409,7 +409,7 @@ func getXAuthRequestHeaders() []Header {
 	headers := []Header{
 		{
 			Name:                 "X-Auth-Request-User",
-			PreserveRequestValue: ptr.Ptr(false),
+			PreserveRequestValue: ptr.To(false),
 			Values: []HeaderValue{
 				{
 					ClaimSource: &ClaimSource{
@@ -420,7 +420,7 @@ func getXAuthRequestHeaders() []Header {
 		},
 		{
 			Name:                 "X-Auth-Request-Email",
-			PreserveRequestValue: ptr.Ptr(false),
+			PreserveRequestValue: ptr.To(false),
 			Values: []HeaderValue{
 				{
 					ClaimSource: &ClaimSource{
@@ -431,7 +431,7 @@ func getXAuthRequestHeaders() []Header {
 		},
 		{
 			Name:                 "X-Auth-Request-Preferred-Username",
-			PreserveRequestValue: ptr.Ptr(false),
+			PreserveRequestValue: ptr.To(false),
 			Values: []HeaderValue{
 				{
 					ClaimSource: &ClaimSource{
@@ -442,7 +442,7 @@ func getXAuthRequestHeaders() []Header {
 		},
 		{
 			Name:                 "X-Auth-Request-Groups",
-			PreserveRequestValue: ptr.Ptr(false),
+			PreserveRequestValue: ptr.To(false),
 			Values: []HeaderValue{
 				{
 					ClaimSource: &ClaimSource{
@@ -459,7 +459,7 @@ func getXAuthRequestHeaders() []Header {
 func getXAuthRequestAccessTokenHeader() Header {
 	return Header{
 		Name:                 "X-Auth-Request-Access-Token",
-		PreserveRequestValue: ptr.Ptr(false),
+		PreserveRequestValue: ptr.To(false),
 		Values: []HeaderValue{
 			{
 				ClaimSource: &ClaimSource{

@@ -36,9 +36,9 @@ var _ = Describe("Legacy Options", func() {
 						Path:                  "/baz",
 						URI:                   "http://foo.bar/baz",
 						FlushInterval:         &flushInterval,
-						InsecureSkipTLSVerify: ptr.Ptr(true),
-						PassHostHeader:        ptr.Ptr(true),
-						ProxyWebSockets:       ptr.Ptr(true),
+						InsecureSkipTLSVerify: ptr.To(true),
+						PassHostHeader:        ptr.To(true),
+						ProxyWebSockets:       ptr.To(true),
 						Timeout:               &timeout,
 						DisableKeepAlives:     &legacyOpts.LegacyUpstreams.DisableKeepAlives,
 					},
@@ -47,9 +47,9 @@ var _ = Describe("Legacy Options", func() {
 						Path:                  "/bar",
 						URI:                   "file:///var/lib/website",
 						FlushInterval:         &flushInterval,
-						InsecureSkipTLSVerify: ptr.Ptr(true),
-						PassHostHeader:        ptr.Ptr(true),
-						ProxyWebSockets:       ptr.Ptr(true),
+						InsecureSkipTLSVerify: ptr.To(true),
+						PassHostHeader:        ptr.To(true),
+						ProxyWebSockets:       ptr.To(true),
 						Timeout:               &timeout,
 						DisableKeepAlives:     &legacyOpts.LegacyUpstreams.DisableKeepAlives,
 					},
@@ -57,10 +57,10 @@ var _ = Describe("Legacy Options", func() {
 						ID:                    "static://204",
 						Path:                  "/",
 						URI:                   "",
-						Static:                ptr.Ptr(true),
+						Static:                ptr.To(true),
 						StaticCode:            &staticCode,
 						FlushInterval:         nil,
-						InsecureSkipTLSVerify: ptr.Ptr(false),
+						InsecureSkipTLSVerify: ptr.To(false),
 						PassHostHeader:        nil,
 						ProxyWebSockets:       nil,
 						Timeout:               nil,
@@ -72,7 +72,7 @@ var _ = Describe("Legacy Options", func() {
 			opts.InjectRequestHeaders = []Header{
 				{
 					Name:                 "X-Forwarded-Groups",
-					PreserveRequestValue: ptr.Ptr(false),
+					PreserveRequestValue: ptr.To(false),
 					Values: []HeaderValue{
 						{
 							ClaimSource: &ClaimSource{
@@ -83,7 +83,7 @@ var _ = Describe("Legacy Options", func() {
 				},
 				{
 					Name:                 "X-Forwarded-User",
-					PreserveRequestValue: ptr.Ptr(false),
+					PreserveRequestValue: ptr.To(false),
 					Values: []HeaderValue{
 						{
 							ClaimSource: &ClaimSource{
@@ -94,7 +94,7 @@ var _ = Describe("Legacy Options", func() {
 				},
 				{
 					Name:                 "X-Forwarded-Email",
-					PreserveRequestValue: ptr.Ptr(false),
+					PreserveRequestValue: ptr.To(false),
 					Values: []HeaderValue{
 						{
 							ClaimSource: &ClaimSource{
@@ -105,7 +105,7 @@ var _ = Describe("Legacy Options", func() {
 				},
 				{
 					Name:                 "X-Forwarded-Preferred-Username",
-					PreserveRequestValue: ptr.Ptr(false),
+					PreserveRequestValue: ptr.To(false),
 					Values: []HeaderValue{
 						{
 							ClaimSource: &ClaimSource{
@@ -126,8 +126,8 @@ var _ = Describe("Legacy Options", func() {
 			opts.Providers[0].ClientID = "oauth-proxy"
 			opts.Providers[0].OIDCConfig.AudienceClaims = []string{"aud"}
 			opts.Providers[0].OIDCConfig.ExtraAudiences = []string{}
-			opts.Providers[0].OIDCConfig.InsecureSkipNonce = ptr.Ptr(true)
-			opts.Providers[0].OIDCConfig.InsecureSkipIssuerVerification = ptr.Ptr(false)
+			opts.Providers[0].OIDCConfig.InsecureSkipNonce = ptr.To(true)
+			opts.Providers[0].OIDCConfig.InsecureSkipIssuerVerification = ptr.To(false)
 			opts.Providers[0].LoginURLParameters = []LoginURLParameter{
 				{Name: "approval_prompt", Default: []string{"force"}},
 			}
@@ -202,14 +202,14 @@ var _ = Describe("Legacy Options", func() {
 			ID:                    validStatic,
 			Path:                  "/",
 			URI:                   "",
-			Static:                ptr.Ptr(true),
+			Static:                ptr.To(true),
 			StaticCode:            &validStaticCode,
-			InsecureSkipTLSVerify: ptr.Ptr(false),
+			InsecureSkipTLSVerify: ptr.To(false),
 			PassHostHeader:        nil,
 			ProxyWebSockets:       nil,
 			FlushInterval:         nil,
 			Timeout:               nil,
-			DisableKeepAlives:     ptr.Ptr(false),
+			DisableKeepAlives:     ptr.To(false),
 		}
 
 		invalidStatic := "static://abc"
@@ -218,14 +218,14 @@ var _ = Describe("Legacy Options", func() {
 			ID:                    invalidStatic,
 			Path:                  "/",
 			URI:                   "",
-			Static:                ptr.Ptr(true),
+			Static:                ptr.To(true),
 			StaticCode:            &invalidStaticCode,
-			InsecureSkipTLSVerify: ptr.Ptr(false),
+			InsecureSkipTLSVerify: ptr.To(false),
 			PassHostHeader:        nil,
 			ProxyWebSockets:       nil,
 			FlushInterval:         nil,
 			Timeout:               nil,
-			DisableKeepAlives:     ptr.Ptr(false),
+			DisableKeepAlives:     ptr.To(false),
 		}
 
 		invalidHTTP := ":foo"
@@ -318,7 +318,7 @@ var _ = Describe("Legacy Options", func() {
 
 		xForwardedUser := Header{
 			Name:                 "X-Forwarded-User",
-			PreserveRequestValue: ptr.Ptr(false),
+			PreserveRequestValue: ptr.To(false),
 			Values: []HeaderValue{
 				{
 					ClaimSource: &ClaimSource{
@@ -330,7 +330,7 @@ var _ = Describe("Legacy Options", func() {
 
 		xForwardedEmail := Header{
 			Name:                 "X-Forwarded-Email",
-			PreserveRequestValue: ptr.Ptr(false),
+			PreserveRequestValue: ptr.To(false),
 			Values: []HeaderValue{
 				{
 					ClaimSource: &ClaimSource{
@@ -342,7 +342,7 @@ var _ = Describe("Legacy Options", func() {
 
 		xForwardedGroups := Header{
 			Name:                 "X-Forwarded-Groups",
-			PreserveRequestValue: ptr.Ptr(false),
+			PreserveRequestValue: ptr.To(false),
 			Values: []HeaderValue{
 				{
 					ClaimSource: &ClaimSource{
@@ -354,7 +354,7 @@ var _ = Describe("Legacy Options", func() {
 
 		xForwardedPreferredUsername := Header{
 			Name:                 "X-Forwarded-Preferred-Username",
-			PreserveRequestValue: ptr.Ptr(false),
+			PreserveRequestValue: ptr.To(false),
 			Values: []HeaderValue{
 				{
 					ClaimSource: &ClaimSource{
@@ -366,7 +366,7 @@ var _ = Describe("Legacy Options", func() {
 
 		basicAuthHeader := Header{
 			Name:                 "Authorization",
-			PreserveRequestValue: ptr.Ptr(false),
+			PreserveRequestValue: ptr.To(false),
 			Values: []HeaderValue{
 				{
 					ClaimSource: &ClaimSource{
@@ -382,7 +382,7 @@ var _ = Describe("Legacy Options", func() {
 
 		xForwardedUserWithEmail := Header{
 			Name:                 "X-Forwarded-User",
-			PreserveRequestValue: ptr.Ptr(false),
+			PreserveRequestValue: ptr.To(false),
 			Values: []HeaderValue{
 				{
 					ClaimSource: &ClaimSource{
@@ -394,7 +394,7 @@ var _ = Describe("Legacy Options", func() {
 
 		xForwardedAccessToken := Header{
 			Name:                 "X-Forwarded-Access-Token",
-			PreserveRequestValue: ptr.Ptr(false),
+			PreserveRequestValue: ptr.To(false),
 			Values: []HeaderValue{
 				{
 					ClaimSource: &ClaimSource{
@@ -406,7 +406,7 @@ var _ = Describe("Legacy Options", func() {
 
 		basicAuthHeaderWithEmail := Header{
 			Name:                 "Authorization",
-			PreserveRequestValue: ptr.Ptr(false),
+			PreserveRequestValue: ptr.To(false),
 			Values: []HeaderValue{
 				{
 					ClaimSource: &ClaimSource{
@@ -422,7 +422,7 @@ var _ = Describe("Legacy Options", func() {
 
 		xAuthRequestUser := Header{
 			Name:                 "X-Auth-Request-User",
-			PreserveRequestValue: ptr.Ptr(false),
+			PreserveRequestValue: ptr.To(false),
 			Values: []HeaderValue{
 				{
 					ClaimSource: &ClaimSource{
@@ -434,7 +434,7 @@ var _ = Describe("Legacy Options", func() {
 
 		xAuthRequestEmail := Header{
 			Name:                 "X-Auth-Request-Email",
-			PreserveRequestValue: ptr.Ptr(false),
+			PreserveRequestValue: ptr.To(false),
 			Values: []HeaderValue{
 				{
 					ClaimSource: &ClaimSource{
@@ -446,7 +446,7 @@ var _ = Describe("Legacy Options", func() {
 
 		xAuthRequestGroups := Header{
 			Name:                 "X-Auth-Request-Groups",
-			PreserveRequestValue: ptr.Ptr(false),
+			PreserveRequestValue: ptr.To(false),
 			Values: []HeaderValue{
 				{
 					ClaimSource: &ClaimSource{
@@ -458,7 +458,7 @@ var _ = Describe("Legacy Options", func() {
 
 		xAuthRequestPreferredUsername := Header{
 			Name:                 "X-Auth-Request-Preferred-Username",
-			PreserveRequestValue: ptr.Ptr(false),
+			PreserveRequestValue: ptr.To(false),
 			Values: []HeaderValue{
 				{
 					ClaimSource: &ClaimSource{
@@ -470,7 +470,7 @@ var _ = Describe("Legacy Options", func() {
 
 		xAuthRequestAccessToken := Header{
 			Name:                 "X-Auth-Request-Access-Token",
-			PreserveRequestValue: ptr.Ptr(false),
+			PreserveRequestValue: ptr.To(false),
 			Values: []HeaderValue{
 				{
 					ClaimSource: &ClaimSource{
@@ -482,7 +482,7 @@ var _ = Describe("Legacy Options", func() {
 
 		authorizationHeader := Header{
 			Name:                 "Authorization",
-			PreserveRequestValue: ptr.Ptr(false),
+			PreserveRequestValue: ptr.To(false),
 			Values: []HeaderValue{
 				{
 					ClaimSource: &ClaimSource{
@@ -948,14 +948,14 @@ var _ = Describe("Legacy Options", func() {
 		}
 
 		defaultOIDCOptions := OIDCOptions{
-			SkipDiscovery:                  ptr.Ptr(false),
-			InsecureSkipNonce:              ptr.Ptr(false),
-			InsecureAllowUnverifiedEmail:   ptr.Ptr(false),
-			InsecureSkipIssuerVerification: ptr.Ptr(false),
+			SkipDiscovery:                  ptr.To(false),
+			InsecureSkipNonce:              ptr.To(false),
+			InsecureAllowUnverifiedEmail:   ptr.To(false),
+			InsecureSkipIssuerVerification: ptr.To(false),
 		}
 
 		defaultGoogleOptions := GoogleOptions{
-			UseApplicationDefaultCredentials: ptr.Ptr(false),
+			UseApplicationDefaultCredentials: ptr.To(false),
 		}
 
 		defaultLegacyProvider := LegacyProvider{
@@ -970,8 +970,8 @@ var _ = Describe("Legacy Options", func() {
 			OIDCConfig:               defaultOIDCOptions,
 			GoogleConfig:             defaultGoogleOptions,
 			LoginURLParameters:       defaultURLParams,
-			UseSystemTrustStore:      ptr.Ptr(false),
-			SkipClaimsFromProfileURL: ptr.Ptr(false),
+			UseSystemTrustStore:      ptr.To(false),
+			SkipClaimsFromProfileURL: ptr.To(false),
 		}
 
 		defaultLegacyProviderWithPrompt := LegacyProvider{
@@ -989,8 +989,8 @@ var _ = Describe("Legacy Options", func() {
 			LoginURLParameters: []LoginURLParameter{
 				{Name: "prompt", Default: []string{"switch_user"}},
 			},
-			UseSystemTrustStore:      ptr.Ptr(false),
-			SkipClaimsFromProfileURL: ptr.Ptr(false),
+			UseSystemTrustStore:      ptr.To(false),
+			SkipClaimsFromProfileURL: ptr.To(false),
 		}
 
 		displayNameLegacyProvider := LegacyProvider{
@@ -1007,8 +1007,8 @@ var _ = Describe("Legacy Options", func() {
 			OIDCConfig:               defaultOIDCOptions,
 			GoogleConfig:             defaultGoogleOptions,
 			LoginURLParameters:       defaultURLParams,
-			UseSystemTrustStore:      ptr.Ptr(false),
-			SkipClaimsFromProfileURL: ptr.Ptr(false),
+			UseSystemTrustStore:      ptr.To(false),
+			SkipClaimsFromProfileURL: ptr.To(false),
 		}
 
 		internalConfigProvider := Provider{
@@ -1020,11 +1020,11 @@ var _ = Describe("Legacy Options", func() {
 				AdminEmail:                       "email@email.com",
 				ServiceAccountJSON:               "test.json",
 				Groups:                           []string{"1", "2"},
-				UseApplicationDefaultCredentials: ptr.Ptr(false),
+				UseApplicationDefaultCredentials: ptr.To(false),
 			},
 			LoginURLParameters:       defaultURLParams,
-			UseSystemTrustStore:      ptr.Ptr(false),
-			SkipClaimsFromProfileURL: ptr.Ptr(false),
+			UseSystemTrustStore:      ptr.To(false),
+			SkipClaimsFromProfileURL: ptr.To(false),
 		}
 
 		internalConfigLegacyProvider := LegacyProvider{

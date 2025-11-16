@@ -128,7 +128,7 @@ type Upstream struct {
 // EnsureDefaults sets any default values for UpstreamConfig fields.
 func (uc *UpstreamConfig) EnsureDefaults() {
 	if uc.ProxyRawPath == nil {
-		uc.ProxyRawPath = ptr.Ptr(DefaultUpstreamProxyRawPath)
+		uc.ProxyRawPath = ptr.To(DefaultUpstreamProxyRawPath)
 	}
 	for i := range uc.Upstreams {
 		uc.Upstreams[i].EnsureDefaults()
@@ -138,24 +138,24 @@ func (uc *UpstreamConfig) EnsureDefaults() {
 // EnsureDefaults sets any default values for Upstream fields.
 func (u *Upstream) EnsureDefaults() {
 	if u.InsecureSkipTLSVerify == nil {
-		u.InsecureSkipTLSVerify = ptr.Ptr(DefaultUpsteamInsecureSkipTLSVerify)
+		u.InsecureSkipTLSVerify = ptr.To(DefaultUpsteamInsecureSkipTLSVerify)
 	}
 	if u.Static == nil {
-		u.Static = ptr.Ptr(DefaultUpstreamStatic)
+		u.Static = ptr.To(DefaultUpstreamStatic)
 	}
 	if u.FlushInterval == nil {
-		u.FlushInterval = ptr.Ptr(DefaultUpstreamFlushInterval)
+		u.FlushInterval = ptr.To(DefaultUpstreamFlushInterval)
 	}
 	if u.PassHostHeader == nil {
-		u.PassHostHeader = ptr.Ptr(DefaultUpstreamPassHostHeader)
+		u.PassHostHeader = ptr.To(DefaultUpstreamPassHostHeader)
 	}
 	if u.ProxyWebSockets == nil {
-		u.ProxyWebSockets = ptr.Ptr(DefaultUpstreamProxyWebSockets)
+		u.ProxyWebSockets = ptr.To(DefaultUpstreamProxyWebSockets)
 	}
 	if u.Timeout == nil {
-		u.Timeout = ptr.Ptr(DefaultUpstreamTimeout)
+		u.Timeout = ptr.To(DefaultUpstreamTimeout)
 	}
 	if u.DisableKeepAlives == nil {
-		u.DisableKeepAlives = ptr.Ptr(DefaultUpstreamDisableKeepAlives)
+		u.DisableKeepAlives = ptr.To(DefaultUpstreamDisableKeepAlives)
 	}
 }
