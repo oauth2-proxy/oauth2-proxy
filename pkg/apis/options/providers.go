@@ -37,6 +37,10 @@ const (
 	// for MicrosoftEntraIDOptions.FederatedTokenAuth
 	DefaultMicrosoftEntraIDUseFederatedToken bool = false
 
+	// DefaultGoogleUseOrganizationID is the default value
+	// for GoogleOptions.UseOrganizationID
+	DefaultGoogleUseOrganizationID bool = false
+
 	// DefaultGoogleUseApplicationDefaultCredentials is the default values
 	// for GoogleOptions.UseApplicationDefaultCredentials
 	DefaultUseApplicationDefaultCredentials bool = false
@@ -269,7 +273,7 @@ type GoogleOptions struct {
 	// TargetPrincipal is the Google Service Account used for Application Default Credentials
 	TargetPrincipal string `yaml:"targetPrincipal,omitempty"`
 	// UseOrganizationId indicates whether to use the organization ID as the UserName claim
-	UseOrganizationID bool `yaml:"useOrganizationID,omitempty"`
+	UseOrganizationID *bool `yaml:"useOrganizationID,omitempty"`
 	// admin scope needed for fetching user organization information from admin api, can be one of cloud, user or defaults to readonly
 	AdminAPIUserScope string `yaml:"adminAPIUserScope,omitempty"`
 }
@@ -412,6 +416,8 @@ func (a *ADFSOptions) EnsureDefaults() {
 
 // EnsureDefaults sets any default values for GoogleOptions fields.
 func (g *GoogleOptions) EnsureDefaults() {
+	g.UseOrganizationID = ptr.To(DefaultGoogleUseOrganizationID)
+
 	if g.UseApplicationDefaultCredentials == nil {
 		g.UseApplicationDefaultCredentials = ptr.To(DefaultUseApplicationDefaultCredentials)
 	}

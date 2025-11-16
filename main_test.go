@@ -169,8 +169,9 @@ redirect_url="http://localhost:4180/oauth2/callback"
 				SkipClaimsFromProfileURL: ptr.To(false),
 				GoogleConfig: options.GoogleOptions{
 					AdminEmail:                       "admin@example.com",
-					UseApplicationDefaultCredentials: ptr.To(false),
 					TargetPrincipal:                  "principal",
+					UseOrganizationID:                ptr.To(false),
+					UseApplicationDefaultCredentials: ptr.To(false),
 				},
 				AzureConfig: options.AzureOptions{
 					Tenant: "common",

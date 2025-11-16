@@ -109,11 +109,11 @@ func NewGoogleProvider(p *ProviderData, opts options.GoogleOptions) (*GoogleProv
 		},
 	}
 
-	if opts.UseOrganizationID || opts.ServiceAccountJSON != "" || ptr.Deref(opts.UseApplicationDefaultCredentials, options.DefaultUseApplicationDefaultCredentials) {
+	if ptr.Deref(opts.UseOrganizationID, options.DefaultGoogleUseOrganizationID) || opts.ServiceAccountJSON != "" || ptr.Deref(opts.UseApplicationDefaultCredentials, options.DefaultUseApplicationDefaultCredentials) {
 		// reuse admin service to avoid multiple calls for token
 		var adminService *admin.Service
 
-		if opts.UseOrganizationID {
+		if ptr.Deref(opts.UseOrganizationID, options.DefaultGoogleUseOrganizationID) {
 			// add user scopes to admin api
 			userScope := getAdminAPIUserScope(opts.AdminAPIUserScope)
 			for index, scope := range possibleScopesList {

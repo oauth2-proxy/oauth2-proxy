@@ -5,6 +5,8 @@ import "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 const (
 	// DefaultHeaderPreserveRequestValue is the default value for Header.PreserveRequestValue
 	DefaultHeaderPreserveRequestValue bool = false
+	// DefaultInsecureSkipHeaderNormalization is the default value for Header.InsecureSkipHeaderNormalization
+	DefaultInsecureSkipHeaderNormalization bool = false
 )
 
 // Header represents an individual header that will be added to a request or
@@ -28,7 +30,7 @@ type Header struct {
 	// treated as the same header. Additionally underscores (_) in header names
 	// will be converted to dashes (-) when normalizing.
 	// Defaults to false (header names will be normalized).
-	InsecureSkipHeaderNormalization bool `json:"InsecureSkipHeaderNormalization,omitempty"`
+	InsecureSkipHeaderNormalization *bool `yaml:"InsecureSkipHeaderNormalization,omitempty"`
 
 	// Values contains the desired values for this header
 	Values []HeaderValue `yaml:"values,omitempty"`

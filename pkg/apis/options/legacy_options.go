@@ -789,7 +789,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 			ServiceAccountJSON:               l.GoogleServiceAccountJSON,
 			UseApplicationDefaultCredentials: &l.GoogleUseApplicationDefaultCredentials,
 			TargetPrincipal:                  l.GoogleTargetPrincipal,
-			UseOrganizationID:                l.GoogleUseOrganizationID,
+			UseOrganizationID:                &l.GoogleUseOrganizationID,
 			AdminAPIUserScope:                l.GoogleAdminAPIUserScope,
 		}
 	case "entra-id":

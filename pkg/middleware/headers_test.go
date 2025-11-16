@@ -231,7 +231,7 @@ var _ = Describe("Headers Suite", func() {
 			headers: []options.Header{
 				{
 					Name:                            "X-Auth-Request-User",
-					InsecureSkipHeaderNormalization: true,
+					InsecureSkipHeaderNormalization: ptr.To(true),
 					Values: []options.HeaderValue{
 						{
 							ClaimSource: &options.ClaimSource{Claim: "user"},

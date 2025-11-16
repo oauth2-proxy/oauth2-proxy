@@ -955,6 +955,7 @@ var _ = Describe("Legacy Options", func() {
 		}
 
 		defaultGoogleOptions := GoogleOptions{
+			UseOrganizationID:                ptr.To(false),
 			UseApplicationDefaultCredentials: ptr.To(false),
 		}
 
@@ -1020,6 +1021,7 @@ var _ = Describe("Legacy Options", func() {
 				AdminEmail:                       "email@email.com",
 				ServiceAccountJSON:               "test.json",
 				Groups:                           []string{"1", "2"},
+				UseOrganizationID:                ptr.To(false),
 				UseApplicationDefaultCredentials: ptr.To(false),
 			},
 			LoginURLParameters:       defaultURLParams,

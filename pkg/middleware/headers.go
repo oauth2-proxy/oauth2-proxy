@@ -54,7 +54,7 @@ func flattenHeaders(headers http.Header) {
 func stripHeaders(headers []options.Header, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		for _, header := range headers {
-			if header.InsecureSkipHeaderNormalization {
+			if ptr.Deref(header.InsecureSkipHeaderNormalization, options.DefaultInsecureSkipHeaderNormalization) {
 				req.Header.Del(header.Name)
 				continue
 			}
