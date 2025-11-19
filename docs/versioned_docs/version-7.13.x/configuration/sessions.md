@@ -55,8 +55,8 @@ which can get quite big.
 
 Two settings are used to configure the OAuth2 Proxy cookie lifetime:
 
-    --cookie-refresh duration   refresh the cookie after this duration; 0 to disable
-    --cookie-expire duration    expire timeframe for cookie     168h0m0s
+    * `--cookie-refresh` duration   refresh the cookie after this duration; 0 to disable
+    * `--cookie-expire` duration    expire timeframe for cookie     168h0m0s
 
 The "cookie-expire" value should be equal to the lifetime of the Refresh-Token that is issued by the OAuth2 authorization server.
 If it expires earlier and is deleted by the browser, OAuth2 Proxy cannot find the stored Refresh-Tokens in Redis and thus cannot start
