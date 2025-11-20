@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"syscall"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	. "github.com/onsi/ginkgo/v2"
@@ -826,6 +827,38 @@ var _ = Describe("Server", func() {
 					defer GinkgoRecover()
 					Expect(srv.Start(ctx)).To(Succeed())
 				}()
+
+				resp, err := httpGet(ctx, secureListenAddr)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				Expect(resp.TLS.VerifiedChains).Should(HaveLen(1))
+				Expect(resp.TLS.VerifiedChains[0]).Should(HaveLen(1))
+				Expect(resp.TLS.VerifiedChains[0][0].Raw).Should(Equal(ipv4CertData))
+			})
+
+			It("Reloads the certificate on SIGHUP", func() {
+				go func() {
+					defer GinkgoRecover()
+					Expect(srv.Start(ctx)).To(Succeed())
+				}()
+
+				var err error
+
+				ipv4CertData, ipv4CertDataSource.Value, ipv4KeyDataSource.Value, err = generateCert(ipv4Addr)
+				Expect(err).ToNot(HaveOccurred())
+				ipv6CertData, ipv6CertDataSource.Value, ipv6KeyDataSource.Value, err = generateCert(ipv6Addr)
+				Expect(err).ToNot(HaveOccurred())
+
+				ipv4Certificate, err := generateX509Cert(ipv4CertDataSource, ipv4KeyDataSource)
+				Expect(err).ToNot(HaveOccurred())
+				ipv6Certificate, err := generateX509Cert(ipv6CertDataSource, ipv6KeyDataSource)
+				Expect(err).ToNot(HaveOccurred())
+
+				addCertToTransportRootCAs(transport, ipv4Certificate, ipv6Certificate)
+
+				err = syscall.Kill(syscall.Getpid(), syscall.SIGHUP)
+				Expect(err).ToNot(HaveOccurred())
 
 				resp, err := httpGet(ctx, secureListenAddr)
 				Expect(err).ToNot(HaveOccurred())
