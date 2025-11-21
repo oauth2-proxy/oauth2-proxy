@@ -9,6 +9,7 @@
 ## Changes since v7.13.0
 
 - [#3197](https://github.com/oauth2-proxy/oauth2-proxy/pull/3197) fix: NewRemoteKeySet is not using DefaultHTTPClient (@rsrdesarrollo / @tuunit)
+- [#3219](https://github.com/oauth2-proxy/oauth2-proxy/pull/3219) fix: escape OAuth state redirect URLs to preserve query parameters (@CallumWayve)
 
 # V7.13.0
 
