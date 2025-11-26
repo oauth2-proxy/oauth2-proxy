@@ -76,6 +76,8 @@ func TestProviderDataAuthorize(t *testing.T) {
 		name          string
 		allowedGroups []string
 		groups        []string
+		acr           string
+		userAcr       string
 		expectedAuthZ bool
 	}{
 		{
@@ -102,6 +104,23 @@ func TestProviderDataAuthorize(t *testing.T) {
 			groups:        []string{"baz", "foo"},
 			expectedAuthZ: false,
 		},
+		{
+			name:          "UserNotAllowedForACRLevel",
+			acr:           "1",
+			expectedAuthZ: false,
+		},
+		{
+			name:          "UserNotAllowedForACRLevel",
+			acr:           "1",
+			userAcr:       "1",
+			expectedAuthZ: true,
+		},
+		{
+			name:          "UserNotAllowedForACRLevel",
+			acr:           "2",
+			userAcr:       "somethingElse",
+			expectedAuthZ: false,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -110,9 +129,11 @@ func TestProviderDataAuthorize(t *testing.T) {
 
 			session := &sessions.SessionState{
 				Groups: tc.groups,
+				ACR:    tc.userAcr,
 			}
 			p := &ProviderData{}
 			p.setAllowedGroups(tc.allowedGroups)
+			p.setAllowedACR(tc.acr)
 
 			authorized, err := p.Authorize(context.Background(), session)
 			g.Expect(err).ToNot(HaveOccurred())

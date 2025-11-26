@@ -276,6 +276,8 @@ type OIDCOptions struct {
 	// ExtraAudiences is a list of additional audiences that are allowed
 	// to pass verification in addition to the client id.
 	ExtraAudiences []string `json:"extraAudiences,omitempty"`
+	// to pass acr values to the provider
+	ACRs string `json:"acr,omitempty"`
 }
 
 type LoginGovOptions struct {
