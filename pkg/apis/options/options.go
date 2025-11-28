@@ -168,3 +168,23 @@ func NewFlagSet() *pflag.FlagSet {
 
 	return flagSet
 }
+
+// EnsureDefaults configures the defaults for all options
+// to ensure no unexpected empty strings for enum types or nils for booleans
+func (o *Options) EnsureDefaults() {
+	o.Providers.EnsureDefaults()
+	o.UpstreamServers.EnsureDefaults()
+
+	for i := range o.InjectRequestHeaders {
+		o.InjectRequestHeaders[i].EnsureDefaults()
+	}
+	for i := range o.InjectResponseHeaders {
+		o.InjectResponseHeaders[i].EnsureDefaults()
+	}
+
+	// TBD: Uncomment as we add EnsureDefaults methods
+	// o.Cookie.EnsureDefaults()
+	// o.Session.EnsureDefaults()
+	// o.Templates.EnsureDefaults()
+	// o.Logging.EnsureDefaults()
+}

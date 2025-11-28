@@ -204,16 +204,6 @@ ClaimSource allows loading a header value from a claim within the session
 | `prefix` | _string_ | Prefix is an optional prefix that will be prepended to the value of the<br/>claim if it is non-empty. |
 | `basicAuthPassword` | _[SecretSource](#secretsource)_ | BasicAuthPassword converts this claim into a basic auth header.<br/>Note the value of claim will become the basic auth username and the<br/>basicAuthPassword will be used as the password value. |
 
-### Duration
-#### (`string` alias)
-
-(**Appears on:** [Upstream](#upstream))
-
-Duration is as string representation of a period of time.
-A duration string is a is a possibly signed sequence of decimal numbers,
-each with optional fraction and a unit suffix, such as "300ms", "-1.5h" or "2h45m".
-Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
-
 ### GitHubOptions
 
 (**Appears on:** [Provider](#provider))
@@ -502,9 +492,9 @@ Server represents the configuration for an HTTP(S) server
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `BindAddress` | _string_ | BindAddress is the address on which to serve traffic.<br/>Leave blank or set to "-" to disable. |
-| `SecureBindAddress` | _string_ | SecureBindAddress is the address on which to serve secure traffic.<br/>Leave blank or set to "-" to disable. |
-| `TLS` | _[TLS](#tls)_ | TLS contains the information for loading the certificate and key for the<br/>secure traffic and further configuration for the TLS server. |
+| `bindAddress` | _string_ | BindAddress is the address on which to serve traffic.<br/>Leave blank or set to "-" to disable. |
+| `secureBindAddress` | _string_ | SecureBindAddress is the address on which to serve secure traffic.<br/>Leave blank or set to "-" to disable. |
+| `tls` | _[TLS](#tls)_ | TLS contains the information for loading the certificate and key for the<br/>secure traffic and further configuration for the TLS server. |
 
 ### TLS
 
@@ -515,10 +505,10 @@ as well as an optional minimal TLS version that is acceptable.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `Key` | _[SecretSource](#secretsource)_ | Key is the TLS key data to use.<br/>Typically this will come from a file. |
-| `Cert` | _[SecretSource](#secretsource)_ | Cert is the TLS certificate data to use.<br/>Typically this will come from a file. |
-| `MinVersion` | _string_ | MinVersion is the minimal TLS version that is acceptable.<br/>E.g. Set to "TLS1.3" to select TLS version 1.3 |
-| `CipherSuites` | _[]string_ | CipherSuites is a list of TLS cipher suites that are allowed.<br/>E.g.:<br/>- TLS_RSA_WITH_RC4_128_SHA<br/>- TLS_RSA_WITH_AES_256_GCM_SHA384<br/>If not specified, the default Go safe cipher list is used.<br/>List of valid cipher suites can be found in the [crypto/tls documentation](https://pkg.go.dev/crypto/tls#pkg-constants). |
+| `key` | _[SecretSource](#secretsource)_ | Key is the TLS key data to use.<br/>Typically this will come from a file. |
+| `cert` | _[SecretSource](#secretsource)_ | Cert is the TLS certificate data to use.<br/>Typically this will come from a file. |
+| `minVersion` | _string_ | MinVersion is the minimal TLS version that is acceptable.<br/>E.g. Set to "TLS1.3" to select TLS version 1.3 |
+| `cipherSuites` | _[]string_ | CipherSuites is a list of TLS cipher suites that are allowed.<br/>E.g.:<br/>- TLS_RSA_WITH_RC4_128_SHA<br/>- TLS_RSA_WITH_AES_256_GCM_SHA384<br/>If not specified, the default Go safe cipher list is used.<br/>List of valid cipher suites can be found in the [crypto/tls documentation](https://pkg.go.dev/crypto/tls#pkg-constants). |
 
 ### URLParameterRule
 
@@ -550,10 +540,10 @@ Requests will be proxied to this upstream if the path matches the request path.
 | `insecureSkipTLSVerify` | _bool_ | InsecureSkipTLSVerify will skip TLS verification of upstream HTTPS hosts.<br/>This option is insecure and will allow potential Man-In-The-Middle attacks<br/>between OAuth2 Proxy and the upstream server.<br/>Defaults to false. |
 | `static` | _bool_ | Static will make all requests to this upstream have a static response.<br/>The response will have a body of "Authenticated" and a response code<br/>matching StaticCode.<br/>If StaticCode is not set, the response will return a 200 response. |
 | `staticCode` | _int_ | StaticCode determines the response code for the Static response.<br/>This option can only be used with Static enabled. |
-| `flushInterval` | _[Duration](#duration)_ | FlushInterval is the period between flushing the response buffer when<br/>streaming response from the upstream.<br/>Defaults to 1 second. |
+| `flushInterval` | _duration_ | FlushInterval is the period between flushing the response buffer when<br/>streaming response from the upstream.<br/>Defaults to 1 second. |
 | `passHostHeader` | _bool_ | PassHostHeader determines whether the request host header should be proxied<br/>to the upstream server.<br/>Defaults to true. |
 | `proxyWebSockets` | _bool_ | ProxyWebSockets enables proxying of websockets to upstream servers<br/>Defaults to true. |
-| `timeout` | _[Duration](#duration)_ | Timeout is the maximum duration the server will wait for a response from the upstream server.<br/>Defaults to 30 seconds. |
+| `timeout` | _duration_ | Timeout is the maximum duration the server will wait for a response from the upstream server.<br/>Defaults to 30 seconds. |
 | `disableKeepAlives` | _bool_ | DisableKeepAlives disables HTTP keep-alive connections to the upstream server.<br/>Defaults to false. |
 
 ### UpstreamConfig

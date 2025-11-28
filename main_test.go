@@ -2,13 +2,11 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"os"
-	"strings"
-	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	. "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options/testutil"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/format"
@@ -24,14 +22,15 @@ var _ = Describe("Configuration Loading Suite", func() {
 http_address="127.0.0.1:4180"
 upstreams="http://httpbin"
 set_basic_auth="true"
-basic_auth_password="super-secret-password"
+basic_auth_password="c3VwZXItc2VjcmV0LXBhc3N3b3Jk"
 client_id="oauth2-proxy"
 client_secret="b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK"
+google_admin_email="admin@example.com"
+google_target_principal="principal"
 `
 
 	const testAlphaConfig = `
 upstreamConfig:
-  proxyrawpath: false
   upstreams:
   - id: /
     path: /
@@ -40,45 +39,63 @@ upstreamConfig:
     passHostHeader: true
     proxyWebSockets: true
     timeout: 30s
+    insecureSkipTLSVerify: false
+    disableKeepAlives: false
 injectRequestHeaders:
 - name: Authorization
+  preserveRequestValue: false
   values:
-  - claim: user
-    prefix: "Basic "
-    basicAuthPassword:
-      value: c3VwZXItc2VjcmV0LXBhc3N3b3Jk
+  - claimSource:
+      claim: user
+      prefix: "Basic "
+      basicAuthPassword:
+        value: c3VwZXItc2VjcmV0LXBhc3N3b3Jk
 - name: X-Forwarded-Groups
+  preserveRequestValue: false
   values:
-  - claim: groups
+  - claimSource:
+      claim: groups
 - name: X-Forwarded-User
+  preserveRequestValue: false
   values:
-  - claim: user
+  - claimSource:
+      claim: user
 - name: X-Forwarded-Email
+  preserveRequestValue: false
   values:
-  - claim: email
+  - claimSource:
+      claim: email
 - name: X-Forwarded-Preferred-Username
+  preserveRequestValue: false
   values:
-  - claim: preferred_username
+  - claimSource:
+      claim: preferred_username
 injectResponseHeaders:
 - name: Authorization
   values:
-  - claim: user
-    prefix: "Basic "
-    basicAuthPassword:
-      value: c3VwZXItc2VjcmV0LXBhc3N3b3Jk
+  - claimSource:
+      claim: user
+      prefix: "Basic "
+      basicAuthPassword:
+        value: c3VwZXItc2VjcmV0LXBhc3N3b3Jk
 server:
   bindAddress: "127.0.0.1:4180"
 providers:
-- provider: google
-  ID: google=oauth2-proxy
+- id: google=oauth2-proxy
+  provider: google
   clientSecret: b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK
   clientID: oauth2-proxy
-  azureConfig:
-    tenant: common
+  useSystemTrustStore: false
+  skipClaimsFromProfileURL: false
+  googleConfig:
+    adminEmail: admin@example.com
+    targetPrincipal: principal
+    useApplicationDefaultCredentials: false
   oidcConfig:
     groupsClaim: groups
     emailClaim: email
     userIDClaim: email
+    insecureSkipIssuerVerification: false
     insecureSkipNonce: true
     audienceClaims: [aud]
     extraAudiences: []
@@ -96,15 +113,6 @@ cookie_secure="false"
 redirect_url="http://localhost:4180/oauth2/callback"
 `
 
-	boolPtr := func(b bool) *bool {
-		return &b
-	}
-
-	durationPtr := func(d time.Duration) *options.Duration {
-		du := options.Duration(d)
-		return &du
-	}
-
 	testExpectedOptions := func() *options.Options {
 		opts, err := options.NewLegacyOptions().ToOptions()
 		Expect(err).ToNot(HaveOccurred())
@@ -115,28 +123,33 @@ redirect_url="http://localhost:4180/oauth2/callback"
 		opts.RawRedirectURL = "http://localhost:4180/oauth2/callback"
 
 		opts.UpstreamServers = options.UpstreamConfig{
+			ProxyRawPath: ptr.To(false),
 			Upstreams: []options.Upstream{
 				{
-					ID:              "/",
-					Path:            "/",
-					URI:             "http://httpbin",
-					FlushInterval:   durationPtr(options.DefaultUpstreamFlushInterval),
-					PassHostHeader:  boolPtr(true),
-					ProxyWebSockets: boolPtr(true),
-					Timeout:         durationPtr(options.DefaultUpstreamTimeout),
+					ID:                    "/",
+					Path:                  "/",
+					URI:                   "http://httpbin",
+					FlushInterval:         ptr.To(options.DefaultUpstreamFlushInterval),
+					PassHostHeader:        ptr.To(true),
+					ProxyWebSockets:       ptr.To(true),
+					Timeout:               ptr.To(options.DefaultUpstreamTimeout),
+					Static:                ptr.To(false),
+					InsecureSkipTLSVerify: ptr.To(false),
+					DisableKeepAlives:     ptr.To(false),
 				},
 			},
 		}
 
 		authHeader := options.Header{
-			Name: "Authorization",
+			Name:                 "Authorization",
+			PreserveRequestValue: ptr.To(false),
 			Values: []options.HeaderValue{
 				{
 					ClaimSource: &options.ClaimSource{
 						Claim:  "user",
 						Prefix: "Basic ",
 						BasicAuthPassword: &options.SecretSource{
-							Value: []byte("super-secret-password"),
+							Value: []byte("c3VwZXItc2VjcmV0LXBhc3N3b3Jk"),
 						},
 					},
 				},
@@ -148,20 +161,37 @@ redirect_url="http://localhost:4180/oauth2/callback"
 
 		opts.Providers = options.Providers{
 			options.Provider{
-				ID:           "google=oauth2-proxy",
-				Type:         "google",
-				ClientSecret: "b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK",
-				ClientID:     "oauth2-proxy",
+				ID:                       "google=oauth2-proxy",
+				Type:                     "google",
+				ClientSecret:             "b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK",
+				ClientID:                 "oauth2-proxy",
+				UseSystemTrustStore:      ptr.To(false),
+				SkipClaimsFromProfileURL: ptr.To(false),
+				GoogleConfig: options.GoogleOptions{
+					AdminEmail:                       "admin@example.com",
+					TargetPrincipal:                  "principal",
+					UseOrganizationID:                ptr.To(false),
+					UseApplicationDefaultCredentials: ptr.To(false),
+				},
 				AzureConfig: options.AzureOptions{
 					Tenant: "common",
 				},
 				OIDCConfig: options.OIDCOptions{
-					GroupsClaim:       "groups",
-					EmailClaim:        "email",
-					UserIDClaim:       "email",
-					AudienceClaims:    []string{"aud"},
-					ExtraAudiences:    []string{},
-					InsecureSkipNonce: true,
+					GroupsClaim:                    "groups",
+					EmailClaim:                     "email",
+					UserIDClaim:                    "email",
+					AudienceClaims:                 []string{"aud"},
+					ExtraAudiences:                 []string{},
+					InsecureSkipNonce:              ptr.To(true),
+					InsecureAllowUnverifiedEmail:   ptr.To(false),
+					InsecureSkipIssuerVerification: ptr.To(false),
+					SkipDiscovery:                  ptr.To(false),
+				},
+				MicrosoftEntraIDConfig: options.MicrosoftEntraIDOptions{
+					FederatedTokenAuth: ptr.To(false),
+				},
+				ADFSConfig: options.ADFSOptions{
+					SkipScope: ptr.To(false),
 				},
 				LoginURLParameters: []options.LoginURLParameter{
 					{Name: "approval_prompt", Default: []string{"force"}},
@@ -226,12 +256,13 @@ redirect_url="http://localhost:4180/oauth2/callback"
 
 			opts, err := loadConfiguration(configFileName, alphaConfigFileName, extraFlags, in.args)
 			if in.expectedErr != nil {
-				Expect(err).To(MatchError(in.expectedErr.Error()))
+				Expect(err).To(MatchError(ContainSubstring(in.expectedErr.Error())))
 			} else {
 				Expect(err).ToNot(HaveOccurred())
 			}
 			Expect(in.expectedOptions).ToNot(BeNil())
-			Expect(opts).To(EqualOpts(in.expectedOptions()))
+			expectedOpts := in.expectedOptions()
+			Expect(opts).To(EqualOpts(expectedOpts))
 		},
 		Entry("with legacy configuration", loadConfigurationTableInput{
 			configContent:   testCoreConfig + testLegacyConfig,
@@ -245,19 +276,19 @@ redirect_url="http://localhost:4180/oauth2/callback"
 		Entry("with bad legacy configuration", loadConfigurationTableInput{
 			configContent:   testCoreConfig + "unknown_field=\"something\"",
 			expectedOptions: func() *options.Options { return nil },
-			expectedErr:     errors.New("failed to load config: error unmarshalling config: decoding failed due to the following error(s):\n\n'' has invalid keys: unknown_field"),
+			expectedErr:     errors.New("failed to load legacy options: failed to load config: error unmarshalling config: decoding failed due to the following error(s):\n\n'' has invalid keys: unknown_field"),
 		}),
 		Entry("with bad alpha configuration", loadConfigurationTableInput{
 			configContent:      testCoreConfig,
 			alphaConfigContent: testAlphaConfig + ":",
 			expectedOptions:    func() *options.Options { return nil },
-			expectedErr:        fmt.Errorf("failed to load alpha options: error unmarshalling config: error converting YAML to JSON: yaml: line %d: did not find expected key", strings.Count(testAlphaConfig, "\n")),
+			expectedErr:        errors.New("failed to load alpha options: error unmarshalling config: yaml: line 1: did not find expected key"),
 		}),
 		Entry("with alpha configuration and bad core configuration", loadConfigurationTableInput{
 			configContent:      testCoreConfig + "unknown_field=\"something\"",
 			alphaConfigContent: testAlphaConfig,
 			expectedOptions:    func() *options.Options { return nil },
-			expectedErr:        errors.New("failed to load core options: failed to load config: error unmarshalling config: decoding failed due to the following error(s):\n\n'' has invalid keys: unknown_field"),
+			expectedErr:        errors.New("failed to load legacy options: failed to load config: error unmarshalling config: decoding failed due to the following error(s):\n\n'' has invalid keys: unknown_field"),
 		}),
 	)
 })

@@ -8,14 +8,11 @@ import (
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func timePtr(t time.Time) *time.Time {
-	return &t
-}
 
 func TestCreatedAtNow(t *testing.T) {
 	g := NewWithT(t)
@@ -137,10 +134,10 @@ func TestString(t *testing.T) {
 }
 
 func TestIsExpired(t *testing.T) {
-	s := &SessionState{ExpiresOn: timePtr(time.Now().Add(time.Duration(-1) * time.Minute))}
+	s := &SessionState{ExpiresOn: ptr.To(time.Now().Add(time.Duration(-1) * time.Minute))}
 	assert.Equal(t, true, s.IsExpired())
 
-	s = &SessionState{ExpiresOn: timePtr(time.Now().Add(time.Duration(1) * time.Minute))}
+	s = &SessionState{ExpiresOn: ptr.To(time.Now().Add(time.Duration(1) * time.Minute))}
 	assert.Equal(t, false, s.IsExpired())
 
 	s = &SessionState{}
@@ -154,7 +151,7 @@ func TestAge(t *testing.T) {
 	assert.Equal(t, time.Duration(0), ss.Age())
 
 	// Set CreatedAt to 1 hour ago
-	ss.CreatedAt = timePtr(time.Now().Add(-1 * time.Hour))
+	ss.CreatedAt = ptr.To(time.Now().Add(-1 * time.Hour))
 	assert.Equal(t, time.Hour, ss.Age().Round(time.Minute))
 }
 

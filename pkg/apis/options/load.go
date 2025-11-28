@@ -9,10 +9,10 @@ import (
 	"strings"
 
 	"github.com/a8m/envsubst"
-	"github.com/ghodss/yaml"
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	"go.yaml.in/yaml/v3"
 )
 
 // Load reads in the config file at the path given, then merges in environment
@@ -53,6 +53,87 @@ func Load(configFileName string, flagSet *pflag.FlagSet, into interface{}) error
 	}
 
 	return nil
+}
+
+// LoadYAML will load a YAML based configuration file into the options interface provided.
+func LoadYAML(configFileName string, opts interface{}) error {
+	buffer, err := loadAndSubstituteEnvs(configFileName)
+	if err != nil {
+		return err
+	}
+
+	// Generic interface for loading arbitrary yaml structure
+	var intermediate map[string]interface{}
+
+	if err := yaml.Unmarshal(buffer, &intermediate); err != nil {
+		return fmt.Errorf("error unmarshalling config: %w", err)
+	}
+
+	// Using mapstructure to decode arbitrary yaml structure into options and
+	// merge with existing values instead of overwriting everything. This is especially
+	// important as we have a lot of default values for boolean which are supposed to be
+	// true by default. Normally by just parsing through yaml all booleans that aren't
+	// referenced in the config file would be parsed as false and we cannot identify after
+	// the fact if they have been explicitly set to false or have not been referenced.
+	return Decode(intermediate, opts)
+}
+
+// Decode processes an input map and decodes it into a given struct while preserving default values.
+// It ensures proper conversion of duration values from strings, floats, and int64 into time.Duration.
+//
+// Parameters:
+// - input: A map[string]interface{} representing the input data.
+// - result: A pointer to a struct where the decoded values will be stored.
+//
+// Returns:
+// - An error if decoding fails or if there are unmapped keys.
+func Decode(input interface{}, result interface{}) error {
+	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		DecodeHook: mapstructure.ComposeDecodeHookFunc(
+			toDurationHookFunc(),
+			stringToBytesHookFunc(),
+		),
+		Metadata:             nil,    // Don't track any metadata
+		Result:               result, // Decode the result into the prefilled options
+		TagName:              "yaml", // Parse all fields that use the yaml tag
+		ZeroFields:           false,  // Don't clean the default values from the result map (options)
+		ErrorUnused:          true,   // Throw an error if keys have been used that aren't mapped to any struct fields
+		IgnoreUntaggedFields: true,   // Ignore fields in structures that aren't tagged with yaml
+	})
+	if err != nil {
+		return fmt.Errorf("error creating decoder for config: %w", err)
+	}
+
+	if err := decoder.Decode(input); err != nil {
+		return fmt.Errorf("error decoding config: %w", err)
+	}
+
+	return nil
+}
+
+// loadAndSubstituteEnvs reads the yaml config into a generic byte buffer and
+// substitute env references
+func loadAndSubstituteEnvs(configFileName string) ([]byte, error) {
+	if configFileName == "" {
+		return nil, errors.New("no configuration file provided")
+	}
+
+	unparsedBuffer, err := os.ReadFile(configFileName)
+	if err != nil {
+		return nil, fmt.Errorf("unable to load config file: %w", err)
+	}
+
+	modifiedBuffer, err := normalizeSubstitution(unparsedBuffer)
+	if err != nil {
+		return nil, fmt.Errorf("error normalizing substitution string : %w", err)
+	}
+
+	buffer, err := envsubst.Bytes(modifiedBuffer)
+	if err != nil {
+		return nil, fmt.Errorf("error in substituting env variables : %w", err)
+	}
+
+	return buffer, nil
 }
 
 // registerFlags uses `cfg` and `flag` tags to associate flags in the flagSet
@@ -138,47 +219,6 @@ func isUnexported(name string) bool {
 
 	first := string(name[0])
 	return first == strings.ToLower(first)
-}
-
-// LoadYAML will load a YAML based configuration file into the options interface provided.
-func LoadYAML(configFileName string, into interface{}) error {
-	buffer, err := loadAndParseYaml(configFileName)
-	if err != nil {
-		return err
-	}
-
-	// UnmarshalStrict will return an error if the config includes options that are
-	// not mapped to fields of the into struct
-	if err := yaml.UnmarshalStrict(buffer, into, yaml.DisallowUnknownFields); err != nil {
-		return fmt.Errorf("error unmarshalling config: %w", err)
-	}
-
-	return nil
-}
-
-// loadAndParseYaml reads the config from the filesystem and
-// execute the environment variable substitution
-func loadAndParseYaml(configFileName string) ([]byte, error) {
-	if configFileName == "" {
-		return nil, errors.New("no configuration file provided")
-	}
-
-	unparsedBuffer, err := os.ReadFile(configFileName)
-	if err != nil {
-		return nil, fmt.Errorf("unable to load config file: %w", err)
-	}
-
-	modifiedBuffer, err := normalizeSubstitution(unparsedBuffer)
-	if err != nil {
-		return nil, fmt.Errorf("error normalizing substitution string : %w", err)
-	}
-
-	buffer, err := envsubst.Bytes(modifiedBuffer)
-	if err != nil {
-		return nil, fmt.Errorf("error in substituting env variables : %w", err)
-	}
-
-	return buffer, nil
 }
 
 // normalizeSubstitution normalizes dollar signs ($) with numerals like
