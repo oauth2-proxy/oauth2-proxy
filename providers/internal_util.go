@@ -36,7 +36,7 @@ func stripParam(param, endpoint string) string {
 		}
 
 		if val := values.Get(param); val != "" {
-			values.Set(param, val[:(len(val)/2)]+"...")
+			values.Set(param, val[:min(len(val)/2, 5)]+"...")
 			u.RawQuery = values.Encode()
 			return u.String()
 		}
