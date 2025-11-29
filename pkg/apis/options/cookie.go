@@ -1,67 +1,53 @@
 package options
 
 import (
-	"errors"
+	"fmt"
 	"os"
 	"time"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
-	"github.com/spf13/pflag"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 )
 
-// Cookie contains configuration options relating to Cookie configuration
+const (
+	// DefaultCookieSecure is the default value for Cookie.Secure
+	DefaultCookieSecure bool = true
+	// DefaultCookieHTTPOnly is the default value for Cookie.HTTPOnly
+	DefaultCookieHTTPOnly bool = true
+	// DefaultCSRFPerRequest is the default value for Cookie.CSRFPerRequest
+	DefaultCSRFPerRequest bool = false
+)
+
+// Cookie contains configuration options relating session and CSRF cookies
 type Cookie struct {
-	Name                string        `flag:"cookie-name" cfg:"cookie_name"`
-	Secret              string        `flag:"cookie-secret" cfg:"cookie_secret"`
-	SecretFile          string        `flag:"cookie-secret-file" cfg:"cookie_secret_file"`
-	Domains             []string      `flag:"cookie-domain" cfg:"cookie_domains"`
-	Path                string        `flag:"cookie-path" cfg:"cookie_path"`
-	Expire              time.Duration `flag:"cookie-expire" cfg:"cookie_expire"`
-	Refresh             time.Duration `flag:"cookie-refresh" cfg:"cookie_refresh"`
-	Secure              bool          `flag:"cookie-secure" cfg:"cookie_secure"`
-	HTTPOnly            bool          `flag:"cookie-httponly" cfg:"cookie_httponly"`
-	SameSite            string        `flag:"cookie-samesite" cfg:"cookie_samesite"`
-	CSRFPerRequest      bool          `flag:"cookie-csrf-per-request" cfg:"cookie_csrf_per_request"`
-	CSRFPerRequestLimit int           `flag:"cookie-csrf-per-request-limit" cfg:"cookie_csrf_per_request_limit"`
-	CSRFExpire          time.Duration `flag:"cookie-csrf-expire" cfg:"cookie_csrf_expire"`
-}
-
-func cookieFlagSet() *pflag.FlagSet {
-	flagSet := pflag.NewFlagSet("cookie", pflag.ExitOnError)
-
-	flagSet.String("cookie-name", "_oauth2_proxy", "the name of the cookie that the oauth_proxy creates")
-	flagSet.String("cookie-secret", "", "the seed string for secure cookies (optionally base64 encoded)")
-	flagSet.String("cookie-secret-file", "", "For defining a separate cookie secret file to read the encryption key from")
-	flagSet.StringSlice("cookie-domain", []string{}, "Optional cookie domains to force cookies to (ie: `.yourcompany.com`). The longest domain matching the request's host will be used (or the shortest cookie domain if there is no match).")
-	flagSet.String("cookie-path", "/", "an optional cookie path to force cookies to (ie: /poc/)*")
-	flagSet.Duration("cookie-expire", time.Duration(168)*time.Hour, "expire timeframe for cookie")
-	flagSet.Duration("cookie-refresh", time.Duration(0), "refresh the cookie after this duration; 0 to disable")
-	flagSet.Bool("cookie-secure", true, "set secure (HTTPS) cookie flag")
-	flagSet.Bool("cookie-httponly", true, "set HttpOnly cookie flag")
-	flagSet.String("cookie-samesite", "", "set SameSite cookie attribute (ie: \"lax\", \"strict\", \"none\", or \"\"). ")
-	flagSet.Bool("cookie-csrf-per-request", false, "When this property is set to true, then the CSRF cookie name is built based on the state and varies per request. If property is set to false, then CSRF cookie has the same name for all requests.")
-	flagSet.Int("cookie-csrf-per-request-limit", 0, "Sets a limit on the number of CSRF requests cookies that oauth2-proxy will create. The oldest cookies will be removed. Useful if users end up with 431 Request headers too large status codes.")
-	flagSet.Duration("cookie-csrf-expire", time.Duration(15)*time.Minute, "expire timeframe for CSRF cookie")
-	return flagSet
-}
-
-// cookieDefaults creates a Cookie populating each field with its default value
-func cookieDefaults() Cookie {
-	return Cookie{
-		Name:                "_oauth2_proxy",
-		Secret:              "",
-		SecretFile:          "",
-		Domains:             nil,
-		Path:                "/",
-		Expire:              time.Duration(168) * time.Hour,
-		Refresh:             time.Duration(0),
-		Secure:              true,
-		HTTPOnly:            true,
-		SameSite:            "",
-		CSRFPerRequest:      false,
-		CSRFPerRequestLimit: 0,
-		CSRFExpire:          time.Duration(15) * time.Minute,
-	}
+	// Name is the name of the cookie
+	Name string `yaml:"name,omitempty"`
+	// Secret is the secret used to encrypt/sign the cookie value
+	Secret string `yaml:"secret,omitempty"`
+	// SecretFile is a file containing the secret used to encrypt/sign the cookie value
+	// instead of specifying it directly in the config. Secret takes precedence over SecretFile
+	SecretFile string `yaml:"secretFile,omitempty"`
+	// Domains is a list of domains for which the cookie is valid
+	Domains []string `yaml:"domains,omitempty"`
+	// Path is the path for which the cookie is valid
+	Path string `yaml:"path,omitempty"`
+	// Expire is the duration before the cookie expires
+	Expire time.Duration `yaml:"expire,omitempty"`
+	// Refresh is the duration after which the cookie is refreshable
+	Refresh time.Duration `yaml:"refresh,omitempty"`
+	// Secure indicates whether the cookie is only sent over HTTPS
+	Secure *bool `yaml:"secure,omitempty"`
+	// HTTPOnly indicates whether the cookie is inaccessible to JavaScript
+	HTTPOnly *bool `yaml:"httpOnly,omitempty"`
+	// SameSite sets the SameSite attribute on the cookie
+	SameSite string `yaml:"sameSite,omitempty"`
+	// CSRFPerRequest indicates whether a unique CSRF token is generated for each request
+	// Enables parallel requests from clients (e.g., multiple tabs)
+	CSRFPerRequest *bool `yaml:"csrfPerRequest,omitempty"`
+	// CSRFPerRequestLimit sets a limit on the number of valid CSRF tokens when CSRFPerRequest is enabled
+	// Used to prevent unbounded memory growth from storing too many tokens
+	CSRFPerRequestLimit int `yaml:"csrfPerRequestLimit,omitempty"`
+	// CSRFExpire sets the duration before a CSRF token expires
+	CSRFExpire time.Duration `yaml:"csrfExpire,omitempty"`
 }
 
 // GetSecret returns the cookie secret, reading from file if SecretFile is set
@@ -72,9 +58,33 @@ func (c *Cookie) GetSecret() (secret string, err error) {
 
 	fileSecret, err := os.ReadFile(c.SecretFile)
 	if err != nil {
-		logger.Errorf("error reading cookie secret file %s: %s", c.SecretFile, err)
-		return "", errors.New("could not read cookie secret file")
+		return "", fmt.Errorf("error reading cookie secret file %s: %w", c.SecretFile, err)
 	}
 
 	return string(fileSecret), nil
+}
+
+// EnsureDefaults sets any default values for the Cookie configuration
+func (c *Cookie) EnsureDefaults() {
+	if c.Name == "" {
+		c.Name = "_oauth2_proxy"
+	}
+	if c.Path == "" {
+		c.Path = "/"
+	}
+	if c.Expire == 0 {
+		c.Expire = time.Duration(168) * time.Hour
+	}
+	if c.Secure == nil {
+		c.Secure = ptr.To(DefaultCookieSecure)
+	}
+	if c.HTTPOnly == nil {
+		c.HTTPOnly = ptr.To(DefaultCookieHTTPOnly)
+	}
+	if c.CSRFPerRequest == nil {
+		c.CSRFPerRequest = ptr.To(DefaultCSRFPerRequest)
+	}
+	if c.CSRFExpire == 0 {
+		c.CSRFExpire = time.Duration(15) * time.Minute
+	}
 }

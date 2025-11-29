@@ -86,14 +86,14 @@ More information and available patterns can be found [here](https://github.com/a
 The following flags/options and their respective environment variables are no
 longer available when using alpha configuration:
 
-<!-- Legacy Upstream FlagSet -->
+### Legacy Upstream options
 - `flush-interval`/`flush_interval`
 - `pass-host-header`/`pass_host_header`
 - `proxy-websockets`/`proxy_websockets`
 - `ssl-upstream-insecure-skip-verify`/`ssl_upstream_insecure_skip_verify`
 - `upstream`/`upstreams`
 
-<!-- Legacy Headers FlagSet -->
+### Legacy Headers options
 - `pass-basic-auth`/`pass_basic_auth`
 - `pass-access-token`/`pass_access_token`
 - `pass-user-headers`/`pass_user_headers`
@@ -105,7 +105,7 @@ longer available when using alpha configuration:
 - `basic-auth-password`/`basic_auth_password`
 - `skip-auth-strip-headers`/`skip_auth_strip_headers`
 
-<!-- Legacy provider FlagSet -->
+### Legacy Provider options
 - `client-id`/`client_id`
 - `client-secret`/`client_secret`, and `client-secret-file`/`client_secret_file`
 - `provider`
@@ -126,6 +126,22 @@ longer available when using alpha configuration:
 - `jwt-key`/`jwt_key`
 - `jwt-key-file`/`jwt_key_file`
 - `pubjwk-url`/`pubjwk_url`
+
+### Legacy Cookie options
+- `cookie-name`/`cookie_name`
+- `cookie-name`/`cookie_name`
+- `cookie-secret`/`cookie_secret`
+- `cookie-secret-file`/`cookie_secret_file`
+- `cookie-domain`/`cookie_domains`
+- `cookie-path`/`cookie_path`
+- `cookie-expire`/`cookie_expire`
+- `cookie-refresh`/`cookie_refresh`
+- `cookie-secure`/`cookie_secure`
+- `cookie-httponly`/`cookie_httponly`
+- `cookie-samesite`/`cookie_samesite`
+- `cookie-csrf-per-request`/`cookie_csrf_per_request`
+- `cookie-csrf-per-request-limit`/`cookie_csrf_per_request_limit`
+- `cookie-csrf-expire`/`cookie_csrf_expire`
 
 and all provider-specific options, i.e. any option whose name includes `oidc`,
 `azure`, `bitbucket`, `github`, `gitlab`, `google` or `keycloak`.  Attempting to

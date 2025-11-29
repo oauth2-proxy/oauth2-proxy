@@ -13,6 +13,7 @@ import (
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	cookiesapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/cookies"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -68,8 +69,8 @@ func RunSessionStoreTests(newSS NewSessionStoreFunc, persistentFastForward Persi
 				Path:     "/",
 				Expire:   time.Duration(168) * time.Hour,
 				Refresh:  time.Duration(1) * time.Hour,
-				Secure:   true,
-				HTTPOnly: true,
+				Secure:   ptr.To(true),
+				HTTPOnly: ptr.To(true),
 				SameSite: "",
 				Secret:   string(cookieSecret),
 			}
@@ -117,8 +118,8 @@ func RunSessionStoreTests(newSS NewSessionStoreFunc, persistentFastForward Persi
 					Path:     "/path",
 					Expire:   time.Duration(72) * time.Hour,
 					Refresh:  time.Duration(2) * time.Hour,
-					Secure:   false,
-					HTTPOnly: false,
+					Secure:   ptr.To(false),
+					HTTPOnly: ptr.To(false),
 					Domains:  []string{"example.com"},
 					SameSite: "strict",
 					Secret:   string(cookieSecret),
@@ -149,8 +150,8 @@ func RunSessionStoreTests(newSS NewSessionStoreFunc, persistentFastForward Persi
 					Path:       "/",
 					Expire:     time.Duration(168) * time.Hour,
 					Refresh:    time.Duration(1) * time.Hour,
-					Secure:     true,
-					HTTPOnly:   true,
+					Secure:     ptr.To(true),
+					HTTPOnly:   ptr.To(true),
 					SameSite:   "",
 					Secret:     "",
 					SecretFile: tmpfile.Name(),
@@ -208,13 +209,13 @@ func CheckCookieOptions(in *testInput) {
 
 		It("have the correct HTTPOnly set", func() {
 			for _, cookie := range cookies {
-				Expect(cookie.HttpOnly).To(Equal(in.cookieOpts.HTTPOnly))
+				Expect(cookie.HttpOnly).To(Equal(*in.cookieOpts.HTTPOnly))
 			}
 		})
 
 		It("have the correct secure set", func() {
 			for _, cookie := range cookies {
-				Expect(cookie.Secure).To(Equal(in.cookieOpts.Secure))
+				Expect(cookie.Secure).To(Equal(*in.cookieOpts.Secure))
 			}
 		})
 

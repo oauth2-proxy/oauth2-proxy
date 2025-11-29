@@ -15,18 +15,24 @@ import (
 
 var _ = Describe("Configuration Loading Suite", func() {
 	// For comparing the full configuration differences of our structs we need to increase the gomega limits
-	format.MaxLength = 50000
+	format.MaxLength = 0
 	format.MaxDepth = 10
 
 	const testLegacyConfig = `
 http_address="127.0.0.1:4180"
 upstreams="http://httpbin"
+
 set_basic_auth="true"
 basic_auth_password="c3VwZXItc2VjcmV0LXBhc3N3b3Jk"
+
 client_id="oauth2-proxy"
 client_secret="b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK"
+
 google_admin_email="admin@example.com"
 google_target_principal="principal"
+
+cookie_secret="OQINaROshtE9TcZkNAm-5Zs2Pv3xaWytBmc5W7sPX7w="
+cookie_secure="false"
 `
 
 	const testAlphaConfig = `
@@ -80,6 +86,9 @@ injectResponseHeaders:
         value: c3VwZXItc2VjcmV0LXBhc3N3b3Jk
 server:
   bindAddress: "127.0.0.1:4180"
+cookie:
+  secure: false
+  secret: "OQINaROshtE9TcZkNAm-5Zs2Pv3xaWytBmc5W7sPX7w="
 providers:
 - id: google=oauth2-proxy
   provider: google
@@ -106,10 +115,7 @@ providers:
 `
 
 	const testCoreConfig = `
-cookie_secret="OQINaROshtE9TcZkNAm-5Zs2Pv3xaWytBmc5W7sPX7w="
 email_domains="example.com"
-cookie_secure="false"
-
 redirect_url="http://localhost:4180/oauth2/callback"
 `
 
@@ -119,7 +125,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 
 		opts.Cookie.Secret = "OQINaROshtE9TcZkNAm-5Zs2Pv3xaWytBmc5W7sPX7w="
 		opts.EmailDomains = []string{"example.com"}
-		opts.Cookie.Secure = false
+		opts.Cookie.Secure = ptr.To(false)
 		opts.RawRedirectURL = "http://localhost:4180/oauth2/callback"
 
 		opts.UpstreamServers = options.UpstreamConfig{
@@ -276,7 +282,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 		Entry("with bad legacy configuration", loadConfigurationTableInput{
 			configContent:   testCoreConfig + "unknown_field=\"something\"",
 			expectedOptions: func() *options.Options { return nil },
-			expectedErr:     errors.New("failed to load legacy options: failed to load config: error unmarshalling config: decoding failed due to the following error(s):\n\n'' has invalid keys: unknown_field"),
+			expectedErr:     errors.New("failed to load legacy options: failed to load legacy config: error unmarshalling config: decoding failed due to the following error(s):\n\n'' has invalid keys: unknown_field"),
 		}),
 		Entry("with bad alpha configuration", loadConfigurationTableInput{
 			configContent:      testCoreConfig,
@@ -288,7 +294,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 			configContent:      testCoreConfig + "unknown_field=\"something\"",
 			alphaConfigContent: testAlphaConfig,
 			expectedOptions:    func() *options.Options { return nil },
-			expectedErr:        errors.New("failed to load legacy options: failed to load config: error unmarshalling config: decoding failed due to the following error(s):\n\n'' has invalid keys: unknown_field"),
+			expectedErr:        errors.New("failed to load legacy options: failed to load legacy config: error unmarshalling config: decoding failed due to the following error(s):\n\n'' has invalid keys: unknown_field"),
 		}),
 	)
 })

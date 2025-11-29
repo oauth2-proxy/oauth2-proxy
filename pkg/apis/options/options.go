@@ -35,7 +35,7 @@ type Options struct {
 	HtpasswdFile            string   `flag:"htpasswd-file" cfg:"htpasswd_file"`
 	HtpasswdUserGroups      []string `flag:"htpasswd-user-group" cfg:"htpasswd_user_groups"`
 
-	Cookie    Cookie         `cfg:",squash"`
+	Cookie    Cookie         `cfg:",internal"`
 	Session   SessionOptions `cfg:",squash"`
 	Logging   Logging        `cfg:",squash"`
 	Templates Templates      `cfg:",squash"`
@@ -105,7 +105,6 @@ func NewOptions() *Options {
 		ReadyPath:                "/ready",
 		RealClientIPHeader:       "X-Real-IP",
 		ForceHTTPS:               false,
-		Cookie:                   cookieDefaults(),
 		Session:                  sessionOptionsDefaults(),
 		Templates:                templatesDefaults(),
 		SkipAuthPreflight:        false,
@@ -162,7 +161,6 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.String("signature-key", "", "GAP-Signature request signature key (algorithm:secretkey)")
 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
 
-	flagSet.AddFlagSet(cookieFlagSet())
 	flagSet.AddFlagSet(loggingFlagSet())
 	flagSet.AddFlagSet(templatesFlagSet())
 
@@ -182,8 +180,9 @@ func (o *Options) EnsureDefaults() {
 		o.InjectResponseHeaders[i].EnsureDefaults()
 	}
 
+	o.Cookie.EnsureDefaults()
+
 	// TBD: Uncomment as we add EnsureDefaults methods
-	// o.Cookie.EnsureDefaults()
 	// o.Session.EnsureDefaults()
 	// o.Templates.EnsureDefaults()
 	// o.Logging.EnsureDefaults()

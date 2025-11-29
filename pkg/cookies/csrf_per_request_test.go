@@ -10,6 +10,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -28,9 +29,9 @@ var _ = Describe("CSRF Cookie with non-fixed name Tests", func() {
 			Domains:        []string{cookieDomain},
 			Path:           cookiePath,
 			Expire:         time.Hour,
-			Secure:         true,
-			HTTPOnly:       true,
-			CSRFPerRequest: true,
+			Secure:         ptr.To(true),
+			HTTPOnly:       ptr.To(true),
+			CSRFPerRequest: ptr.To(true),
 			CSRFExpire:     time.Duration(5) * time.Minute,
 		}
 

@@ -46,6 +46,20 @@ var _ = Describe("Load", func() {
 			InsecureOIDCSkipNonce: true,
 		},
 
+		LegacyCookie: LegacyCookie{
+			Name:           "_oauth2_proxy",
+			Secret:         "",
+			Domains:        nil,
+			Path:           "/",
+			Expire:         time.Duration(168) * time.Hour,
+			Refresh:        time.Duration(0),
+			Secure:         true,
+			HTTPOnly:       true,
+			SameSite:       "",
+			CSRFPerRequest: false,
+			CSRFExpire:     time.Duration(15) * time.Minute,
+		},
+
 		Options: Options{
 			BearerTokenLoginFallback: true,
 			ProxyPrefix:              "/oauth2",
@@ -53,7 +67,6 @@ var _ = Describe("Load", func() {
 			ReadyPath:                "/ready",
 			RealClientIPHeader:       "X-Real-IP",
 			ForceHTTPS:               false,
-			Cookie:                   cookieDefaults(),
 			Session:                  sessionOptionsDefaults(),
 			Templates:                templatesDefaults(),
 			SkipAuthPreflight:        false,
