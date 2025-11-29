@@ -207,7 +207,7 @@ func TestBasicAuthPassword(t *testing.T) {
 		},
 	}
 
-	opts.Cookie.Secure = false
+	opts.Cookie.Secure = ptr.To(false)
 	opts.InjectRequestHeaders = []options.Header{
 		{
 			Name: "Authorization",
@@ -362,7 +362,7 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) (*PassAccessTokenTe
 		patt.opts.UpstreamServers.Upstreams = append(patt.opts.UpstreamServers.Upstreams, opts.ProxyUpstream)
 	}
 
-	patt.opts.Cookie.Secure = false
+	patt.opts.Cookie.Secure = ptr.To(false)
 	if opts.PassAccessToken {
 		patt.opts.InjectRequestHeaders = []options.Header{
 			{
@@ -3468,7 +3468,7 @@ func TestGetOAuthRedirectURI(t *testing.T) {
 		{
 			name: "redirect with http schema",
 			setupOpts: func(baseOpts *options.Options) *options.Options {
-				baseOpts.Cookie.Secure = false
+				baseOpts.Cookie.Secure = ptr.To(false)
 				return baseOpts
 			},
 			req: &http.Request{

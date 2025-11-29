@@ -10,6 +10,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	requestutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 )
 
 // MakeCookieFromOptions constructs a cookie based on the given *options.CookieOptions,
@@ -30,8 +31,8 @@ func MakeCookieFromOptions(req *http.Request, name string, value string, opts *o
 		Value:    value,
 		Path:     opts.Path,
 		Domain:   domain,
-		HttpOnly: opts.HTTPOnly,
-		Secure:   opts.Secure,
+		HttpOnly: ptr.Deref(opts.HTTPOnly, options.DefaultCookieHTTPOnly),
+		Secure:   ptr.Deref(opts.Secure, options.DefaultCookieSecure),
 		SameSite: ParseSameSite(opts.SameSite),
 	}
 
