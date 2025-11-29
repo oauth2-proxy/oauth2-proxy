@@ -12,6 +12,7 @@ import (
 	sessionscookie "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/cookie"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/persistence"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/redis"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -44,8 +45,8 @@ var _ = Describe("NewSessionStore", func() {
 			Path:     "/",
 			Expire:   time.Duration(168) * time.Hour,
 			Refresh:  time.Duration(1) * time.Hour,
-			Secure:   true,
-			HTTPOnly: true,
+			Secure:   ptr.To(true),
+			HTTPOnly: ptr.To(true),
 			SameSite: "",
 		}
 	})
