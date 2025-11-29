@@ -86,14 +86,14 @@ More information and available patterns can be found [here](https://github.com/a
 The following flags/options and their respective environment variables are no
 longer available when using alpha configuration:
 
-<!-- Legacy Upstream FlagSet -->
+### Legacy Upstream options
 - `flush-interval`/`flush_interval`
 - `pass-host-header`/`pass_host_header`
 - `proxy-websockets`/`proxy_websockets`
 - `ssl-upstream-insecure-skip-verify`/`ssl_upstream_insecure_skip_verify`
 - `upstream`/`upstreams`
 
-<!-- Legacy Headers FlagSet -->
+### Legacy Headers options
 - `pass-basic-auth`/`pass_basic_auth`
 - `pass-access-token`/`pass_access_token`
 - `pass-user-headers`/`pass_user_headers`
@@ -105,7 +105,7 @@ longer available when using alpha configuration:
 - `basic-auth-password`/`basic_auth_password`
 - `skip-auth-strip-headers`/`skip_auth_strip_headers`
 
-<!-- Legacy provider FlagSet -->
+### Legacy Provider options
 - `client-id`/`client_id`
 - `client-secret`/`client_secret`, and `client-secret-file`/`client_secret_file`
 - `provider`
@@ -126,6 +126,22 @@ longer available when using alpha configuration:
 - `jwt-key`/`jwt_key`
 - `jwt-key-file`/`jwt_key_file`
 - `pubjwk-url`/`pubjwk_url`
+
+### Legacy Cookie options
+- `cookie-name`/`cookie_name`
+- `cookie-name`/`cookie_name`
+- `cookie-secret`/`cookie_secret`
+- `cookie-secret-file`/`cookie_secret_file`
+- `cookie-domain`/`cookie_domains`
+- `cookie-path`/`cookie_path`
+- `cookie-expire`/`cookie_expire`
+- `cookie-refresh`/`cookie_refresh`
+- `cookie-secure`/`cookie_secure`
+- `cookie-httponly`/`cookie_httponly`
+- `cookie-samesite`/`cookie_samesite`
+- `cookie-csrf-per-request`/`cookie_csrf_per_request`
+- `cookie-csrf-per-request-limit`/`cookie_csrf_per_request_limit`
+- `cookie-csrf-expire`/`cookie_csrf_expire`
 
 and all provider-specific options, i.e. any option whose name includes `oidc`,
 `azure`, `bitbucket`, `github`, `gitlab`, `google` or `keycloak`.  Attempting to
@@ -169,6 +185,7 @@ They may change between releases without notice.
 | `server` | _[Server](#server)_ | Server is used to configure the HTTP(S) server for the proxy application.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
 | `metricsServer` | _[Server](#server)_ | MetricsServer is used to configure the HTTP(S) server for metrics.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
 | `providers` | _[Providers](#providers)_ | Providers is used to configure your provider. **Multiple-providers is not<br/>yet working.** [This feature is tracked in<br/>#925](https://github.com/oauth2-proxy/oauth2-proxy/issues/926) |
+| `cookie` | _[Cookie](#cookie)_ | Cookie is used to configure the cookies used by OAuth2 Proxy.<br/>This includes session and CSRF cookies. |
 
 ### AzureOptions
 
@@ -203,6 +220,28 @@ ClaimSource allows loading a header value from a claim within the session
 | `claim` | _string_ | Claim is the name of the claim in the session that the value should be<br/>loaded from. Available claims: `access_token` `id_token` `created_at`<br/>`expires_on` `refresh_token` `email` `user` `groups` `preferred_username`. |
 | `prefix` | _string_ | Prefix is an optional prefix that will be prepended to the value of the<br/>claim if it is non-empty. |
 | `basicAuthPassword` | _[SecretSource](#secretsource)_ | BasicAuthPassword converts this claim into a basic auth header.<br/>Note the value of claim will become the basic auth username and the<br/>basicAuthPassword will be used as the password value. |
+
+### Cookie
+
+(**Appears on:** [AlphaOptions](#alphaoptions))
+
+Cookie contains configuration options relating session and CSRF cookies
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `name` | _string_ | Name is the name of the cookie |
+| `secret` | _string_ | Secret is the secret used to encrypt/sign the cookie value |
+| `secretFile` | _string_ | SecretFile is a file containing the secret used to encrypt/sign the cookie value<br/>instead of specifying it directly in the config. Secret takes precedence over SecretFile |
+| `domains` | _[]string_ | Domains is a list of domains for which the cookie is valid |
+| `path` | _string_ | Path is the path for which the cookie is valid |
+| `expire` | _duration_ | Expire is the duration before the cookie expires |
+| `refresh` | _duration_ | Refresh is the duration after which the cookie is refreshable |
+| `secure` | _bool_ | Secure indicates whether the cookie is only sent over HTTPS |
+| `httpOnly` | _bool_ | HTTPOnly indicates whether the cookie is inaccessible to JavaScript |
+| `sameSite` | _string_ | SameSite sets the SameSite attribute on the cookie |
+| `csrfPerRequest` | _bool_ | CSRFPerRequest indicates whether a unique CSRF token is generated for each request<br/>Enables parallel requests from clients (e.g., multiple tabs) |
+| `csrfPerRequestLimit` | _int_ | CSRFPerRequestLimit sets a limit on the number of valid CSRF tokens when CSRFPerRequest is enabled<br/>Used to prevent unbounded memory growth from storing too many tokens |
+| `csrfExpire` | _duration_ | CSRFExpire sets the duration before a CSRF token expires |
 
 ### GitHubOptions
 
