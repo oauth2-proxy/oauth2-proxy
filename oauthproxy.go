@@ -30,6 +30,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/proxyhttp"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/version"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
@@ -1098,7 +1099,7 @@ func (p *OAuthProxy) getOAuthRedirectURI(req *http.Request) string {
 
 	// If CookieSecure is true, return `https` no matter what
 	// Not all reverse proxies set X-Forwarded-Proto
-	if p.CookieOptions.Secure {
+	if ptr.Deref(p.CookieOptions.Secure, options.DefaultCookieSecure) {
 		rd.Scheme = schemeHTTPS
 	}
 	return rd.String()
