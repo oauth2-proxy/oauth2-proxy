@@ -76,17 +76,11 @@ func (s *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) error {
 
 	for _, c := range req.Cookies() {
 		if cookieNameRegex.MatchString(c.Name) {
-			sessionCookieOptions := &pkgcookies.CookieOptions{
-				Name:       c.Name,
-				Value:      "",
-				Domains:    s.Cookie.Domains,
-				Expiration: time.Hour * -1,
-				SameSite:   s.Cookie.SameSite,
-				Path:       s.Cookie.Path,
-				HTTPOnly:   s.Cookie.HTTPOnly,
-				Secure:     s.Cookie.Secure,
-			}
-			clearCookie := pkgcookies.MakeCookieFromOptions(req, sessionCookieOptions)
+			sessionCookieOptions := *s.Cookie
+			sessionCookieOptions.Name = c.Name
+			sessionCookieOptions.Expire = time.Hour * -1
+
+			clearCookie := pkgcookies.MakeCookieFromOptions(req, "", &sessionCookieOptions)
 
 			http.SetCookie(rw, clearCookie)
 		}
@@ -142,17 +136,7 @@ func (s *SessionStore) makeSessionCookie(req *http.Request, value []byte, now ti
 			return nil, err
 		}
 	}
-	sessionCookieOptions := &pkgcookies.CookieOptions{
-		Name:       s.Cookie.Name,
-		Value:      strValue,
-		Domains:    s.Cookie.Domains,
-		Expiration: s.Cookie.Expire,
-		SameSite:   s.Cookie.SameSite,
-		Path:       s.Cookie.Path,
-		HTTPOnly:   s.Cookie.HTTPOnly,
-		Secure:     s.Cookie.Secure,
-	}
-	c := pkgcookies.MakeCookieFromOptions(req, sessionCookieOptions)
+	c := pkgcookies.MakeCookieFromOptions(req, strValue, s.Cookie)
 	if len(c.String()) > maxCookieLength {
 		return splitCookie(c), nil
 	}

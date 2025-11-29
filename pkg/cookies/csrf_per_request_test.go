@@ -10,6 +10,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -28,9 +29,9 @@ var _ = Describe("CSRF Cookie with non-fixed name Tests", func() {
 			Domains:        []string{cookieDomain},
 			Path:           cookiePath,
 			Expire:         time.Hour,
-			Secure:         true,
-			HTTPOnly:       true,
-			CSRFPerRequest: true,
+			Secure:         ptr.To(true),
+			HTTPOnly:       ptr.To(true),
+			CSRFPerRequest: ptr.To(true),
 			CSRFExpire:     time.Duration(5) * time.Minute,
 		}
 
@@ -216,18 +217,13 @@ var _ = Describe("CSRF Cookie with non-fixed name Tests", func() {
 				for _, csrf := range []*csrf{privateCSRF1, privateCSRF2, privateCSRF3} {
 					encoded, err := csrf.encodeCookie()
 					Expect(err).ToNot(HaveOccurred())
-					csrfCookieOptions := &CookieOptions{
-						Name:       csrf.cookieName(),
-						Value:      encoded,
-						Domains:    csrf.cookieOpts.Domains,
-						Expiration: csrf.cookieOpts.CSRFExpire,
-						SameSite:   getCSRFSameSite(csrf.cookieOpts),
-						Path:       csrf.cookieOpts.Path,
-						HTTPOnly:   csrf.cookieOpts.HTTPOnly,
-						Secure:     csrf.cookieOpts.Secure,
-					}
 
-					cookie := MakeCookieFromOptions(req, csrfCookieOptions)
+					csrfCookieOpts := *csrf.cookieOpts
+					csrfCookieOpts.Name = csrf.cookieName()
+					csrfCookieOpts.Expire = csrfCookieOpts.CSRFExpire
+					csrfCookieOpts.SameSite = csrfCookieOpts.CSRFSameSite
+
+					cookie := MakeCookieFromOptions(req, encoded, &csrfCookieOpts)
 					cookies = append(cookies, fmt.Sprintf("%v=%v", cookie.Name, cookie.Value))
 				}
 

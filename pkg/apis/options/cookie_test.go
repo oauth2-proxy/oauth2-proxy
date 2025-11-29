@@ -55,7 +55,7 @@ func TestCookieGetSecret(t *testing.T) {
 		secret, err := c.GetSecret()
 		assert.Error(t, err)
 		assert.Equal(t, "", secret)
-		assert.Contains(t, err.Error(), "could not read cookie secret file")
+		assert.Contains(t, err.Error(), "error reading cookie secret file /nonexistent/file:")
 	})
 
 	t.Run("returns empty when both Secret and SecretFile are empty", func(t *testing.T) {

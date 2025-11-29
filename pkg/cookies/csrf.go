@@ -11,6 +11,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	"github.com/vmihailenco/msgpack/v5"
 )
 
@@ -96,7 +97,7 @@ func LoadCSRFCookie(req *http.Request, cookieName string, opts *options.Cookie) 
 // build name based on the state
 func GenerateCookieName(opts *options.Cookie, state string) string {
 	stateSubstring := ""
-	if opts.CSRFPerRequest {
+	if ptr.Deref(opts.CSRFPerRequest, options.DefaultCSRFPerRequest) {
 		// csrfCookieName will include a substring of the state to enable multiple csrf cookies
 		// in case of parallel requests
 		stateSubstring = ExtractStateSubstring(state)
@@ -134,15 +135,6 @@ func (c *csrf) SetSessionNonce(s *sessions.SessionState) {
 	s.Nonce = c.OIDCNonce
 }
 
-// getCSRFSameSite get the CSRF same site
-func getCSRFSameSite(opts *options.Cookie) string {
-	sameSite := opts.CSRFSameSite
-	if sameSite == "" {
-		sameSite = opts.SameSite
-	}
-	return sameSite
-}
-
 // SetCookie encodes the CSRF to a signed cookie and sets it on the ResponseWriter
 func (c *csrf) SetCookie(rw http.ResponseWriter, req *http.Request) (*http.Cookie, error) {
 	encoded, err := c.encodeCookie()
@@ -150,18 +142,12 @@ func (c *csrf) SetCookie(rw http.ResponseWriter, req *http.Request) (*http.Cooki
 		return nil, err
 	}
 
-	csrfCookieOptions := &CookieOptions{
-		Name:       c.cookieName(),
-		Value:      encoded,
-		Domains:    c.cookieOpts.Domains,
-		Expiration: c.cookieOpts.CSRFExpire,
-		SameSite:   getCSRFSameSite(c.cookieOpts),
-		Path:       c.cookieOpts.Path,
-		HTTPOnly:   c.cookieOpts.HTTPOnly,
-		Secure:     c.cookieOpts.Secure,
-	}
+	csrfCookieOptions := *c.cookieOpts
+	csrfCookieOptions.Name = c.cookieName()
+	csrfCookieOptions.Expire = csrfCookieOptions.CSRFExpire
+	csrfCookieOptions.SameSite = csrfCookieOptions.CSRFSameSite
 
-	cookie := MakeCookieFromOptions(req, csrfCookieOptions)
+	cookie := MakeCookieFromOptions(req, encoded, &csrfCookieOptions)
 	http.SetCookie(rw, cookie)
 
 	return cookie, nil
@@ -170,7 +156,7 @@ func (c *csrf) SetCookie(rw http.ResponseWriter, req *http.Request) (*http.Cooki
 // ClearExtraCsrfCookies limits the amount of existing CSRF cookies by deleting
 // an excess of cookies controlled through the option CSRFPerRequestLimit
 func ClearExtraCsrfCookies(opts *options.Cookie, rw http.ResponseWriter, req *http.Request) {
-	if !opts.CSRFPerRequest || opts.CSRFPerRequestLimit <= 0 {
+	if !ptr.Deref(opts.CSRFPerRequest, options.DefaultCSRFPerRequest) || opts.CSRFPerRequestLimit <= 0 {
 		return
 	}
 
@@ -211,18 +197,12 @@ func ClearExtraCsrfCookies(opts *options.Cookie, rw http.ResponseWriter, req *ht
 
 // ClearCookie removes the CSRF cookie
 func (c *csrf) ClearCookie(rw http.ResponseWriter, req *http.Request) {
-	csrfCookieOptions := &CookieOptions{
-		Name:       c.cookieName(),
-		Value:      "",
-		Domains:    c.cookieOpts.Domains,
-		Expiration: time.Hour * -1,
-		SameSite:   getCSRFSameSite(c.cookieOpts),
-		Path:       c.cookieOpts.Path,
-		HTTPOnly:   c.cookieOpts.HTTPOnly,
-		Secure:     c.cookieOpts.Secure,
-	}
+	csrfCookieOptions := *c.cookieOpts
+	csrfCookieOptions.Name = c.cookieName()
+	csrfCookieOptions.Expire = time.Hour * -1
+	csrfCookieOptions.SameSite = csrfCookieOptions.CSRFSameSite
 
-	http.SetCookie(rw, MakeCookieFromOptions(req, csrfCookieOptions))
+	http.SetCookie(rw, MakeCookieFromOptions(req, "", &csrfCookieOptions))
 }
 
 // encodeCookie MessagePack encodes and encrypts the CSRF and then creates a
@@ -281,7 +261,7 @@ func unmarshalCSRF(decrypted []byte, opts *options.Cookie, csrfTime time.Time) (
 // cookieName returns the CSRF cookie's name
 func (c *csrf) cookieName() string {
 	stateSubstring := ""
-	if c.cookieOpts.CSRFPerRequest {
+	if ptr.Deref(c.cookieOpts.CSRFPerRequest, options.DefaultCSRFPerRequest) {
 		stateSubstring = encryption.HashNonce(c.OAuthState)[0 : csrfStateLength-1]
 	}
 	return csrfCookieName(c.cookieOpts, stateSubstring)

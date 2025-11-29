@@ -7,24 +7,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	requestutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 )
-
-type CookieOptions struct {
-	Name       string
-	Value      string
-	Domains    []string
-	Expiration time.Duration
-	SameSite   string
-	Path       string
-	HTTPOnly   bool
-	Secure     bool
-}
 
 // MakeCookieFromOptions constructs a cookie based on the given *options.CookieOptions,
 // value and creation time
-func MakeCookieFromOptions(req *http.Request, opts *CookieOptions) *http.Cookie {
+func MakeCookieFromOptions(req *http.Request, value string, opts *options.Cookie) *http.Cookie {
 	domain := GetCookieDomain(req, opts.Domains)
 	// If nothing matches, create the cookie with the shortest domain
 	if domain == "" && len(opts.Domains) > 0 {
@@ -37,17 +28,17 @@ func MakeCookieFromOptions(req *http.Request, opts *CookieOptions) *http.Cookie 
 
 	c := &http.Cookie{
 		Name:     opts.Name,
-		Value:    opts.Value,
+		Value:    value,
 		Path:     opts.Path,
 		Domain:   domain,
-		HttpOnly: opts.HTTPOnly,
-		Secure:   opts.Secure,
+		HttpOnly: ptr.Deref(opts.HTTPOnly, options.DefaultCookieHTTPOnly),
+		Secure:   ptr.Deref(opts.Secure, options.DefaultCookieSecure),
 		SameSite: ParseSameSite(opts.SameSite),
 	}
 
-	if opts.Expiration > time.Duration(0) {
-		c.MaxAge = int(opts.Expiration.Seconds())
-	} else if opts.Expiration < time.Duration(0) {
+	if opts.Expire > time.Duration(0) {
+		c.MaxAge = int(opts.Expire.Seconds())
+	} else if opts.Expire < time.Duration(0) {
 		c.MaxAge = -1
 	}
 
