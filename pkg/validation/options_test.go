@@ -32,6 +32,7 @@ func testOptions() *options.Options {
 	o.Providers[0].ClientID = clientID
 	o.Providers[0].ClientSecret = clientSecret
 	o.EmailDomains = []string{"*"}
+	o.EnsureDefaults()
 	return o
 }
 
@@ -45,6 +46,8 @@ func errorMsg(msgs []string) string {
 func TestNewOptions(t *testing.T) {
 	o := options.NewOptions()
 	o.EmailDomains = []string{"*"}
+	o.EnsureDefaults()
+
 	err := Validate(o)
 	assert.NotEqual(t, nil, err)
 

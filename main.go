@@ -97,7 +97,7 @@ func loadLegacyOptions(config string, extraFlags *pflag.FlagSet, args []string) 
 
 	legacyOpts := options.NewLegacyOptions()
 	if err := options.Load(config, optionsFlagSet, legacyOpts); err != nil {
-		return nil, fmt.Errorf("failed to load config: %v", err)
+		return nil, fmt.Errorf("failed to load legacy config: %v", err)
 	}
 
 	opts, err := legacyOpts.ToOptions()
@@ -149,6 +149,28 @@ func loadOptions(config string, extraFlags *pflag.FlagSet, args []string) (*opti
 // and renders these to stdout in YAML format.
 func printConvertedConfig(opts *options.Options) error {
 	alphaConfig := options.NewAlphaOptions(opts)
+
+	if len(alphaConfig.Providers) == 1 {
+		providerType := alphaConfig.Providers[0].Type
+
+		if providerType != options.ADFSProvider {
+			alphaConfig.Providers[0].ADFSConfig = options.ADFSOptions{}
+		}
+
+		if providerType != options.AzureProvider {
+			alphaConfig.Providers[0].AzureConfig = options.AzureOptions{}
+		}
+
+		if providerType != options.GoogleProvider {
+			alphaConfig.Providers[0].GoogleConfig = options.GoogleOptions{}
+		}
+
+		if providerType != options.MicrosoftEntraIDProvider {
+			alphaConfig.Providers[0].MicrosoftEntraIDConfig = options.MicrosoftEntraIDOptions{}
+		}
+	} else {
+		return fmt.Errorf("only single provider conversion is supported")
+	}
 
 	// Generic interface for loading arbitrary yaml structure
 	var buffer map[string]interface{}
