@@ -117,14 +117,12 @@ func (p *OIDCProvider) ValidateSession(ctx context.Context, s *sessions.SessionS
 
 	// https://openid.net/specs/openid-connect-core-1_0.html#RefreshTokenResponse
 	// The ID Token is optional in the Refresh Token Response
-	// TODO: @tuunit remove dependency on refreshed flag and only rely on presence of access_token
-	// in accordance with the spec. For now, keep existing behavior.
 	if s.Refreshed {
-		if !validateToken(ctx, p, s.AccessToken, makeOIDCHeader(s.AccessToken)) {
+		validateEndpointAvailable := p.Data().ValidateURL != nil && p.Data().ValidateURL.String() != ""
+		if validateEndpointAvailable && !validateToken(ctx, p, s.AccessToken, makeOIDCHeader(s.AccessToken)) {
 			logger.Errorf("access_token validation failed")
 			return false
 		}
-
 		return true
 	}
 
@@ -190,9 +188,8 @@ func (p *OIDCProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sessi
 		return fmt.Errorf("unable create new session state from response: %v", err)
 	}
 
-	// It's possible that if the refresh token isn't in the token response the
-	// session will not contain an id token.
-	// If it doesn't it's probably better to retain the old one
+	// It's possible that a refresh does not renew the ID Token.
+	// If it doesn't, it's probably better to retain the old one.
 	if newSession.IDToken != "" {
 		s.IDToken = newSession.IDToken
 		s.Email = newSession.Email
@@ -205,6 +202,7 @@ func (p *OIDCProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sessi
 	s.RefreshToken = newSession.RefreshToken
 	s.CreatedAt = newSession.CreatedAt
 	s.ExpiresOn = newSession.ExpiresOn
+	s.Refreshed = newSession.Refreshed
 
 	return nil
 }
