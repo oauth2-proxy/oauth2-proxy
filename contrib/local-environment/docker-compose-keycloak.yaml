@@ -40,7 +40,7 @@ services:
 
   keycloak:
     container_name: keycloak
-    image: keycloak/keycloak:25.0
+    image: keycloak/keycloak:26.4
     hostname: keycloak
     command:
       - 'start-dev'
