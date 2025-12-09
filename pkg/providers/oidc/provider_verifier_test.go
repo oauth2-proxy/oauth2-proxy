@@ -2,6 +2,8 @@ package oidc
 
 import (
 	"context"
+	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"time"
@@ -45,10 +47,24 @@ var _ = AfterSuite(func() {
 
 var _ = Describe("ProviderVerifier", func() {
 	var m *mockoidc.MockOIDC
+	var endpointsHit []string
 
 	BeforeEach(func() {
 		var err error
-		m, err = mockoidc.Run()
+		m, err = mockoidc.NewServer(nil)
+		Expect(err).ToNot(HaveOccurred())
+		ln, err := net.Listen("tcp", "127.0.0.1:0")
+		Expect(err).ToNot(HaveOccurred())
+
+		endpointsHit = []string{}
+		m.AddMiddleware(func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+				endpointsHit = append(endpointsHit, req.URL.Path)
+				next.ServeHTTP(rw, req)
+			})
+		})
+
+		err = m.Start(ln, nil)
 		Expect(err).ToNot(HaveOccurred())
 	})
 
@@ -88,9 +104,12 @@ var _ = Describe("ProviderVerifier", func() {
 			Expect(endpoints.TokenURL).To(Equal(m.TokenEndpoint()))
 			Expect(endpoints.JWKsURL).To(Equal(m.JWKSEndpoint()))
 			Expect(endpoints.UserInfoURL).To(Equal(m.UserinfoEndpoint()))
+			Expect(endpointsHit).To(ContainElement("/oidc/.well-known/openid-configuration"))
+		} else {
+			Expect(endpointsHit).ToNot(ContainElement("/oidc/.well-known/openid-configuration"))
 		}
 	},
-		Entry("should be succesfful when discovering the OIDC provider", &newProviderVerifierTableInput{
+		Entry("should be successful when discovering the OIDC provider", &newProviderVerifierTableInput{
 			modifyOpts: func(_ *ProviderVerifierOptions) {},
 		}),
 		Entry("when the issuer URL is missing", &newProviderVerifierTableInput{

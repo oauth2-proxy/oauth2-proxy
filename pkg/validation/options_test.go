@@ -236,3 +236,39 @@ func TestProviderCAFilesError(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "unable to load provider CA file(s)")
 }
+
+func TestProviderVerifierSkipsDiscoveryWhenConfigured(t *testing.T) {
+	jwksUrl := "https://examle.com/auth/certs"
+	o := testOptions()
+	o.Providers[0].OIDCConfig.SkipDiscovery = true
+	o.Providers[0].OIDCConfig.JwksURL = jwksUrl
+
+	jwtIssuer := jwtIssuer{
+		issuerURI: "https://example.com",
+		audience:  "aud",
+	}
+
+	pv, err := newProviderVerifierFromJwtIssuer(o.Providers[0].OIDCConfig, jwtIssuer)
+	assert.Equal(t, nil, err)
+	assert.NotEqual(t, nil, pv)
+
+	assert.Equal(t, jwksUrl, pv.JwksURL())
+	assert.False(t, pv.DiscoveryEnabled())
+}
+
+func TestProviderVerifierUsesFallback(t *testing.T) {
+	issuerURI := "https://example.com"
+	o := testOptions()
+
+	jwtIssuer := jwtIssuer{
+		issuerURI: issuerURI,
+		audience:  "aud",
+	}
+
+	pv, err := newProviderVerifierFromJwtIssuer(o.Providers[0].OIDCConfig, jwtIssuer)
+	assert.Equal(t, nil, err)
+	assert.NotEqual(t, nil, pv)
+
+	assert.Equal(t, issuerURI+"/.well-known/jwks.json", pv.JwksURL())
+	assert.False(t, pv.DiscoveryEnabled())
+}
