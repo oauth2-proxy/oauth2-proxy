@@ -54,6 +54,8 @@ const (
 	authOnlyPath      = "/auth"
 	userInfoPath      = "/userinfo"
 	staticPathPrefix  = "/static/"
+
+	idTokenPlaceholder = "{id_token}"
 )
 
 var (
@@ -748,6 +750,16 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	if strings.Contains(redirect, idTokenPlaceholder) {
+		session, err := p.getAuthenticatedSession(rw, req)
+		if err != nil {
+			logger.Errorf("error getting authenticated session during SignOut, won't replace id_token placeholder in redirect URL: %v", err)
+		} else {
+			redirect = strings.ReplaceAll(redirect, idTokenPlaceholder, session.IDToken)
+		}
+	}
+
 	// Call backend logout before clearing the session so we still have the session
 	// (and id_token) available to invoke the provider's logout endpoint
 	p.backendLogout(rw, req)
@@ -778,7 +790,7 @@ func (p *OAuthProxy) backendLogout(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	backendLogoutURL := strings.ReplaceAll(providerData.BackendLogoutURL, "{id_token}", session.IDToken)
+	backendLogoutURL := strings.ReplaceAll(providerData.BackendLogoutURL, idTokenPlaceholder, session.IDToken)
 	// security exception because URL is dynamic ({id_token} replacement) but
 	// base is not end-user provided but comes from configuration somewhat secure
 	resp, err := http.Get(backendLogoutURL) // #nosec G107
