@@ -31,8 +31,8 @@ func MakeCookieFromOptions(req *http.Request, name string, value string, opts *o
 		Value:    value,
 		Path:     opts.Path,
 		Domain:   domain,
-		HttpOnly: ptr.Deref(opts.HTTPOnly, options.DefaultCookieHTTPOnly),
-		Secure:   ptr.Deref(opts.Secure, options.DefaultCookieSecure),
+		HttpOnly: !ptr.Deref(opts.NotHttpOnly, options.DefaultCookieNotHttpOnly),
+		Secure:   !ptr.Deref(opts.Insecure, options.DefaultCookieInsecure),
 		SameSite: ParseSameSite(opts.SameSite),
 	}
 
@@ -60,7 +60,7 @@ func GetCookieDomain(req *http.Request, cookieDomains []string) string {
 }
 
 // Parse a valid http.SameSite value from a user supplied string for use of making cookies.
-func ParseSameSite(v string) http.SameSite {
+func ParseSameSite(v options.SameSiteMode) http.SameSite {
 	switch v {
 	case "lax":
 		return http.SameSiteLaxMode

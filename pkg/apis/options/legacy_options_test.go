@@ -1094,13 +1094,12 @@ var _ = Describe("Legacy Options", func() {
 		// Test cases and expected outcomes
 		fullCookie := Cookie{
 			Name:                "_oauth2_proxy",
-			Secret:              "",
+			Secret:              SecretSource{},
 			Domains:             nil,
 			Path:                "/",
 			Expire:              time.Duration(168) * time.Hour,
-			Refresh:             time.Duration(0),
-			Secure:              ptr.To(true),
-			HTTPOnly:            ptr.To(true),
+			Insecure:            ptr.To(false),
+			NotHttpOnly:         ptr.To(false),
 			SameSite:            "",
 			CSRFPerRequest:      ptr.To(false),
 			CSRFPerRequestLimit: 0,

@@ -1,8 +1,10 @@
 package options
 
 import (
+	"encoding/base64"
 	"time"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/spf13/pflag"
 )
 
@@ -39,21 +41,34 @@ func legacyCookieFlagSet() *pflag.FlagSet {
 	flagSet.Bool("cookie-csrf-per-request", false, "When this property is set to true, then the CSRF cookie name is built based on the state and varies per request. If property is set to false, then CSRF cookie has the same name for all requests.")
 	flagSet.Int("cookie-csrf-per-request-limit", 0, "Sets a limit on the number of CSRF requests cookies that oauth2-proxy will create. The oldest cookies will be removed. Useful if users end up with 431 Request headers too large status codes.")
 	flagSet.Duration("cookie-csrf-expire", time.Duration(15)*time.Minute, "expire timeframe for CSRF cookie")
+
 	return flagSet
 }
 
 func (l *LegacyCookie) convert() Cookie {
+	// Invert Secure and HTTPOnly to match the new Cookie struct
+	// which uses Insecure and NotHttpOnly
+	insecure := !l.Secure
+	notHTTPOnly := !l.HTTPOnly
+
+	var secret *SecretSource
+	if l.Secret != "" {
+		secret = NewSecretSourceFromString(l.Secret)
+	} else if l.SecretFile != "" {
+		secret = &SecretSource{
+			FromFile: l.SecretFile,
+		}
+	}
+
 	return Cookie{
 		Name:                l.Name,
-		Secret:              l.Secret,
-		SecretFile:          l.SecretFile,
+		Secret:              *secret,
 		Domains:             l.Domains,
 		Path:                l.Path,
 		Expire:              l.Expire,
-		Refresh:             l.Refresh,
-		Secure:              &l.Secure,
-		HTTPOnly:            &l.HTTPOnly,
-		SameSite:            l.SameSite,
+		Insecure:            &insecure,
+		NotHttpOnly:         &notHTTPOnly,
+		SameSite:            SameSiteMode(l.SameSite),
 		CSRFPerRequest:      &l.CSRFPerRequest,
 		CSRFPerRequestLimit: l.CSRFPerRequestLimit,
 		CSRFExpire:          l.CSRFExpire,

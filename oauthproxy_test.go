@@ -819,9 +819,9 @@ func NewProcessCookieTest(opts ProcessCookieTestOpts, modifiers ...OptionsModifi
 	for _, modifier := range modifiers {
 		modifier(pcTest.opts)
 	}
-	// First, set the CookieRefresh option so proxy.AesCipher is created,
+	// First, set the Session Refresh option so proxy.AesCipher is created,
 	// needed to encrypt the access_token.
-	pcTest.opts.Cookie.Refresh = time.Hour
+	pcTest.opts.Session.Refresh = time.Hour
 	err := validation.Validate(pcTest.opts)
 	if err != nil {
 		return nil, err
@@ -845,9 +845,9 @@ func NewProcessCookieTest(opts ProcessCookieTestOpts, modifiers ...OptionsModifi
 	}
 	pcTest.proxy.provider = testProvider
 
-	// Now, zero-out proxy.CookieRefresh for the cases that don't involve
+	// Now, zero-out Session Refresh for the cases that don't involve
 	// access_token validation.
-	pcTest.proxy.CookieOptions.Refresh = time.Duration(0)
+	pcTest.opts.Session.Refresh = time.Duration(0)
 	pcTest.rw = httptest.NewRecorder()
 	pcTest.req, _ = http.NewRequest("GET", "/", strings.NewReader(""))
 	pcTest.validateUser = true
@@ -969,7 +969,7 @@ func TestProcessCookieFailIfRefreshSetAndCookieExpired(t *testing.T) {
 	err = pcTest.SaveSession(startSession)
 	assert.NoError(t, err)
 
-	pcTest.proxy.CookieOptions.Refresh = time.Hour
+	pcTest.opts.Session.Refresh = time.Hour
 	session, err := pcTest.LoadCookiedSession()
 	assert.NotEqual(t, nil, err)
 	if session != nil {
