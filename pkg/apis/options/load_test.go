@@ -60,6 +60,13 @@ var _ = Describe("Load", func() {
 			CSRFExpire:     time.Duration(15) * time.Minute,
 		},
 
+		LegacySessionOptions: LegacySessionOptions{
+			Type: "cookie",
+			Cookie: LegacyCookieStoreOptions{
+				Minimal: false,
+			},
+		},
+
 		Options: Options{
 			BearerTokenLoginFallback: true,
 			ProxyPrefix:              "/oauth2",
@@ -67,7 +74,6 @@ var _ = Describe("Load", func() {
 			ReadyPath:                "/ready",
 			RealClientIPHeader:       "X-Real-IP",
 			ForceHTTPS:               false,
-			Session:                  sessionOptionsDefaults(),
 			Templates:                templatesDefaults(),
 			SkipAuthPreflight:        false,
 			Logging:                  loggingDefaults(),

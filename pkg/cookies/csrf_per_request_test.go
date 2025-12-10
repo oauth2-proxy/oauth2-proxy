@@ -25,12 +25,12 @@ var _ = Describe("CSRF Cookie with non-fixed name Tests", func() {
 	BeforeEach(func() {
 		cookieOpts = &options.Cookie{
 			Name:           cookieName,
-			Secret:         cookieSecret,
+			Secret:         options.SecretSource{Value: cookieSecret},
 			Domains:        []string{cookieDomain},
 			Path:           cookiePath,
 			Expire:         time.Hour,
-			Secure:         ptr.To(true),
-			HTTPOnly:       ptr.To(true),
+			Insecure:       ptr.To(false),
+			NotHttpOnly:    ptr.To(false),
 			CSRFPerRequest: ptr.To(true),
 			CSRFExpire:     time.Duration(5) * time.Minute,
 		}
@@ -118,7 +118,10 @@ var _ = Describe("CSRF Cookie with non-fixed name Tests", func() {
 				Value: encoded,
 			}
 
-			_, _, valid := encryption.Validate(cookie, cookieOpts.Secret, cookieOpts.Expire)
+			cookieSecret, err := cookieOpts.GetSecret()
+			Expect(err).ToNot(HaveOccurred())
+
+			_, _, valid := encryption.Validate(cookie, cookieSecret, cookieOpts.Expire)
 			Expect(valid).To(BeTrue())
 		})
 	})

@@ -13,7 +13,6 @@ const (
 	csrfNonce = "0987lkjh0987lkjh0987lkjh"
 
 	cookieName   = "cookie_test_12345"
-	cookieSecret = "3q48hmFH30FJ2HfJF0239UFJCVcl3kj3"
 	cookieDomain = "o2p.cookies.test"
 	cookiePath   = "/cookie-tests"
 
@@ -22,6 +21,10 @@ const (
 	sameSiteNone   = "none"
 
 	nowEpoch = 1609366421
+)
+
+var (
+	cookieSecret = []byte("3q48hmFH30FJ2HfJF0239UFJCVcl3kj3")
 )
 
 func TestProviderSuite(t *testing.T) {

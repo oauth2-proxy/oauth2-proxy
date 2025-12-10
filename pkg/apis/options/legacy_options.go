@@ -23,6 +23,9 @@ type LegacyOptions struct {
 	// Legacy options for cookie configuration
 	LegacyCookie LegacyCookie `cfg:",squash"`
 
+	// Legacy options for session store configuration
+	LegacySessionOptions LegacySessionOptions `cfg:",squash"`
+
 	Options Options `cfg:",squash"`
 }
 
@@ -75,6 +78,13 @@ func NewLegacyOptions() *LegacyOptions {
 			CSRFExpire:          time.Duration(15) * time.Minute,
 		},
 
+		LegacySessionOptions: LegacySessionOptions{
+			Type: "cookie",
+			Cookie: LegacyCookieStoreOptions{
+				Minimal: false,
+			},
+		},
+
 		Options: *NewOptions(),
 	}
 }
@@ -88,6 +98,7 @@ func NewLegacyFlagSet() *pflag.FlagSet {
 	flagSet.AddFlagSet(legacyProviderFlagSet())
 	flagSet.AddFlagSet(legacyGoogleFlagSet())
 	flagSet.AddFlagSet(legacyCookieFlagSet())
+	flagSet.AddFlagSet(legacySessionFlagSet())
 
 	return flagSet
 }
@@ -110,6 +121,7 @@ func (l *LegacyOptions) ToOptions() (*Options, error) {
 	}
 	l.Options.Providers = providers
 	l.Options.Cookie = l.LegacyCookie.convert()
+	l.Options.Session = l.LegacySessionOptions.convert(l.LegacyCookie.Refresh)
 
 	l.Options.EnsureDefaults()
 

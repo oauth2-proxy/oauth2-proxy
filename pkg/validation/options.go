@@ -21,7 +21,7 @@ import (
 // Validate checks that required options are set and validates those that they
 // are of the correct format
 func Validate(o *options.Options) error {
-	msgs := validateCookie(o.Cookie)
+	msgs := validateCookie(o.Cookie, o.Session.Refresh)
 	msgs = append(msgs, validateSessionCookieMinimal(o)...)
 	msgs = append(msgs, validateRedisSessionStore(o)...)
 	msgs = append(msgs, prefixValues("injectRequestHeaders: ", validateHeaders(o.InjectRequestHeaders)...)...)
@@ -74,7 +74,7 @@ func Validate(o *options.Options) error {
 	var redirectURL *url.URL
 	redirectURL, msgs = parseURL(o.RawRedirectURL, "redirect", msgs)
 	o.SetRedirectURL(redirectURL)
-	if o.RawRedirectURL == "" && !ptr.Deref(o.Cookie.Secure, options.DefaultCookieSecure) && !o.ReverseProxy {
+	if o.RawRedirectURL == "" && ptr.Deref(o.Cookie.Insecure, options.DefaultCookieInsecure) && !o.ReverseProxy {
 		logger.Print("WARNING: no explicit redirect URL: redirects will default to insecure HTTP")
 	}
 
