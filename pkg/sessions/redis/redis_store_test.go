@@ -9,6 +9,7 @@ import (
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/persistence"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/tests"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -80,7 +81,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 					sentinelAddr := redisProtocol + ms.Addr()
 					opts.Type = options.RedisSessionStoreType
 					opts.Redis.SentinelConnectionURLs = []string{sentinelAddr}
-					opts.Redis.UseSentinel = true
+					opts.Redis.UseSentinel = ptr.To(true)
 					opts.Redis.SentinelMasterName = ms.MasterInfo().Name
 
 					// Capture the session store so that we can close the client
@@ -101,7 +102,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 					clusterAddr := redisProtocol + mr.Addr()
 					opts.Type = options.RedisSessionStoreType
 					opts.Redis.ClusterConnectionURLs = []string{clusterAddr}
-					opts.Redis.UseCluster = true
+					opts.Redis.UseCluster = ptr.To(true)
 
 					// Capture the session store so that we can close the client
 					var err error
@@ -156,7 +157,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 						sentinelAddr := redisProtocol + ms.Addr()
 						opts.Type = options.RedisSessionStoreType
 						opts.Redis.SentinelConnectionURLs = []string{sentinelAddr}
-						opts.Redis.UseSentinel = true
+						opts.Redis.UseSentinel = ptr.To(true)
 						opts.Redis.SentinelMasterName = ms.MasterInfo().Name
 						opts.Redis.Password = redisPassword
 
@@ -178,7 +179,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 						clusterAddr := redisProtocol + mr.Addr()
 						opts.Type = options.RedisSessionStoreType
 						opts.Redis.ClusterConnectionURLs = []string{clusterAddr}
-						opts.Redis.UseCluster = true
+						opts.Redis.UseCluster = ptr.To(true)
 						opts.Redis.Password = redisPassword
 
 						// Capture the session store so that we can close the client
@@ -227,7 +228,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 						clusterAddr := "redis://" + redisUsername + "@" + mr.Addr()
 						opts.Type = options.RedisSessionStoreType
 						opts.Redis.ClusterConnectionURLs = []string{clusterAddr}
-						opts.Redis.UseCluster = true
+						opts.Redis.UseCluster = ptr.To(true)
 						opts.Redis.Username = redisUsername
 						opts.Redis.Password = redisPassword
 

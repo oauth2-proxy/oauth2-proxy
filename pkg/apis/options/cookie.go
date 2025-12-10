@@ -2,46 +2,53 @@ package options
 
 import (
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
+	"go.yaml.in/yaml/v3"
 )
 
 const (
-	// DefaultCookieSecure is the default value for Cookie.Secure
-	DefaultCookieSecure bool = true
-	// DefaultCookieHTTPOnly is the default value for Cookie.HTTPOnly
-	DefaultCookieHTTPOnly bool = true
+	// DefaultCookieInsecure is the default value for Cookie.Insecure
+	DefaultCookieInsecure bool = false
+	// DefaultCookieNotHttpOnly is the default value for Cookie.NotHttpOnly
+	DefaultCookieNotHttpOnly bool = false
 	// DefaultCSRFPerRequest is the default value for Cookie.CSRFPerRequest
 	DefaultCSRFPerRequest bool = false
+)
+
+type SameSiteMode string
+
+const (
+	SameSiteLax     SameSiteMode = "lax"
+	SameSiteStrict  SameSiteMode = "strict"
+	SameSiteNone    SameSiteMode = "none"
+	SameSiteDefault SameSiteMode = ""
 )
 
 // Cookie contains configuration options relating session and CSRF cookies
 type Cookie struct {
 	// Name is the name of the cookie
 	Name string `yaml:"name,omitempty"`
-	// Secret is the secret used to encrypt/sign the cookie value
-	Secret string `yaml:"secret,omitempty"`
-	// SecretFile is a file containing the secret used to encrypt/sign the cookie value
-	// instead of specifying it directly in the config. Secret takes precedence over SecretFile
-	SecretFile string `yaml:"secretFile,omitempty"`
+	// Secret is the secret source used to encrypt/sign the cookie value
+	Secret SecretSource `yaml:"secret,omitempty"`
 	// Domains is a list of domains for which the cookie is valid
 	Domains []string `yaml:"domains,omitempty"`
 	// Path is the path for which the cookie is valid
 	Path string `yaml:"path,omitempty"`
 	// Expire is the duration before the cookie expires
 	Expire time.Duration `yaml:"expire,omitempty"`
-	// Refresh is the duration after which the cookie is refreshable
-	Refresh time.Duration `yaml:"refresh,omitempty"`
-	// Secure indicates whether the cookie is only sent over HTTPS
-	Secure *bool `yaml:"secure,omitempty"`
-	// HTTPOnly indicates whether the cookie is inaccessible to JavaScript
-	HTTPOnly *bool `yaml:"httpOnly,omitempty"`
+	// Insecure indicates whether the cookie allows to be sent over HTTP
+	// Default is false, which requires HTTPS
+	Insecure *bool `yaml:"insecure,omitempty"`
+	// NotHttpOnly is the inverse of HTTPOnly; indicates whether the cookie is accessible to JavaScript
+	// Default is false, which helps mitigate certain XSS attacks
+	NotHttpOnly *bool `yaml:"notHttpOnly,omitempty"`
 	// SameSite sets the SameSite attribute on the cookie
-	SameSite string `yaml:"sameSite,omitempty"`
+	SameSite SameSiteMode `yaml:"sameSite,omitempty"`
 	// CSRFPerRequest indicates whether a unique CSRF token is generated for each request
 	// Enables parallel requests from clients (e.g., multiple tabs)
+	// Default is false, which uses a single CSRF token per session
 	CSRFPerRequest *bool `yaml:"csrfPerRequest,omitempty"`
 	// CSRFPerRequestLimit sets a limit on the number of valid CSRF tokens when CSRFPerRequest is enabled
 	// Used to prevent unbounded memory growth from storing too many tokens
@@ -50,18 +57,28 @@ type Cookie struct {
 	CSRFExpire time.Duration `yaml:"csrfExpire,omitempty"`
 }
 
-// GetSecret returns the cookie secret, reading from file if SecretFile is set
-func (c *Cookie) GetSecret() (secret string, err error) {
-	if c.Secret != "" || c.SecretFile == "" {
-		return c.Secret, nil
+func (m *SameSiteMode) UnmarshalYAML(value *yaml.Node) error {
+	var s string
+	if err := value.Decode(&s); err != nil {
+		return err
 	}
+	switch SameSiteMode(s) {
+	case SameSiteLax, SameSiteStrict, SameSiteNone, SameSiteDefault:
+		*m = SameSiteMode(s)
+		return nil
+	default:
+		return fmt.Errorf("invalid same site mode: %s", s)
+	}
+}
 
-	fileSecret, err := os.ReadFile(c.SecretFile)
+// GetSecret returns the cookie secret as a string from the SecretSource
+func (c *Cookie) GetSecret() (string, error) {
+	secret, err := c.Secret.GetSecretValue()
 	if err != nil {
-		return "", fmt.Errorf("error reading cookie secret file %s: %w", c.SecretFile, err)
+		return "", fmt.Errorf("error getting cookie secret: %w", err)
 	}
 
-	return string(fileSecret), nil
+	return string(secret), nil
 }
 
 // EnsureDefaults sets any default values for the Cookie configuration
@@ -75,11 +92,11 @@ func (c *Cookie) EnsureDefaults() {
 	if c.Expire == 0 {
 		c.Expire = time.Duration(168) * time.Hour
 	}
-	if c.Secure == nil {
-		c.Secure = ptr.To(DefaultCookieSecure)
+	if c.Insecure == nil {
+		c.Insecure = ptr.To(DefaultCookieInsecure)
 	}
-	if c.HTTPOnly == nil {
-		c.HTTPOnly = ptr.To(DefaultCookieHTTPOnly)
+	if c.NotHttpOnly == nil {
+		c.NotHttpOnly = ptr.To(DefaultCookieNotHttpOnly)
 	}
 	if c.CSRFPerRequest == nil {
 		c.CSRFPerRequest = ptr.To(DefaultCSRFPerRequest)

@@ -24,6 +24,7 @@ import (
 // Interfaces have to be wrapped in closures otherwise nil pointers are thrown.
 type testInput struct {
 	cookieOpts            *options.Cookie
+	sessionOpts           *options.SessionOptions
 	ss                    sessionStoreFunc
 	session               *sessionsapi.SessionState
 	request               *http.Request
@@ -44,7 +45,6 @@ type NewSessionStoreFunc func(sessionOpts *options.SessionOptions, cookieOpts *o
 
 func RunSessionStoreTests(newSS NewSessionStoreFunc, persistentFastForward PersistentStoreFastForwardFunc) {
 	Describe("Session Store Suite", func() {
-		var opts *options.SessionOptions
 		var ss sessionsapi.SessionStore
 		var input testInput
 		var cookieSecret []byte
@@ -55,7 +55,9 @@ func RunSessionStoreTests(newSS NewSessionStoreFunc, persistentFastForward Persi
 
 		BeforeEach(func() {
 			ss = nil
-			opts = &options.SessionOptions{}
+			sessionOpts := &options.SessionOptions{
+				Refresh: time.Duration(1) * time.Hour,
+			}
 
 			// A secret is required to create a Cipher, validation ensures it is the correct
 			// length before a session store is initialised.
@@ -65,14 +67,13 @@ func RunSessionStoreTests(newSS NewSessionStoreFunc, persistentFastForward Persi
 
 			// Set default options in CookieOptions
 			cookieOpts := &options.Cookie{
-				Name:     "_oauth2_proxy",
-				Path:     "/",
-				Expire:   time.Duration(168) * time.Hour,
-				Refresh:  time.Duration(1) * time.Hour,
-				Secure:   ptr.To(true),
-				HTTPOnly: ptr.To(true),
-				SameSite: "",
-				Secret:   string(cookieSecret),
+				Name:        "_oauth2_proxy",
+				Path:        "/",
+				Expire:      time.Duration(168) * time.Hour,
+				Insecure:    ptr.To(false),
+				NotHttpOnly: ptr.To(false),
+				SameSite:    options.SameSiteDefault,
+				Secret:      options.SecretSource{Value: cookieSecret},
 			}
 
 			expires := time.Now().Add(1 * time.Hour)
@@ -90,6 +91,7 @@ func RunSessionStoreTests(newSS NewSessionStoreFunc, persistentFastForward Persi
 
 			input = testInput{
 				cookieOpts:            cookieOpts,
+				sessionOpts:           sessionOpts,
 				ss:                    getSessionStore,
 				session:               session,
 				request:               request,
@@ -101,7 +103,7 @@ func RunSessionStoreTests(newSS NewSessionStoreFunc, persistentFastForward Persi
 		Context("with default options", func() {
 			BeforeEach(func() {
 				var err error
-				ss, err = newSS(opts, input.cookieOpts)
+				ss, err = newSS(input.sessionOpts, input.cookieOpts)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
@@ -113,20 +115,20 @@ func RunSessionStoreTests(newSS NewSessionStoreFunc, persistentFastForward Persi
 
 		Context("with non-default options", func() {
 			BeforeEach(func() {
+				input.sessionOpts.Refresh = time.Duration(2) * time.Hour
 				input.cookieOpts = &options.Cookie{
-					Name:     "_cookie_name",
-					Path:     "/path",
-					Expire:   time.Duration(72) * time.Hour,
-					Refresh:  time.Duration(2) * time.Hour,
-					Secure:   ptr.To(false),
-					HTTPOnly: ptr.To(false),
-					Domains:  []string{"example.com"},
-					SameSite: "strict",
-					Secret:   string(cookieSecret),
+					Name:        "_cookie_name",
+					Path:        "/path",
+					Expire:      time.Duration(72) * time.Hour,
+					Insecure:    ptr.To(true),
+					NotHttpOnly: ptr.To(true),
+					Domains:     []string{"example.com"},
+					SameSite:    options.SameSiteStrict,
+					Secret:      options.SecretSource{Value: cookieSecret},
 				}
 
 				var err error
-				ss, err = newSS(opts, input.cookieOpts)
+				ss, err = newSS(input.sessionOpts, input.cookieOpts)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
@@ -145,18 +147,17 @@ func RunSessionStoreTests(newSS NewSessionStoreFunc, persistentFastForward Persi
 				tmpfile.Write(secretBytes)
 				tmpfile.Close()
 
+				input.sessionOpts.Refresh = time.Duration(1) * time.Hour
 				input.cookieOpts = &options.Cookie{
-					Name:       "_oauth2_proxy_file",
-					Path:       "/",
-					Expire:     time.Duration(168) * time.Hour,
-					Refresh:    time.Duration(1) * time.Hour,
-					Secure:     ptr.To(true),
-					HTTPOnly:   ptr.To(true),
-					SameSite:   "",
-					Secret:     "",
-					SecretFile: tmpfile.Name(),
+					Name:        "_oauth2_proxy_file",
+					Path:        "/",
+					Expire:      time.Duration(168) * time.Hour,
+					Insecure:    ptr.To(false),
+					NotHttpOnly: ptr.To(false),
+					SameSite:    options.SameSiteDefault,
+					Secret:      options.SecretSource{FromFile: tmpfile.Name()},
 				}
-				ss, err = newSS(opts, input.cookieOpts)
+				ss, err = newSS(input.sessionOpts, input.cookieOpts)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
@@ -209,13 +210,13 @@ func CheckCookieOptions(in *testInput) {
 
 		It("have the correct HTTPOnly set", func() {
 			for _, cookie := range cookies {
-				Expect(cookie.HttpOnly).To(Equal(*in.cookieOpts.HTTPOnly))
+				Expect(cookie.HttpOnly).To(Equal(!(*in.cookieOpts.NotHttpOnly)))
 			}
 		})
 
 		It("have the correct secure set", func() {
 			for _, cookie := range cookies {
-				Expect(cookie.Secure).To(Equal(*in.cookieOpts.Secure))
+				Expect(cookie.Secure).To(Equal(!(*in.cookieOpts.Insecure)))
 			}
 		})
 
@@ -298,7 +299,7 @@ func PersistentSessionStoreInterfaceTests(in *testInput) {
 
 		Context("after the refresh period, but before the cookie expire period", func() {
 			BeforeEach(func() {
-				Expect(in.persistentFastForward(in.cookieOpts.Refresh + time.Minute)).To(Succeed())
+				Expect(in.persistentFastForward(in.sessionOpts.Refresh + time.Minute)).To(Succeed())
 			})
 
 			LoadSessionTests(in)
@@ -421,8 +422,13 @@ func SessionStoreInterfaceTests(in *testInput) {
 			BeforeEach(func() {
 				By("Using a valid cookie with a different providers session encoding")
 				broken := "BrokenSessionFromADifferentSessionImplementation"
-				value, err := encryption.SignedValue(in.cookieOpts.Secret, in.cookieOpts.Name, []byte(broken), time.Now())
+
+				cookieSecret, err := in.cookieOpts.GetSecret()
 				Expect(err).ToNot(HaveOccurred())
+
+				value, err := encryption.SignedValue(cookieSecret, in.cookieOpts.Name, []byte(broken), time.Now())
+				Expect(err).ToNot(HaveOccurred())
+
 				cookie := cookiesapi.MakeCookieFromOptions(in.request, in.cookieOpts.Name, value, in.cookieOpts, in.cookieOpts.Expire)
 				in.request.AddCookie(cookie)
 
