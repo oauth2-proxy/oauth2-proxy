@@ -9,6 +9,7 @@ import (
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/persistence"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/tests"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -69,7 +70,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 					clusterAddr := redissProtocol + mr.Addr()
 					opts.Type = options.RedisSessionStoreType
 					opts.Redis.ClusterConnectionURLs = []string{clusterAddr}
-					opts.Redis.UseCluster = true
+					opts.Redis.UseCluster = ptr.To(true)
 					opts.Redis.CAPath = caPath
 
 					// Capture the session store so that we can close the client
@@ -92,7 +93,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 					// Set the connection URL
 					opts.Type = options.RedisSessionStoreType
 					opts.Redis.ConnectionURL = redissProtocol + mr.Addr()
-					opts.Redis.InsecureSkipTLSVerify = true
+					opts.Redis.InsecureSkipTLSVerify = ptr.To(true)
 
 					// Capture the session store so that we can close the client
 					ss, err := NewRedisSessionStore(opts, cookieOpts)
@@ -111,8 +112,8 @@ var _ = Describe("Redis SessionStore Tests", func() {
 					clusterAddr := redissProtocol + mr.Addr()
 					opts.Type = options.RedisSessionStoreType
 					opts.Redis.ClusterConnectionURLs = []string{clusterAddr}
-					opts.Redis.UseCluster = true
-					opts.Redis.InsecureSkipTLSVerify = true
+					opts.Redis.UseCluster = ptr.To(true)
+					opts.Redis.InsecureSkipTLSVerify = ptr.To(true)
 
 					// Capture the session store so that we can close the client
 					var err error
@@ -153,7 +154,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 				// Set the connection URL
 				opts.Type = options.RedisSessionStoreType
 				opts.Redis.ConnectionURL = "redis://127.0.0.1:" + mr.Port() // func (*Miniredis) StartTLS listens on 127.0.0.1
-				opts.Redis.InsecureSkipTLSVerify = true
+				opts.Redis.InsecureSkipTLSVerify = ptr.To(true)
 
 				// Capture the session store so that we can close the client
 				var err error
