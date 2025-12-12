@@ -1038,7 +1038,7 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 			// the user did not explicitly start the login flow
 			p.doOAuthStart(rw, req, nil)
 		} else {
-			p.SignInPage(rw, req, http.StatusForbidden)
+			p.SignInPage(rw, req, http.StatusUnauthorized)
 		}
 
 	case ErrAccessDenied:
