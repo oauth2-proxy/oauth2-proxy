@@ -633,6 +633,10 @@ func (p *OAuthProxy) isTrustedIP(req *http.Request) bool {
 // SignInPage writes the sign in template to the response
 func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code int) {
 	prepareNoCache(rw)
+	rw.Header().Set("WWW-Authenticate", "Bearer")
+	if p.basicAuthValidator != nil {
+		rw.Header().Add("WWW-Authenticate", "Basic")
+	}
 	rw.WriteHeader(code)
 
 	redirectURL, err := p.appDirector.GetRedirect(req)
