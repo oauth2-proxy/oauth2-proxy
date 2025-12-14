@@ -168,7 +168,7 @@ They may change between releases without notice.
 | `injectResponseHeaders` | _[[]Header](#header)_ | InjectResponseHeaders is used to configure headers that should be added<br/>to responses from the proxy.<br/>This is typically used when using the proxy as an external authentication<br/>provider in conjunction with another proxy such as NGINX and its<br/>auth_request module.<br/>Headers may source values from either the authenticated user's session<br/>or from a static secret value. |
 | `server` | _[Server](#server)_ | Server is used to configure the HTTP(S) server for the proxy application.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
 | `metricsServer` | _[Server](#server)_ | MetricsServer is used to configure the HTTP(S) server for metrics.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
-| `providers` | _[Providers](#providers)_ | Providers is used to configure multiple providers. |
+| `providers` | _[Providers](#providers)_ | Providers is used to configure your provider. **Multiple-providers is not<br/>yet working.** [This feature is tracked in<br/>#925](https://github.com/oauth2-proxy/oauth2-proxy/issues/926) |
 
 ### AzureOptions
 
@@ -203,16 +203,6 @@ ClaimSource allows loading a header value from a claim within the session
 | `claim` | _string_ | Claim is the name of the claim in the session that the value should be<br/>loaded from. Available claims: `access_token` `id_token` `created_at`<br/>`expires_on` `refresh_token` `email` `user` `groups` `preferred_username`. |
 | `prefix` | _string_ | Prefix is an optional prefix that will be prepended to the value of the<br/>claim if it is non-empty. |
 | `basicAuthPassword` | _[SecretSource](#secretsource)_ | BasicAuthPassword converts this claim into a basic auth header.<br/>Note the value of claim will become the basic auth username and the<br/>basicAuthPassword will be used as the password value. |
-
-### Duration
-#### (`string` alias)
-
-(**Appears on:** [Upstream](#upstream))
-
-Duration is as string representation of a period of time.
-A duration string is a is a possibly signed sequence of decimal numbers,
-each with optional fraction and a unit suffix, such as "300ms", "-1.5h" or "2h45m".
-Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 
 ### GitHubOptions
 
@@ -252,6 +242,8 @@ Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 | `serviceAccountJson` | _string_ | ServiceAccountJSON is the path to the service account json credentials |
 | `useApplicationDefaultCredentials` | _bool_ | UseApplicationDefaultCredentials is a boolean whether to use Application Default Credentials instead of a ServiceAccountJSON |
 | `targetPrincipal` | _string_ | TargetPrincipal is the Google Service Account used for Application Default Credentials |
+| `useOrganizationID` | _bool_ | UseOrganizationId indicates whether to use the organization ID as the UserName claim |
+| `adminAPIUserScope` | _string_ | admin scope needed for fetching user organization information from admin api, can be one of cloud, user or defaults to readonly |
 
 ### Header
 
@@ -264,6 +256,7 @@ response header.
 | ----- | ---- | ----------- |
 | `name` | _string_ | Name is the header name to be used for this set of values.<br/>Names should be unique within a list of Headers. |
 | `preserveRequestValue` | _bool_ | PreserveRequestValue determines whether any values for this header<br/>should be preserved for the request to the upstream server.<br/>This option only applies to injected request headers.<br/>Defaults to false (headers that match this header will be stripped). |
+| `InsecureSkipHeaderNormalization` | _bool_ | InsecureSkipHeaderNormalization disables normalizing the header name<br/>According to RFC 7230 Section 3.2 there aren't any rules about<br/>capitalization of header names, but the standard practice is to use<br/>Title-Case (e.g. X-Forwarded-For). By default, header names will be<br/>normalized to Title-Case and any incoming headers that match will be<br/>treated as the same header. Additionally underscores (_) in header names<br/>will be converted to dashes (-) when normalizing.<br/>Defaults to false (header names will be normalized). |
 | `values` | _[[]HeaderValue](#headervalue)_ | Values contains the desired values for this header |
 
 ### HeaderValue
@@ -445,6 +438,7 @@ Provider holds all configuration for a single provider
 | `useSystemTrustStore` | _bool_ | UseSystemTrustStore determines if your custom CA files and the system trust store are used<br/>If set to true, your custom CA files and the system trust store are used otherwise only your custom CA files. |
 | `loginURL` | _string_ | LoginURL is the authentication endpoint |
 | `loginURLParameters` | _[[]LoginURLParameter](#loginurlparameter)_ | LoginURLParameters defines the parameters that can be passed from the start URL to the IdP login URL |
+| `authRequestResponseMode` | _string_ | AuthRequestResponseMode defines the response mode to request during authorization request |
 | `redeemURL` | _string_ | RedeemURL is the token redemption endpoint |
 | `profileURL` | _string_ | ProfileURL is the profile access endpoint |
 | `skipClaimsFromProfileURL` | _bool_ | SkipClaimsFromProfileURL allows to skip request to Profile URL for resolving claims not present in id_token<br/>default set to 'false' |
@@ -471,7 +465,11 @@ and oidc.
 
 (**Appears on:** [AlphaOptions](#alphaoptions))
 
-Providers is a collection of definitions for providers.
+The provider can be selected using the `provider` configuration value, or
+set in the [`providers` array using
+AlphaConfig](https://oauth2-proxy.github.io/oauth2-proxy/configuration/alpha-config#providers).
+However, [**the feature to implement multiple providers is not
+complete**](https://github.com/oauth2-proxy/oauth2-proxy/issues/926).
 
 ### SecretSource
 
@@ -494,9 +492,9 @@ Server represents the configuration for an HTTP(S) server
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `BindAddress` | _string_ | BindAddress is the address on which to serve traffic.<br/>Leave blank or set to "-" to disable. |
-| `SecureBindAddress` | _string_ | SecureBindAddress is the address on which to serve secure traffic.<br/>Leave blank or set to "-" to disable. |
-| `TLS` | _[TLS](#tls)_ | TLS contains the information for loading the certificate and key for the<br/>secure traffic and further configuration for the TLS server. |
+| `bindAddress` | _string_ | BindAddress is the address on which to serve traffic.<br/>Leave blank or set to "-" to disable. |
+| `secureBindAddress` | _string_ | SecureBindAddress is the address on which to serve secure traffic.<br/>Leave blank or set to "-" to disable. |
+| `tls` | _[TLS](#tls)_ | TLS contains the information for loading the certificate and key for the<br/>secure traffic and further configuration for the TLS server. |
 
 ### TLS
 
@@ -507,10 +505,10 @@ as well as an optional minimal TLS version that is acceptable.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `Key` | _[SecretSource](#secretsource)_ | Key is the TLS key data to use.<br/>Typically this will come from a file. |
-| `Cert` | _[SecretSource](#secretsource)_ | Cert is the TLS certificate data to use.<br/>Typically this will come from a file. |
-| `MinVersion` | _string_ | MinVersion is the minimal TLS version that is acceptable.<br/>E.g. Set to "TLS1.3" to select TLS version 1.3 |
-| `CipherSuites` | _[]string_ | CipherSuites is a list of TLS cipher suites that are allowed.<br/>E.g.:<br/>- TLS_RSA_WITH_RC4_128_SHA<br/>- TLS_RSA_WITH_AES_256_GCM_SHA384<br/>If not specified, the default Go safe cipher list is used.<br/>List of valid cipher suites can be found in the [crypto/tls documentation](https://pkg.go.dev/crypto/tls#pkg-constants). |
+| `key` | _[SecretSource](#secretsource)_ | Key is the TLS key data to use.<br/>Typically this will come from a file. |
+| `cert` | _[SecretSource](#secretsource)_ | Cert is the TLS certificate data to use.<br/>Typically this will come from a file. |
+| `minVersion` | _string_ | MinVersion is the minimal TLS version that is acceptable.<br/>E.g. Set to "TLS1.3" to select TLS version 1.3 |
+| `cipherSuites` | _[]string_ | CipherSuites is a list of TLS cipher suites that are allowed.<br/>E.g.:<br/>- TLS_RSA_WITH_RC4_128_SHA<br/>- TLS_RSA_WITH_AES_256_GCM_SHA384<br/>If not specified, the default Go safe cipher list is used.<br/>List of valid cipher suites can be found in the [crypto/tls documentation](https://pkg.go.dev/crypto/tls#pkg-constants). |
 
 ### URLParameterRule
 
@@ -542,10 +540,11 @@ Requests will be proxied to this upstream if the path matches the request path.
 | `insecureSkipTLSVerify` | _bool_ | InsecureSkipTLSVerify will skip TLS verification of upstream HTTPS hosts.<br/>This option is insecure and will allow potential Man-In-The-Middle attacks<br/>between OAuth2 Proxy and the upstream server.<br/>Defaults to false. |
 | `static` | _bool_ | Static will make all requests to this upstream have a static response.<br/>The response will have a body of "Authenticated" and a response code<br/>matching StaticCode.<br/>If StaticCode is not set, the response will return a 200 response. |
 | `staticCode` | _int_ | StaticCode determines the response code for the Static response.<br/>This option can only be used with Static enabled. |
-| `flushInterval` | _[Duration](#duration)_ | FlushInterval is the period between flushing the response buffer when<br/>streaming response from the upstream.<br/>Defaults to 1 second. |
+| `flushInterval` | _duration_ | FlushInterval is the period between flushing the response buffer when<br/>streaming response from the upstream.<br/>Defaults to 1 second. |
 | `passHostHeader` | _bool_ | PassHostHeader determines whether the request host header should be proxied<br/>to the upstream server.<br/>Defaults to true. |
 | `proxyWebSockets` | _bool_ | ProxyWebSockets enables proxying of websockets to upstream servers<br/>Defaults to true. |
-| `timeout` | _[Duration](#duration)_ | Timeout is the maximum duration the server will wait for a response from the upstream server.<br/>Defaults to 30 seconds. |
+| `timeout` | _duration_ | Timeout is the maximum duration the server will wait for a response from the upstream server.<br/>Defaults to 30 seconds. |
+| `disableKeepAlives` | _bool_ | DisableKeepAlives disables HTTP keep-alive connections to the upstream server.<br/>Defaults to false. |
 
 ### UpstreamConfig
 

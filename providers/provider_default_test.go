@@ -17,8 +17,9 @@ func TestRefresh(t *testing.T) {
 	now := time.Unix(1234567890, 10)
 	expires := time.Unix(1234567890, 0)
 
-	ss := &sessions.SessionState{}
-	ss.Clock.Set(now)
+	ss := &sessions.SessionState{
+		Clock: func() time.Time { return now },
+	}
 	ss.SetExpiresOn(expires)
 
 	refreshed, err := p.RefreshSession(context.Background(), ss)
@@ -118,4 +119,31 @@ func TestProviderDataAuthorize(t *testing.T) {
 			g.Expect(authorized).To(Equal(tc.expectedAuthZ))
 		})
 	}
+}
+
+func TestResponseModeConfigured(t *testing.T) {
+	p := &ProviderData{
+		LoginURL: &url.URL{
+			Scheme: "http",
+			Host:   "my.test.idp",
+			Path:   "/oauth/authorize",
+		},
+		AuthRequestResponseMode: "form_post",
+	}
+
+	result := p.GetLoginURL("https://my.test.app/oauth", "", "", url.Values{})
+	assert.Contains(t, result, "response_mode=form_post")
+}
+
+func TestResponseModeNotConfigured(t *testing.T) {
+	p := &ProviderData{
+		LoginURL: &url.URL{
+			Scheme: "http",
+			Host:   "my.test.idp",
+			Path:   "/oauth/authorize",
+		},
+	}
+
+	result := p.GetLoginURL("https://my.test.app/oauth", "", "", url.Values{})
+	assert.NotContains(t, result, "response_mode")
 }

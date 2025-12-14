@@ -54,16 +54,18 @@ func (s *SessionStore) Load(req *http.Request) (*sessions.SessionState, error) {
 		// always http.ErrNoCookie
 		return nil, err
 	}
-	val, _, ok := encryption.Validate(c, s.Cookie.Secret, s.Cookie.Expire)
+
+	secret, err := s.Cookie.GetSecret()
+	if err != nil {
+		return nil, fmt.Errorf("error getting cookie secret: %v", err)
+	}
+
+	val, _, ok := encryption.Validate(c, secret, s.Cookie.Expire)
 	if !ok {
 		return nil, errors.New("cookie signature not valid")
 	}
 
-	session, err := sessions.DecodeSessionState(val, s.CookieCipher, true)
-	if err != nil {
-		return nil, err
-	}
-	return session, nil
+	return sessions.DecodeSessionState(val, s.CookieCipher, true)
 }
 
 // Clear clears any saved session information by writing a cookie to
@@ -74,7 +76,7 @@ func (s *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) error {
 
 	for _, c := range req.Cookies() {
 		if cookieNameRegex.MatchString(c.Name) {
-			clearCookie := s.makeCookie(req, c.Name, "", time.Hour*-1, time.Now())
+			clearCookie := s.makeCookie(req, c.Name, "", time.Hour*-1)
 
 			http.SetCookie(rw, clearCookie)
 		}
@@ -121,33 +123,40 @@ func (s *SessionStore) makeSessionCookie(req *http.Request, value []byte, now ti
 	strValue := string(value)
 	if strValue != "" {
 		var err error
-		strValue, err = encryption.SignedValue(s.Cookie.Secret, s.Cookie.Name, value, now)
+		secret, err := s.Cookie.GetSecret()
+		if err != nil {
+			return nil, fmt.Errorf("error getting cookie secret: %v", err)
+		}
+		strValue, err = encryption.SignedValue(secret, s.Cookie.Name, value, now)
 		if err != nil {
 			return nil, err
 		}
 	}
-	c := s.makeCookie(req, s.Cookie.Name, strValue, s.Cookie.Expire, now)
+	c := s.makeCookie(req, s.Cookie.Name, strValue, s.Cookie.Expire)
 	if len(c.String()) > maxCookieLength {
 		return splitCookie(c), nil
 	}
 	return []*http.Cookie{c}, nil
 }
 
-func (s *SessionStore) makeCookie(req *http.Request, name string, value string, expiration time.Duration, now time.Time) *http.Cookie {
+func (s *SessionStore) makeCookie(req *http.Request, name string, value string, expiration time.Duration) *http.Cookie {
 	return pkgcookies.MakeCookieFromOptions(
 		req,
 		name,
 		value,
 		s.Cookie,
 		expiration,
-		now,
 	)
 }
 
 // NewCookieSessionStore initialises a new instance of the SessionStore from
 // the configuration given
 func NewCookieSessionStore(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessions.SessionStore, error) {
-	cipher, err := encryption.NewCFBCipher(encryption.SecretBytes(cookieOpts.Secret))
+	secret, err := cookieOpts.GetSecret()
+	if err != nil {
+		return nil, fmt.Errorf("error getting cookie secret: %v", err)
+	}
+	cipher, err := encryption.NewCFBCipher(encryption.SecretBytes(secret))
 	if err != nil {
 		return nil, fmt.Errorf("error initialising cipher: %v", err)
 	}

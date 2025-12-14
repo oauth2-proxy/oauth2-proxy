@@ -2,7 +2,10 @@ package providers
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
@@ -51,7 +54,7 @@ func (p *KeycloakOIDCProvider) CreateSessionFromToken(ctx context.Context, token
 	}
 
 	// Extract custom keycloak roles and enrich session
-	if err := p.extractRoles(ctx, ss); err != nil {
+	if err := p.extractRoles(ss); err != nil {
 		return nil, err
 	}
 
@@ -65,7 +68,7 @@ func (p *KeycloakOIDCProvider) EnrichSession(ctx context.Context, s *sessions.Se
 	if err != nil {
 		return fmt.Errorf("could not enrich oidc session: %v", err)
 	}
-	return p.extractRoles(ctx, s)
+	return p.extractRoles(s)
 }
 
 // RefreshSession adds role extraction logic to the refresh flow
@@ -77,11 +80,11 @@ func (p *KeycloakOIDCProvider) RefreshSession(ctx context.Context, s *sessions.S
 		return refreshed, err
 	}
 
-	return true, p.extractRoles(ctx, s)
+	return true, p.extractRoles(s)
 }
 
-func (p *KeycloakOIDCProvider) extractRoles(ctx context.Context, s *sessions.SessionState) error {
-	claims, err := p.getAccessClaims(ctx, s)
+func (p *KeycloakOIDCProvider) extractRoles(s *sessions.SessionState) error {
+	claims, err := p.getAccessClaims(s)
 	if err != nil {
 		return err
 	}
@@ -106,18 +109,22 @@ type accessClaims struct {
 	ResourceAccess map[string]interface{} `json:"resource_access"`
 }
 
-func (p *KeycloakOIDCProvider) getAccessClaims(ctx context.Context, s *sessions.SessionState) (*accessClaims, error) {
-	// HACK: This isn't an ID Token, but has similar structure & signing
-	token, err := p.Verifier.Verify(ctx, s.AccessToken)
-	if err != nil {
-		return nil, err
+func (p *KeycloakOIDCProvider) getAccessClaims(s *sessions.SessionState) (*accessClaims, error) {
+	parts := strings.Split(s.AccessToken, ".")
+	if len(parts) < 2 {
+		return nil, fmt.Errorf("malformed access token, expected 3 parts got %d", len(parts))
 	}
 
-	var claims *accessClaims
-	if err = token.Claims(&claims); err != nil {
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return nil, fmt.Errorf("malformed access token, couldn't extract jwt payload: %v", err)
+	}
+
+	var claims accessClaims
+	if err := json.Unmarshal(payload, &claims); err != nil {
 		return nil, err
 	}
-	return claims, nil
+	return &claims, nil
 }
 
 // getClientRoles extracts client roles from the `resource_access` claim with

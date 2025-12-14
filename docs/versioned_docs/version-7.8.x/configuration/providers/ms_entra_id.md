@@ -112,7 +112,7 @@ insecure_oidc_skip_issuer_verification=true
 ```
 `insecure_oidc_skip_issuer_verification` setting is required to disable following checks:
 * Startup check for matching issuer URL returned from [discovery document](https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration) with `oidc_issuer_url` setting. Required, as document's `issuer` field doesn't equal to `https://login.microsoftonline.com/common/v2.0`. See [OIDC Discovery 4.3](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationValidation).
-* Matching ID token's `issuer` claim with `oidc_issuer_url` setting during ID token validation. Required to support tokens issued by diffrerent tenants. See [OIDC Core 3.1.3.7](https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation). 
+* Matching ID token's `issuer` claim with `oidc_issuer_url` setting during ID token validation. Required to support tokens issued by different tenants. See [OIDC Core 3.1.3.7](https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation).
 
 To provide additional security, Entra ID provider performs check on the ID token's `issuer` claim to match the `https://login.microsoftonline.com/{tenant-id}/v2.0` template.
 
@@ -192,6 +192,6 @@ client_id="<client-id>"
 client_secret="<client-secret>"
 insecure_oidc_skip_issuer_verification=true
 scope="openid profile email User.Read"
-entra_id_allowed_tenant=["9188040d-6c67-4c5b-b112-36a304b66dad","<my-tenant-id>"] # Allow only <my-tenant-id> and Personal MS Accounts tenant 
+entra_id_allowed_tenants=["9188040d-6c67-4c5b-b112-36a304b66dad","<my-tenant-id>"] # Allow only <my-tenant-id> and Personal MS Accounts tenant
 email_domains="*"
 ```

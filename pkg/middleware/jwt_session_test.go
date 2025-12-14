@@ -92,6 +92,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 			authorizationHeader string
 			existingSession     *sessionsapi.SessionState
 			expectedSession     *sessionsapi.SessionState
+			expectedStatus      int
 		}
 
 		DescribeTable("with an authorization header",
@@ -114,12 +115,13 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				// Create the handler with a next handler that will capture the session
 				// from the scope
 				var gotSession *sessionsapi.SessionState
-				handler := NewJwtSessionLoader(sessionLoaders)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				handler := NewJwtSessionLoader(sessionLoaders, true)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					gotSession = middlewareapi.GetRequestScope(r).Session
 				}))
 				handler.ServeHTTP(rw, req)
 
 				Expect(gotSession).To(Equal(in.expectedSession))
+				Expect(rw.Code).To(Equal(200))
 			},
 			Entry("<no value>", jwtSessionLoaderTableInput{
 				authorizationHeader: "",
@@ -163,6 +165,83 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 			}),
 		)
 
+		DescribeTable("with an authorization header, denyInvalidJWTs",
+			func(in jwtSessionLoaderTableInput) {
+				scope := &middlewareapi.RequestScope{
+					Session: in.existingSession,
+				}
+
+				// Set up the request with the authorization header and a request scope
+				req := httptest.NewRequest("", "/", nil)
+				req.Header.Set("Authorization", in.authorizationHeader)
+				req = middlewareapi.AddRequestScope(req, scope)
+
+				rw := httptest.NewRecorder()
+
+				sessionLoaders := []middlewareapi.TokenToSessionFunc{
+					middlewareapi.CreateTokenToSessionFunc(verifier),
+				}
+
+				// Create the handler with a next handler that will capture the session
+				// from the scope
+				var gotSession *sessionsapi.SessionState
+				handler := NewJwtSessionLoader(sessionLoaders, false)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					gotSession = middlewareapi.GetRequestScope(r).Session
+				}))
+				handler.ServeHTTP(rw, req)
+
+				Expect(gotSession).To(Equal(in.expectedSession))
+				Expect(rw.Code).To(Equal(in.expectedStatus))
+			},
+			Entry("<no value>", jwtSessionLoaderTableInput{
+				authorizationHeader: "",
+				existingSession:     nil,
+				expectedSession:     nil,
+				expectedStatus:      200,
+			}),
+			Entry("abcdef", jwtSessionLoaderTableInput{
+				authorizationHeader: "abcdef",
+				existingSession:     nil,
+				expectedSession:     nil,
+				expectedStatus:      403,
+			}),
+			Entry("abcdef  (with existing session)", jwtSessionLoaderTableInput{
+				authorizationHeader: "abcdef",
+				existingSession:     &sessionsapi.SessionState{User: "user"},
+				expectedSession:     &sessionsapi.SessionState{User: "user"},
+				expectedStatus:      200,
+			}),
+			Entry("Bearer <verifiedToken>", jwtSessionLoaderTableInput{
+				authorizationHeader: fmt.Sprintf("Bearer %s", verifiedToken),
+				existingSession:     nil,
+				expectedSession:     verifiedSession,
+				expectedStatus:      200,
+			}),
+			Entry("Bearer <nonVerifiedToken>", jwtSessionLoaderTableInput{
+				authorizationHeader: fmt.Sprintf("Bearer %s", nonVerifiedToken),
+				existingSession:     nil,
+				expectedSession:     nil,
+				expectedStatus:      403,
+			}),
+			Entry("Bearer <verifiedToken> (with existing session)", jwtSessionLoaderTableInput{
+				authorizationHeader: fmt.Sprintf("Bearer %s", verifiedToken),
+				existingSession:     &sessionsapi.SessionState{User: "user"},
+				expectedSession:     &sessionsapi.SessionState{User: "user"},
+				expectedStatus:      200,
+			}),
+			Entry("Basic Base64(<nonVerifiedToken>:) (No password)", jwtSessionLoaderTableInput{
+				authorizationHeader: "Basic ZXlKZm9vYmFyLmV5SmZvb2Jhci4xMjM0NWFzZGY6",
+				existingSession:     nil,
+				expectedSession:     nil,
+				expectedStatus:      403,
+			}),
+			Entry("Basic Base64(<verifiedToken>:x-oauth-basic) (Sentinel password)", jwtSessionLoaderTableInput{
+				authorizationHeader: fmt.Sprintf("Basic %s", verifiedTokenXOAuthBasicBase64),
+				existingSession:     nil,
+				expectedSession:     verifiedSession,
+				expectedStatus:      200,
+			}),
+		)
 	})
 
 	Context("getJWTSession", func() {
@@ -225,7 +304,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				authorizationHeader: fmt.Sprintf("Bearer %s", nonVerifiedToken),
 				expectedErr: k8serrors.NewAggregate([]error{
 					errors.New("unable to verify bearer token"),
-					errors.New("oidc: malformed jwt: oidc: malformed jwt payload: illegal base64 data at input byte 8"),
+					errors.New("oidc: malformed jwt: illegal base64 data at input byte 8"),
 				}),
 				expectedSession: nil,
 			}),
@@ -238,7 +317,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				authorizationHeader: "Basic ZXlKZm9vYmFyLmV5SmZvb2Jhci4xMjM0NWFzZGY6",
 				expectedErr: k8serrors.NewAggregate([]error{
 					errors.New("unable to verify bearer token"),
-					errors.New("oidc: malformed jwt: oidc: malformed jwt payload: illegal base64 data at input byte 8"),
+					errors.New("oidc: malformed jwt: illegal base64 data at input byte 8"),
 				}),
 				expectedSession: nil,
 			}),

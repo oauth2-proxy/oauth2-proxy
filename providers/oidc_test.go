@@ -63,7 +63,7 @@ func newOIDCProvider(serverURL *url.URL, skipNonce bool) *OIDCProvider {
 	}
 
 	p := NewOIDCProvider(providerData, options.OIDCOptions{
-		InsecureSkipNonce: skipNonce,
+		InsecureSkipNonce: &skipNonce,
 	})
 
 	return p
@@ -274,4 +274,33 @@ func TestOIDCProviderCreateSessionFromToken(t *testing.T) {
 			assert.Equal(t, "", ss.RefreshToken)
 		})
 	}
+}
+
+func TestOIDCProviderResponseModeConfigured(t *testing.T) {
+	providerData := &ProviderData{
+		LoginURL: &url.URL{
+			Scheme: "http",
+			Host:   "my.test.idp",
+			Path:   "/oauth/authorize",
+		},
+		AuthRequestResponseMode: "form_post",
+	}
+	p := NewOIDCProvider(providerData, options.OIDCOptions{})
+
+	result := p.GetLoginURL("https://my.test.app/oauth", "", "", url.Values{})
+	assert.Contains(t, result, "response_mode=form_post")
+}
+
+func TestOIDCProviderResponseModeNotConfigured(t *testing.T) {
+	providerData := &ProviderData{
+		LoginURL: &url.URL{
+			Scheme: "http",
+			Host:   "my.test.idp",
+			Path:   "/oauth/authorize",
+		},
+	}
+	p := NewOIDCProvider(providerData, options.OIDCOptions{})
+
+	result := p.GetLoginURL("https://my.test.app/oauth", "", "", url.Values{})
+	assert.NotContains(t, result, "response_mode")
 }

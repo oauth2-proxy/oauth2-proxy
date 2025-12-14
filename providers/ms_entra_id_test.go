@@ -13,6 +13,7 @@ import (
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 
 	. "github.com/onsi/gomega"
@@ -24,7 +25,7 @@ func TestAzureEntraOIDCProviderNewMultiTenant(t *testing.T) {
 	provider := NewMicrosoftEntraIDProvider(&ProviderData{},
 		options.Provider{OIDCConfig: options.OIDCOptions{
 			IssuerURL:                      "https://login.microsoftonline.com/common/v2.0",
-			InsecureSkipIssuerVerification: true,
+			InsecureSkipIssuerVerification: ptr.To(true),
 		}},
 	)
 	g.Expect(provider.Data().ProviderName).To(Equal("Microsoft Entra ID"))
@@ -90,8 +91,8 @@ func TestAzureEntraOIDCProviderValidateSessionAllowedTenants(t *testing.T) {
 		options.Provider{
 			OIDCConfig: options.OIDCOptions{
 				IssuerURL:                      "https://login.microsoftonline.com/common/v2.0",
-				InsecureSkipIssuerVerification: true,
-				InsecureSkipNonce:              true,
+				InsecureSkipIssuerVerification: ptr.To(true),
+				InsecureSkipNonce:              ptr.To(true),
 			},
 			MicrosoftEntraIDConfig: options.MicrosoftEntraIDOptions{
 				AllowedTenants: []string{"85d7d600-7804-4d92-8d43-9c33c21c130c"},
@@ -149,7 +150,7 @@ func mockGraphAPI(noGroupMemberPermissions bool) *httptest.Server {
 
 			} else if r.URL.Path == groupsPath && r.Method == http.MethodGet {
 				// First page (pagination)
-				w.Write([]byte(fmt.Sprintf(`{
+				fmt.Fprintf(w, `{
 					"@odata.context": "https://graph.microsoft.com/v1.0/$metadata#directoryObjects(id)",
 					"@odata.nextLink": "http://%s/v1.0/me/transitiveMemberOf?$select=id&$top=2&$skiptoken=TEST_TOKEN",
 					"value": [
@@ -162,7 +163,7 @@ func mockGraphAPI(noGroupMemberPermissions bool) *httptest.Server {
 							"id": "916f0604-8a3b-4a69-bda9-06db11a8f0cd"
 						  }
 					]
-				}`, r.Host)))
+				}`, r.Host)
 			}
 		},
 	))

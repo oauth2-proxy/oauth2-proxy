@@ -8,9 +8,10 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/mbland/hmacauth"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/authentication/hmacauth"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 )
 
 const (
@@ -53,7 +54,7 @@ func newHTTPUpstreamProxy(upstream options.Upstream, u *url.URL, sigData *option
 
 	// Set up a WebSocket proxy if required
 	var wsProxy http.Handler
-	if upstream.ProxyWebSockets == nil || *upstream.ProxyWebSockets {
+	if ptr.Deref(upstream.ProxyWebSockets, options.DefaultUpstreamProxyWebSockets) {
 		wsProxy = newWebSocketReverseProxy(u, upstream.InsecureSkipTLSVerify)
 	}
 
@@ -86,7 +87,7 @@ func (h *httpUpstreamProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request)
 	// A scope should always be injected before this handler is called.
 	scope.Upstream = h.upstream
 
-	// TODO (@NickMeves) - Deprecate GAP-Signature & remove GAP-Auth
+	// TODO (@tuunit) - Deprecate GAP-Signature & remove GAP-Auth
 	if h.auth != nil {
 		req.Header.Set("GAP-Auth", rw.Header().Get("GAP-Auth"))
 		h.auth.SignRequest(req)
@@ -137,26 +138,26 @@ func newReverseProxy(target *url.URL, upstream options.Upstream, errorHandler Pr
 
 	// Change default duration for waiting for an upstream response
 	if upstream.Timeout != nil {
-		transport.ResponseHeaderTimeout = upstream.Timeout.Duration()
+		transport.ResponseHeaderTimeout = *upstream.Timeout
 	}
 
 	// Configure options on the SingleHostReverseProxy
 	if upstream.FlushInterval != nil {
-		proxy.FlushInterval = upstream.FlushInterval.Duration()
+		proxy.FlushInterval = *upstream.FlushInterval
 	} else {
 		proxy.FlushInterval = options.DefaultUpstreamFlushInterval
 	}
 
 	// InsecureSkipVerify is a configurable option we allow
 	/* #nosec G402 */
-	if upstream.InsecureSkipTLSVerify {
+	if ptr.Deref(upstream.InsecureSkipTLSVerify, options.DefaultUpsteamInsecureSkipTLSVerify) {
 		transport.TLSClientConfig.InsecureSkipVerify = true
 	}
 
 	// Ensure we always pass the original request path
 	setProxyDirector(proxy)
 
-	if upstream.PassHostHeader != nil && !*upstream.PassHostHeader {
+	if !ptr.Deref(upstream.PassHostHeader, options.DefaultUpstreamPassHostHeader) {
 		setProxyUpstreamHostHeader(proxy, target)
 	}
 
@@ -165,6 +166,10 @@ func newReverseProxy(target *url.URL, upstream options.Upstream, errorHandler Pr
 	if errorHandler != nil {
 		proxy.ErrorHandler = errorHandler
 	}
+
+	// Pass on DisableKeepAlives to the transport settings
+	// to allow for disabling HTTP keep-alive connections
+	transport.DisableKeepAlives = ptr.Deref(upstream.DisableKeepAlives, options.DefaultUpstreamDisableKeepAlives)
 
 	// Apply the customized transport to our proxy before returning it
 	proxy.Transport = transport
@@ -196,14 +201,14 @@ func setProxyDirector(proxy *httputil.ReverseProxy) {
 }
 
 // newWebSocketReverseProxy creates a new reverse proxy for proxying websocket connections.
-func newWebSocketReverseProxy(u *url.URL, skipTLSVerify bool) http.Handler {
+func newWebSocketReverseProxy(u *url.URL, skipTLSVerify *bool) http.Handler {
 	wsProxy := httputil.NewSingleHostReverseProxy(u)
 
 	// Inherit default transport options from Go's stdlib
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 
 	/* #nosec G402 */
-	if skipTLSVerify {
+	if ptr.Deref(skipTLSVerify, false) {
 		transport.TLSClientConfig.InsecureSkipVerify = true
 	}
 

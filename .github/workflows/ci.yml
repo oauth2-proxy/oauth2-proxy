@@ -14,10 +14,10 @@ jobs:
       COVER: true
     steps:
     - name: Check out code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Set up Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@v6
       with:
         go-version-file: go.mod
       id: go
@@ -25,7 +25,7 @@ jobs:
     - name: Get dependencies
       env:
         # renovate: datasource=github-tags depName=golangci/golangci-lint
-        GOLANGCI_LINT_VERSION: v1.63.4
+        GOLANGCI_LINT_VERSION: v2.5.0
       run: |
         curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin ${GOLANGCI_LINT_VERSION}
         curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
@@ -60,7 +60,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Check out code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
@@ -72,10 +72,10 @@ jobs:
     - name: Docker Build
       if: (!startsWith(github.head_ref, 'release'))
       run: |
-        make docker
+        make build-docker
 
     # For release testing
     - name: Docker Build All
       if: github.base_ref == 'master' && startsWith(github.head_ref, 'release')
       run: |
-        make docker-all
+        make build-docker-all

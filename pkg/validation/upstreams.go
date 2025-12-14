@@ -5,6 +5,7 @@ import (
 	"net/url"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 )
 
 func validateUpstreams(upstreams options.UpstreamConfig) []string {
@@ -54,22 +55,22 @@ func validateUpstream(upstream options.Upstream, ids, paths map[string]struct{})
 func validateStaticUpstream(upstream options.Upstream) []string {
 	msgs := []string{}
 
-	if !upstream.Static && upstream.StaticCode != nil {
+	if !ptr.Deref(upstream.Static, options.DefaultUpstreamStatic) && upstream.StaticCode != nil {
 		msgs = append(msgs, fmt.Sprintf("upstream %q has staticCode (%d), but is not a static upstream, set 'static' for a static response", upstream.ID, *upstream.StaticCode))
 	}
 
 	// Checks after this only make sense when the upstream is static
-	if !upstream.Static {
+	if !ptr.Deref(upstream.Static, options.DefaultUpstreamStatic) {
 		return msgs
 	}
 
 	if upstream.URI != "" {
 		msgs = append(msgs, fmt.Sprintf("upstream %q has uri, but is a static upstream, this will have no effect.", upstream.ID))
 	}
-	if upstream.InsecureSkipTLSVerify {
+	if ptr.Deref(upstream.InsecureSkipTLSVerify, options.DefaultUpsteamInsecureSkipTLSVerify) {
 		msgs = append(msgs, fmt.Sprintf("upstream %q has insecureSkipTLSVerify, but is a static upstream, this will have no effect.", upstream.ID))
 	}
-	if upstream.FlushInterval != nil && upstream.FlushInterval.Duration() != options.DefaultUpstreamFlushInterval {
+	if upstream.FlushInterval != nil && *upstream.FlushInterval != options.DefaultUpstreamFlushInterval {
 		msgs = append(msgs, fmt.Sprintf("upstream %q has flushInterval, but is a static upstream, this will have no effect.", upstream.ID))
 	}
 	if upstream.PassHostHeader != nil {
@@ -85,13 +86,13 @@ func validateStaticUpstream(upstream options.Upstream) []string {
 func validateUpstreamURI(upstream options.Upstream) []string {
 	msgs := []string{}
 
-	if !upstream.Static && upstream.URI == "" {
+	if !ptr.Deref(upstream.Static, options.DefaultUpstreamStatic) && upstream.URI == "" {
 		msgs = append(msgs, fmt.Sprintf("upstream %q has empty uri: uris are required for all non-static upstreams", upstream.ID))
 		return msgs
 	}
 
 	// Checks after this only make sense the upstream is not static
-	if upstream.Static {
+	if ptr.Deref(upstream.Static, options.DefaultUpstreamStatic) {
 		return msgs
 	}
 

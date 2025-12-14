@@ -130,7 +130,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 		testNow := time.Unix(nowEpoch, 0)
 
 		BeforeEach(func() {
-			privateCSRF.time.Set(testNow)
+			privateCSRF.clock = func() time.Time { return testNow }
 
 			req = &http.Request{
 				Method: http.MethodGet,
@@ -146,7 +146,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 		})
 
 		AfterEach(func() {
-			privateCSRF.time.Reset()
+			privateCSRF.clock = time.Now
 		})
 
 		Context("SetCookie", func() {
@@ -161,10 +161,10 @@ var _ = Describe("CSRF Cookie Tests", func() {
 				))
 				Expect(rw.Header().Get("Set-Cookie")).To(ContainSubstring(
 					fmt.Sprintf(
-						"; Path=%s; Domain=%s; Expires=%s; HttpOnly; Secure",
+						"; Path=%s; Domain=%s; Max-Age=%d; HttpOnly; Secure",
 						cookiePath,
 						cookieDomain,
-						testCookieExpires(testNow.Add(cookieOpts.CSRFExpire)),
+						int(cookieOpts.CSRFExpire.Seconds()),
 					),
 				))
 			})
@@ -173,7 +173,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 		Context("LoadCSRFCookie", func() {
 			BeforeEach(func() {
 				// we need to reset the time to ensure the cookie is valid
-				privateCSRF.time.Reset()
+				privateCSRF.clock = time.Now
 			})
 
 			It("should return error when no cookie is set", func() {
@@ -239,11 +239,10 @@ var _ = Describe("CSRF Cookie Tests", func() {
 
 				Expect(rw.Header().Get("Set-Cookie")).To(Equal(
 					fmt.Sprintf(
-						"%s=; Path=%s; Domain=%s; Expires=%s; HttpOnly; Secure",
+						"%s=; Path=%s; Domain=%s; Max-Age=0; HttpOnly; Secure",
 						privateCSRF.cookieName(),
 						cookiePath,
 						cookieDomain,
-						testCookieExpires(testNow.Add(time.Hour*-1)),
 					),
 				))
 			})

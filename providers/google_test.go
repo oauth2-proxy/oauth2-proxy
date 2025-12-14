@@ -237,30 +237,31 @@ func TestGoogleProviderGetEmailAddressEmailMissing(t *testing.T) {
 
 func TestGoogleProvider_userInGroup(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/admin/directory/v1/groups/group@example.com/hasMember/member-in-domain@example.com" {
+		switch r.URL.Path {
+		case "/admin/directory/v1/groups/group@example.com/hasMember/member-in-domain@example.com":
 			fmt.Fprintln(w, `{"isMember":true}`)
-		} else if r.URL.Path == "/admin/directory/v1/groups/group@example.com/hasMember/non-member-in-domain@example.com" {
+		case "/admin/directory/v1/groups/group@example.com/hasMember/non-member-in-domain@example.com":
 			fmt.Fprintln(w, `{"isMember":false}`)
-		} else if r.URL.Path == "/admin/directory/v1/groups/group@example.com/hasMember/member-out-of-domain@otherexample.com" {
+		case "/admin/directory/v1/groups/group@example.com/hasMember/member-out-of-domain@otherexample.com":
 			http.Error(
 				w,
 				`{"error":{"errors":[{"domain":"global","reason":"invalid","message":"Invalid Input: memberKey"}],"code":400,"message":"Invalid Input: memberKey"}}`,
 				http.StatusBadRequest,
 			)
-		} else if r.URL.Path == "/admin/directory/v1/groups/group@example.com/hasMember/non-member-out-of-domain@otherexample.com" {
+		case "/admin/directory/v1/groups/group@example.com/hasMember/non-member-out-of-domain@otherexample.com":
 			http.Error(
 				w,
 				`{"error":{"errors":[{"domain":"global","reason":"invalid","message":"Invalid Input: memberKey"}],"code":400,"message":"Invalid Input: memberKey"}}`,
 				http.StatusBadRequest,
 			)
-		} else if r.URL.Path == "/admin/directory/v1/groups/group@example.com/members/non-member-out-of-domain@otherexample.com" {
+		case "/admin/directory/v1/groups/group@example.com/members/non-member-out-of-domain@otherexample.com":
 			// note that the client currently doesn't care what this response text or code is - any error here results in failure to match the group
 			http.Error(
 				w,
 				`{"kind":"admin#directory#member","etag":"12345","id":"1234567890","email":"member-out-of-domain@otherexample.com","role":"MEMBER","type":"USER","status":"ACTIVE","delivery_settings":"ALL_MAIL"}`,
 				http.StatusNotFound,
 			)
-		} else if r.URL.Path == "/admin/directory/v1/groups/group@example.com/members/member-out-of-domain@otherexample.com" {
+		case "/admin/directory/v1/groups/group@example.com/members/member-out-of-domain@otherexample.com":
 			fmt.Fprintln(w,
 				`{"kind":"admin#directory#member","etag":"12345","id":"1234567890","email":"member-out-of-domain@otherexample.com","role":"MEMBER","type":"USER","status":"ACTIVE","delivery_settings":"ALL_MAIL"}`,
 			)
@@ -287,4 +288,120 @@ func TestGoogleProvider_userInGroup(t *testing.T) {
 
 	result = userInGroup(service, "group@example.com", "non-member-out-of-domain@otherexample.com")
 	assert.False(t, result)
+}
+
+func TestGoogleProvider_getUserGroups(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/admin/directory/v1/groups" && r.URL.Query().Get("userKey") == "test@example.com" {
+			response := `{
+				"kind": "admin#directory#groups",
+				"groups": [
+					{
+						"kind": "admin#directory#group",
+						"id": "1",
+						"email": "group1@example.com",
+						"name": "Group 1"
+					},
+					{
+						"kind": "admin#directory#group", 
+						"id": "2",
+						"email": "group2@example.com",
+						"name": "Group 2"
+					}
+				]
+			}`
+			fmt.Fprintln(w, response)
+		} else {
+			http.NotFound(w, r)
+		}
+	}))
+	defer ts.Close()
+
+	client := &http.Client{}
+	adminService, err := admin.NewService(context.Background(), option.WithHTTPClient(client), option.WithEndpoint(ts.URL))
+	assert.NoError(t, err)
+
+	groups, err := getUserGroups(adminService, "test@example.com")
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"group1@example.com", "group2@example.com"}, groups)
+}
+
+func TestGoogleProvider_getUserInfo(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/admin/directory/v1/users/test@example.com" {
+			response := `{
+			  "kind": "admin#directory#user",
+			  "id": "",
+			  "etag": "\"\"",
+			  "primaryEmail": "test@example.com",
+			  "name": {
+				"givenName": "Test",
+				"familyName": "User",
+				"fullName": "Test User"
+			  },
+			  "isAdmin": false,
+			  "isDelegatedAdmin": false,
+			  "lastLoginTime": "",
+			  "creationTime": "",
+			  "agreedToTerms": true,
+			  "suspended": false,
+			  "archived": false,
+			  "changePasswordAtNextLogin": false,
+			  "ipWhitelisted": false,
+			  "emails": [
+				{
+				  "address": "test@example.com",
+				  "primary": true
+				}
+			  ],
+			  "externalIds": [
+				{
+				  "value": "test.user",
+				  "type": "organization"
+				}
+			  ],
+			  "organizations": [
+			  ],
+			  "phones": [
+			  ],
+			  "languages": [
+				{
+				  "languageCode": "en",
+				  "preference": "preferred"
+				}
+			  ],
+			  "aliases": [
+				"test.user@example.com"
+			  ],
+			  "nonEditableAliases": [
+				"test.user@example.com"
+			  ],
+			  "gender": {
+				"type": "male"
+			  },
+			  "customerId": "",
+			  "orgUnitPath": "/",
+			  "isMailboxSetup": true,
+			  "isEnrolledIn2Sv": true,
+			  "isEnforcedIn2Sv": false,
+			  "includeInGlobalAddressList": true,
+			  "thumbnailPhotoUrl": "",
+			  "thumbnailPhotoEtag": "\"\"",
+			  "recoveryEmail": "test.user@gmail.com",
+			  "recoveryPhone": "+55555555555"
+			}`
+			fmt.Fprintln(w, response)
+		} else {
+			http.NotFound(w, r)
+		}
+	}))
+	defer ts.Close()
+
+	client := &http.Client{}
+	adminService, err := admin.NewService(context.Background(), option.WithHTTPClient(client), option.WithEndpoint(ts.URL))
+	assert.NoError(t, err)
+
+	info, err := getUserInfo(adminService, "test@example.com")
+	assert.NoError(t, err)
+	assert.Equal(t, "test.user", info)
 }

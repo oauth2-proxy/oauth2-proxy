@@ -12,6 +12,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	"golang.org/x/oauth2"
 )
 
@@ -50,7 +51,7 @@ func NewOIDCProvider(p *ProviderData, opts options.OIDCOptions) *OIDCProvider {
 
 	return &OIDCProvider{
 		ProviderData: p,
-		SkipNonce:    opts.InsecureSkipNonce,
+		SkipNonce:    ptr.Deref(opts.InsecureSkipNonce, options.DefaultInsecureSkipNonce),
 	}
 }
 
@@ -61,6 +62,11 @@ func (p *OIDCProvider) GetLoginURL(redirectURI, state, nonce string, extraParams
 	if !p.SkipNonce {
 		extraParams.Add("nonce", nonce)
 	}
+	// Response mode should only be set if a non default mode is requested
+	if p.AuthRequestResponseMode != "" {
+		extraParams.Add("response_mode", p.AuthRequestResponseMode)
+	}
+
 	loginURL := makeLoginURL(p.Data(), redirectURI, state, extraParams)
 	return loginURL.String()
 }
@@ -105,11 +111,24 @@ func (p *OIDCProvider) EnrichSession(_ context.Context, s *sessions.SessionState
 	return nil
 }
 
-// ValidateSession checks that the session's IDToken is still valid
+// ValidateSession checks that the session's id_token or access_token (when a ValidateURL is configured) is still valid
 func (p *OIDCProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
 	ctx = oidc.ClientContext(ctx, requests.DefaultHTTPClient)
-	_, err := p.Verifier.Verify(ctx, s.IDToken)
-	if err != nil {
+
+	// https://openid.net/specs/openid-connect-core-1_0.html#RefreshTokenResponse
+	// The ID Token is optional in the Refresh Token Response
+	// TODO: @tuunit remove dependency on refreshed flag and only rely on presence of access_token
+	// in accordance with the spec. For now, keep existing behavior.
+	if s.Refreshed {
+		if !validateToken(ctx, p, s.AccessToken, makeOIDCHeader(s.AccessToken)) {
+			logger.Errorf("access_token validation failed")
+			return false
+		}
+
+		return true
+	}
+
+	if _, err := p.Verifier.Verify(ctx, s.IDToken); err != nil {
 		logger.Errorf("id_token verification failed: %v", err)
 		return false
 	}
@@ -117,8 +136,8 @@ func (p *OIDCProvider) ValidateSession(ctx context.Context, s *sessions.SessionS
 	if p.SkipNonce {
 		return true
 	}
-	err = p.checkNonce(s)
-	if err != nil {
+
+	if err := p.checkNonce(s); err != nil {
 		logger.Errorf("nonce verification failed: %v", err)
 		return false
 	}
@@ -142,7 +161,8 @@ func (p *OIDCProvider) RefreshSession(ctx context.Context, s *sessions.SessionSt
 }
 
 // redeemRefreshToken uses a RefreshToken with the RedeemURL to refresh the
-// Access Token and (probably) the ID Token.
+// Access Token and (optionally) the ID Token.
+// https://openid.net/specs/openid-connect-core-1_0.html#RefreshTokenResponse
 func (p *OIDCProvider) redeemRefreshToken(ctx context.Context, s *sessions.SessionState) error {
 	clientSecret, err := p.GetClientSecret()
 	if err != nil {
@@ -245,6 +265,7 @@ func (p *OIDCProvider) createSession(ctx context.Context, token *oauth2.Token, r
 
 	ss.CreatedAtNow()
 	ss.SetExpiresOn(token.Expiry)
+	ss.Refreshed = refresh
 
 	return ss, nil
 }

@@ -14,16 +14,16 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v5
       
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           # renovate: datasource=node-version depName=node
-          node-version: 22
+          node-version: 24
 
       - name: Test Build
         working-directory: ./docs
@@ -35,12 +35,12 @@ jobs:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           # renovate: datasource=node-version depName=node
-          node-version: 22
+          node-version: 24
 
       - name: Build docusaurus
         working-directory: ./docs

@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 )
 
 // validateProviders is the initial validation migration for multiple providrers
@@ -64,7 +65,7 @@ func validateProvider(provider options.Provider, providerIDs map[string]struct{}
 // providerRequiresClientSecret checks if provider requires client secret to be set
 // or it can be omitted in favor of JWT token to authenticate oAuth client
 func providerRequiresClientSecret(provider options.Provider) bool {
-	if provider.Type == "entra-id" && provider.MicrosoftEntraIDConfig.FederatedTokenAuth {
+	if provider.Type == "entra-id" && ptr.Deref(provider.MicrosoftEntraIDConfig.FederatedTokenAuth, options.DefaultMicrosoftEntraIDUseFederatedToken) {
 		return false
 	}
 
@@ -94,18 +95,14 @@ func validateClientSecret(provider options.Provider) []string {
 func validateGoogleConfig(provider options.Provider) []string {
 	msgs := []string{}
 
-	hasGoogleGroups := len(provider.GoogleConfig.Groups) >= 1
 	hasAdminEmail := provider.GoogleConfig.AdminEmail != ""
 	hasSAJSON := provider.GoogleConfig.ServiceAccountJSON != ""
-	useADC := provider.GoogleConfig.UseApplicationDefaultCredentials
+	useADC := ptr.Deref(provider.GoogleConfig.UseApplicationDefaultCredentials, options.DefaultUseApplicationDefaultCredentials)
 
-	if !hasGoogleGroups && !hasAdminEmail && !hasSAJSON && !useADC {
+	if !hasAdminEmail && !hasSAJSON && !useADC {
 		return msgs
 	}
 
-	if !hasGoogleGroups {
-		msgs = append(msgs, "missing setting: google-group")
-	}
 	if !hasAdminEmail {
 		msgs = append(msgs, "missing setting: google-admin-email")
 	}
@@ -127,7 +124,7 @@ func validateGoogleConfig(provider options.Provider) []string {
 func validateEntraConfig(provider options.Provider) []string {
 	msgs := []string{}
 
-	if provider.MicrosoftEntraIDConfig.FederatedTokenAuth {
+	if ptr.Deref(provider.MicrosoftEntraIDConfig.FederatedTokenAuth, options.DefaultMicrosoftEntraIDUseFederatedToken) {
 		federatedTokenPath := os.Getenv("AZURE_FEDERATED_TOKEN_FILE")
 
 		if federatedTokenPath == "" {

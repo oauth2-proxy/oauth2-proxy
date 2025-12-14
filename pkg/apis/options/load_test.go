@@ -47,16 +47,17 @@ var _ = Describe("Load", func() {
 		},
 
 		Options: Options{
-			ProxyPrefix:        "/oauth2",
-			PingPath:           "/ping",
-			ReadyPath:          "/ready",
-			RealClientIPHeader: "X-Real-IP",
-			ForceHTTPS:         false,
-			Cookie:             cookieDefaults(),
-			Session:            sessionOptionsDefaults(),
-			Templates:          templatesDefaults(),
-			SkipAuthPreflight:  false,
-			Logging:            loggingDefaults(),
+			BearerTokenLoginFallback: true,
+			ProxyPrefix:              "/oauth2",
+			PingPath:                 "/ping",
+			ReadyPath:                "/ready",
+			RealClientIPHeader:       "X-Real-IP",
+			ForceHTTPS:               false,
+			Cookie:                   cookieDefaults(),
+			Session:                  sessionOptionsDefaults(),
+			Templates:                templatesDefaults(),
+			SkipAuthPreflight:        false,
+			Logging:                  loggingDefaults(),
 		},
 	}
 
@@ -154,7 +155,7 @@ var _ = Describe("Load", func() {
 				}
 				err := Load(configFileName, flagSet, input)
 				if o.expectedErr != nil {
-					Expect(err).To(MatchError(o.expectedErr.Error()))
+					Expect(err).To(MatchError(ContainSubstring(o.expectedErr.Error())))
 				} else {
 					Expect(err).ToNot(HaveOccurred())
 				}
@@ -328,7 +329,7 @@ var _ = Describe("Load", func() {
 			Entry("with an unknown option in the config file", &testOptionsTableInput{
 				configFile:  []byte(`unknown_option="foo"`),
 				flagSet:     func() *pflag.FlagSet { return testOptionsFlagSet },
-				expectedErr: fmt.Errorf("error unmarshalling config: 1 error(s) decoding:\n\n* '' has invalid keys: unknown_option"),
+				expectedErr: fmt.Errorf("error unmarshalling config: decoding failed due to the following error(s):\n\n'' has invalid keys: unknown_option"),
 				// Viper will unmarshal before returning the error, so this is the default output
 				expectedOutput: &TestOptions{
 					StringOption: "default",
@@ -415,7 +416,7 @@ sub:
 
 				err := LoadYAML(configFileName, input)
 				if in.expectedErr != nil {
-					Expect(err).To(MatchError(in.expectedErr.Error()))
+					Expect(err).To(MatchError(ContainSubstring(in.expectedErr.Error())))
 				} else {
 					Expect(err).ToNot(HaveOccurred())
 				}
@@ -444,7 +445,7 @@ sub:
 				configFile:     []byte("\tfoo: bar"),
 				input:          &TestOptions{},
 				expectedOutput: &TestOptions{},
-				expectedErr:    errors.New("error unmarshalling config: error converting YAML to JSON: yaml: found character that cannot start any token"),
+				expectedErr:    errors.New("error unmarshalling config: yaml: found character that cannot start any token"),
 			}),
 			Entry("with extra fields in the YAML", loadYAMLTableInput{
 				configFile: append(testOptionsConfigBytesFull, []byte("foo: bar\n")...),
@@ -458,19 +459,19 @@ sub:
 						StringSliceOption: []string{"a", "b", "c"},
 					},
 				},
-				expectedErr: errors.New("error unmarshalling config: error unmarshaling JSON: while decoding JSON: json: unknown field \"foo\""),
+				expectedErr: errors.New("has invalid keys: foo"),
 			}),
 			Entry("with an incorrect type for a string field", loadYAMLTableInput{
 				configFile:     []byte(`stringOption: ["a", "b"]`),
 				input:          &TestOptions{},
 				expectedOutput: &TestOptions{},
-				expectedErr:    errors.New("error unmarshalling config: error unmarshaling JSON: while decoding JSON: json: cannot unmarshal array into Go struct field TestOptions.StringOption of type string"),
+				expectedErr:    errors.New("'stringOption' expected type 'string', got unconvertible type"),
 			}),
 			Entry("with an incorrect type for an array field", loadYAMLTableInput{
 				configFile:     []byte(`stringSliceOption: "a"`),
 				input:          &TestOptions{},
 				expectedOutput: &TestOptions{},
-				expectedErr:    errors.New("error unmarshalling config: error unmarshaling JSON: while decoding JSON: json: cannot unmarshal string into Go struct field TestOptions.StringSliceOption of type []string"),
+				expectedErr:    errors.New("error decoding config: decoding failed due to the following error(s):\n\n'stringSliceOption' source data must be an array or slice, got string"),
 			}),
 			Entry("with a config file containing environment variable references", loadYAMLTableInput{
 				configFile: []byte("stringOption: ${TESTUSER}"),
@@ -484,6 +485,31 @@ sub:
 				input:      &TestOptions{},
 				expectedOutput: &TestOptions{
 					StringOption: "Bob",
+				},
+			}),
+			Entry("with a config file containing $ signs for things other than environment variables", loadYAMLTableInput{
+				configFile: []byte(`
+stringOption: /$1
+stringSliceOption:
+- /$1
+- ^/(.*)$
+- api/$1
+- api/(.*)$
+- ^/api/(.*)$
+- /api/$1`),
+				input: &TestOptions{},
+				expectedOutput: &TestOptions{
+					StringOption: "/$1",
+					TestOptionSubStruct: TestOptionSubStruct{
+						StringSliceOption: []string{
+							"/$1",
+							"^/(.*)$",
+							"api/$1",
+							"api/(.*)$",
+							"^/api/(.*)$",
+							"/api/$1",
+						},
+					},
 				},
 			}),
 		)
@@ -500,11 +526,13 @@ upstreamConfig:
 injectRequestHeaders:
 - name: X-Forwarded-User
   values:
-  - claim: user
+  - claimSource:
+      claim: user
 injectResponseHeaders:
 - name: X-Secret
   values:
-  - value: c2VjcmV0
+  - secretSource:
+      value: secret
 `)
 
 		By("Creating a config file")
@@ -522,7 +550,7 @@ injectResponseHeaders:
 		into := &AlphaOptions{}
 		Expect(LoadYAML(configFileName, into)).To(Succeed())
 
-		flushInterval := Duration(500 * time.Millisecond)
+		flushInterval := 500 * time.Millisecond
 
 		Expect(into).To(Equal(&AlphaOptions{
 			UpstreamConfig: UpstreamConfig{

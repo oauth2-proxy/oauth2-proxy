@@ -1,3 +1,29 @@
+#!/usr/bin/env bash
+
+#
+# Makefile with some common workflow for dev, build and test
+#
+
+##@ General
+
+# The help target prints out all targets with their descriptions organized
+# beneath their categories. The categories are represented by '##@' and the
+# target descriptions by '##'. The awk command is responsible for reading the
+# entire set of makefiles included in this invocation, looking for lines of the
+# file as xyz: ## something, and then pretty-format the target and help. Then,
+# if there's a line with ##@ something, that gets pretty-printed as a category.
+# More info on the usage of ANSI control characters for terminal formatting:
+# https://en.wikipedia.org/wiki/ANSI_escape_code#SGR_parameters
+# More info on the awk command:
+# http://linuxcommand.org/lc3_adv_awk.php
+
+# The following help command is Licensed under the Apache License, Version 2.0 (the "License")
+# Copyright 2023 The Kubernetes Authors.
+.PHONY: help
+help: ## Display this help
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+
+
 GO ?= go
 GOLANGCILINT ?= golangci-lint
 
@@ -10,41 +36,26 @@ REPOSITORY ?= oauth2-proxy
 DATE := $(shell date +"%Y%m%d")
 .NOTPARALLEL:
 
-GO_MAJOR_VERSION = $(shell $(GO) version | cut -c 14- | cut -d' ' -f1 | cut -d'.' -f1)
-GO_MINOR_VERSION = $(shell $(GO) version | cut -c 14- | cut -d' ' -f1 | cut -d'.' -f2)
+# The go version in go.mod used for the Docker build toolchain, without the patch
+GO_MOD_VERSION_MINOR := $(shell $(GO) list -f '{{printf "%.4s" .Module.GoVersion}}' )
 
-GO_MOD_VERSION = $(shell sed -En 's/^go ([[:digit:]]\.[[:digit:]]+)\.[[:digit:]]+/\1/p' go.mod)
-MINIMUM_SUPPORTED_GO_MAJOR_VERSION = $(shell echo ${GO_MOD_VERSION} | cut -d' ' -f1 | cut -d'.' -f1)
-MINIMUM_SUPPORTED_GO_MINOR_VERSION = $(shell echo ${GO_MOD_VERSION} | cut -d' ' -f1 | cut -d'.' -f2)
-GO_VERSION_VALIDATION_ERR_MSG = Golang version is not supported, please update to at least $(MINIMUM_SUPPORTED_GO_MAJOR_VERSION).$(MINIMUM_SUPPORTED_GO_MINOR_VERSION)
+# From go1.21 go will transparently download the toolchain declared in go.mod. https://go.dev/doc/toolchain
+# We don't need to keep this message updated: the important info is in go.mod.
+GO_VERSION_VALIDATION_ERR_MSG = Golang version is not supported, please update to at least go1.21
 
 ifeq ($(COVER),true)
 TESTCOVER ?= -coverprofile c.out
 endif
 
-.PHONY: all
-all: lint $(BINARY)
-
-.PHONY: clean
-clean:
-	-rm -rf release
-	-rm -f $(BINARY)
-
-.PHONY: distclean
-distclean: clean
-	rm -rf vendor
-
-.PHONY: lint
-lint: validate-go-version
-	GO111MODULE=on $(GOLANGCILINT) run
+##@ Build
 
 .PHONY: build
-build: validate-go-version clean $(BINARY)
+build: validate-go-version clean $(BINARY) ## Build and create oauth2-proxy binary from current source code
 
 $(BINARY):
 	CGO_ENABLED=0 $(GO) build -a -installsuffix cgo -ldflags="-X github.com/oauth2-proxy/oauth2-proxy/v7/pkg/version.VERSION=${VERSION}" -o $@ github.com/oauth2-proxy/oauth2-proxy/v7
 
-DOCKER_BUILDX_COMMON_ARGS     ?= --build-arg BUILD_IMAGE=docker.io/library/golang:${GO_MOD_VERSION}-bookworm --build-arg VERSION=${VERSION}
+DOCKER_BUILDX_COMMON_ARGS     ?= --build-arg BUILD_IMAGE=docker.io/library/golang:$(GO_MOD_VERSION_MINOR)-bookworm --build-arg VERSION=$(VERSION)
 
 DOCKER_BUILD_PLATFORM         ?= linux/amd64,linux/arm64,linux/ppc64le,linux/arm/v7,linux/s390x
 DOCKER_BUILD_RUNTIME_IMAGE    ?= gcr.io/distroless/static:nonroot
@@ -55,74 +66,102 @@ DOCKER_BUILDX_PUSH            := $(DOCKER_BUILDX) --push
 DOCKER_BUILDX_PUSH_X_PLATFORM := $(DOCKER_BUILDX_PUSH) --platform ${DOCKER_BUILD_PLATFORM}
 
 DOCKER_BUILD_PLATFORM_ALPINE         ?= linux/amd64,linux/arm64,linux/ppc64le,linux/arm/v6,linux/arm/v7,linux/s390x
-DOCKER_BUILD_RUNTIME_IMAGE_ALPINE    ?= alpine:3.21.2
+DOCKER_BUILD_RUNTIME_IMAGE_ALPINE    ?= alpine:3.22.2
 DOCKER_BUILDX_ARGS_ALPINE            ?= --build-arg RUNTIME_IMAGE=${DOCKER_BUILD_RUNTIME_IMAGE_ALPINE} ${DOCKER_BUILDX_COMMON_ARGS}
 DOCKER_BUILDX_X_PLATFORM_ALPINE      := docker buildx build ${DOCKER_BUILDX_ARGS_ALPINE} --platform ${DOCKER_BUILD_PLATFORM_ALPINE}
 DOCKER_BUILDX_PUSH_X_PLATFORM_ALPINE := $(DOCKER_BUILDX_X_PLATFORM_ALPINE) --push
 
-.PHONY: docker
-docker:
+.PHONY: build-docker
+build-docker: build-distroless build-alpine ## Build multi architecture docker images in both flavours (distroless / alpine)
+
+.PHONY: build-docker-local
+build-docker-local: ## Build distroless docker image and locally load into docker images
+	$(DOCKER_BUILDX) --load -t $(REGISTRY)/$(REPOSITORY):${VERSION}-local .
+
+.PHONY: build-distroless
+build-distroless: ## Build multi architecture distroless based docker image
 	$(DOCKER_BUILDX_X_PLATFORM) -t $(REGISTRY)/$(REPOSITORY):latest -t $(REGISTRY)/$(REPOSITORY):${VERSION} .
+
+.PHONY: build-alpine
+build-alpine: ## Build multi architecture alpine based docker image
 	$(DOCKER_BUILDX_X_PLATFORM_ALPINE) -t $(REGISTRY)/$(REPOSITORY):latest-alpine -t $(REGISTRY)/$(REPOSITORY):${VERSION}-alpine .
 
-.PHONY: docker-push
-docker-push:
-	$(DOCKER_BUILDX_PUSH_X_PLATFORM) -t $(REGISTRY)/$(REPOSITORY):latest -t $(REGISTRY)/$(REPOSITORY):${VERSION} .
-	$(DOCKER_BUILDX_PUSH_X_PLATFORM_ALPINE) -t $(REGISTRY)/$(REPOSITORY):latest-alpine -t $(REGISTRY)/$(REPOSITORY):${VERSION}-alpine .
-
-.PHONY: docker-all
-docker-all: docker
+.PHONY: build-docker-all
+build-docker-all: build-docker ## Build docker images for all supported architectures in both flavours (distroless / alpine)
 	$(DOCKER_BUILDX) --platform linux/amd64   -t $(REGISTRY)/$(REPOSITORY):latest-amd64   -t $(REGISTRY)/$(REPOSITORY):${VERSION}-amd64 .
 	$(DOCKER_BUILDX) --platform linux/arm64   -t $(REGISTRY)/$(REPOSITORY):latest-arm64   -t $(REGISTRY)/$(REPOSITORY):${VERSION}-arm64 .
 	$(DOCKER_BUILDX) --platform linux/ppc64le -t $(REGISTRY)/$(REPOSITORY):latest-ppc64le -t $(REGISTRY)/$(REPOSITORY):${VERSION}-ppc64le .
 	$(DOCKER_BUILDX) --platform linux/arm/v7  -t $(REGISTRY)/$(REPOSITORY):latest-armv7   -t $(REGISTRY)/$(REPOSITORY):${VERSION}-armv7 .
 	$(DOCKER_BUILDX) --platform linux/s390x   -t $(REGISTRY)/$(REPOSITORY):latest-s390x -t $(REGISTRY)/$(REPOSITORY):${VERSION}-s390x .
 
-.PHONY: docker-push-all
-docker-push-all: docker-push
+
+##@ Publish
+
+.PHONY: push-docker
+push-docker: push-distroless push-alpine ## Push multi architecture docker images for both flavours (distroless / alpine)
+
+.PHONY: push-distroless
+push-distroless: ## Push multi architecture distroless based docker image
+	$(DOCKER_BUILDX_PUSH_X_PLATFORM) -t $(REGISTRY)/$(REPOSITORY):latest -t $(REGISTRY)/$(REPOSITORY):${VERSION} .
+
+.PHONY: push-alpine
+push-alpine: ## Push multi architecture alpine based docker image
+	$(DOCKER_BUILDX_PUSH_X_PLATFORM_ALPINE) -t $(REGISTRY)/$(REPOSITORY):latest-alpine -t $(REGISTRY)/$(REPOSITORY):${VERSION}-alpine .
+
+.PHONY: push-docker-all
+push-docker-all: push-docker ## Push docker images for all supported architectures for both flavours (distroless / alpine)
 	$(DOCKER_BUILDX_PUSH) --platform linux/amd64   -t $(REGISTRY)/$(REPOSITORY):latest-amd64   -t $(REGISTRY)/$(REPOSITORY):${VERSION}-amd64 .
 	$(DOCKER_BUILDX_PUSH) --platform linux/arm64   -t $(REGISTRY)/$(REPOSITORY):latest-arm64   -t $(REGISTRY)/$(REPOSITORY):${VERSION}-arm64 .
 	$(DOCKER_BUILDX_PUSH) --platform linux/ppc64le -t $(REGISTRY)/$(REPOSITORY):latest-ppc64le -t $(REGISTRY)/$(REPOSITORY):${VERSION}-ppc64le .
 	$(DOCKER_BUILDX_PUSH) --platform linux/arm/v7  -t $(REGISTRY)/$(REPOSITORY):latest-armv7   -t $(REGISTRY)/$(REPOSITORY):${VERSION}-armv7 .
 	$(DOCKER_BUILDX_PUSH) --platform linux/s390x   -t $(REGISTRY)/$(REPOSITORY):latest-s390x -t $(REGISTRY)/$(REPOSITORY):${VERSION}-s390x .
 
-.PHONY: docker-nightly-build
-docker-nightly-build:
+
+##@ Nightly scheduling
+
+.PHONY: nightly-build
+nightly-build: ## Nightly build command for docker images in both flavours (distroless / alpine)
 	$(DOCKER_BUILDX_X_PLATFORM) -t $(REGISTRY)/$(REPOSITORY)-nightly:latest -t $(REGISTRY)/$(REPOSITORY)-nightly:${DATE} .
 	$(DOCKER_BUILDX_X_PLATFORM_ALPINE) -t ${REGISTRY}/$(REPOSITORY)-nightly:latest-alpine -t $(REGISTRY)/$(REPOSITORY)-nightly:${DATE}-alpine .
 
-.PHONY: docker-nightly-push
-docker-nightly-push:
+.PHONY: nightly-push
+nightly-push: ## Nightly push command for docker images in both flavours (distroless / alpine)
 	$(DOCKER_BUILDX_PUSH_X_PLATFORM) -t $(REGISTRY)/$(REPOSITORY)-nightly:latest -t $(REGISTRY)/$(REPOSITORY)-nightly:${DATE} .
 	$(DOCKER_BUILDX_PUSH_X_PLATFORM_ALPINE) -t ${REGISTRY}/$(REPOSITORY)-nightly:latest-alpine -t $(REGISTRY)/$(REPOSITORY)-nightly:${DATE}-alpine .
 
+
+##@ Docs
+
 .PHONY: generate
-generate:
+generate: ## Generate alpha config docs from golang structs
 	go generate ./pkg/...
 
 .PHONY: verify-generate
-verify-generate: generate
+verify-generate: generate ## Verify command to check if alpha config docs are in line with golang struct changes
 	git diff --exit-code
 
+##@ Miscellaneous
+
 .PHONY: test
-test: lint
+test: lint ## Run all Go tests
 	GO111MODULE=on $(GO) test $(TESTCOVER) -v -race ./...
 
 .PHONY: release
-release: validate-go-version lint test
+release: validate-go-version lint test ## Create a full release for all architectures (binaries and checksums)
 	BINARY=${BINARY} VERSION=${VERSION} ./dist.sh
 
+.PHONY: clean
+clean: ## Cleanup release and build files
+	-rm -rf release
+	-rm -f $(BINARY)
+
+.PHONY: lint
+lint: validate-go-version ## Lint all files using golangci-lint
+	GO111MODULE=on $(GOLANGCILINT) run
+
 .PHONY: validate-go-version
-validate-go-version:
-	@if [ $(GO_MAJOR_VERSION) -gt $(MINIMUM_SUPPORTED_GO_MAJOR_VERSION) ]; then \
-		exit 0 ;\
-	elif [ $(GO_MAJOR_VERSION) -lt $(MINIMUM_SUPPORTED_GO_MAJOR_VERSION) ]; then \
-		echo '$(GO_VERSION_VALIDATION_ERR_MSG)';\
-		exit 1; \
-	elif [ $(GO_MINOR_VERSION) -lt $(MINIMUM_SUPPORTED_GO_MINOR_VERSION) ] ; then \
-		echo '$(GO_VERSION_VALIDATION_ERR_MSG)';\
-		exit 1; \
-	fi
+validate-go-version: ## Validate Go environment requirements
+	@$(GO) list . >/dev/null || { echo '$(GO_VERSION_VALIDATION_ERR_MSG)'; exit 1; }
 
 # local-env can be used to interact with the local development environment
 # eg:
