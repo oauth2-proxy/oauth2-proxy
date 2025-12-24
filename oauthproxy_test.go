@@ -3356,26 +3356,45 @@ func TestAuthOnlyAllowedEmailDomains(t *testing.T) {
 }
 
 func TestStateEncodesCorrectly(t *testing.T) {
-	state := "some_state_to_test"
+	state := "https://example.com/callback?foo=bar&baz=qux"
 	nonce := "some_nonce_to_test"
 
 	encodedResult := encodeState(nonce, state, true)
-	assert.Equal(t, "c29tZV9ub25jZV90b190ZXN0OnNvbWVfc3RhdGVfdG9fdGVzdA", encodedResult)
+	expectedEncoded := base64.RawURLEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", nonce, state)))
+	assert.Equal(t, expectedEncoded, encodedResult)
 
 	notEncodedResult := encodeState(nonce, state, false)
-	assert.Equal(t, "some_nonce_to_test:some_state_to_test", notEncodedResult)
+	expectedUnencoded := fmt.Sprintf("%s:%s", nonce, url.QueryEscape(state))
+	assert.Equal(t, expectedUnencoded, notEncodedResult)
+	assert.NotContains(t, notEncodedResult, "&")
 }
 
 func TestStateDecodesCorrectly(t *testing.T) {
-	nonce, redirect, _ := decodeState("c29tZV9ub25jZV90b190ZXN0OnNvbWVfc3RhdGVfdG9fdGVzdA", true)
+	state := "https://example.com/callback?foo=bar&baz=qux"
+	nonce := "some_nonce_to_test"
 
-	assert.Equal(t, "some_nonce_to_test", nonce)
-	assert.Equal(t, "some_state_to_test", redirect)
+	encodedState := base64.RawURLEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", nonce, state)))
+	decodedNonce, decodedRedirect, err := decodeState(encodedState, true)
+	assert.NoError(t, err)
+	assert.Equal(t, nonce, decodedNonce)
+	assert.Equal(t, state, decodedRedirect)
 
-	nonce2, redirect2, _ := decodeState("some_nonce_to_test:some_state_to_test", false)
+	rawState := fmt.Sprintf("%s:%s", nonce, url.QueryEscape(state))
+	decodedNonce2, decodedRedirect2, err := decodeState(rawState, false)
+	assert.NoError(t, err)
+	assert.Equal(t, nonce, decodedNonce2)
+	assert.Equal(t, state, decodedRedirect2)
+}
 
-	assert.Equal(t, "some_nonce_to_test", nonce2)
-	assert.Equal(t, "some_state_to_test", redirect2)
+func TestStateRoundTripWithMultipleQueryParameters(t *testing.T) {
+	state := "https://example.com/callback?foo=bar&baz=qux&zap=zazzle"
+	nonce := "another_nonce"
+
+	encoded := encodeState(nonce, state, false)
+	decodedNonce, decodedRedirect, err := decodeState(encoded, false)
+	assert.NoError(t, err)
+	assert.Equal(t, nonce, decodedNonce)
+	assert.Equal(t, state, decodedRedirect)
 }
 
 func TestAuthOnlyAllowedEmails(t *testing.T) {
