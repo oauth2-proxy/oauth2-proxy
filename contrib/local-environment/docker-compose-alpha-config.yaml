@@ -31,7 +31,7 @@ services:
       - httpbin
   dex:
     container_name: dex
-    image: ghcr.io/dexidp/dex:v2.43.1
+    image: ghcr.io/dexidp/dex:v2.44.0
     command: dex serve /dex.yaml
     hostname: dex
     volumes:
@@ -54,7 +54,7 @@ services:
       httpbin: {}
   etcd:
     container_name: etcd
-    image: gcr.io/etcd-development/etcd:v3.6.2
+    image: gcr.io/etcd-development/etcd:v3.6.7
     entrypoint: /usr/local/bin/etcd
     command:
       - --listen-client-urls=http://0.0.0.0:2379
