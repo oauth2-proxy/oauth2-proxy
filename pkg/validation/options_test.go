@@ -32,6 +32,7 @@ func testOptions() *options.Options {
 	o.Providers[0].ClientID = clientID
 	o.Providers[0].ClientSecret = clientSecret
 	o.EmailDomains = []string{"*"}
+	o.EnsureDefaults()
 	return o
 }
 
@@ -45,6 +46,8 @@ func errorMsg(msgs []string) string {
 func TestNewOptions(t *testing.T) {
 	o := options.NewOptions()
 	o.EmailDomains = []string{"*"}
+	o.EnsureDefaults()
+
 	err := Validate(o)
 	assert.NotEqual(t, nil, err)
 
@@ -123,10 +126,10 @@ func TestCookieRefreshMustBeLessThanCookieExpire(t *testing.T) {
 	assert.Equal(t, nil, Validate(o))
 
 	o.Cookie.Secret = "0123456789abcdef"
-	o.Cookie.Refresh = o.Cookie.Expire
+	o.Session.Refresh = o.Cookie.Expire
 	assert.NotEqual(t, nil, Validate(o))
 
-	o.Cookie.Refresh -= time.Duration(1)
+	o.Session.Refresh -= time.Duration(1)
 	assert.Equal(t, nil, Validate(o))
 }
 
