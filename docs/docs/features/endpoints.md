@@ -38,6 +38,20 @@ X-Auth-Request-Redirect: https://my-oidc-provider/sign_out_page
 
 BEWARE that the domain you want to redirect to (`my-oidc-provider.example.com` in the example) must be added to the [`--whitelist-domain`](../configuration/overview) configuration option otherwise the redirect will be ignored. Make sure to include the actual domain and port (if needed) and not the URL (e.g "localhost:8081" instead of "http://localhost:8081").
 
+ID Token can be injected in the redirect url by using `{id_token}` placeholder. For example to redirect to `https://my-oidc-provider.example.com/sign_out_page?id_token_hint={id_token}&post_logout_redirect_uri=https://my-app.example.com`;
+
+```
+/oauth2/sign_out?rd=https%3A%2F%2Fmy-oidc-provider.example.com%2Fsign_out_page%3Fid_token_hint%3D%7Bid_token%7D%26post_logout_redirect_uri%3Dhttps%3A%2F%2Fmy-app.example.com
+```
+
+or alternatively in the header:
+
+```
+GET /oauth2/sign_out HTTP/1.1
+X-Auth-Request-Redirect: https://my-oidc-provider.example.com/sign_out_page?id_token_hint={id_token}&post_logout_redirect_uri=https://my-app.example.com
+...
+```
+
 ### Auth
 
 This endpoint returns 202 Accepted response or a 401 Unauthorized response.
