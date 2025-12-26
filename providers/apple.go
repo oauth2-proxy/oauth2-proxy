@@ -295,11 +295,20 @@ func (p *AppleProvider) RefreshSession(ctx context.Context, s *sessions.SessionS
 func (p *AppleProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
 	ctx = oidc.ClientContext(ctx, requests.DefaultHTTPClient)
 
+	// Validate ID token if present
 	if s.IDToken != "" && p.Verifier != nil {
 		if _, err := p.Verifier.Verify(ctx, s.IDToken); err != nil {
 			return false
 		}
+		// ID token is valid - Apple doesn't provide a token validation endpoint,
+		return true
 	}
 
-	return validateToken(ctx, p, s.AccessToken, makeOIDCHeader(s.AccessToken))
+	// Fallback to access token validation if ValidateURL is set
+	if p.ValidateURL != nil && p.ValidateURL.String() != "" {
+		return validateToken(ctx, p, s.AccessToken, makeOIDCHeader(s.AccessToken))
+	}
+
+	// No validation possible, but session exists with valid data
+	return s.AccessToken != ""
 }
