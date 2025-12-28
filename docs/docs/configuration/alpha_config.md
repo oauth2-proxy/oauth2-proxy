@@ -285,6 +285,20 @@ longer available when using alpha configuration:
 - `cookie-csrf-per-request-limit`/`cookie_csrf_per_request_limit`
 - `cookie-csrf-expire`/`cookie_csrf_expire`
 
+### Legacy Session options
+- `session-cookie-minimal`/`session_cookie_minimal`
+- `session-store-type`/`session_store_type`
+- `redis-cluster-connection-urls`/`redis_cluster_connection_urls`
+- `redis-connection-url`/`redis_connection_url`
+- `redis-insecure-skip-tls-verify`/`redis_insecure_skip_tls_verify`
+- `redis-password`/`redis_password`
+- `redis-sentinel-password`/`redis_sentinel_password`
+- `redis-sentinel-master-name`/`redis_sentinel_master_name`
+- `redis-sentinel-connection-urls`/`redis_sentinel_connection_urls`
+- `redis-use-cluster`/`redis_use_cluster`
+- `redis-use-sentinel`/`redis_use_sentinel`
+- `redis-connection-idle-timeout`/`redis_connection_idle_timeout`
+
 and all provider-specific options, i.e. any option whose name includes `oidc`,
 `azure`, `bitbucket`, `github`, `gitlab`, `google` or `keycloak`.  Attempting to
 use any of these options via flags or via config when `--alpha-config` is
@@ -380,6 +394,7 @@ Cookie contains configuration options relating session and CSRF cookies
 | `insecure` | _bool_ | Insecure indicates whether the cookie allows to be sent over HTTP<br/>Default is false, which requires HTTPS |
 | `scriptAccess` | _[ScriptAccess](#scriptaccess)_ | ScriptAccess is a wrapper enum for HTTPOnly; indicates whether the<br/>cookie is accessible to JavaScript. Default is deny which translates<br/>to true for HTTPOnly, which helps mitigate certain XSS attacks |
 | `sameSite` | _[SameSiteMode](#samesitemode)_ | SameSite sets the SameSite attribute on the cookie |
+| `sameSite` | _[SameSiteMode](#samesitemode)_ | CSRFSameSite sets the SameSite attribute on the csrf cookies |
 | `csrfPerRequest` | _bool_ | CSRFPerRequest indicates whether a unique CSRF token is generated for each request<br/>Enables parallel requests from clients (e.g., multiple tabs)<br/>Default is false, which uses a single CSRF token per session |
 | `csrfPerRequestLimit` | _int_ | CSRFPerRequestLimit sets a limit on the number of valid CSRF tokens when CSRFPerRequest is enabled<br/>Used to prevent unbounded memory growth from storing too many tokens |
 | `csrfExpire` | _duration_ | CSRFExpire sets the duration before a CSRF token expires |
@@ -689,14 +704,16 @@ RedisStoreOptions contains configuration options for the RedisSessionStore.
 
 (**Appears on:** [Cookie](#cookie))
 
-
+SameSiteMode is an enum representing the different SameSite modes for cookies
+Available modes are "lax", "strict", "none", and "" (default browser behavior)
 
 ### ScriptAccess
 #### (`string` alias)
 
 (**Appears on:** [Cookie](#cookie))
 
-
+ScriptAccess is an enum representing whether a cookie is accessible to JavaScript
+Available modes are "allow", "deny" (default behavior)
 
 ### SecretSource
 
