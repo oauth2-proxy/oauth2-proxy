@@ -285,6 +285,20 @@ longer available when using alpha configuration:
 - `cookie-csrf-per-request-limit`/`cookie_csrf_per_request_limit`
 - `cookie-csrf-expire`/`cookie_csrf_expire`
 
+### Legacy Session options
+- `session-cookie-minimal`/`session_cookie_minimal`
+- `session-store-type`/`session_store_type`
+- `redis-cluster-connection-urls`/`redis_cluster_connection_urls`
+- `redis-connection-url`/`redis_connection_url`
+- `redis-insecure-skip-tls-verify`/`redis_insecure_skip_tls_verify`
+- `redis-password`/`redis_password`
+- `redis-sentinel-password`/`redis_sentinel_password`
+- `redis-sentinel-master-name`/`redis_sentinel_master_name`
+- `redis-sentinel-connection-urls`/`redis_sentinel_connection_urls`
+- `redis-use-cluster`/`redis_use_cluster`
+- `redis-use-sentinel`/`redis_use_sentinel`
+- `redis-connection-idle-timeout`/`redis_connection_idle_timeout`
+
 and all provider-specific options, i.e. any option whose name includes `oidc`,
 `azure`, `bitbucket`, `github`, `gitlab`, `google` or `keycloak`.  Attempting to
 use any of these options via flags or via config when `--alpha-config` is
