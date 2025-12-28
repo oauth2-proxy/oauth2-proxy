@@ -39,7 +39,7 @@ var _ = Describe("NewSessionStore", func() {
 		secret := make([]byte, 32)
 		_, err := rand.Read(secret)
 		Expect(err).ToNot(HaveOccurred())
-		var secretValue []byte
+		secretValue := make([]byte, base64.URLEncoding.EncodedLen(len(secret)))
 
 		base64.URLEncoding.Encode(secretValue, secret)
 		Expect(secretValue).ToNot(BeEmpty())
@@ -47,7 +47,7 @@ var _ = Describe("NewSessionStore", func() {
 		// Set default options in CookieOptions
 		cookieOpts = &options.Cookie{
 			Name: "_oauth2_proxy",
-			Secret: options.SecretSource{
+			Secret: &options.SecretSource{
 				Value: secretValue,
 			},
 			Path:         "/",
