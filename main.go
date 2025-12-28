@@ -175,14 +175,7 @@ func printConvertedConfig(opts *options.Options) error {
 		return fmt.Errorf("only single provider conversion is supported")
 	}
 
-	// Generic interface for loading arbitrary yaml structure
-	var buffer map[string]interface{}
-
-	if err := options.Decode(alphaConfig, &buffer); err != nil {
-		return fmt.Errorf("unable to decode alpha config into interface: %w", err)
-	}
-
-	data, err := yaml.Marshal(buffer)
+	data, err := yaml.Marshal(alphaConfig)
 	if err != nil {
 		return fmt.Errorf("unable to marshal config: %v", err)
 	}

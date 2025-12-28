@@ -62,11 +62,38 @@ func (ss *SecretSource) GetSecretValue() ([]byte, error) {
 		return nil, fmt.Errorf("failed retrieving secret value: no source defined")
 	}
 
+	if len(ss.Value) == 0 && ss.FromFile != "" {
+		return value, nil
+	}
+
 	decoded := make([]byte, base64.URLEncoding.DecodedLen(len(value)))
 	if _, err := base64.URLEncoding.Decode(decoded, value); err != nil {
 		return nil, fmt.Errorf("error decoding secret value: %w", err)
 	}
 	return decoded, nil
+}
+
+// MarshalYAML implements the yaml.Marshaler interface for SecretSource.
+// This is only necessary for the conversion workflow from toml to yaml
+func (ss *SecretSource) MarshalYAML() (interface{}, error) {
+	if ss == nil {
+		return nil, nil
+	}
+
+	if ss.FromFile != "" {
+		return map[string]string{
+			"fromFile": ss.FromFile,
+		}, nil
+	}
+
+	encodedValue, err := ss.GetRawSecretValue()
+	if err != nil {
+		return nil, fmt.Errorf("error getting raw secret value for marshaling: %w", err)
+	}
+
+	return map[string]string{
+		"value": string(encodedValue),
+	}, nil
 }
 
 // EnsureDefaults sets any default values for SecretSource fields.

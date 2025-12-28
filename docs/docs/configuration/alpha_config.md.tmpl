@@ -24,12 +24,18 @@ When using alpha configuration, your config file will look something like below:
 upstreams:
   - id: ...
     ...: ...
+providers:
+  - id: ...
+    ...: ...
+cookie:
+  secret: ...
+  ...: ...
 injectRequestHeaders:
-  - name: ...
-    ...: ...
+  - secretSource:
+      ...: ...
 injectResponseHeaders:
-  - name: ...
-    ...: ...
+  - claimSource:
+      ...: ...
 ```
 
 Please browse the [reference](#configuration-reference) below for the structure
@@ -67,9 +73,9 @@ the new config.
 oauth2-proxy --alpha-config ./path/to/new/config.yaml --config ./path/to/existing/config.cfg
 ```
 
-## Using ENV variables in the alpha configuration
+### How to use environment variables
 
-The alpha package supports the use of environment variables in place of yaml keys, allowing sensitive values to be pulled from somewhere other than the yaml file.
+The alpha package supports the use of environment variables in place of yaml values, allowing sensitive data to be pulled from somewhere other than the yaml file.
 When using environment variables, your yaml will look like this:
 
 ```yaml
@@ -80,6 +86,46 @@ When using environment variables, your yaml will look like this:
 ```
 Where CLIENT_SECRET is an environment variable.
 More information and available patterns can be found [here](https://github.com/a8m/envsubst#docs)
+
+### How to inject custom headers
+
+Configure `injectRequestHeaders` and `injectResponseHeaders` in alpha config YAML.
+
+```yaml
+injectRequestHeaders:
+  - name: "X-User-Email"
+    values:
+      - claimSource:
+          claim: "email" # extract the email claim contents from the id token
+  - name: "X-Static-Secret"
+    values:
+      # secrets need to be encoded with base64 when directly in the yaml config but will be send decoded
+      - secretSource:
+          value: "c3VwZXItc2VjcmV0" 
+  - name: "X-Static-File-Secret"
+      - secretSource:
+          fromFile: "/path/to/my/secret" 
+  - name: "X-Static-Env-Secret"
+      - secretSource:
+          value: "${MY_SECRET_ENV}" # content still needs to be base64 encoded
+injectResponseHeaders:
+  # Following will result in a header "Authorization: Basic <user:password> (encoded)"
+  - name: "Authorization"
+    values:
+    - claimSource:
+        claim: user
+        prefix: "Basic "
+        basicAuthPassword:
+          value: c3VwZXItc2VjcmV0LXBhc3N3b3Jk # base64 encoded password
+```
+
+**Value sources:** 
+* `claimSource` - `claim` (session claims either from id token or from profile URL)
+* `secretSource` - `value` (base64), `fromFile` (file path)
+
+**Request option:** `preserveRequestValue: true` retains existing header values
+
+**Incompatibility:** Remove legacy flags `pass-user-headers`, `set-xauthrequest`
 
 ## Removed options
 
@@ -142,6 +188,20 @@ longer available when using alpha configuration:
 - `cookie-csrf-per-request`/`cookie_csrf_per_request`
 - `cookie-csrf-per-request-limit`/`cookie_csrf_per_request_limit`
 - `cookie-csrf-expire`/`cookie_csrf_expire`
+
+### Legacy Session options
+- `session-cookie-minimal`/`session_cookie_minimal`
+- `session-store-type`/`session_store_type`
+- `redis-cluster-connection-urls`/`redis_cluster_connection_urls`
+- `redis-connection-url`/`redis_connection_url`
+- `redis-insecure-skip-tls-verify`/`redis_insecure_skip_tls_verify`
+- `redis-password`/`redis_password`
+- `redis-sentinel-password`/`redis_sentinel_password`
+- `redis-sentinel-master-name`/`redis_sentinel_master_name`
+- `redis-sentinel-connection-urls`/`redis_sentinel_connection_urls`
+- `redis-use-cluster`/`redis_use_cluster`
+- `redis-use-sentinel`/`redis_use_sentinel`
+- `redis-connection-idle-timeout`/`redis_connection_idle_timeout`
 
 and all provider-specific options, i.e. any option whose name includes `oidc`,
 `azure`, `bitbucket`, `github`, `gitlab`, `google` or `keycloak`.  Attempting to
