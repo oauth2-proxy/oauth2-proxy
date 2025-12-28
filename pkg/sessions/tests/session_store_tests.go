@@ -73,7 +73,7 @@ func RunSessionStoreTests(newSS NewSessionStoreFunc, persistentFastForward Persi
 				Insecure:     ptr.To(false),
 				ScriptAccess: options.ScriptAccessDenied,
 				SameSite:     options.SameSiteDefault,
-				Secret:       options.SecretSource{Value: cookieSecret},
+				Secret:       &options.SecretSource{Value: cookieSecret},
 			}
 
 			expires := time.Now().Add(1 * time.Hour)
@@ -124,7 +124,7 @@ func RunSessionStoreTests(newSS NewSessionStoreFunc, persistentFastForward Persi
 					ScriptAccess: options.ScriptAccessAllowed,
 					Domains:      []string{"example.com"},
 					SameSite:     options.SameSiteStrict,
-					Secret:       options.SecretSource{Value: cookieSecret},
+					Secret:       &options.SecretSource{Value: cookieSecret},
 				}
 
 				var err error
@@ -155,7 +155,7 @@ func RunSessionStoreTests(newSS NewSessionStoreFunc, persistentFastForward Persi
 					Insecure:     ptr.To(false),
 					ScriptAccess: options.ScriptAccessDenied,
 					SameSite:     options.SameSiteDefault,
-					Secret:       options.SecretSource{FromFile: tmpfile.Name()},
+					Secret:       &options.SecretSource{FromFile: tmpfile.Name()},
 				}
 				ss, err = newSS(input.sessionOpts, input.cookieOpts)
 				Expect(err).ToNot(HaveOccurred())

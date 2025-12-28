@@ -36,7 +36,7 @@ type Options struct {
 	HtpasswdUserGroups      []string `flag:"htpasswd-user-group" cfg:"htpasswd_user_groups"`
 
 	Cookie    Cookie         `cfg:",internal"`
-	Session   SessionOptions `cfg:",squash"`
+	Session   SessionOptions `cfg:",internal"`
 	Logging   Logging        `cfg:",squash"`
 	Templates Templates      `cfg:",squash"`
 

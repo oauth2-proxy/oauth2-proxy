@@ -26,9 +26,11 @@ func MakeCookieFromOptions(req *http.Request, name string, value string, opts *o
 		domain = opts.Domains[len(opts.Domains)-1]
 	}
 
-	httpOnly := true
+	var httpOnly bool
 	if opts.ScriptAccess == options.ScriptAccessAllowed {
 		httpOnly = false
+	} else {
+		httpOnly = true
 	}
 
 	c := &http.Cookie{

@@ -37,7 +37,7 @@ type Cookie struct {
 	// Name is the name of the cookie
 	Name string `yaml:"name,omitempty"`
 	// Secret is the secret source used to encrypt/sign the cookie value
-	Secret SecretSource `yaml:"secret,omitempty"`
+	Secret *SecretSource `yaml:"secret,omitempty"`
 	// Domains is a list of domains for which the cookie is valid
 	Domains []string `yaml:"domains,omitempty"`
 	// Path is the path for which the cookie is valid
@@ -98,7 +98,7 @@ func (sa *ScriptAccess) UnmarshalYAML(value *yaml.Node) error {
 
 // GetSecret returns the cookie secret as a string from the SecretSource
 func (c *Cookie) GetSecret() (string, error) {
-	secret, err := c.Secret.GetSecretValue()
+	secret, err := c.Secret.GetRawSecretValue()
 	if err != nil {
 		return "", fmt.Errorf("error getting cookie secret: %w", err)
 	}
@@ -116,6 +116,9 @@ func (c *Cookie) EnsureDefaults() {
 	}
 	if c.Expire == 0 {
 		c.Expire = time.Duration(168) * time.Hour
+	}
+	if c.Secret == nil {
+		c.Secret = &SecretSource{}
 	}
 	if c.Insecure == nil {
 		c.Insecure = ptr.To(DefaultCookieInsecure)

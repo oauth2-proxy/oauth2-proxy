@@ -20,8 +20,8 @@ type SecretSource struct {
 }
 
 func NewSecretSourceFromValue(value []byte) *SecretSource {
-	encoded := make([]byte, base64.RawStdEncoding.EncodedLen(len(value)))
-	base64.RawStdEncoding.Encode(encoded, value)
+	encoded := make([]byte, base64.URLEncoding.EncodedLen(len(value)))
+	base64.URLEncoding.Encode(encoded, value)
 	return &SecretSource{
 		Value: encoded,
 	}
@@ -31,13 +31,9 @@ func NewSecretSourceFromString(s string) *SecretSource {
 	return NewSecretSourceFromValue([]byte(s))
 }
 
-func (ss *SecretSource) GetSecretValue() ([]byte, error) {
+func (ss *SecretSource) GetRawSecretValue() ([]byte, error) {
 	if len(ss.Value) > 0 {
-		var decoded []byte
-		if _, err := base64.RawStdEncoding.Decode(decoded, ss.Value); err != nil {
-			return nil, fmt.Errorf("error decoding secret value: %w", err)
-		}
-		return decoded, nil
+		return ss.Value, nil
 	}
 
 	if ss.FromEnv != "" {
@@ -54,6 +50,23 @@ func (ss *SecretSource) GetSecretValue() ([]byte, error) {
 	}
 
 	return nil, nil
+}
+
+func (ss *SecretSource) GetSecretValue() ([]byte, error) {
+	value, err := ss.GetRawSecretValue()
+	if err != nil {
+		return nil, fmt.Errorf("failed getting raw secret value: %w", err)
+	}
+
+	if value == nil {
+		return nil, fmt.Errorf("failed retrieving secret value: no source defined")
+	}
+
+	decoded := make([]byte, base64.URLEncoding.DecodedLen(len(value)))
+	if _, err := base64.URLEncoding.Decode(decoded, value); err != nil {
+		return nil, fmt.Errorf("error decoding secret value: %w", err)
+	}
+	return decoded, nil
 }
 
 // EnsureDefaults sets any default values for SecretSource fields.

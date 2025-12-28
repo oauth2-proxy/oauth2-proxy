@@ -33,10 +33,13 @@ import (
 const (
 	// The rawCookieSecret is 32 bytes and the base64CookieSecret is the base64
 	// encoded version of this.
-	rawCookieSecret    = "secretthirtytwobytes+abcdefghijk"
-	base64CookieSecret = "c2VjcmV0dGhpcnR5dHdvYnl0ZXMrYWJjZGVmZ2hpams"
-	clientID           = "3984n253984d7348dm8234yf982t"
-	clientSecret       = "gv3498mfc9t23y23974dm2394dm9"
+	clientID     = "3984n253984d7348dm8234yf982t"
+	clientSecret = "gv3498mfc9t23y23974dm2394dm9"
+)
+
+var (
+	rawCookieSecret    = &options.SecretSource{Value: []byte("secretthirtytwobytes+abcdefghijk")}
+	base64CookieSecret = &options.SecretSource{Value: []byte("c2VjcmV0dGhpcnR5dHdvYnl0ZXMrYWJjZGVmZ2hpams")}
 )
 
 func init() {
@@ -207,7 +210,7 @@ func TestBasicAuthPassword(t *testing.T) {
 		},
 	}
 
-	opts.Cookie.Secure = ptr.To(false)
+	opts.Cookie.Insecure = ptr.To(true)
 	opts.InjectRequestHeaders = []options.Header{
 		{
 			Name: "Authorization",
@@ -362,7 +365,7 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) (*PassAccessTokenTe
 		patt.opts.UpstreamServers.Upstreams = append(patt.opts.UpstreamServers.Upstreams, opts.ProxyUpstream)
 	}
 
-	patt.opts.Cookie.Secure = ptr.To(false)
+	patt.opts.Cookie.Insecure = ptr.To(true)
 	if opts.PassAccessToken {
 		patt.opts.InjectRequestHeaders = []options.Header{
 			{
@@ -3470,7 +3473,7 @@ func TestGetOAuthRedirectURI(t *testing.T) {
 		{
 			name: "redirect with http schema",
 			setupOpts: func(baseOpts *options.Options) *options.Options {
-				baseOpts.Cookie.Secure = ptr.To(false)
+				baseOpts.Cookie.Insecure = ptr.To(true)
 				return baseOpts
 			},
 			req: &http.Request{

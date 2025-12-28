@@ -189,7 +189,7 @@ var _ = Describe("Headers Suite", func() {
 							ClaimSource: &options.ClaimSource{
 								Claim: "user",
 								BasicAuthPassword: &options.SecretSource{
-									Value:   []byte(base64.RawStdEncoding.EncodeToString([]byte("basic-password"))),
+									Value:   []byte(base64.URLEncoding.EncodeToString([]byte("basic-password"))),
 									FromEnv: "SECRET_ENV",
 								},
 							},
@@ -461,7 +461,7 @@ var _ = Describe("Headers Suite", func() {
 							ClaimSource: &options.ClaimSource{
 								Claim: "user",
 								BasicAuthPassword: &options.SecretSource{
-									Value:   []byte(base64.StdEncoding.EncodeToString([]byte("basic-password"))),
+									Value:   []byte(base64.RawStdEncoding.EncodeToString([]byte("basic-password"))),
 									FromEnv: "SECRET_ENV",
 								},
 							},

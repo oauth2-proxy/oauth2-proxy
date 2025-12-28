@@ -25,7 +25,7 @@ var _ = Describe("CSRF Cookie with non-fixed name Tests", func() {
 	BeforeEach(func() {
 		cookieOpts = &options.Cookie{
 			Name:           cookieName,
-			Secret:         options.SecretSource{Value: cookieSecret},
+			Secret:         &options.SecretSource{Value: cookieSecret},
 			Domains:        []string{cookieDomain},
 			Path:           cookiePath,
 			Expire:         time.Hour,
