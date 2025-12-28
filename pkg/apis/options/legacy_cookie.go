@@ -44,10 +44,13 @@ func legacyCookieFlagSet() *pflag.FlagSet {
 }
 
 func (l *LegacyCookie) convert() Cookie {
-	// Invert Secure and HTTPOnly to match the new Cookie struct
-	// which uses Insecure and NotHttpOnly
+	// Invert Secure and use ScriptAccess property instead of
+	// HTTPOnly to match new Cookie struct
 	insecure := !l.Secure
-	notHTTPOnly := !l.HTTPOnly
+	scriptAccess := ScriptAccessDenied
+	if !l.HTTPOnly {
+		scriptAccess = ScriptAccessAllowed
+	}
 
 	var secret *SecretSource
 	if l.Secret != "" {
@@ -65,7 +68,7 @@ func (l *LegacyCookie) convert() Cookie {
 		Path:                l.Path,
 		Expire:              l.Expire,
 		Insecure:            &insecure,
-		NotHttpOnly:         &notHTTPOnly,
+		ScriptAccess:        scriptAccess,
 		SameSite:            SameSiteMode(l.SameSite),
 		CSRFPerRequest:      &l.CSRFPerRequest,
 		CSRFPerRequestLimit: l.CSRFPerRequestLimit,
