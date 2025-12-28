@@ -23,7 +23,7 @@ http_address="127.0.0.1:4180"
 upstreams="http://httpbin"
 
 set_basic_auth="true"
-basic_auth_password="c3VwZXItc2VjcmV0LXBhc3N3b3Jk"
+basic_auth_password="super-secret-password"
 
 client_id="oauth2-proxy"
 client_secret="b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK"
@@ -55,7 +55,7 @@ injectRequestHeaders:
       claim: user
       prefix: "Basic "
       basicAuthPassword:
-        value: YzNWd1pYSXRjMlZqY21WMExYQmhjM04zYjNKaw==
+        value: c3VwZXItc2VjcmV0LXBhc3N3b3Jk
 - name: X-Forwarded-Groups
   preserveRequestValue: false
   values:
@@ -83,7 +83,7 @@ injectResponseHeaders:
       claim: user
       prefix: "Basic "
       basicAuthPassword:
-        value: "YzNWd1pYSXRjMlZqY21WMExYQmhjM04zYjNKaw=="
+        value: c3VwZXItc2VjcmV0LXBhc3N3b3Jk
 server:
   bindAddress: "127.0.0.1:4180"
 cookie:
@@ -155,7 +155,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 					ClaimSource: &options.ClaimSource{
 						Claim:             "user",
 						Prefix:            "Basic ",
-						BasicAuthPassword: options.NewSecretSourceFromString("c3VwZXItc2VjcmV0LXBhc3N3b3Jk"),
+						BasicAuthPassword: &options.SecretSource{Value: []byte("c3VwZXItc2VjcmV0LXBhc3N3b3Jk")},
 					},
 				},
 			},
