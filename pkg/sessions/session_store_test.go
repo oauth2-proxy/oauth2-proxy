@@ -50,11 +50,11 @@ var _ = Describe("NewSessionStore", func() {
 			Secret: options.SecretSource{
 				Value: secretValue,
 			},
-			Path:        "/",
-			Expire:      time.Duration(168) * time.Hour,
-			Insecure:    ptr.To(false),
-			NotHttpOnly: ptr.To(false),
-			SameSite:    "",
+			Path:         "/",
+			Expire:       time.Duration(168) * time.Hour,
+			Insecure:     ptr.To(false),
+			ScriptAccess: options.ScriptAccessDenied,
+			SameSite:     "",
 		}
 	})
 
