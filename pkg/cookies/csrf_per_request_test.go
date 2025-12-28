@@ -30,7 +30,7 @@ var _ = Describe("CSRF Cookie with non-fixed name Tests", func() {
 			Path:           cookiePath,
 			Expire:         time.Hour,
 			Insecure:       ptr.To(false),
-			NotHttpOnly:    ptr.To(false),
+			ScriptAccess:   options.ScriptAccessDenied,
 			CSRFPerRequest: ptr.To(true),
 			CSRFExpire:     time.Duration(5) * time.Minute,
 		}

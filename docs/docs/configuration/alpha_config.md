@@ -184,8 +184,9 @@ They may change between releases without notice.
 | `injectResponseHeaders` | _[[]Header](#header)_ | InjectResponseHeaders is used to configure headers that should be added<br/>to responses from the proxy.<br/>This is typically used when using the proxy as an external authentication<br/>provider in conjunction with another proxy such as NGINX and its<br/>auth_request module.<br/>Headers may source values from either the authenticated user's session<br/>or from a static secret value. |
 | `server` | _[Server](#server)_ | Server is used to configure the HTTP(S) server for the proxy application.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
 | `metricsServer` | _[Server](#server)_ | MetricsServer is used to configure the HTTP(S) server for metrics.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
-| `providers` | _[Providers](#providers)_ | Providers is used to configure your provider. **Multiple-providers is not<br/>yet working.** [This feature is tracked in<br/>#925](https://github.com/oauth2-proxy/oauth2-proxy/issues/926) |
+| `providers` | _[Providers](#providers)_ | Providers is used to configure your provider.<br/>**Multiple-providers is not yet working.**<br/>[This feature is tracked in #925](https://github.com/oauth2-proxy/oauth2-proxy/issues/926) |
 | `cookie` | _[Cookie](#cookie)_ | Cookie is used to configure the cookies used by OAuth2 Proxy.<br/>This includes session and CSRF cookies. |
+| `session` | _[SessionOptions](#sessionoptions)_ | Session is used to configure session options used by OAuth2 Proxy.<br/>This includes session storage options. |
 
 ### AzureOptions
 
@@ -230,18 +231,26 @@ Cookie contains configuration options relating session and CSRF cookies
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | `name` | _string_ | Name is the name of the cookie |
-| `secret` | _string_ | Secret is the secret used to encrypt/sign the cookie value |
-| `secretFile` | _string_ | SecretFile is a file containing the secret used to encrypt/sign the cookie value<br/>instead of specifying it directly in the config. Secret takes precedence over SecretFile |
+| `secret` | _[SecretSource](#secretsource)_ | Secret is the secret source used to encrypt/sign the cookie value |
 | `domains` | _[]string_ | Domains is a list of domains for which the cookie is valid |
 | `path` | _string_ | Path is the path for which the cookie is valid |
 | `expire` | _duration_ | Expire is the duration before the cookie expires |
-| `refresh` | _duration_ | Refresh is the duration after which the cookie is refreshable |
-| `secure` | _bool_ | Secure indicates whether the cookie is only sent over HTTPS |
-| `httpOnly` | _bool_ | HTTPOnly indicates whether the cookie is inaccessible to JavaScript |
-| `sameSite` | _string_ | SameSite sets the SameSite attribute on the cookie |
-| `csrfPerRequest` | _bool_ | CSRFPerRequest indicates whether a unique CSRF token is generated for each request<br/>Enables parallel requests from clients (e.g., multiple tabs) |
+| `insecure` | _bool_ | Insecure indicates whether the cookie allows to be sent over HTTP<br/>Default is false, which requires HTTPS |
+| `scriptAccess` | _[ScriptAccess](#scriptaccess)_ | ScriptAccess is a wrapper enum for HTTPOnly; indicates whether the<br/>cookie is accessible to JavaScript. Default is deny which translates<br/>to true for HTTPOnly, which helps mitigate certain XSS attacks |
+| `sameSite` | _[SameSiteMode](#samesitemode)_ | SameSite sets the SameSite attribute on the cookie |
+| `csrfPerRequest` | _bool_ | CSRFPerRequest indicates whether a unique CSRF token is generated for each request<br/>Enables parallel requests from clients (e.g., multiple tabs)<br/>Default is false, which uses a single CSRF token per session |
 | `csrfPerRequestLimit` | _int_ | CSRFPerRequestLimit sets a limit on the number of valid CSRF tokens when CSRFPerRequest is enabled<br/>Used to prevent unbounded memory growth from storing too many tokens |
 | `csrfExpire` | _duration_ | CSRFExpire sets the duration before a CSRF token expires |
+
+### CookieStoreOptions
+
+(**Appears on:** [SessionOptions](#sessionoptions))
+
+CookieStoreOptions contains configuration options for the CookieSessionStore.
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `minimal` | _bool_ | Minimal indicates whether to use minimal cookies for session storage<br/>Default is false |
 
 ### GitHubOptions
 
@@ -510,9 +519,44 @@ AlphaConfig](https://oauth2-proxy.github.io/oauth2-proxy/configuration/alpha-con
 However, [**the feature to implement multiple providers is not
 complete**](https://github.com/oauth2-proxy/oauth2-proxy/issues/926).
 
+### RedisStoreOptions
+
+(**Appears on:** [SessionOptions](#sessionoptions))
+
+RedisStoreOptions contains configuration options for the RedisSessionStore.
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `connectionURL` | _string_ | ConnectionURL is the Redis connection URL |
+| `username` | _string_ | Username is the Redis username |
+| `password` | _string_ | Password is the Redis password |
+| `useSentinel` | _bool_ | UseSentinel indicates whether to use Redis Sentinel<br/>Default is false |
+| `sentinelPassword` | _string_ | SentinelPassword is the Redis Sentinel password |
+| `sentinelMasterName` | _string_ | SentinelMasterName is the Redis Sentinel master name |
+| `sentinelConnectionURLs` | _[]string_ | SentinelConnectionURLs is a list of Redis Sentinel connection URLs |
+| `useCluster` | _bool_ | UseCluster indicates whether to use Redis Cluster<br/>Default is false |
+| `clusterConnectionURLs` | _[]string_ | ClusterConnectionURLs is a list of Redis Cluster connection URLs |
+| `caPath` | _string_ | CAPath is the path to the CA certificate for Redis TLS connections |
+| `insecureSkipTLSVerify` | _bool_ | InsecureSkipTLSVerify indicates whether to skip TLS verification for Redis connections |
+| `idleTimeout` | _int_ | IdleTimeout is the Redis connection idle timeout in seconds |
+
+### SameSiteMode
+#### (`string` alias)
+
+(**Appears on:** [Cookie](#cookie))
+
+
+
+### ScriptAccess
+#### (`string` alias)
+
+(**Appears on:** [Cookie](#cookie))
+
+
+
 ### SecretSource
 
-(**Appears on:** [ClaimSource](#claimsource), [HeaderValue](#headervalue), [TLS](#tls))
+(**Appears on:** [ClaimSource](#claimsource), [Cookie](#cookie), [HeaderValue](#headervalue), [TLS](#tls))
 
 SecretSource references an individual secret value.
 Only one source within the struct should be defined at any time.
@@ -534,6 +578,26 @@ Server represents the configuration for an HTTP(S) server
 | `bindAddress` | _string_ | BindAddress is the address on which to serve traffic.<br/>Leave blank or set to "-" to disable. |
 | `secureBindAddress` | _string_ | SecureBindAddress is the address on which to serve secure traffic.<br/>Leave blank or set to "-" to disable. |
 | `tls` | _[TLS](#tls)_ | TLS contains the information for loading the certificate and key for the<br/>secure traffic and further configuration for the TLS server. |
+
+### SessionOptions
+
+(**Appears on:** [AlphaOptions](#alphaoptions))
+
+SessionOptions contains configuration options for the SessionStore providers.
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `type` | _[SessionStoreType](#sessionstoretype)_ | Type is the type of session store to use<br/>Options are "cookie" or "redis"<br/>Default is "cookie" |
+| `refresh` | _duration_ | Refresh is the duration after which the session is refreshable |
+| `cookie` | _[CookieStoreOptions](#cookiestoreoptions)_ | Cookie is the configuration options for the CookieSessionStore |
+| `redis` | _[RedisStoreOptions](#redisstoreoptions)_ | Redis is the configuration options for the RedisSessionStore |
+
+### SessionStoreType
+#### (`string` alias)
+
+(**Appears on:** [SessionOptions](#sessionoptions))
+
+
 
 ### TLS
 

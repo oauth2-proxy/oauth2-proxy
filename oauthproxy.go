@@ -180,7 +180,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		refresh = fmt.Sprintf("after %s", opts.Session.Refresh)
 	}
 
-	logger.Printf("Cookie settings: name:%s insecure(http):%v nothttponly:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s", opts.Cookie.Name, opts.Cookie.Insecure, opts.Cookie.NotHttpOnly, opts.Cookie.Expire, strings.Join(opts.Cookie.Domains, ","), opts.Cookie.Path, opts.Cookie.SameSite, refresh)
+	logger.Printf("Cookie settings: name:%s insecure(http):%v scriptaccess:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s", opts.Cookie.Name, opts.Cookie.Insecure, opts.Cookie.ScriptAccess, opts.Cookie.Expire, strings.Join(opts.Cookie.Domains, ","), opts.Cookie.Path, opts.Cookie.SameSite, refresh)
 
 	trustedIPs := ip.NewNetSet()
 	for _, ipStr := range opts.TrustedIPs {
