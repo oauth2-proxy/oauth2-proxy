@@ -11,8 +11,6 @@ import (
 const (
 	// DefaultCookieInsecure is the default value for Cookie.Insecure
 	DefaultCookieInsecure bool = false
-	// DefaultCookieNotHttpOnly is the default value for Cookie.NotHttpOnly
-	DefaultCookieNotHttpOnly bool = false
 	// DefaultCSRFPerRequest is the default value for Cookie.CSRFPerRequest
 	DefaultCSRFPerRequest bool = false
 )
@@ -24,6 +22,14 @@ const (
 	SameSiteStrict  SameSiteMode = "strict"
 	SameSiteNone    SameSiteMode = "none"
 	SameSiteDefault SameSiteMode = ""
+)
+
+type ScriptAccess string
+
+const (
+	ScriptAccessDenied  ScriptAccess = "deny"
+	ScriptAccessAllowed ScriptAccess = "allow"
+	ScriptAccessNone    ScriptAccess = ""
 )
 
 // Cookie contains configuration options relating session and CSRF cookies
@@ -41,9 +47,10 @@ type Cookie struct {
 	// Insecure indicates whether the cookie allows to be sent over HTTP
 	// Default is false, which requires HTTPS
 	Insecure *bool `yaml:"insecure,omitempty"`
-	// NotHttpOnly is the inverse of HTTPOnly; indicates whether the cookie is accessible to JavaScript
-	// Default is false, which helps mitigate certain XSS attacks
-	NotHttpOnly *bool `yaml:"notHttpOnly,omitempty"`
+	// ScriptAccess is a wrapper enum for HTTPOnly; indicates whether the
+	// cookie is accessible to JavaScript. Default is deny which translates
+	// to true for HTTPOnly, which helps mitigate certain XSS attacks
+	ScriptAccess ScriptAccess `yaml:"scriptAccess,omitempty"`
 	// SameSite sets the SameSite attribute on the cookie
 	SameSite SameSiteMode `yaml:"sameSite,omitempty"`
 	// CSRFPerRequest indicates whether a unique CSRF token is generated for each request
@@ -57,6 +64,8 @@ type Cookie struct {
 	CSRFExpire time.Duration `yaml:"csrfExpire,omitempty"`
 }
 
+// UnmarshalYAML unmarshalles the strings provided for the
+// SameSite property to the enum type SameSiteMode
 func (m *SameSiteMode) UnmarshalYAML(value *yaml.Node) error {
 	var s string
 	if err := value.Decode(&s); err != nil {
@@ -68,6 +77,22 @@ func (m *SameSiteMode) UnmarshalYAML(value *yaml.Node) error {
 		return nil
 	default:
 		return fmt.Errorf("invalid same site mode: %s", s)
+	}
+}
+
+// UnmarshalYAML unmarshalles the strings provided for the
+// ScriptAccess property to the enum type ScriptAccess
+func (sa *ScriptAccess) UnmarshalYAML(value *yaml.Node) error {
+	var s string
+	if err := value.Decode(&s); err != nil {
+		return err
+	}
+	switch ScriptAccess(s) {
+	case ScriptAccessAllowed, ScriptAccessDenied, ScriptAccessNone:
+		*sa = ScriptAccess(s)
+		return nil
+	default:
+		return fmt.Errorf("invalid script access: %s", s)
 	}
 }
 
@@ -95,8 +120,8 @@ func (c *Cookie) EnsureDefaults() {
 	if c.Insecure == nil {
 		c.Insecure = ptr.To(DefaultCookieInsecure)
 	}
-	if c.NotHttpOnly == nil {
-		c.NotHttpOnly = ptr.To(DefaultCookieNotHttpOnly)
+	if c.ScriptAccess == ScriptAccessNone {
+		c.ScriptAccess = ScriptAccessDenied
 	}
 	if c.CSRFPerRequest == nil {
 		c.CSRFPerRequest = ptr.To(DefaultCSRFPerRequest)

@@ -1099,7 +1099,7 @@ var _ = Describe("Legacy Options", func() {
 			Path:                "/",
 			Expire:              time.Duration(168) * time.Hour,
 			Insecure:            ptr.To(false),
-			NotHttpOnly:         ptr.To(false),
+			ScriptAccess:        ScriptAccessDenied,
 			SameSite:            "",
 			CSRFPerRequest:      ptr.To(false),
 			CSRFPerRequestLimit: 0,

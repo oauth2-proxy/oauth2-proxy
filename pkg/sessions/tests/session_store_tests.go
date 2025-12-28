@@ -67,13 +67,13 @@ func RunSessionStoreTests(newSS NewSessionStoreFunc, persistentFastForward Persi
 
 			// Set default options in CookieOptions
 			cookieOpts := &options.Cookie{
-				Name:        "_oauth2_proxy",
-				Path:        "/",
-				Expire:      time.Duration(168) * time.Hour,
-				Insecure:    ptr.To(false),
-				NotHttpOnly: ptr.To(false),
-				SameSite:    options.SameSiteDefault,
-				Secret:      options.SecretSource{Value: cookieSecret},
+				Name:         "_oauth2_proxy",
+				Path:         "/",
+				Expire:       time.Duration(168) * time.Hour,
+				Insecure:     ptr.To(false),
+				ScriptAccess: options.ScriptAccessDenied,
+				SameSite:     options.SameSiteDefault,
+				Secret:       options.SecretSource{Value: cookieSecret},
 			}
 
 			expires := time.Now().Add(1 * time.Hour)
@@ -117,14 +117,14 @@ func RunSessionStoreTests(newSS NewSessionStoreFunc, persistentFastForward Persi
 			BeforeEach(func() {
 				input.sessionOpts.Refresh = time.Duration(2) * time.Hour
 				input.cookieOpts = &options.Cookie{
-					Name:        "_cookie_name",
-					Path:        "/path",
-					Expire:      time.Duration(72) * time.Hour,
-					Insecure:    ptr.To(true),
-					NotHttpOnly: ptr.To(true),
-					Domains:     []string{"example.com"},
-					SameSite:    options.SameSiteStrict,
-					Secret:      options.SecretSource{Value: cookieSecret},
+					Name:         "_cookie_name",
+					Path:         "/path",
+					Expire:       time.Duration(72) * time.Hour,
+					Insecure:     ptr.To(true),
+					ScriptAccess: options.ScriptAccessAllowed,
+					Domains:      []string{"example.com"},
+					SameSite:     options.SameSiteStrict,
+					Secret:       options.SecretSource{Value: cookieSecret},
 				}
 
 				var err error
@@ -149,13 +149,13 @@ func RunSessionStoreTests(newSS NewSessionStoreFunc, persistentFastForward Persi
 
 				input.sessionOpts.Refresh = time.Duration(1) * time.Hour
 				input.cookieOpts = &options.Cookie{
-					Name:        "_oauth2_proxy_file",
-					Path:        "/",
-					Expire:      time.Duration(168) * time.Hour,
-					Insecure:    ptr.To(false),
-					NotHttpOnly: ptr.To(false),
-					SameSite:    options.SameSiteDefault,
-					Secret:      options.SecretSource{FromFile: tmpfile.Name()},
+					Name:         "_oauth2_proxy_file",
+					Path:         "/",
+					Expire:       time.Duration(168) * time.Hour,
+					Insecure:     ptr.To(false),
+					ScriptAccess: options.ScriptAccessDenied,
+					SameSite:     options.SameSiteDefault,
+					Secret:       options.SecretSource{FromFile: tmpfile.Name()},
 				}
 				ss, err = newSS(input.sessionOpts, input.cookieOpts)
 				Expect(err).ToNot(HaveOccurred())
@@ -210,7 +210,14 @@ func CheckCookieOptions(in *testInput) {
 
 		It("have the correct HTTPOnly set", func() {
 			for _, cookie := range cookies {
-				Expect(cookie.HttpOnly).To(Equal(!(*in.cookieOpts.NotHttpOnly)))
+				var httpOnly bool
+				if in.cookieOpts.ScriptAccess == options.ScriptAccessAllowed {
+					httpOnly = false
+				}
+				if in.cookieOpts.ScriptAccess == options.ScriptAccessDenied {
+					httpOnly = true
+				}
+				Expect(cookie.HttpOnly).To(Equal(httpOnly))
 			}
 		})
 
