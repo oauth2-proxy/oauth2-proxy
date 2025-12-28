@@ -52,9 +52,11 @@ func (l *LegacyCookie) convert() Cookie {
 		scriptAccess = ScriptAccessAllowed
 	}
 
-	var secret *SecretSource
+	secret := &SecretSource{}
 	if l.Secret != "" {
-		secret = NewSecretSourceFromString(l.Secret)
+		secret = &SecretSource{
+			Value: []byte(l.Secret),
+		}
 	} else if l.SecretFile != "" {
 		secret = &SecretSource{
 			FromFile: l.SecretFile,
@@ -63,7 +65,7 @@ func (l *LegacyCookie) convert() Cookie {
 
 	return Cookie{
 		Name:                l.Name,
-		Secret:              *secret,
+		Secret:              secret,
 		Domains:             l.Domains,
 		Path:                l.Path,
 		Expire:              l.Expire,

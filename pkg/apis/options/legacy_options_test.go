@@ -372,11 +372,9 @@ var _ = Describe("Legacy Options", func() {
 			Values: []HeaderValue{
 				{
 					ClaimSource: &ClaimSource{
-						Claim:  "user",
-						Prefix: "Basic ",
-						BasicAuthPassword: &SecretSource{
-							Value: []byte(basicAuthSecret),
-						},
+						Claim:             "user",
+						Prefix:            "Basic ",
+						BasicAuthPassword: NewSecretSourceFromString(basicAuthSecret),
 					},
 				},
 			},
@@ -412,11 +410,9 @@ var _ = Describe("Legacy Options", func() {
 			Values: []HeaderValue{
 				{
 					ClaimSource: &ClaimSource{
-						Claim:  "email",
-						Prefix: "Basic ",
-						BasicAuthPassword: &SecretSource{
-							Value: []byte(basicAuthSecret),
-						},
+						Claim:             "email",
+						Prefix:            "Basic ",
+						BasicAuthPassword: NewSecretSourceFromString(basicAuthSecret),
 					},
 				},
 			},
@@ -1096,7 +1092,7 @@ var _ = Describe("Legacy Options", func() {
 		// Test cases and expected outcomes
 		fullCookie := Cookie{
 			Name:                "_oauth2_proxy",
-			Secret:              SecretSource{},
+			Secret:              &SecretSource{},
 			Domains:             nil,
 			Path:                "/",
 			Expire:              time.Duration(168) * time.Hour,

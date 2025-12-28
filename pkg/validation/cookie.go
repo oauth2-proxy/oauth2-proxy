@@ -49,12 +49,12 @@ func validateCookieName(name string) []string {
 	return msgs
 }
 
-func validateCookieSecret(secret options.SecretSource) []string {
-	if len(secret.Value) == 0 && secret.FromFile == "" {
+func validateCookieSecret(secret *options.SecretSource) []string {
+	if secret == nil || len(secret.Value) == 0 && secret.FromFile == "" {
 		return []string{"missing setting: cookie-secret or cookie-secret-file"}
 	}
 
-	value, err := secret.GetSecretValue()
+	value, err := secret.GetRawSecretValue()
 	if err != nil {
 		return []string{fmt.Sprintf("error retrieving cookie secret: %v", err)}
 	}
