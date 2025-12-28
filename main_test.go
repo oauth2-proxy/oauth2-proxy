@@ -55,7 +55,7 @@ injectRequestHeaders:
       claim: user
       prefix: "Basic "
       basicAuthPassword:
-        value: c3VwZXItc2VjcmV0LXBhc3N3b3Jk
+        value: YzNWd1pYSXRjMlZqY21WMExYQmhjM04zYjNKaw==
 - name: X-Forwarded-Groups
   preserveRequestValue: false
   values:
@@ -83,12 +83,13 @@ injectResponseHeaders:
       claim: user
       prefix: "Basic "
       basicAuthPassword:
-        value: c3VwZXItc2VjcmV0LXBhc3N3b3Jk
+        value: "YzNWd1pYSXRjMlZqY21WMExYQmhjM04zYjNKaw=="
 server:
   bindAddress: "127.0.0.1:4180"
 cookie:
-  secure: false
-  secret: "OQINaROshtE9TcZkNAm-5Zs2Pv3xaWytBmc5W7sPX7w="
+  insecure: true
+  secret:
+    value: "OQINaROshtE9TcZkNAm-5Zs2Pv3xaWytBmc5W7sPX7w="
 providers:
 - id: google=oauth2-proxy
   provider: google
@@ -123,9 +124,9 @@ redirect_url="http://localhost:4180/oauth2/callback"
 		opts, err := options.NewLegacyOptions().ToOptions()
 		Expect(err).ToNot(HaveOccurred())
 
-		opts.Cookie.Secret = "OQINaROshtE9TcZkNAm-5Zs2Pv3xaWytBmc5W7sPX7w="
+		opts.Cookie.Secret = &options.SecretSource{Value: []byte("OQINaROshtE9TcZkNAm-5Zs2Pv3xaWytBmc5W7sPX7w=")}
 		opts.EmailDomains = []string{"example.com"}
-		opts.Cookie.Secure = ptr.To(false)
+		opts.Cookie.Insecure = ptr.To(true)
 		opts.RawRedirectURL = "http://localhost:4180/oauth2/callback"
 
 		opts.UpstreamServers = options.UpstreamConfig{
@@ -152,11 +153,9 @@ redirect_url="http://localhost:4180/oauth2/callback"
 			Values: []options.HeaderValue{
 				{
 					ClaimSource: &options.ClaimSource{
-						Claim:  "user",
-						Prefix: "Basic ",
-						BasicAuthPassword: &options.SecretSource{
-							Value: []byte("c3VwZXItc2VjcmV0LXBhc3N3b3Jk"),
-						},
+						Claim:             "user",
+						Prefix:            "Basic ",
+						BasicAuthPassword: options.NewSecretSourceFromString("c3VwZXItc2VjcmV0LXBhc3N3b3Jk"),
 					},
 				},
 			},
@@ -294,7 +293,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 			configContent:      testCoreConfig + "unknown_field=\"something\"",
 			alphaConfigContent: testAlphaConfig,
 			expectedOptions:    func() *options.Options { return nil },
-			expectedErr:        errors.New("failed to load legacy options: failed to load legacy config: error unmarshalling config: decoding failed due to the following error(s):\n\n'' has invalid keys: unknown_field"),
+			expectedErr:        errors.New("failed to load yaml options: failed to load core options: failed to load config: error unmarshalling config: decoding failed due to the following error(s):\n\n'' has invalid keys: unknown_field"),
 		}),
 	)
 })

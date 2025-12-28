@@ -18,11 +18,11 @@ func TestValidateCookie(t *testing.T) {
 	invalidName := "_oauth2;proxy" // Separater character not allowed
 	// 10 times the alphabet should be longer than 256 characters
 	longName := strings.Repeat(alphabet, 10)
-	validSecret := options.SecretSource{
+	validSecret := &options.SecretSource{
 		Value: []byte("secretthirtytwobytes+abcdefghijk"),
 	}
 	// 6 bytes is not a valid size
-	invalidSecret := options.SecretSource{
+	invalidSecret := &options.SecretSource{
 		Value: []byte("abcdef"),
 	}
 
@@ -90,7 +90,7 @@ func TestValidateCookie(t *testing.T) {
 			name: "with no cookie secret",
 			cookie: options.Cookie{
 				Name: validName,
-				Secret: options.SecretSource{
+				Secret: &options.SecretSource{
 					Value:    nil,
 					FromFile: "",
 				},
@@ -127,7 +127,7 @@ func TestValidateCookie(t *testing.T) {
 			name: "with a valid Base64 secret",
 			cookie: options.Cookie{
 				Name:         validName,
-				Secret:       validBase64Secret,
+				Secret:       &validBase64Secret,
 				Domains:      emptyDomains,
 				Path:         "",
 				Expire:       time.Hour,
@@ -142,7 +142,7 @@ func TestValidateCookie(t *testing.T) {
 			name: "with an invalid Base64 secret",
 			cookie: options.Cookie{
 				Name:         validName,
-				Secret:       invalidBase64Secret,
+				Secret:       &invalidBase64Secret,
 				Domains:      emptyDomains,
 				Path:         "",
 				Expire:       time.Hour,
@@ -307,7 +307,7 @@ func TestValidateCookie(t *testing.T) {
 			name: "with valid secret file",
 			cookie: options.Cookie{
 				Name: validName,
-				Secret: options.SecretSource{
+				Secret: &options.SecretSource{
 					FromFile: tmpfile.Name(),
 				},
 				Domains:      domains,
@@ -324,7 +324,7 @@ func TestValidateCookie(t *testing.T) {
 			name: "with nonexistent secret file",
 			cookie: options.Cookie{
 				Name: validName,
-				Secret: options.SecretSource{
+				Secret: &options.SecretSource{
 					FromFile: "/nonexistent/file.txt",
 				},
 				Domains:      domains,
@@ -335,7 +335,7 @@ func TestValidateCookie(t *testing.T) {
 				SameSite:     "",
 			},
 			refresh:    0,
-			errStrings: []string{"could not read cookie secret file: /nonexistent/file.txt"},
+			errStrings: []string{"error retrieving cookie secret: error reading secret from file \"/nonexistent/file.txt\": open /nonexistent/file.txt: no such file or directory"},
 		},
 	}
 

@@ -10,7 +10,7 @@ import (
 func TestCookieGetSecret(t *testing.T) {
 	t.Run("returns secret when Secret is set", func(t *testing.T) {
 		c := &Cookie{
-			Secret: SecretSource{
+			Secret: &SecretSource{
 				Value:    []byte("my-secret"),
 				FromFile: "",
 			},
@@ -22,7 +22,7 @@ func TestCookieGetSecret(t *testing.T) {
 
 	t.Run("returns secret when both Secret and SecretFile are set", func(t *testing.T) {
 		c := &Cookie{
-			Secret: SecretSource{
+			Secret: &SecretSource{
 				Value:    []byte("my-secret"),
 				FromFile: "/some/file",
 			},
@@ -43,7 +43,7 @@ func TestCookieGetSecret(t *testing.T) {
 		tmpfile.Close()
 
 		c := &Cookie{
-			Secret: SecretSource{
+			Secret: &SecretSource{
 				Value:    []byte(""),
 				FromFile: tmpfile.Name(),
 			},
@@ -55,7 +55,7 @@ func TestCookieGetSecret(t *testing.T) {
 
 	t.Run("returns error when file does not exist", func(t *testing.T) {
 		c := &Cookie{
-			Secret: SecretSource{
+			Secret: &SecretSource{
 				Value:    []byte(""),
 				FromFile: "/nonexistent/file",
 			},
@@ -63,12 +63,12 @@ func TestCookieGetSecret(t *testing.T) {
 		secret, err := c.GetSecret()
 		assert.Error(t, err)
 		assert.Equal(t, "", secret)
-		assert.Contains(t, err.Error(), "error reading cookie secret file /nonexistent/file:")
+		assert.Contains(t, err.Error(), "error getting cookie secret: error reading secret from file \"/nonexistent/file\": open /nonexistent/file: no such file or directory")
 	})
 
 	t.Run("returns empty when both Secret and SecretFile are empty", func(t *testing.T) {
 		c := &Cookie{
-			Secret: SecretSource{
+			Secret: &SecretSource{
 				Value:    []byte(""),
 				FromFile: "",
 			},

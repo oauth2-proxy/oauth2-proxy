@@ -9,6 +9,7 @@ import (
 	"hash"
 	"io"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -27,10 +28,8 @@ func SecretBytes(secret string) []byte {
 		// Only return decoded form if a valid AES length
 		// Don't want unintentional decoding resulting in invalid lengths confusing a user
 		// that thought they used a 16, 24, 32 length string
-		for _, i := range []int{16, 24, 32} {
-			if len(b) == i {
-				return b
-			}
+		if slices.Contains([]int{16, 24, 32}, len(b)) {
+			return b
 		}
 	}
 	// If decoding didn't work or resulted in non-AES compliant length,

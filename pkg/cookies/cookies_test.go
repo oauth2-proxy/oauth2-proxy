@@ -92,7 +92,7 @@ var _ = Describe("Cookie Tests", func() {
 		}
 
 		validName := "_oauth2_proxy"
-		validSecret := []byte("secretthirtytwobytes+abcdefghijk")
+		validSecret := &options.SecretSource{Value: []byte("secretthirtytwobytes+abcdefghijk")}
 		domains := []string{"www.cookies.test"}
 
 		now := time.Now()
@@ -115,7 +115,7 @@ var _ = Describe("Cookie Tests", func() {
 				value: "1",
 				opts: options.Cookie{
 					Name:         validName,
-					Secret:       options.SecretSource{Value: validSecret},
+					Secret:       validSecret,
 					Domains:      domains,
 					Path:         "",
 					Expire:       time.Hour,
@@ -133,7 +133,7 @@ var _ = Describe("Cookie Tests", func() {
 				value: "1",
 				opts: options.Cookie{
 					Name:         validName,
-					Secret:       options.SecretSource{Value: validSecret},
+					Secret:       validSecret,
 					Domains:      domains,
 					Path:         "",
 					Expire:       time.Hour * -1,
@@ -151,7 +151,7 @@ var _ = Describe("Cookie Tests", func() {
 				value: "1",
 				opts: options.Cookie{
 					Name:         validName,
-					Secret:       options.SecretSource{Value: validSecret},
+					Secret:       validSecret,
 					Domains:      domains,
 					Path:         "",
 					Expire:       0,
