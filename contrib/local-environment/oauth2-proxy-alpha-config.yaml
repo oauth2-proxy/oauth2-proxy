@@ -1,8 +1,9 @@
 server:
   bindAddress: "0.0.0.0:4180"
 cookie:
-  secret: OQINaROshtE9TcZkNAm-5Zs2Pv3xaWytBmc5W7sPX7w=
-  secure: false
+  secret:
+    value: OQINaROshtE9TcZkNAm-5Zs2Pv3xaWytBmc5W7sPX7w=
+  insecure: true
 providers:
   - id: oidc
     provider: oidc
