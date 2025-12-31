@@ -456,7 +456,7 @@ Provider holds all configuration for a single provider
 
 ProviderType is used to enumerate the different provider type options
 Valid options are: adfs, azure, bitbucket, digitalocean facebook, github,
-gitlab, google, keycloak, keycloak-oidc, linkedin, login.gov, nextcloud
+gitlab, google, google-oidc, keycloak, keycloak-oidc, linkedin, login.gov, nextcloud
 and oidc.
 
 ### Providers
