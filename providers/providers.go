@@ -58,6 +58,8 @@ func NewProvider(providerConfig options.Provider) (Provider, error) {
 		return NewGitLabProvider(providerData, providerConfig)
 	case options.GoogleProvider:
 		return NewGoogleProvider(providerData, providerConfig.GoogleConfig)
+	case options.GoogleOIDCProvider:
+		return NewGoogleOIDCProvider(providerData, providerConfig.GoogleConfig, providerConfig.OIDCConfig), nil
 	case options.KeycloakProvider:
 		return NewKeycloakProvider(providerData, providerConfig.KeycloakConfig), nil
 	case options.KeycloakOIDCProvider:
@@ -192,7 +194,7 @@ func providerRequiresOIDCProviderVerifier(providerType options.ProviderType) (bo
 		options.NextCloudProvider, options.SourceHutProvider:
 		return false, nil
 	case options.OIDCProvider, options.ADFSProvider, options.AzureProvider, options.CidaasProvider,
-		options.GitLabProvider, options.KeycloakOIDCProvider, options.MicrosoftEntraIDProvider:
+		options.GitLabProvider, options.GoogleOIDCProvider, options.KeycloakOIDCProvider, options.MicrosoftEntraIDProvider:
 		return true, nil
 	default:
 		return false, fmt.Errorf("unknown provider type: %s", providerType)

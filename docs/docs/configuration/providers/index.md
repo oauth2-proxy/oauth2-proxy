@@ -17,6 +17,7 @@ Valid providers are :
 - [GitHub](github.md)
 - [GitLab](gitlab.md)
 - [Google](google.md) _default_
+- [Google OIDC](google_oidc.md)
 - [Keycloak](keycloak.md) (Deprecated)
 - [Keycloak OIDC](keycloak_oidc.md)
 - [LinkedIn](linkedin.md)

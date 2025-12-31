@@ -140,7 +140,7 @@ type Provider struct {
 
 // ProviderType is used to enumerate the different provider type options
 // Valid options are: adfs, azure, bitbucket, digitalocean facebook, github,
-// gitlab, google, keycloak, keycloak-oidc, linkedin, login.gov, nextcloud
+// gitlab, google, google-oidc, keycloak, keycloak-oidc, linkedin, login.gov, nextcloud
 // and oidc.
 type ProviderType string
 
@@ -174,6 +174,9 @@ const (
 
 	// GoogleProvider is the provider type for GoogleProvider
 	GoogleProvider ProviderType = "google"
+
+	// GoogleOIDCProvider is the provider type for Google with OIDC verification
+	GoogleOIDCProvider ProviderType = "google-oidc"
 
 	// KeycloakProvider is the provider type for Keycloak
 	KeycloakProvider ProviderType = "keycloak"

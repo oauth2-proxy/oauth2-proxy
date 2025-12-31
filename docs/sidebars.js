@@ -40,6 +40,7 @@ const sidebars = {
             "configuration/providers/github",
             "configuration/providers/gitlab",
             "configuration/providers/google",
+            "configuration/providers/google_oidc",
             "configuration/providers/keycloak",
             "configuration/providers/keycloak_oidc",
             "configuration/providers/linkedin",

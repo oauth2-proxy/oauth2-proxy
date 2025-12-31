@@ -775,7 +775,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 			Team:       l.BitbucketTeam,
 			Repository: l.BitbucketRepository,
 		}
-	case "google":
+	case "google", "google-oidc":
 		if len(l.GoogleGroupsLegacy) != 0 && !reflect.DeepEqual(l.GoogleGroupsLegacy, l.GoogleGroups) {
 			// Log the deprecation notice
 			logger.Error(
