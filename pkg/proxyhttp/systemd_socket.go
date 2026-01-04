@@ -1,7 +1,7 @@
 //go:build !windows
 // +build !windows
 
-package http
+package proxyhttp
 
 import (
 	"errors"
