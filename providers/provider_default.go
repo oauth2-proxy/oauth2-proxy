@@ -107,6 +107,7 @@ func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code, codeVerifi
 }
 
 // GetEmailAddress returns the Account email address
+//
 // Deprecated: Migrate to EnrichSession
 func (p *ProviderData) GetEmailAddress(_ context.Context, _ *sessions.SessionState) (string, error) {
 	return "", ErrNotImplemented
