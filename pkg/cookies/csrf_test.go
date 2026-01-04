@@ -10,6 +10,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -25,13 +26,13 @@ var _ = Describe("CSRF Cookie Tests", func() {
 	BeforeEach(func() {
 		cookieOpts = &options.Cookie{
 			Name:           cookieName,
-			Secret:         cookieSecret,
+			Secret:         &options.SecretSource{Value: cookieSecret},
 			Domains:        []string{cookieDomain},
 			Path:           cookiePath,
 			Expire:         time.Hour,
-			Secure:         true,
-			HTTPOnly:       true,
-			CSRFPerRequest: false,
+			Insecure:       ptr.To(false),
+			ScriptAccess:   options.ScriptAccessDenied,
+			CSRFPerRequest: ptr.To(false),
 			CSRFExpire:     time.Hour,
 		}
 
@@ -118,8 +119,10 @@ var _ = Describe("CSRF Cookie Tests", func() {
 				Name:  privateCSRF.cookieName(),
 				Value: encoded,
 			}
+			cookieSecret, err := cookieOpts.GetSecret()
+			Expect(err).ToNot(HaveOccurred())
 
-			_, _, valid := encryption.Validate(cookie, cookieOpts.Secret, cookieOpts.Expire)
+			_, _, valid := encryption.Validate(cookie, cookieSecret, cookieOpts.Expire)
 			Expect(valid).To(BeTrue())
 		})
 	})

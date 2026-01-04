@@ -370,11 +370,9 @@ var _ = Describe("Legacy Options", func() {
 			Values: []HeaderValue{
 				{
 					ClaimSource: &ClaimSource{
-						Claim:  "user",
-						Prefix: "Basic ",
-						BasicAuthPassword: &SecretSource{
-							Value: []byte(basicAuthSecret),
-						},
+						Claim:             "user",
+						Prefix:            "Basic ",
+						BasicAuthPassword: NewSecretSourceFromString(basicAuthSecret),
 					},
 				},
 			},
@@ -410,11 +408,9 @@ var _ = Describe("Legacy Options", func() {
 			Values: []HeaderValue{
 				{
 					ClaimSource: &ClaimSource{
-						Claim:  "email",
-						Prefix: "Basic ",
-						BasicAuthPassword: &SecretSource{
-							Value: []byte(basicAuthSecret),
-						},
+						Claim:             "email",
+						Prefix:            "Basic ",
+						BasicAuthPassword: NewSecretSourceFromString(basicAuthSecret),
 					},
 				},
 			},
@@ -1081,6 +1077,55 @@ var _ = Describe("Legacy Options", func() {
 				legacyProvider:    legacyConfigLegacyProvider,
 				expectedProviders: Providers{internalConfigProvider},
 				errMsg:            "",
+			}),
+		)
+	})
+
+	Context("Legacy Cookie", func() {
+		type convertCookieTableInput struct {
+			legacyCookie   LegacyCookie
+			expectedCookie Cookie
+		}
+
+		// Test cases and expected outcomes
+		fullCookie := Cookie{
+			Name:                "_oauth2_proxy",
+			Secret:              &SecretSource{},
+			Domains:             nil,
+			Path:                "/",
+			Expire:              time.Duration(168) * time.Hour,
+			Insecure:            ptr.To(false),
+			ScriptAccess:        ScriptAccessDenied,
+			SameSite:            "",
+			CSRFPerRequest:      ptr.To(false),
+			CSRFPerRequestLimit: 0,
+			CSRFExpire:          time.Duration(15) * time.Minute,
+		}
+
+		fullLegacyCookie := LegacyCookie{
+			Name:                "_oauth2_proxy",
+			Secret:              "",
+			Domains:             nil,
+			Path:                "/",
+			Expire:              time.Duration(168) * time.Hour,
+			Refresh:             time.Duration(0),
+			Secure:              true,
+			HTTPOnly:            true,
+			SameSite:            "",
+			CSRFPerRequest:      false,
+			CSRFPerRequestLimit: 0,
+			CSRFExpire:          time.Duration(15) * time.Minute,
+		}
+
+		DescribeTable("convertLegacyCookie",
+			func(in *convertCookieTableInput) {
+				cookie := in.legacyCookie.convert()
+
+				Expect(cookie).To(BeEquivalentTo(in.expectedCookie))
+			},
+			Entry("with all attributes", &convertCookieTableInput{
+				legacyCookie:   fullLegacyCookie,
+				expectedCookie: fullCookie,
 			}),
 		)
 	})

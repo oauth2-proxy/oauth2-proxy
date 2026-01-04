@@ -9,6 +9,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/redis"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -26,7 +27,7 @@ var _ = Describe("Redis Client Tests", func() {
 		RunClientTests(func(mr *miniredis.Miniredis) options.RedisStoreOptions {
 			return options.RedisStoreOptions{
 				ClusterConnectionURLs: []string{"redis://" + mr.Addr()},
-				UseCluster:            true,
+				UseCluster:            ptr.To(true),
 			}
 		})
 	})

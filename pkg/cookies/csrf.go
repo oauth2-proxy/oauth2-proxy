@@ -11,6 +11,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	"github.com/vmihailenco/msgpack/v5"
 )
 
@@ -96,7 +97,7 @@ func LoadCSRFCookie(req *http.Request, cookieName string, opts *options.Cookie) 
 // build name based on the state
 func GenerateCookieName(opts *options.Cookie, state string) string {
 	stateSubstring := ""
-	if opts.CSRFPerRequest {
+	if ptr.Deref(opts.CSRFPerRequest, options.DefaultCSRFPerRequest) {
 		// csrfCookieName will include a substring of the state to enable multiple csrf cookies
 		// in case of parallel requests
 		stateSubstring = ExtractStateSubstring(state)
@@ -156,7 +157,7 @@ func (c *csrf) SetCookie(rw http.ResponseWriter, req *http.Request) (*http.Cooki
 // ClearExtraCsrfCookies limits the amount of existing CSRF cookies by deleting
 // an excess of cookies controlled through the option CSRFPerRequestLimit
 func ClearExtraCsrfCookies(opts *options.Cookie, rw http.ResponseWriter, req *http.Request) {
-	if !opts.CSRFPerRequest || opts.CSRFPerRequestLimit <= 0 {
+	if !ptr.Deref(opts.CSRFPerRequest, options.DefaultCSRFPerRequest) || opts.CSRFPerRequestLimit <= 0 {
 		return
 	}
 
@@ -262,7 +263,7 @@ func unmarshalCSRF(decrypted []byte, opts *options.Cookie, csrfTime time.Time) (
 // cookieName returns the CSRF cookie's name
 func (c *csrf) cookieName() string {
 	stateSubstring := ""
-	if c.cookieOpts.CSRFPerRequest {
+	if ptr.Deref(c.cookieOpts.CSRFPerRequest, options.DefaultCSRFPerRequest) {
 		stateSubstring = encryption.HashNonce(c.OAuthState)[0 : csrfStateLength-1]
 	}
 	return csrfCookieName(c.cookieOpts, stateSubstring)

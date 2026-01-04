@@ -33,10 +33,13 @@ import (
 const (
 	// The rawCookieSecret is 32 bytes and the base64CookieSecret is the base64
 	// encoded version of this.
-	rawCookieSecret    = "secretthirtytwobytes+abcdefghijk"
-	base64CookieSecret = "c2VjcmV0dGhpcnR5dHdvYnl0ZXMrYWJjZGVmZ2hpams"
-	clientID           = "3984n253984d7348dm8234yf982t"
-	clientSecret       = "gv3498mfc9t23y23974dm2394dm9"
+	clientID     = "3984n253984d7348dm8234yf982t"
+	clientSecret = "gv3498mfc9t23y23974dm2394dm9"
+)
+
+var (
+	rawCookieSecret    = &options.SecretSource{Value: []byte("secretthirtytwobytes+abcdefghijk")}
+	base64CookieSecret = &options.SecretSource{Value: []byte("c2VjcmV0dGhpcnR5dHdvYnl0ZXMrYWJjZGVmZ2hpams")}
 )
 
 func init() {
@@ -207,7 +210,7 @@ func TestBasicAuthPassword(t *testing.T) {
 		},
 	}
 
-	opts.Cookie.Secure = false
+	opts.Cookie.Insecure = ptr.To(true)
 	opts.InjectRequestHeaders = []options.Header{
 		{
 			Name: "Authorization",
@@ -362,7 +365,7 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) (*PassAccessTokenTe
 		patt.opts.UpstreamServers.Upstreams = append(patt.opts.UpstreamServers.Upstreams, opts.ProxyUpstream)
 	}
 
-	patt.opts.Cookie.Secure = false
+	patt.opts.Cookie.Insecure = ptr.To(true)
 	if opts.PassAccessToken {
 		patt.opts.InjectRequestHeaders = []options.Header{
 			{
@@ -819,9 +822,9 @@ func NewProcessCookieTest(opts ProcessCookieTestOpts, modifiers ...OptionsModifi
 	for _, modifier := range modifiers {
 		modifier(pcTest.opts)
 	}
-	// First, set the CookieRefresh option so proxy.AesCipher is created,
+	// First, set the Session Refresh option so proxy.AesCipher is created,
 	// needed to encrypt the access_token.
-	pcTest.opts.Cookie.Refresh = time.Hour
+	pcTest.opts.Session.Refresh = time.Hour
 	err := validation.Validate(pcTest.opts)
 	if err != nil {
 		return nil, err
@@ -845,9 +848,9 @@ func NewProcessCookieTest(opts ProcessCookieTestOpts, modifiers ...OptionsModifi
 	}
 	pcTest.proxy.provider = testProvider
 
-	// Now, zero-out proxy.CookieRefresh for the cases that don't involve
+	// Now, zero-out Session Refresh for the cases that don't involve
 	// access_token validation.
-	pcTest.proxy.CookieOptions.Refresh = time.Duration(0)
+	pcTest.opts.Session.Refresh = time.Duration(0)
 	pcTest.rw = httptest.NewRecorder()
 	pcTest.req, _ = http.NewRequest("GET", "/", strings.NewReader(""))
 	pcTest.validateUser = true
@@ -969,7 +972,7 @@ func TestProcessCookieFailIfRefreshSetAndCookieExpired(t *testing.T) {
 	err = pcTest.SaveSession(startSession)
 	assert.NoError(t, err)
 
-	pcTest.proxy.CookieOptions.Refresh = time.Hour
+	pcTest.opts.Session.Refresh = time.Hour
 	session, err := pcTest.LoadCookiedSession()
 	assert.NotEqual(t, nil, err)
 	if session != nil {
@@ -2072,6 +2075,8 @@ func baseTestOptions() *options.Options {
 			},
 		},
 	}
+
+	opts.EnsureDefaults()
 
 	return opts
 }
@@ -3468,7 +3473,7 @@ func TestGetOAuthRedirectURI(t *testing.T) {
 		{
 			name: "redirect with http schema",
 			setupOpts: func(baseOpts *options.Options) *options.Options {
-				baseOpts.Cookie.Secure = false
+				baseOpts.Cookie.Insecure = ptr.To(true)
 				return baseOpts
 			},
 			req: &http.Request{
