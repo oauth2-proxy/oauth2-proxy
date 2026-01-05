@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
+	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/authentication/hmacauth"
@@ -3530,4 +3531,50 @@ func TestGetOAuthRedirectURI(t *testing.T) {
 			assert.Equalf(t, tt.want, proxy.getOAuthRedirectURI(tt.req), "getOAuthRedirectURI(%v)", tt.req)
 		})
 	}
+}
+
+func TestIdTokenPlaceholderInSignOut(t *testing.T) {
+	opts := baseTestOptions()
+	opts.WhitelistDomains = []string{"my-oidc-provider.example.com"}
+
+	err := validation.Validate(opts)
+	assert.NoError(t, err)
+
+	const emailAddress = "john.doe@example.com"
+	const userName = "9fcab5c9b889a557"
+	created := time.Now()
+
+	session := &sessions.SessionState{
+		User:        userName,
+		Groups:      []string{"a", "b"},
+		Email:       emailAddress,
+		IDToken:     "eYjjjjjj.vvvv.ddd",
+		AccessToken: "oauth_token",
+		CreatedAt:   &created,
+	}
+
+	proxy, err := NewOAuthProxy(opts, func(email string) bool {
+		return true
+	})
+	assert.NoError(t, err)
+
+	// Save the required session
+	rw := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/", nil)
+	err = proxy.sessionStore.Save(rw, req, session)
+	assert.NoError(t, err)
+
+	rw = httptest.NewRecorder()
+
+	rdUrl := url.QueryEscape("https://my-oidc-provider.example.com/sign_out_page?id_token_hint={id_token}&post_logout_redirect_uri=https://my-app.example.com/")
+	req, _ = http.NewRequest("GET", "/oauth2/sign_out?rd="+rdUrl, nil)
+	req = middlewareapi.AddRequestScope(req, &middlewareapi.RequestScope{
+		RequestID: "11111111-2222-4333-8444-555555555555",
+		Session:   session,
+	})
+
+	proxy.SignOut(rw, req)
+	newLocation := rw.Header().Values("Location")[0]
+
+	assert.Equal(t, "https://idp.com/endsession?id_token_hint=eYjjjjjj.vvvv.ddd&post_logout_redirect_uri=http://myapp.com", newLocation)
 }
