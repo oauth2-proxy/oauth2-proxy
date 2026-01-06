@@ -63,7 +63,7 @@ func TestValidateCookie(t *testing.T) {
 	invalidSecretMsg := "cookie_secret must be 16, 24, or 32 bytes to create an AES cipher, but is 6 bytes"
 	invalidBase64SecretMsg := "cookie_secret must be 16, 24, or 32 bytes to create an AES cipher, but is 10 bytes"
 	refreshLongerThanExpireMsg := "cookie_refresh (\"1h0m0s\") must be less than cookie_expire (\"15m0s\")"
-	invalidSameSiteMsg := "cookie_samesite (\"invalid\") must be one of ['', 'lax', 'strict', 'none']"
+	invalidSameSiteMsg := "cookie_samesite (\"invalid\") must be one of ['', 'Lax', 'Strict', 'None']"
 
 	testCases := []struct {
 		name       string
@@ -216,7 +216,7 @@ func TestValidateCookie(t *testing.T) {
 				Expire:       time.Hour,
 				Insecure:     ptr.To(false),
 				ScriptAccess: options.ScriptAccessAllowed,
-				SameSite:     "none",
+				SameSite:     options.SameSiteNone,
 			},
 			refresh:    15 * time.Minute,
 			errStrings: []string{},
@@ -231,7 +231,7 @@ func TestValidateCookie(t *testing.T) {
 				Expire:       time.Hour,
 				Insecure:     ptr.To(false),
 				ScriptAccess: options.ScriptAccessAllowed,
-				SameSite:     "none",
+				SameSite:     options.SameSiteLax,
 			},
 			refresh:    15 * time.Minute,
 			errStrings: []string{},
@@ -246,7 +246,7 @@ func TestValidateCookie(t *testing.T) {
 				Expire:       time.Hour,
 				Insecure:     ptr.To(false),
 				ScriptAccess: options.ScriptAccessAllowed,
-				SameSite:     "none",
+				SameSite:     options.SameSiteStrict,
 			},
 			refresh:    15 * time.Minute,
 			errStrings: []string{},

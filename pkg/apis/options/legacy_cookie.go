@@ -63,6 +63,18 @@ func (l *LegacyCookie) convert() Cookie {
 		}
 	}
 
+	var sameSite SameSiteMode
+	switch l.SameSite {
+	case "lax":
+		sameSite = SameSiteLax
+	case "strict":
+		sameSite = SameSiteStrict
+	case "none":
+		sameSite = SameSiteNone
+	default:
+		sameSite = SameSiteDefault
+	}
+
 	return Cookie{
 		Name:                l.Name,
 		Secret:              secret,
@@ -71,7 +83,7 @@ func (l *LegacyCookie) convert() Cookie {
 		Expire:              l.Expire,
 		Insecure:            &insecure,
 		ScriptAccess:        scriptAccess,
-		SameSite:            SameSiteMode(l.SameSite),
+		SameSite:            sameSite,
 		CSRFPerRequest:      &l.CSRFPerRequest,
 		CSRFPerRequestLimit: l.CSRFPerRequestLimit,
 		CSRFExpire:          l.CSRFExpire,
