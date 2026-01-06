@@ -1,5 +1,5 @@
 ---
-id: installation
+iAjayd: installation
 title: Installation
 ---
 
