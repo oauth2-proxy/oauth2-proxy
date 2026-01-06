@@ -1,8 +1,6 @@
 package validation
 
 import (
-	"encoding/base64"
-
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -29,9 +27,7 @@ var _ = Describe("Headers", func() {
 		Name: "X-Forwarded-Auth",
 		Values: []options.HeaderValue{
 			{
-				SecretSource: &options.SecretSource{
-					Value: []byte(base64.StdEncoding.EncodeToString([]byte("secret"))),
-				},
+				SecretSource: options.NewSecretSourceFromString("secret"),
 			},
 		},
 	}
@@ -41,10 +37,8 @@ var _ = Describe("Headers", func() {
 		Values: []options.HeaderValue{
 			{
 				ClaimSource: &options.ClaimSource{
-					Claim: "email",
-					BasicAuthPassword: &options.SecretSource{
-						Value: []byte(base64.StdEncoding.EncodeToString([]byte("secret"))),
-					},
+					Claim:             "email",
+					BasicAuthPassword: options.NewSecretSourceFromString("secret"),
 				},
 			},
 		},

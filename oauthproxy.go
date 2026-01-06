@@ -30,6 +30,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/proxyhttp"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/version"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
@@ -175,11 +176,11 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 
 	logger.Printf("OAuthProxy configured for %s Client ID: %s", provider.Data().ProviderName, opts.Providers[0].ClientID)
 	refresh := "disabled"
-	if opts.Cookie.Refresh != time.Duration(0) {
-		refresh = fmt.Sprintf("after %s", opts.Cookie.Refresh)
+	if opts.Session.Refresh != time.Duration(0) {
+		refresh = fmt.Sprintf("after %s", opts.Session.Refresh)
 	}
 
-	logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s", opts.Cookie.Name, opts.Cookie.Secure, opts.Cookie.HTTPOnly, opts.Cookie.Expire, strings.Join(opts.Cookie.Domains, ","), opts.Cookie.Path, opts.Cookie.SameSite, refresh)
+	logger.Printf("Cookie settings: name:%s insecure(http):%v scriptaccess:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s", opts.Cookie.Name, *opts.Cookie.Insecure, opts.Cookie.ScriptAccess, opts.Cookie.Expire, strings.Join(opts.Cookie.Domains, ","), opts.Cookie.Path, opts.Cookie.SameSite, refresh)
 
 	trustedIPs := ip.NewNetSet()
 	for _, ipStr := range opts.TrustedIPs {
@@ -415,7 +416,7 @@ func buildSessionChain(opts *options.Options, provider providers.Provider, sessi
 
 	chain = chain.Append(middleware.NewStoredSessionLoader(&middleware.StoredSessionLoaderOptions{
 		SessionStore:    sessionStore,
-		RefreshPeriod:   opts.Cookie.Refresh,
+		RefreshPeriod:   opts.Session.Refresh,
 		RefreshSession:  provider.RefreshSession,
 		ValidateSession: provider.ValidateSession,
 	}))
@@ -1096,9 +1097,9 @@ func (p *OAuthProxy) getOAuthRedirectURI(req *http.Request) string {
 		rd.Scheme = schemeHTTP
 	}
 
-	// If CookieSecure is true, return `https` no matter what
+	// If CookieInsecure is false, return `https` no matter what
 	// Not all reverse proxies set X-Forwarded-Proto
-	if p.CookieOptions.Secure {
+	if !ptr.Deref(p.CookieOptions.Insecure, options.DefaultCookieInsecure) {
 		rd.Scheme = schemeHTTPS
 	}
 	return rd.String()

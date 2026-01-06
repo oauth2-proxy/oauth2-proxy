@@ -14,10 +14,13 @@ import (
 )
 
 const (
-	cookieSecret = "secretthirtytwobytes+abcdefghijk"
 	clientID     = "bazquux"
 	clientSecret = "xyzzyplugh"
 	providerID   = "providerID"
+)
+
+var (
+	cookieSecret = &options.SecretSource{Value: []byte("secretthirtytwobytes+abcdefghijk")}
 )
 
 func testOptions() *options.Options {
@@ -32,6 +35,7 @@ func testOptions() *options.Options {
 	o.Providers[0].ClientID = clientID
 	o.Providers[0].ClientSecret = clientSecret
 	o.EmailDomains = []string{"*"}
+	o.EnsureDefaults()
 	return o
 }
 
@@ -45,6 +49,8 @@ func errorMsg(msgs []string) string {
 func TestNewOptions(t *testing.T) {
 	o := options.NewOptions()
 	o.EmailDomains = []string{"*"}
+	o.EnsureDefaults()
+
 	err := Validate(o)
 	assert.NotEqual(t, nil, err)
 
@@ -122,11 +128,11 @@ func TestCookieRefreshMustBeLessThanCookieExpire(t *testing.T) {
 	o := testOptions()
 	assert.Equal(t, nil, Validate(o))
 
-	o.Cookie.Secret = "0123456789abcdef"
-	o.Cookie.Refresh = o.Cookie.Expire
+	o.Cookie.Secret = &options.SecretSource{Value: []byte("0123456789abcdef")}
+	o.Session.Refresh = o.Cookie.Expire
 	assert.NotEqual(t, nil, Validate(o))
 
-	o.Cookie.Refresh -= time.Duration(1)
+	o.Session.Refresh -= time.Duration(1)
 	assert.Equal(t, nil, Validate(o))
 }
 
@@ -135,23 +141,23 @@ func TestBase64CookieSecret(t *testing.T) {
 	assert.Equal(t, nil, Validate(o))
 
 	// 32 byte, base64 (urlsafe) encoded key
-	o.Cookie.Secret = "yHBw2lh2Cvo6aI_jn_qMTr-pRAjtq0nzVgDJNb36jgQ="
+	o.Cookie.Secret = &options.SecretSource{Value: []byte("yHBw2lh2Cvo6aI_jn_qMTr-pRAjtq0nzVgDJNb36jgQ=")}
 	assert.Equal(t, nil, Validate(o))
 
 	// 32 byte, base64 (urlsafe) encoded key, w/o padding
-	o.Cookie.Secret = "yHBw2lh2Cvo6aI_jn_qMTr-pRAjtq0nzVgDJNb36jgQ"
+	o.Cookie.Secret = &options.SecretSource{Value: []byte("yHBw2lh2Cvo6aI_jn_qMTr-pRAjtq0nzVgDJNb36jgQ")}
 	assert.Equal(t, nil, Validate(o))
 
 	// 24 byte, base64 (urlsafe) encoded key
-	o.Cookie.Secret = "Kp33Gj-GQmYtz4zZUyUDdqQKx5_Hgkv3"
+	o.Cookie.Secret = &options.SecretSource{Value: []byte("Kp33Gj-GQmYtz4zZUyUDdqQKx5_Hgkv3")}
 	assert.Equal(t, nil, Validate(o))
 
 	// 16 byte, base64 (urlsafe) encoded key
-	o.Cookie.Secret = "LFEqZYvYUwKwzn0tEuTpLA=="
+	o.Cookie.Secret = &options.SecretSource{Value: []byte("LFEqZYvYUwKwzn0tEuTpLA==")}
 	assert.Equal(t, nil, Validate(o))
 
 	// 16 byte, base64 (urlsafe) encoded key, w/o padding
-	o.Cookie.Secret = "LFEqZYvYUwKwzn0tEuTpLA"
+	o.Cookie.Secret = &options.SecretSource{Value: []byte("LFEqZYvYUwKwzn0tEuTpLA")}
 	assert.Equal(t, nil, Validate(o))
 }
 

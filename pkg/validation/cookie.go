@@ -3,7 +3,6 @@ package validation
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"sort"
 	"time"
 
@@ -11,20 +10,20 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 )
 
-func validateCookie(o options.Cookie) []string {
-	msgs := validateCookieSecret(o.Secret, o.SecretFile)
+func validateCookie(o options.Cookie, refresh time.Duration) []string {
+	msgs := validateCookieSecret(o.Secret)
 
-	if o.Expire != time.Duration(0) && o.Refresh >= o.Expire {
+	if o.Expire != time.Duration(0) && refresh >= o.Expire {
 		msgs = append(msgs, fmt.Sprintf(
 			"cookie_refresh (%q) must be less than cookie_expire (%q)",
-			o.Refresh.String(),
+			refresh.String(),
 			o.Expire.String()))
 	}
 
 	switch o.SameSite {
-	case "", "none", "lax", "strict":
+	case options.SameSiteLax, options.SameSiteStrict, options.SameSiteNone, options.SameSiteDefault:
 	default:
-		msgs = append(msgs, fmt.Sprintf("cookie_samesite (%q) must be one of ['', 'lax', 'strict', 'none']", o.SameSite))
+		msgs = append(msgs, fmt.Sprintf("cookie_samesite (%q) must be one of ['', 'Lax', 'Strict', 'None']", o.SameSite))
 	}
 
 	// Sort cookie domains by length, so that we try longer (and more specific) domains first
@@ -50,30 +49,17 @@ func validateCookieName(name string) []string {
 	return msgs
 }
 
-func validateCookieSecret(secret string, secretFile string) []string {
-	if secret == "" && secretFile == "" {
+func validateCookieSecret(secret *options.SecretSource) []string {
+	if secret == nil || len(secret.Value) == 0 && secret.FromFile == "" {
 		return []string{"missing setting: cookie-secret or cookie-secret-file"}
 	}
-	if secret == "" && secretFile != "" {
-		fileData, err := os.ReadFile(secretFile)
-		if err != nil {
-			return []string{"could not read cookie secret file: " + secretFile}
-		}
-		// Validate the file content as a secret
-		secretBytes := encryption.SecretBytes(string(fileData))
-		switch len(secretBytes) {
-		case 16, 24, 32:
-			// Valid secret size found
-			return []string{}
-		}
-		// Invalid secret size found, return a message
-		return []string{fmt.Sprintf(
-			"cookie_secret from file must be 16, 24, or 32 bytes to create an AES cipher, but is %d bytes",
-			len(secretBytes)),
-		}
+
+	value, err := secret.GetRawSecretValue()
+	if err != nil {
+		return []string{fmt.Sprintf("error retrieving cookie secret: %v", err)}
 	}
 
-	secretBytes := encryption.SecretBytes(secret)
+	secretBytes := encryption.SecretBytes(string(value))
 	// Check if the secret is a valid length
 	switch len(secretBytes) {
 	case 16, 24, 32:

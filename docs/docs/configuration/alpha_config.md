@@ -24,12 +24,18 @@ When using alpha configuration, your config file will look something like below:
 upstreams:
   - id: ...
     ...: ...
+providers:
+  - id: ...
+    ...: ...
+cookie:
+  secret: ...
+  ...: ...
 injectRequestHeaders:
-  - name: ...
-    ...: ...
+  - secretSource:
+      ...: ...
 injectResponseHeaders:
-  - name: ...
-    ...: ...
+  - claimSource:
+      ...: ...
 ```
 
 Please browse the [reference](#configuration-reference) below for the structure
@@ -67,9 +73,9 @@ the new config.
 oauth2-proxy --alpha-config ./path/to/new/config.yaml --config ./path/to/existing/config.cfg
 ```
 
-## Using ENV variables in the alpha configuration
+### How to use environment variables
 
-The alpha package supports the use of environment variables in place of yaml keys, allowing sensitive values to be pulled from somewhere other than the yaml file.
+The alpha package supports the use of environment variables in place of yaml values, allowing sensitive data to be pulled from somewhere other than the yaml file.
 When using environment variables, your yaml will look like this:
 
 ```yaml
@@ -81,19 +87,59 @@ When using environment variables, your yaml will look like this:
 Where CLIENT_SECRET is an environment variable.
 More information and available patterns can be found [here](https://github.com/a8m/envsubst#docs)
 
+### How to inject custom headers
+
+Configure `injectRequestHeaders` and `injectResponseHeaders` in alpha config YAML.
+
+```yaml
+injectRequestHeaders:
+  - name: "X-User-Email"
+    values:
+      - claimSource:
+          claim: "email" # extract the email claim contents from the id token
+  - name: "X-Static-Secret"
+    values:
+      # secrets need to be encoded with base64 when directly in the yaml config but will be send decoded
+      - secretSource:
+          value: "c3VwZXItc2VjcmV0" 
+  - name: "X-Static-File-Secret"
+      - secretSource:
+          fromFile: "/path/to/my/secret" 
+  - name: "X-Static-Env-Secret"
+      - secretSource:
+          value: "${MY_SECRET_ENV}" # content still needs to be base64 encoded
+injectResponseHeaders:
+  # Following will result in a header "Authorization: Basic <user:password> (encoded)"
+  - name: "Authorization"
+    values:
+    - claimSource:
+        claim: user
+        prefix: "Basic "
+        basicAuthPassword:
+          value: c3VwZXItc2VjcmV0LXBhc3N3b3Jk # base64 encoded password
+```
+
+**Value sources:** 
+* `claimSource` - `claim` (session claims either from id token or from profile URL)
+* `secretSource` - `value` (base64), `fromFile` (file path)
+
+**Request option:** `preserveRequestValue: true` retains existing header values
+
+**Incompatibility:** Remove legacy flags `pass-user-headers`, `set-xauthrequest`
+
 ## Removed options
 
 The following flags/options and their respective environment variables are no
 longer available when using alpha configuration:
 
-<!-- Legacy Upstream FlagSet -->
+### Legacy Upstream options
 - `flush-interval`/`flush_interval`
 - `pass-host-header`/`pass_host_header`
 - `proxy-websockets`/`proxy_websockets`
 - `ssl-upstream-insecure-skip-verify`/`ssl_upstream_insecure_skip_verify`
 - `upstream`/`upstreams`
 
-<!-- Legacy Headers FlagSet -->
+### Legacy Headers options
 - `pass-basic-auth`/`pass_basic_auth`
 - `pass-access-token`/`pass_access_token`
 - `pass-user-headers`/`pass_user_headers`
@@ -105,7 +151,7 @@ longer available when using alpha configuration:
 - `basic-auth-password`/`basic_auth_password`
 - `skip-auth-strip-headers`/`skip_auth_strip_headers`
 
-<!-- Legacy provider FlagSet -->
+### Legacy Provider options
 - `client-id`/`client_id`
 - `client-secret`/`client_secret`, and `client-secret-file`/`client_secret_file`
 - `provider`
@@ -126,6 +172,36 @@ longer available when using alpha configuration:
 - `jwt-key`/`jwt_key`
 - `jwt-key-file`/`jwt_key_file`
 - `pubjwk-url`/`pubjwk_url`
+
+### Legacy Cookie options
+- `cookie-name`/`cookie_name`
+- `cookie-name`/`cookie_name`
+- `cookie-secret`/`cookie_secret`
+- `cookie-secret-file`/`cookie_secret_file`
+- `cookie-domain`/`cookie_domains`
+- `cookie-path`/`cookie_path`
+- `cookie-expire`/`cookie_expire`
+- `cookie-refresh`/`cookie_refresh`
+- `cookie-secure`/`cookie_secure`
+- `cookie-httponly`/`cookie_httponly`
+- `cookie-samesite`/`cookie_samesite`
+- `cookie-csrf-per-request`/`cookie_csrf_per_request`
+- `cookie-csrf-per-request-limit`/`cookie_csrf_per_request_limit`
+- `cookie-csrf-expire`/`cookie_csrf_expire`
+
+### Legacy Session options
+- `session-cookie-minimal`/`session_cookie_minimal`
+- `session-store-type`/`session_store_type`
+- `redis-cluster-connection-urls`/`redis_cluster_connection_urls`
+- `redis-connection-url`/`redis_connection_url`
+- `redis-insecure-skip-tls-verify`/`redis_insecure_skip_tls_verify`
+- `redis-password`/`redis_password`
+- `redis-sentinel-password`/`redis_sentinel_password`
+- `redis-sentinel-master-name`/`redis_sentinel_master_name`
+- `redis-sentinel-connection-urls`/`redis_sentinel_connection_urls`
+- `redis-use-cluster`/`redis_use_cluster`
+- `redis-use-sentinel`/`redis_use_sentinel`
+- `redis-connection-idle-timeout`/`redis_connection_idle_timeout`
 
 and all provider-specific options, i.e. any option whose name includes `oidc`,
 `azure`, `bitbucket`, `github`, `gitlab`, `google` or `keycloak`.  Attempting to
@@ -168,7 +244,9 @@ They may change between releases without notice.
 | `injectResponseHeaders` | _[[]Header](#header)_ | InjectResponseHeaders is used to configure headers that should be added<br/>to responses from the proxy.<br/>This is typically used when using the proxy as an external authentication<br/>provider in conjunction with another proxy such as NGINX and its<br/>auth_request module.<br/>Headers may source values from either the authenticated user's session<br/>or from a static secret value. |
 | `server` | _[Server](#server)_ | Server is used to configure the HTTP(S) server for the proxy application.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
 | `metricsServer` | _[Server](#server)_ | MetricsServer is used to configure the HTTP(S) server for metrics.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
-| `providers` | _[Providers](#providers)_ | Providers is used to configure your provider. **Multiple-providers is not<br/>yet working.** [This feature is tracked in<br/>#925](https://github.com/oauth2-proxy/oauth2-proxy/issues/926) |
+| `providers` | _[Providers](#providers)_ | Providers is used to configure your provider.<br/>**Multiple-providers is not yet working.**<br/>[This feature is tracked in #925](https://github.com/oauth2-proxy/oauth2-proxy/issues/926) |
+| `cookie` | _[Cookie](#cookie)_ | Cookie is used to configure the cookies used by OAuth2 Proxy.<br/>This includes session and CSRF cookies. |
+| `session` | _[SessionOptions](#sessionoptions)_ | Session is used to configure session options used by OAuth2 Proxy.<br/>This includes session storage options. |
 
 ### AzureOptions
 
@@ -203,6 +281,36 @@ ClaimSource allows loading a header value from a claim within the session
 | `claim` | _string_ | Claim is the name of the claim in the session that the value should be<br/>loaded from. Available claims: `access_token` `id_token` `created_at`<br/>`expires_on` `refresh_token` `email` `user` `groups` `preferred_username`. |
 | `prefix` | _string_ | Prefix is an optional prefix that will be prepended to the value of the<br/>claim if it is non-empty. |
 | `basicAuthPassword` | _[SecretSource](#secretsource)_ | BasicAuthPassword converts this claim into a basic auth header.<br/>Note the value of claim will become the basic auth username and the<br/>basicAuthPassword will be used as the password value. |
+
+### Cookie
+
+(**Appears on:** [AlphaOptions](#alphaoptions))
+
+Cookie contains configuration options relating session and CSRF cookies
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `name` | _string_ | Name is the name of the cookie |
+| `secret` | _[SecretSource](#secretsource)_ | Secret is the secret source used to encrypt/sign the cookie value |
+| `domains` | _[]string_ | Domains is a list of domains for which the cookie is valid |
+| `path` | _string_ | Path is the path for which the cookie is valid |
+| `expire` | _duration_ | Expire is the duration before the cookie expires |
+| `insecure` | _bool_ | Insecure indicates whether the cookie allows to be sent over HTTP<br/>Default is false, which requires HTTPS |
+| `scriptAccess` | _[ScriptAccess](#scriptaccess)_ | ScriptAccess is a wrapper enum for HTTPOnly; indicates whether the<br/>cookie is accessible to JavaScript. Default is deny which translates<br/>to true for HTTPOnly, which helps mitigate certain XSS attacks |
+| `sameSite` | _[SameSiteMode](#samesitemode)_ | SameSite sets the SameSite attribute on the cookie |
+| `csrfPerRequest` | _bool_ | CSRFPerRequest indicates whether a unique CSRF token is generated for each request<br/>Enables parallel requests from clients (e.g., multiple tabs)<br/>Default is false, which uses a single CSRF token per session |
+| `csrfPerRequestLimit` | _int_ | CSRFPerRequestLimit sets a limit on the number of valid CSRF tokens when CSRFPerRequest is enabled<br/>Used to prevent unbounded memory growth from storing too many tokens |
+| `csrfExpire` | _duration_ | CSRFExpire sets the duration before a CSRF token expires |
+
+### CookieStoreOptions
+
+(**Appears on:** [SessionOptions](#sessionoptions))
+
+CookieStoreOptions contains configuration options for the CookieSessionStore.
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `minimal` | _bool_ | Minimal indicates whether to use minimal cookies for session storage<br/>Default is false |
 
 ### GitHubOptions
 
@@ -471,9 +579,46 @@ AlphaConfig](https://oauth2-proxy.github.io/oauth2-proxy/configuration/alpha-con
 However, [**the feature to implement multiple providers is not
 complete**](https://github.com/oauth2-proxy/oauth2-proxy/issues/926).
 
+### RedisStoreOptions
+
+(**Appears on:** [SessionOptions](#sessionoptions))
+
+RedisStoreOptions contains configuration options for the RedisSessionStore.
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `connectionURL` | _string_ | ConnectionURL is the Redis connection URL |
+| `username` | _string_ | Username is the Redis username |
+| `password` | _string_ | Password is the Redis password |
+| `useSentinel` | _bool_ | UseSentinel indicates whether to use Redis Sentinel<br/>Default is false |
+| `sentinelPassword` | _string_ | SentinelPassword is the Redis Sentinel password |
+| `sentinelMasterName` | _string_ | SentinelMasterName is the Redis Sentinel master name |
+| `sentinelConnectionURLs` | _[]string_ | SentinelConnectionURLs is a list of Redis Sentinel connection URLs |
+| `useCluster` | _bool_ | UseCluster indicates whether to use Redis Cluster<br/>Default is false |
+| `clusterConnectionURLs` | _[]string_ | ClusterConnectionURLs is a list of Redis Cluster connection URLs |
+| `caPath` | _string_ | CAPath is the path to the CA certificate for Redis TLS connections |
+| `insecureSkipTLSVerify` | _bool_ | InsecureSkipTLSVerify indicates whether to skip TLS verification for Redis connections |
+| `idleTimeout` | _int_ | IdleTimeout is the Redis connection idle timeout in seconds |
+
+### SameSiteMode
+#### (`string` alias)
+
+(**Appears on:** [Cookie](#cookie))
+
+SameSiteMode is an enum representing the different SameSite modes for cookies
+Available modes are "Lax", "Strict", "None", and "" (default browser behavior)
+
+### ScriptAccess
+#### (`string` alias)
+
+(**Appears on:** [Cookie](#cookie))
+
+ScriptAccess is an enum representing whether a cookie is accessible to JavaScript
+Available modes are "Allow", "Deny" (default behavior)
+
 ### SecretSource
 
-(**Appears on:** [ClaimSource](#claimsource), [HeaderValue](#headervalue), [TLS](#tls))
+(**Appears on:** [ClaimSource](#claimsource), [Cookie](#cookie), [HeaderValue](#headervalue), [TLS](#tls))
 
 SecretSource references an individual secret value.
 Only one source within the struct should be defined at any time.
@@ -495,6 +640,26 @@ Server represents the configuration for an HTTP(S) server
 | `bindAddress` | _string_ | BindAddress is the address on which to serve traffic.<br/>Leave blank or set to "-" to disable. |
 | `secureBindAddress` | _string_ | SecureBindAddress is the address on which to serve secure traffic.<br/>Leave blank or set to "-" to disable. |
 | `tls` | _[TLS](#tls)_ | TLS contains the information for loading the certificate and key for the<br/>secure traffic and further configuration for the TLS server. |
+
+### SessionOptions
+
+(**Appears on:** [AlphaOptions](#alphaoptions))
+
+SessionOptions contains configuration options for the SessionStore providers.
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `type` | _[SessionStoreType](#sessionstoretype)_ | Type is the type of session store to use<br/>Options are "cookie" or "redis"<br/>Default is "cookie" |
+| `refresh` | _duration_ | Refresh is the duration after which the session is refreshable |
+| `cookie` | _[CookieStoreOptions](#cookiestoreoptions)_ | Cookie is the configuration options for the CookieSessionStore |
+| `redis` | _[RedisStoreOptions](#redisstoreoptions)_ | Redis is the configuration options for the RedisSessionStore |
+
+### SessionStoreType
+#### (`string` alias)
+
+(**Appears on:** [SessionOptions](#sessionoptions))
+
+
 
 ### TLS
 

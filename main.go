@@ -68,16 +68,19 @@ func main() {
 // It will either load the alpha configuration (if alphaConfig is given)
 // or the legacy configuration.
 func loadConfiguration(config, yamlConfig string, extraFlags *pflag.FlagSet, args []string) (*options.Options, error) {
-	opts, err := loadLegacyOptions(config, extraFlags, args)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load legacy options: %w", err)
-	}
+	var err error
+	var opts *options.Options
 
 	if yamlConfig != "" {
 		logger.Printf("WARNING: You are using alpha configuration. The structure in this configuration file may change without notice. You MUST remove conflicting options from your existing configuration.")
 		opts, err = loadYamlOptions(yamlConfig, config, extraFlags, args)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load yaml options: %w", err)
+		}
+	} else {
+		opts, err = loadLegacyOptions(config, extraFlags, args)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load legacy options: %w", err)
 		}
 	}
 
@@ -97,7 +100,7 @@ func loadLegacyOptions(config string, extraFlags *pflag.FlagSet, args []string) 
 
 	legacyOpts := options.NewLegacyOptions()
 	if err := options.Load(config, optionsFlagSet, legacyOpts); err != nil {
-		return nil, fmt.Errorf("failed to load config: %v", err)
+		return nil, fmt.Errorf("failed to load legacy config: %v", err)
 	}
 
 	opts, err := legacyOpts.ToOptions()
@@ -150,14 +153,29 @@ func loadOptions(config string, extraFlags *pflag.FlagSet, args []string) (*opti
 func printConvertedConfig(opts *options.Options) error {
 	alphaConfig := options.NewAlphaOptions(opts)
 
-	// Generic interface for loading arbitrary yaml structure
-	var buffer map[string]interface{}
+	if len(alphaConfig.Providers) == 1 {
+		providerType := alphaConfig.Providers[0].Type
 
-	if err := options.Decode(alphaConfig, &buffer); err != nil {
-		return fmt.Errorf("unable to decode alpha config into interface: %w", err)
+		if providerType != options.ADFSProvider {
+			alphaConfig.Providers[0].ADFSConfig = options.ADFSOptions{}
+		}
+
+		if providerType != options.AzureProvider {
+			alphaConfig.Providers[0].AzureConfig = options.AzureOptions{}
+		}
+
+		if providerType != options.GoogleProvider {
+			alphaConfig.Providers[0].GoogleConfig = options.GoogleOptions{}
+		}
+
+		if providerType != options.MicrosoftEntraIDProvider {
+			alphaConfig.Providers[0].MicrosoftEntraIDConfig = options.MicrosoftEntraIDOptions{}
+		}
+	} else {
+		return fmt.Errorf("only single provider conversion is supported")
 	}
 
-	data, err := yaml.Marshal(buffer)
+	data, err := yaml.Marshal(alphaConfig)
 	if err != nil {
 		return fmt.Errorf("unable to marshal config: %v", err)
 	}

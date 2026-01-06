@@ -35,8 +35,8 @@ type Options struct {
 	HtpasswdFile            string   `flag:"htpasswd-file" cfg:"htpasswd_file"`
 	HtpasswdUserGroups      []string `flag:"htpasswd-user-group" cfg:"htpasswd_user_groups"`
 
-	Cookie    Cookie         `cfg:",squash"`
-	Session   SessionOptions `cfg:",squash"`
+	Cookie    Cookie         `cfg:",internal"`
+	Session   SessionOptions `cfg:",internal"`
 	Logging   Logging        `cfg:",squash"`
 	Templates Templates      `cfg:",squash"`
 
@@ -105,8 +105,6 @@ func NewOptions() *Options {
 		ReadyPath:                "/ready",
 		RealClientIPHeader:       "X-Real-IP",
 		ForceHTTPS:               false,
-		Cookie:                   cookieDefaults(),
-		Session:                  sessionOptionsDefaults(),
 		Templates:                templatesDefaults(),
 		SkipAuthPreflight:        false,
 		Logging:                  loggingDefaults(),
@@ -145,24 +143,9 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.String("ping-path", "/ping", "the ping endpoint that can be used for basic health checks")
 	flagSet.String("ping-user-agent", "", "special User-Agent that will be used for basic health checks")
 	flagSet.String("ready-path", "/ready", "the ready endpoint that can be used for deep health checks")
-	flagSet.String("session-store-type", "cookie", "the session storage provider to use")
-	flagSet.Bool("session-cookie-minimal", false, "strip OAuth tokens from cookie session stores if they aren't needed (cookie session store only)")
-	flagSet.String("redis-connection-url", "", "URL of redis server for redis session storage (eg: redis://[USER[:PASSWORD]@]HOST[:PORT])")
-	flagSet.String("redis-username", "", "Redis username. Applicable for Redis configurations where ACL has been configured. Will override any username set in `--redis-connection-url`")
-	flagSet.String("redis-password", "", "Redis password. Applicable for all Redis configurations. Will override any password set in `--redis-connection-url`")
-	flagSet.Bool("redis-use-sentinel", false, "Connect to redis via sentinels. Must set --redis-sentinel-master-name and --redis-sentinel-connection-urls to use this feature")
-	flagSet.String("redis-sentinel-password", "", "Redis sentinel password. Used only for sentinel connection; any redis node passwords need to use `--redis-password`")
-	flagSet.String("redis-sentinel-master-name", "", "Redis sentinel master name. Used in conjunction with --redis-use-sentinel")
-	flagSet.String("redis-ca-path", "", "Redis custom CA path")
-	flagSet.Bool("redis-insecure-skip-tls-verify", false, "Use insecure TLS connection to redis")
-	flagSet.StringSlice("redis-sentinel-connection-urls", []string{}, "List of Redis sentinel connection URLs (eg redis://[USER[:PASSWORD]@]HOST[:PORT]). Used in conjunction with --redis-use-sentinel")
-	flagSet.Bool("redis-use-cluster", false, "Connect to redis cluster. Must set --redis-cluster-connection-urls to use this feature")
-	flagSet.StringSlice("redis-cluster-connection-urls", []string{}, "List of Redis cluster connection URLs (eg redis://[USER[:PASSWORD]@]HOST[:PORT]). Used in conjunction with --redis-use-cluster")
-	flagSet.Int("redis-connection-idle-timeout", 0, "Redis connection idle timeout seconds, if Redis timeout option is non-zero, the --redis-connection-idle-timeout must be less then Redis timeout option")
 	flagSet.String("signature-key", "", "GAP-Signature request signature key (algorithm:secretkey)")
 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
 
-	flagSet.AddFlagSet(cookieFlagSet())
 	flagSet.AddFlagSet(loggingFlagSet())
 	flagSet.AddFlagSet(templatesFlagSet())
 
@@ -182,9 +165,9 @@ func (o *Options) EnsureDefaults() {
 		o.InjectResponseHeaders[i].EnsureDefaults()
 	}
 
+	o.Cookie.EnsureDefaults()
+	o.Session.EnsureDefaults()
 	// TBD: Uncomment as we add EnsureDefaults methods
-	// o.Cookie.EnsureDefaults()
-	// o.Session.EnsureDefaults()
 	// o.Templates.EnsureDefaults()
 	// o.Logging.EnsureDefaults()
 }

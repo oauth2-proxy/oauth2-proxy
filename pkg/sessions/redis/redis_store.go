@@ -12,6 +12,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/persistence"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -82,13 +83,14 @@ func (store *SessionStore) VerifyConnection(ctx context.Context) error {
 // NewRedisClient makes a redis.Client (either standalone, sentinel aware, or
 // redis cluster)
 func NewRedisClient(opts options.RedisStoreOptions) (Client, error) {
-	if opts.UseSentinel && opts.UseCluster {
+	if ptr.Deref(opts.UseSentinel, options.DefaultRedisStoreUseSentinel) &&
+		ptr.Deref(opts.UseCluster, options.DefaultRedisStoreUseCluster) {
 		return nil, fmt.Errorf("options redis-use-sentinel and redis-use-cluster are mutually exclusive")
 	}
-	if opts.UseSentinel {
+	if ptr.Deref(opts.UseSentinel, options.DefaultRedisStoreUseSentinel) {
 		return buildSentinelClient(opts)
 	}
-	if opts.UseCluster {
+	if ptr.Deref(opts.UseCluster, options.DefaultRedisStoreUseCluster) {
 		return buildClusterClient(opts)
 	}
 
@@ -181,7 +183,7 @@ func buildStandaloneClient(opts options.RedisStoreOptions) (Client, error) {
 
 // setupTLSConfig sets the TLSConfig if the TLS option is given in redis.Options
 func setupTLSConfig(opts options.RedisStoreOptions, opt *redis.Options) error {
-	if opts.InsecureSkipTLSVerify {
+	if ptr.Deref(opts.InsecureSkipTLSVerify, options.DefaultRedisStoreInsecureSkipTLSVerify) {
 		if opt.TLSConfig == nil {
 			/* #nosec */
 			opt.TLSConfig = &tls.Config{}

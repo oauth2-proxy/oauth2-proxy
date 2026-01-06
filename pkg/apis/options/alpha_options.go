@@ -41,10 +41,18 @@ type AlphaOptions struct {
 	// To use the secure server you must configure a TLS certificate and key.
 	MetricsServer Server `yaml:"metricsServer,omitempty"`
 
-	// Providers is used to configure your provider. **Multiple-providers is not
-	// yet working.** [This feature is tracked in
-	// #925](https://github.com/oauth2-proxy/oauth2-proxy/issues/926)
+	// Providers is used to configure your provider.
+	// **Multiple-providers is not yet working.**
+	// [This feature is tracked in #925](https://github.com/oauth2-proxy/oauth2-proxy/issues/926)
 	Providers Providers `yaml:"providers,omitempty"`
+
+	// Cookie is used to configure the cookies used by OAuth2 Proxy.
+	// This includes session and CSRF cookies.
+	Cookie Cookie `yaml:"cookie,omitempty"`
+
+	// Session is used to configure session options used by OAuth2 Proxy.
+	// This includes session storage options.
+	Session SessionOptions `yaml:"session,omitempty"`
 }
 
 // Initialize alpha options with default values and settings of the core options
@@ -63,6 +71,8 @@ func (a *AlphaOptions) ExtractFrom(opts *Options) {
 	a.Server = opts.Server
 	a.MetricsServer = opts.MetricsServer
 	a.Providers = opts.Providers
+	a.Cookie = opts.Cookie
+	a.Session = opts.Session
 }
 
 // MergeOptionsWithDefaults replaces alpha options in the Options struct
@@ -74,4 +84,6 @@ func (a *AlphaOptions) MergeOptionsWithDefaults(opts *Options) {
 	opts.Server = a.Server
 	opts.MetricsServer = a.MetricsServer
 	opts.Providers = a.Providers
+	opts.Cookie = a.Cookie
+	opts.Session = a.Session
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/Bose/minisentinel"
 	"github.com/alicebob/miniredis/v2"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -30,7 +31,7 @@ var _ = Describe("Sessions", func() {
 			opts: &options.Options{
 				Session: options.SessionOptions{
 					Cookie: options.CookieStoreOptions{
-						Minimal: false,
+						Minimal: ptr.To(false),
 					},
 				},
 			},
@@ -40,7 +41,7 @@ var _ = Describe("Sessions", func() {
 			opts: &options.Options{
 				Session: options.SessionOptions{
 					Cookie: options.CookieStoreOptions{
-						Minimal: false,
+						Minimal: ptr.To(false),
 					},
 				},
 				InjectRequestHeaders: []options.Header{
@@ -62,7 +63,7 @@ var _ = Describe("Sessions", func() {
 			opts: &options.Options{
 				Session: options.SessionOptions{
 					Cookie: options.CookieStoreOptions{
-						Minimal: true,
+						Minimal: ptr.To(true),
 					},
 				},
 			},
@@ -72,7 +73,7 @@ var _ = Describe("Sessions", func() {
 			opts: &options.Options{
 				Session: options.SessionOptions{
 					Cookie: options.CookieStoreOptions{
-						Minimal: true,
+						Minimal: ptr.To(true),
 					},
 				},
 				InjectRequestHeaders: []options.Header{
@@ -94,7 +95,7 @@ var _ = Describe("Sessions", func() {
 			opts: &options.Options{
 				Session: options.SessionOptions{
 					Cookie: options.CookieStoreOptions{
-						Minimal: true,
+						Minimal: ptr.To(true),
 					},
 				},
 				InjectResponseHeaders: []options.Header{
@@ -116,7 +117,7 @@ var _ = Describe("Sessions", func() {
 			opts: &options.Options{
 				Session: options.SessionOptions{
 					Cookie: options.CookieStoreOptions{
-						Minimal: true,
+						Minimal: ptr.To(true),
 					},
 				},
 				InjectRequestHeaders: []options.Header{
@@ -136,12 +137,11 @@ var _ = Describe("Sessions", func() {
 		}),
 		Entry("CookieRefresh conflict", &cookieMinimalTableInput{
 			opts: &options.Options{
-				Cookie: options.Cookie{
-					Refresh: time.Hour,
-				},
+				Cookie: options.Cookie{},
 				Session: options.SessionOptions{
+					Refresh: time.Hour,
 					Cookie: options.CookieStoreOptions{
-						Minimal: true,
+						Minimal: ptr.To(true),
 					},
 				},
 			},
@@ -151,7 +151,7 @@ var _ = Describe("Sessions", func() {
 			opts: &options.Options{
 				Session: options.SessionOptions{
 					Cookie: options.CookieStoreOptions{
-						Minimal: true,
+						Minimal: ptr.To(true),
 					},
 				},
 				InjectResponseHeaders: []options.Header{
@@ -323,7 +323,7 @@ var _ = Describe("Sessions", func() {
 				Session: options.SessionOptions{
 					Type: options.RedisSessionStoreType,
 					Redis: options.RedisStoreOptions{
-						UseSentinel: true,
+						UseSentinel: ptr.To(true),
 					},
 				},
 			},
@@ -340,7 +340,7 @@ var _ = Describe("Sessions", func() {
 					Type: options.RedisSessionStoreType,
 					Redis: options.RedisStoreOptions{
 						Password:    "abcdef123",
-						UseSentinel: true,
+						UseSentinel: ptr.To(true),
 					},
 				},
 			},
@@ -357,7 +357,7 @@ var _ = Describe("Sessions", func() {
 					Type: options.RedisSessionStoreType,
 					Redis: options.RedisStoreOptions{
 						Password:    "zyxwtuv987",
-						UseSentinel: true,
+						UseSentinel: ptr.To(true),
 					},
 				},
 			},
@@ -371,7 +371,7 @@ var _ = Describe("Sessions", func() {
 				Session: options.SessionOptions{
 					Type: options.RedisSessionStoreType,
 					Redis: options.RedisStoreOptions{
-						UseSentinel:        true,
+						UseSentinel:        ptr.To(true),
 						SentinelMasterName: "WRONG",
 					},
 				},
@@ -386,7 +386,7 @@ var _ = Describe("Sessions", func() {
 				Session: options.SessionOptions{
 					Type: options.RedisSessionStoreType,
 					Redis: options.RedisStoreOptions{
-						UseSentinel:            true,
+						UseSentinel:            ptr.To(true),
 						SentinelConnectionURLs: []string{"redis://127.0.0.1:65535"},
 					},
 				},
@@ -398,8 +398,8 @@ var _ = Describe("Sessions", func() {
 				Session: options.SessionOptions{
 					Type: options.RedisSessionStoreType,
 					Redis: options.RedisStoreOptions{
-						UseSentinel: true,
-						UseCluster:  true,
+						UseSentinel: ptr.To(true),
+						UseCluster:  ptr.To(true),
 					},
 				},
 			},

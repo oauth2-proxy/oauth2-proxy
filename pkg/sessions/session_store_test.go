@@ -12,6 +12,7 @@ import (
 	sessionscookie "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/cookie"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/persistence"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/redis"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -29,24 +30,31 @@ var _ = Describe("NewSessionStore", func() {
 	var cookieOpts *options.Cookie
 
 	BeforeEach(func() {
-		opts = &options.SessionOptions{}
+		opts = &options.SessionOptions{
+			Refresh: time.Duration(1) * time.Hour,
+		}
 
 		// A secret is required to create a Cipher, validation ensures it is the correct
 		// length before a session store is initialised.
 		secret := make([]byte, 32)
 		_, err := rand.Read(secret)
 		Expect(err).ToNot(HaveOccurred())
+		secretValue := make([]byte, base64.URLEncoding.EncodedLen(len(secret)))
+
+		base64.URLEncoding.Encode(secretValue, secret)
+		Expect(secretValue).ToNot(BeEmpty())
 
 		// Set default options in CookieOptions
 		cookieOpts = &options.Cookie{
-			Name:     "_oauth2_proxy",
-			Secret:   base64.URLEncoding.EncodeToString(secret),
-			Path:     "/",
-			Expire:   time.Duration(168) * time.Hour,
-			Refresh:  time.Duration(1) * time.Hour,
-			Secure:   true,
-			HTTPOnly: true,
-			SameSite: "",
+			Name: "_oauth2_proxy",
+			Secret: &options.SecretSource{
+				Value: secretValue,
+			},
+			Path:         "/",
+			Expire:       time.Duration(168) * time.Hour,
+			Insecure:     ptr.To(false),
+			ScriptAccess: options.ScriptAccessDenied,
+			SameSite:     "",
 		}
 	})
 
