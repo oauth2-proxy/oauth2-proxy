@@ -16,23 +16,23 @@ const (
 )
 
 // SameSiteMode is an enum representing the different SameSite modes for cookies
-// Available modes are "lax", "strict", "none", and "" (default browser behavior)
+// Available modes are "Lax", "Strict", "None", and "" (default browser behavior)
 type SameSiteMode string
 
 const (
-	SameSiteLax     SameSiteMode = "lax"
-	SameSiteStrict  SameSiteMode = "strict"
-	SameSiteNone    SameSiteMode = "none"
+	SameSiteLax     SameSiteMode = "Lax"
+	SameSiteStrict  SameSiteMode = "Strict"
+	SameSiteNone    SameSiteMode = "None"
 	SameSiteDefault SameSiteMode = ""
 )
 
 // ScriptAccess is an enum representing whether a cookie is accessible to JavaScript
-// Available modes are "allow", "deny" (default behavior)
+// Available modes are "Allow", "Deny" (default behavior)
 type ScriptAccess string
 
 const (
-	ScriptAccessDenied  ScriptAccess = "deny"
-	ScriptAccessAllowed ScriptAccess = "allow"
+	ScriptAccessDenied  ScriptAccess = "Deny"
+	ScriptAccessAllowed ScriptAccess = "Allow"
 	ScriptAccessNone    ScriptAccess = ""
 )
 
