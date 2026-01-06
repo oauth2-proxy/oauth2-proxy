@@ -606,7 +606,7 @@ RedisStoreOptions contains configuration options for the RedisSessionStore.
 (**Appears on:** [Cookie](#cookie))
 
 SameSiteMode is an enum representing the different SameSite modes for cookies
-Available modes are "lax", "strict", "none", and "" (default browser behavior)
+Available modes are "Lax", "Strict", "None", and "" (default browser behavior)
 
 ### ScriptAccess
 #### (`string` alias)
@@ -614,7 +614,7 @@ Available modes are "lax", "strict", "none", and "" (default browser behavior)
 (**Appears on:** [Cookie](#cookie))
 
 ScriptAccess is an enum representing whether a cookie is accessible to JavaScript
-Available modes are "allow", "deny" (default behavior)
+Available modes are "Allow", "Deny" (default behavior)
 
 ### SecretSource
 

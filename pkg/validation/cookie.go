@@ -21,9 +21,9 @@ func validateCookie(o options.Cookie, refresh time.Duration) []string {
 	}
 
 	switch o.SameSite {
-	case "", "none", "lax", "strict":
+	case options.SameSiteLax, options.SameSiteStrict, options.SameSiteNone, options.SameSiteDefault:
 	default:
-		msgs = append(msgs, fmt.Sprintf("cookie_samesite (%q) must be one of ['', 'lax', 'strict', 'none']", o.SameSite))
+		msgs = append(msgs, fmt.Sprintf("cookie_samesite (%q) must be one of ['', 'Lax', 'Strict', 'None']", o.SameSite))
 	}
 
 	// Sort cookie domains by length, so that we try longer (and more specific) domains first

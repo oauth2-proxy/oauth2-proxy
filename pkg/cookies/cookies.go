@@ -69,13 +69,13 @@ func GetCookieDomain(req *http.Request, cookieDomains []string) string {
 // Parse a valid http.SameSite value from a user supplied string for use of making cookies.
 func ParseSameSite(v options.SameSiteMode) http.SameSite {
 	switch v {
-	case "lax":
+	case options.SameSiteLax:
 		return http.SameSiteLaxMode
-	case "strict":
+	case options.SameSiteStrict:
 		return http.SameSiteStrictMode
-	case "none":
+	case options.SameSiteNone:
 		return http.SameSiteNoneMode
-	case "":
+	case options.SameSiteDefault:
 		return 0
 	default:
 		panic(fmt.Sprintf("Invalid value for SameSite: %s", v))
