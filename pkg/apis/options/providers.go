@@ -93,6 +93,8 @@ type Provider struct {
 	OIDCConfig OIDCOptions `yaml:"oidcConfig,omitempty"`
 	// LoginGovConfig holds all configurations for LoginGov provider.
 	LoginGovConfig LoginGovOptions `yaml:"loginGovConfig,omitempty"`
+	// AppleConfig holds all configurations for Apple provider.
+	AppleConfig AppleOptions `yaml:"appleConfig,omitempty"`
 
 	// ID should be a unique identifier for the provider.
 	// This value is required for all providers.
@@ -195,6 +197,9 @@ const (
 
 	// SourceHutProvider is the provider type for SourceHut
 	SourceHutProvider ProviderType = "sourcehut"
+
+	// AppleProvider is the provider type for Apple Sign in with Apple
+	AppleProvider ProviderType = "apple"
 )
 
 type KeycloakOptions struct {
@@ -327,6 +332,17 @@ type LoginGovOptions struct {
 	JWTKeyFile string `yaml:"jwtKeyFile,omitempty"`
 	// PubJWKURL is the JWK pubkey access endpoint
 	PubJWKURL string `yaml:"pubjwkURL,omitempty"`
+}
+
+type AppleOptions struct {
+	// TeamID is the 10-character Apple Developer Team ID
+	TeamID string `yaml:"teamID,omitempty"`
+	// KeyID is the 10-character identifier for the private key
+	KeyID string `yaml:"keyID,omitempty"`
+	// PrivateKey is the PEM-encoded ES256 private key content (from .p8 file)
+	PrivateKey string `yaml:"privateKey,omitempty"`
+	// PrivateKeyFile is the path to the .p8 private key file
+	PrivateKeyFile string `yaml:"privateKeyFile,omitempty"`
 }
 
 // Legacy default providers configuration
