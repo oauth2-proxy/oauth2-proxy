@@ -272,7 +272,16 @@ func (p *MicrosoftEntraIDProvider) getTenantFromToken(session *sessions.SessionS
 		return "", fmt.Errorf("unable to get claim extractor: %v", err)
 	}
 
-	value, exists, err := extractor.GetClaim("iss")
+	// Use tenant id (tid) provided within the payload claims of the id token
+	// https://learn.microsoft.com/en-us/entra/identity-platform/id-token-claims-reference
+	value, exists, err := extractor.GetClaim("tid")
+
+	if exists && err == nil {
+		return value, nil
+	}
+
+	// Fall back to iss claim
+	value, exists, err = extractor.GetClaim("iss")
 
 	if !exists || err != nil {
 		return "", fmt.Errorf("iss claim does not exist in the token")
