@@ -34,6 +34,9 @@ type Options struct {
 	WhitelistDomains        []string `flag:"whitelist-domain" cfg:"whitelist_domains"`
 	HtpasswdFile            string   `flag:"htpasswd-file" cfg:"htpasswd_file"`
 	HtpasswdUserGroups      []string `flag:"htpasswd-user-group" cfg:"htpasswd_user_groups"`
+	MaxAutomatedRetries     int      `flag:"max-automated-retries" cfg:"max_automated_retries"`
+	IdpErrorsToRetry        []string `flag:"retry-idp-errors" cfg:"retry_idp_errors"`
+	RetryCsrfErrors         bool     `flag:"retry-csrf-errors" cfg:"retry_csrf_errors"`
 
 	Cookie    Cookie         `cfg:",squash"`
 	Session   SessionOptions `cfg:",squash"`
@@ -161,6 +164,9 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Int("redis-connection-idle-timeout", 0, "Redis connection idle timeout seconds, if Redis timeout option is non-zero, the --redis-connection-idle-timeout must be less then Redis timeout option")
 	flagSet.String("signature-key", "", "GAP-Signature request signature key (algorithm:secretkey)")
 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
+	flagSet.Int("max-automated-retries", 0, "Maximum number of automated retries for callback errors")
+	flagSet.StringSlice("retry-idp-errors", []string{}, "Errors from IdP that should be automatically retried")
+	flagSet.Bool("retry-csrf-errors", false, "If true retries Csrf errors automatically")
 
 	flagSet.AddFlagSet(cookieFlagSet())
 	flagSet.AddFlagSet(loggingFlagSet())

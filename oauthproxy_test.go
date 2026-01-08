@@ -414,7 +414,7 @@ func (patTest *PassAccessTokenTest) getCallbackEndpoint() (httpCode int, cookie 
 		http.MethodGet,
 		fmt.Sprintf(
 			"/oauth2/callback?code=callback_code&state=%s",
-			encodeState(csrf.HashOAuthState(), "%2F", false),
+			encodeState(csrf.HashOAuthState(), "%2F", 0, false),
 		),
 		strings.NewReader(""),
 	)
@@ -3358,24 +3358,61 @@ func TestAuthOnlyAllowedEmailDomains(t *testing.T) {
 func TestStateEncodesCorrectly(t *testing.T) {
 	state := "some_state_to_test"
 	nonce := "some_nonce_to_test"
+	retryCount := 3
 
-	encodedResult := encodeState(nonce, state, true)
-	assert.Equal(t, "c29tZV9ub25jZV90b190ZXN0OnNvbWVfc3RhdGVfdG9fdGVzdA", encodedResult)
+	encodedResult := encodeState(nonce, state, retryCount, true)
+	assert.Equal(t, "c29tZV9ub25jZV90b190ZXN0OnNvbWVfc3RhdGVfdG9fdGVzdDoz", encodedResult)
 
-	notEncodedResult := encodeState(nonce, state, false)
-	assert.Equal(t, "some_nonce_to_test:some_state_to_test", notEncodedResult)
+	notEncodedResult := encodeState(nonce, state, retryCount, false)
+	assert.Equal(t, "some_nonce_to_test:some_state_to_test:3", notEncodedResult)
+}
+
+func TestStateEncodesWithColonInRedirect(t *testing.T) {
+	redirect := "test:url"
+	nonce := "nonce_value"
+	retryCount := 3
+
+	encodedResult := encodeState(nonce, redirect, retryCount, true)
+	assert.Equal(t, "bm9uY2VfdmFsdWU6dGVzdCUzQXVybDoz", encodedResult)
+
+	notEncodedResult := encodeState(nonce, redirect, retryCount, false)
+	assert.Equal(t, "nonce_value:test%3Aurl:3", notEncodedResult)
 }
 
 func TestStateDecodesCorrectly(t *testing.T) {
-	nonce, redirect, _ := decodeState("c29tZV9ub25jZV90b190ZXN0OnNvbWVfc3RhdGVfdG9fdGVzdA", true)
+	nonce, redirect, retryCount, _ := decodeState("c29tZV9ub25jZV90b190ZXN0OnNvbWVfc3RhdGVfdG9fdGVzdDoz", true)
 
 	assert.Equal(t, "some_nonce_to_test", nonce)
 	assert.Equal(t, "some_state_to_test", redirect)
+	assert.Equal(t, 3, retryCount)
 
-	nonce2, redirect2, _ := decodeState("some_nonce_to_test:some_state_to_test", false)
+	nonce2, redirect2, retryCount2, _ := decodeState("some_nonce_to_test:some_state_to_test:3", false)
 
 	assert.Equal(t, "some_nonce_to_test", nonce2)
 	assert.Equal(t, "some_state_to_test", redirect2)
+	assert.Equal(t, 3, retryCount2)
+}
+
+func TestStateDecodesWithColonInRedirect(t *testing.T) {
+	nonce, redirect, retryCount, _ := decodeState("bm9uY2VfdmFsdWU6dGVzdCUzQXVybDoz", true)
+
+	assert.Equal(t, "nonce_value", nonce)
+	assert.Equal(t, "test:url", redirect)
+	assert.Equal(t, 3, retryCount)
+
+	nonce2, redirect2, retryCount2, _ := decodeState("nonce_value:test%3Aurl:3", false)
+
+	assert.Equal(t, "nonce_value", nonce2)
+	assert.Equal(t, "test:url", redirect2)
+	assert.Equal(t, 3, retryCount2)
+}
+
+func TestStateDecodesWithoutRetryCount(t *testing.T) {
+	nonce, redirect, retryCount, _ := decodeState("nonce_value:url", false)
+
+	assert.Equal(t, "nonce_value", nonce)
+	assert.Equal(t, "url", redirect)
+	assert.Equal(t, 0, retryCount)
 }
 
 func TestAuthOnlyAllowedEmails(t *testing.T) {
