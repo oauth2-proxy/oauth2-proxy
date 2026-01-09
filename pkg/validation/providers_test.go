@@ -79,5 +79,35 @@ var _ = Describe("Providers", func() {
 			},
 			errStrings: []string{skipButtonAndMultipleProvidersMsg},
 		}),
+		Entry("with oidc provider using S256 PKCE and no client secret", &validateProvidersTableInput{
+			options: &options.Options{
+				Providers: options.Providers{
+					{
+						Type:              "oidc",
+						ID:                "oidc-s256",
+						ClientID:          "client-id",
+						ClientSecret:      "",
+						ClientSecretFile:  "",
+						CodeChallengeMethod: "S256",
+					},
+				},
+			},
+			errStrings: []string{},
+		}),
+		Entry("with oidc provider using S256 PKCE and client secret", &validateProvidersTableInput{
+			options: &options.Options{
+				Providers: options.Providers{
+					{
+						Type:              "oidc",
+						ID:                "oidc-s256",
+						ClientID:          "client-id",
+						ClientSecret:      "mysecret",
+						ClientSecretFile:  "",
+						CodeChallengeMethod: "S256",
+					},
+				},
+			},
+			errStrings: []string{},
+		}),
 	)
 })
