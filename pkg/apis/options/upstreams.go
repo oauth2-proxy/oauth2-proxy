@@ -146,16 +146,21 @@ func (u *Upstream) EnsureDefaults() {
 	if u.FlushInterval == nil {
 		u.FlushInterval = ptr.To(DefaultUpstreamFlushInterval)
 	}
-	if u.PassHostHeader == nil {
-		u.PassHostHeader = ptr.To(DefaultUpstreamPassHostHeader)
-	}
-	if u.ProxyWebSockets == nil {
-		u.ProxyWebSockets = ptr.To(DefaultUpstreamProxyWebSockets)
-	}
 	if u.Timeout == nil {
 		u.Timeout = ptr.To(DefaultUpstreamTimeout)
 	}
 	if u.DisableKeepAlives == nil {
 		u.DisableKeepAlives = ptr.To(DefaultUpstreamDisableKeepAlives)
+	}
+
+	// PassHostHeader and ProxyWebSockets must remain nil for static upstreams
+	// as they don't apply and validation will flag them if set
+	if !ptr.Deref(u.Static, DefaultUpstreamStatic) {
+		if u.PassHostHeader == nil {
+			u.PassHostHeader = ptr.To(DefaultUpstreamPassHostHeader)
+		}
+		if u.ProxyWebSockets == nil {
+			u.ProxyWebSockets = ptr.To(DefaultUpstreamProxyWebSockets)
+		}
 	}
 }
