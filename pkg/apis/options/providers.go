@@ -416,7 +416,9 @@ func (a *ADFSOptions) EnsureDefaults() {
 
 // EnsureDefaults sets any default values for GoogleOptions fields.
 func (g *GoogleOptions) EnsureDefaults() {
-	g.UseOrganizationID = ptr.To(DefaultGoogleUseOrganizationID)
+	if g.UseOrganizationID == nil {
+		g.UseOrganizationID = ptr.To(DefaultGoogleUseOrganizationID)
+	}
 
 	if g.UseApplicationDefaultCredentials == nil {
 		g.UseApplicationDefaultCredentials = ptr.To(DefaultUseApplicationDefaultCredentials)
