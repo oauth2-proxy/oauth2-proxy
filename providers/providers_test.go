@@ -30,6 +30,7 @@ func TestClientSecretFileOptionFails(t *testing.T) {
 		ClientSecretFile: clientSecret,
 	}
 
+	setProviderDefaults(&providerConfig)
 	p, err := newProviderDataFromConfig(providerConfig)
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(p.ClientSecretFile).To(Equal(clientSecret))
@@ -63,6 +64,7 @@ func TestClientSecretFileOption(t *testing.T) {
 		ClientSecretFile: clientSecretFileName,
 	}
 
+	setProviderDefaults(&providerConfig)
 	p, err := newProviderDataFromConfig(providerConfig)
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(p.ClientSecretFile).To(Equal(clientSecretFileName))

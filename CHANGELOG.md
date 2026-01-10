@@ -8,6 +8,7 @@
 
 ## Changes since v7.13.0
 
+- [#3294](https://github.com/oauth2-proxy/oauth2-proxy/pull/3294) feat: update the Google provider to use OIDC (@sourava01)
 - [#3197](https://github.com/oauth2-proxy/oauth2-proxy/pull/3197) fix: NewRemoteKeySet is not using DefaultHTTPClient (@rsrdesarrollo / @tuunit)
 - [#3292](https://github.com/oauth2-proxy/oauth2-proxy/pull/3292) chore(deps): upgrade gomod and bump to golang v1.25.5 (@tuunit)
 

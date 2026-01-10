@@ -33,6 +33,9 @@ type Provider interface {
 }
 
 func NewProvider(providerConfig options.Provider) (Provider, error) {
+	// Allow providers to set their defaults before provider data is created
+	setProviderDefaults(&providerConfig)
+
 	providerData, err := newProviderDataFromConfig(providerConfig)
 	if err != nil {
 		return nil, fmt.Errorf("could not create provider data: %v", err)
@@ -57,7 +60,7 @@ func NewProvider(providerConfig options.Provider) (Provider, error) {
 	case options.GitLabProvider:
 		return NewGitLabProvider(providerData, providerConfig)
 	case options.GoogleProvider:
-		return NewGoogleProvider(providerData, providerConfig.GoogleConfig)
+		return NewGoogleProvider(providerData, providerConfig.GoogleConfig, providerConfig.OIDCConfig), nil
 	case options.KeycloakProvider:
 		return NewKeycloakProvider(providerData, providerConfig.KeycloakConfig), nil
 	case options.KeycloakOIDCProvider:
@@ -74,6 +77,14 @@ func NewProvider(providerConfig options.Provider) (Provider, error) {
 		return NewSourceHutProvider(providerData), nil
 	default:
 		return nil, fmt.Errorf("unknown provider type %q", providerConfig.Type)
+	}
+}
+
+// setProviderDefaults allows providers to set their defaults before provider data is created.
+// Each provider can implement its own defaults function.
+func setProviderDefaults(providerConfig *options.Provider) {
+	if providerConfig.Type == options.GoogleProvider {
+		setGoogleDefaults(providerConfig)
 	}
 }
 
@@ -188,11 +199,11 @@ func parseCodeChallengeMethod(providerConfig options.Provider) string {
 func providerRequiresOIDCProviderVerifier(providerType options.ProviderType) (bool, error) {
 	switch providerType {
 	case options.BitbucketProvider, options.DigitalOceanProvider, options.FacebookProvider, options.GitHubProvider,
-		options.GoogleProvider, options.KeycloakProvider, options.LinkedInProvider, options.LoginGovProvider,
+		options.KeycloakProvider, options.LinkedInProvider, options.LoginGovProvider,
 		options.NextCloudProvider, options.SourceHutProvider:
 		return false, nil
 	case options.OIDCProvider, options.ADFSProvider, options.AzureProvider, options.CidaasProvider,
-		options.GitLabProvider, options.KeycloakOIDCProvider, options.MicrosoftEntraIDProvider:
+		options.GitLabProvider, options.GoogleProvider, options.KeycloakOIDCProvider, options.MicrosoftEntraIDProvider:
 		return true, nil
 	default:
 		return false, fmt.Errorf("unknown provider type: %s", providerType)
