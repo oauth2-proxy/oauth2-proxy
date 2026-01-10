@@ -37,7 +37,10 @@ For Google, the registration steps are:
 It's recommended to refresh sessions on a short interval (1h) with `cookie-refresh` setting which validates that the 
 account is still authorized.
 
-#### Restrict auth to specific Google groups on your domain. (optional)
+### Groups Claim
+
+Google does not support a `groups` claim in ID tokens. To include groups information in the session, this provider needs access to the [Google Admin Directory API](https://developers.google.com/admin-sdk/directory). 
+To configure this:
 
 1.  Create a [service account](https://developers.google.com/identity/protocols/oauth2/service-account) and configure it 
     to use [Application Default Credentials / Workload Identity / Workload Identity Federation (recommended)](#using-application-default-credentials-adc--workload-identity--workload-identity-federation-recommended) or, 
@@ -50,6 +53,7 @@ account is still authorized.
 
     ```
     https://www.googleapis.com/auth/admin.directory.group.member.readonly
+    https://www.googleapis.com/auth/admin.directory.group.readonly
     ```
 
 6.  Follow the steps on https://support.google.com/a/answer/60757 to enable Admin API access.
