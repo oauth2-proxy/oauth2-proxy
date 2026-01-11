@@ -27,7 +27,7 @@ func validateAllowlists(o *options.Options) []string {
 	return msgs
 }
 
-// validateAuthRoutes validates method=path routes passed with options.SkipAuthRoutes
+// validateAuthRoutes validates method=path routes and domain=domain_regex passed with options.SkipAuthRoutes
 func validateAuthRoutes(o *options.Options) []string {
 	msgs := []string{}
 	for _, route := range o.SkipAuthRoutes {
@@ -36,6 +36,7 @@ func validateAuthRoutes(o *options.Options) []string {
 		if len(parts) == 1 {
 			regex = parts[0]
 		} else {
+			// For method or domain-based routes, validate the regex
 			regex = parts[1]
 		}
 		_, err := regexp.Compile(regex)

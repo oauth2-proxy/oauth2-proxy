@@ -2250,9 +2250,10 @@ func TestTrustedIPs(t *testing.T) {
 
 func Test_buildRoutesAllowlist(t *testing.T) {
 	type expectedAllowedRoute struct {
-		method      string
-		negate      bool
-		regexString string
+		method            string
+		negate            bool
+		regexString       string
+		domainRegexString string
 	}
 
 	testCases := []struct {
@@ -2377,6 +2378,49 @@ func Test_buildRoutesAllowlist(t *testing.T) {
 			shouldError: false,
 		},
 		{
+			name:          "Domain-based routes",
+			skipAuthRegex: []string{},
+			skipAuthRoutes: []string{
+				"domain=example\\.com",
+				"domain=.*\\.subdomain\\.com",
+			},
+			expectedRoutes: []expectedAllowedRoute{
+				{
+					method:            "",
+					domainRegexString: "example\\.com",
+				},
+				{
+					method:            "",
+					domainRegexString: ".*\\.subdomain\\.com",
+				},
+			},
+			shouldError: false,
+		},
+		{
+			name:          "Mixed method and domain routes",
+			skipAuthRegex: []string{},
+			skipAuthRoutes: []string{
+				"GET=^/api/v1",
+				"domain=api\\.example\\.com",
+				"POST=^/webhook",
+			},
+			expectedRoutes: []expectedAllowedRoute{
+				{
+					method:      "GET",
+					regexString: "^/api/v1",
+				},
+				{
+					method:            "",
+					domainRegexString: "api\\.example\\.com",
+				},
+				{
+					method:      "POST",
+					regexString: "^/webhook",
+				},
+			},
+			shouldError: false,
+		},
+		{
 			name: "Invalid skipAuthRegex entry",
 			skipAuthRegex: []string{
 				"^/foo/bar",
@@ -2418,7 +2462,22 @@ func Test_buildRoutesAllowlist(t *testing.T) {
 				assert.Greater(t, len(tc.expectedRoutes), i)
 				assert.Equal(t, route.method, tc.expectedRoutes[i].method)
 				assert.Equal(t, route.negate, tc.expectedRoutes[i].negate)
-				assert.Equal(t, route.pathRegex.String(), tc.expectedRoutes[i].regexString)
+
+				// Check path regex if expected
+				if tc.expectedRoutes[i].regexString != "" {
+					assert.NotNil(t, route.pathRegex)
+					assert.Equal(t, route.pathRegex.String(), tc.expectedRoutes[i].regexString)
+				} else {
+					assert.Nil(t, route.pathRegex)
+				}
+
+				// Check domain regex if expected
+				if tc.expectedRoutes[i].domainRegexString != "" {
+					assert.NotNil(t, route.domainRegex)
+					assert.Equal(t, route.domainRegex.String(), tc.expectedRoutes[i].domainRegexString)
+				} else {
+					assert.Nil(t, route.domainRegex)
+				}
 			}
 		})
 	}
@@ -2621,6 +2680,118 @@ func TestAllowedRequest(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			req, err := http.NewRequest(tc.method, tc.url, nil)
 			assert.NoError(t, err)
+			assert.Equal(t, tc.allowed, proxy.isAllowedRoute(req))
+
+			rw := httptest.NewRecorder()
+			proxy.ServeHTTP(rw, req)
+
+			if tc.allowed {
+				assert.Equal(t, 200, rw.Code)
+				assert.Equal(t, "Allowed Request", rw.Body.String())
+			} else {
+				assert.Equal(t, 403, rw.Code)
+			}
+		})
+	}
+}
+
+func TestAllowedRequestWithDomain(t *testing.T) {
+	upstreamServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+		_, err := w.Write([]byte("Allowed Request"))
+		if err != nil {
+			t.Fatal(err)
+		}
+	}))
+	t.Cleanup(upstreamServer.Close)
+
+	opts := baseTestOptions()
+	opts.UpstreamServers = options.UpstreamConfig{
+		Upstreams: []options.Upstream{
+			{
+				ID:   upstreamServer.URL,
+				Path: "/",
+				URI:  upstreamServer.URL,
+			},
+		},
+	}
+	opts.SkipAuthRoutes = []string{
+		"domain=api\\.example\\.com",
+		"domain=.*\\.subdomain\\.com",
+		"GET=^/api/public",
+	}
+	err := validation.Validate(opts)
+	assert.NoError(t, err)
+	proxy, err := NewOAuthProxy(opts, func(_ string) bool { return true })
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	testCases := []struct {
+		name    string
+		method  string
+		url     string
+		host    string
+		allowed bool
+	}{
+		{
+			name:    "Domain allowed - exact match",
+			method:  "GET",
+			url:     "/any/path",
+			host:    "api.example.com",
+			allowed: true,
+		},
+		{
+			name:    "Domain allowed - subdomain match",
+			method:  "POST",
+			url:     "/any/path",
+			host:    "test.subdomain.com",
+			allowed: true,
+		},
+		{
+			name:    "Domain allowed - another subdomain",
+			method:  "GET",
+			url:     "/different/path",
+			host:    "app.subdomain.com",
+			allowed: true,
+		},
+		{
+			name:    "Domain denied - wrong domain",
+			method:  "GET",
+			url:     "/any/path",
+			host:    "other.example.com",
+			allowed: false,
+		},
+		{
+			name:    "Domain denied - no host",
+			method:  "GET",
+			url:     "/any/path",
+			host:    "",
+			allowed: false,
+		},
+		{
+			name:    "Path route allowed regardless of domain",
+			method:  "GET",
+			url:     "/api/public",
+			host:    "different.com",
+			allowed: true,
+		},
+		{
+			name:    "Path route with allowed domain",
+			method:  "GET",
+			url:     "/api/public",
+			host:    "api.example.com",
+			allowed: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req, err := http.NewRequest(tc.method, tc.url, nil)
+			assert.NoError(t, err)
+			if tc.host != "" {
+				req.Host = tc.host
+			}
 			assert.Equal(t, tc.allowed, proxy.isAllowedRoute(req))
 
 			rw := httptest.NewRecorder()
