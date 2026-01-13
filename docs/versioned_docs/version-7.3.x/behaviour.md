@@ -1,8 +1,7 @@
- ---
+---
 id: behaviour
 title: Behaviour
 ---
-
 
 1. Any request passing through the proxy to upstream is processed and needs authentication, excluding default proxy endpoints.
     - IF the request matches a skipped route (configured via `--skip-auth-route`)
