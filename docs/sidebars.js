@@ -34,6 +34,7 @@ const sidebars = {
             "configuration/providers/adfs",
             "configuration/providers/azure",
             "configuration/providers/bitbucket",
+            "configuration/providers/cisco_duo",
             "configuration/providers/digitalocean",
             "configuration/providers/facebook",
             "configuration/providers/gitea",

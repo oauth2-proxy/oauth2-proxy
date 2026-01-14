@@ -10,6 +10,7 @@ Valid providers are :
 
 - [ADFS](adfs.md)
 - [Bitbucket](bitbucket.md)
+- [CiscoDuo](cisco_duo.md)
 - [Cidaas](cidaas.md)
 - [DigitalOcean](digitalocean.md)
 - [Facebook](facebook.md)
