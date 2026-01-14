@@ -36,6 +36,7 @@ func stripParam(param, endpoint string) string {
 		}
 
 		if val := values.Get(param); val != "" {
+			// Truncate by at least half and allow for a maximum of 5 characters
 			values.Set(param, val[:min(len(val)/2, 5)]+"...")
 			u.RawQuery = values.Encode()
 			return u.String()
