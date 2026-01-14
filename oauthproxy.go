@@ -988,6 +988,15 @@ func (p *OAuthProxy) enrichSessionState(ctx context.Context, s *sessionsapi.Sess
 func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
 	session, err := p.getAuthenticatedSession(rw, req)
 	if err != nil {
+		// If SkipProviderButton is enabled and user needs login, redirect directly
+		// to OAuth provider instead of returning 401. This allows nginx auth_request
+		// to pass through the 302 redirect to the browser, bypassing error_page
+		// handling which can break redirect flows.
+		// See: https://github.com/oauth2-proxy/oauth2-proxy/issues/334
+		if p.SkipProviderButton && err == ErrNeedsLogin {
+			p.doOAuthStart(rw, req, nil)
+			return
+		}
 		http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
