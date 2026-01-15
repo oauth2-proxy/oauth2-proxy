@@ -42,14 +42,6 @@ Integrate oauth2-proxy with Caddy v2 using the `forward_auth` directive.
 
 oauth2-proxy can also be used to add authentication to Kubernetes web user interfaces:
 
-### [Kubernetes Dashboard](integrations/kubernetes-dashboard.md) ⚠️ *Deprecated*
-
-Integration guide for the deprecated Kubernetes Dashboard, including comprehensive Azure Entra ID configuration on AKS.
-
-:::warning Deprecated Project
-Kubernetes Dashboard has been deprecated and discontinued as of January 2025. Consider using Headlamp as an alternative.
-:::
-
 ### [Headlamp](integrations/headlamp.md) ✨ *Recommended*
 
 Modern, actively maintained Kubernetes web UI with oauth2-proxy integration examples.
@@ -60,6 +52,14 @@ Modern, actively maintained Kubernetes web UI with oauth2-proxy integration exam
 - Multi-cluster support
 - Plugin system
 - Works with all OAuth2 providers
+
+### [Kubernetes Dashboard](integrations/kubernetes-dashboard.md) ⚠️ *Deprecated*
+
+Integration guide for the deprecated Kubernetes Dashboard, including comprehensive Azure Entra ID configuration on AKS with detailed troubleshooting and RBAC setup.
+
+:::warning Deprecated Project
+Kubernetes Dashboard has been deprecated and discontinued as of January 2025. Consider using Headlamp as an alternative.
+:::
 
 ## General Requirements
 
