@@ -3,6 +3,13 @@ id: caddy
 title: Caddy
 ---
 
+Integrate OAuth2 Proxy with Caddy v2 using the `forward_auth` directive.
+
+**Key features:**
+- Simple forward_auth setup
+- Automatic header handling
+- Custom error handling and redirects
+
 ## Configuring for use with the Caddy (v2) `forward_auth` directive
 
 The [Caddy `forward_auth` directive](https://caddyserver.com/docs/caddyfile/directives/forward_auth) allows Caddy to authenticate requests via the `oauth2-proxy`'s `/auth`.

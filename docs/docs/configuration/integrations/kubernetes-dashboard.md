@@ -11,22 +11,22 @@ You may want to consider alternative solutions such as [Headlamp](./headlamp.md)
 
 ## Kubernetes Dashboard on AKS with Azure Entra ID
 
-This section provides a complete example for integrating oauth2-proxy with Kubernetes Dashboard on Azure Kubernetes Service (AKS) using Entra ID for authentication.
+Integration guide for the deprecated Kubernetes Dashboard, including comprehensive Azure Entra ID configuration on AKS with detailed troubleshooting and RBAC setup.
 
 ### Architecture
 
 ```
-User → Nginx Ingress → oauth2-proxy → Entra ID
+User → Nginx Ingress → OAuth2 Proxy → Entra ID
            ↓
    Kubernetes Dashboard
 ```
 
 The integration flow:
 1. Unauthenticated requests to Dashboard are intercepted by Nginx Ingress
-2. Nginx redirects to oauth2-proxy for authentication
-3. oauth2-proxy redirects to Entra ID login
-4. After successful authentication, oauth2-proxy receives ID token from Entra ID
-5. oauth2-proxy sets Authorization header with the bearer token
+2. Nginx redirects to OAuth2 Proxy for authentication
+3. OAuth2 Proxy redirects to Entra ID login
+4. After successful authentication, OAuth2 Proxy receives ID token from Entra ID
+5. OAuth2 Proxy sets Authorization header with the bearer token
 6. Nginx forwards the request with token to Kubernetes Dashboard
 7. Dashboard validates the token and grants access based on AKS RBAC configuration
 
@@ -43,7 +43,7 @@ The integration flow:
 
 ### Alpha Configuration Example
 
-Using [Alpha Configuration](../alpha_config.md) with the oauth2-proxy Helm chart:
+Using [Alpha Configuration](../alpha_config.md) with the OAuth2 Proxy Helm chart:
 
 ```yaml
 alphaConfig:
@@ -110,7 +110,7 @@ ingress:
   enabled: true
   className: nginx
   hosts:
-    - oauth2-proxy.your-domain.com
+    - OAuth2 Proxy.your-domain.com
   path: /oauth2
   pathType: Prefix
 ```
@@ -129,9 +129,9 @@ metadata:
     nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
 
-    # OAuth2-proxy authentication
-    nginx.ingress.kubernetes.io/auth-url: "https://oauth2-proxy.your-domain.com/oauth2/auth"
-    nginx.ingress.kubernetes.io/auth-signin: "https://oauth2-proxy.your-domain.com/oauth2/start?rd=$scheme://$best_http_host$request_uri"
+    # OAuth2 Proxy authentication
+    nginx.ingress.kubernetes.io/auth-url: "https://OAuth2 Proxy.your-domain.com/oauth2/auth"
+    nginx.ingress.kubernetes.io/auth-signin: "https://OAuth2 Proxy.your-domain.com/oauth2/start?rd=$scheme://$best_http_host$request_uri"
 
     # Include Authorization header with bearer token
     nginx.ingress.kubernetes.io/auth-response-headers: "Authorization, X-Auth-Request-User, X-Auth-Request-Email"
@@ -205,7 +205,7 @@ Verify that:
 1. `injectResponseHeaders` in alphaConfig includes Authorization header with id_token claim
 2. Dashboard Ingress includes `Authorization` in `auth-response-headers` annotation
 3. Buffer sizes are sufficient for large tokens (set to 256k as shown above)
-4. Check oauth2-proxy logs for successful token generation: `kubectl logs -n oauth2-proxy <pod-name>`
+4. Check OAuth2 Proxy logs for successful token generation: `kubectl logs -n OAuth2 Proxy <pod-name>`
 
 **"Unauthorized" or "Invalid token" errors**
 
@@ -215,7 +215,7 @@ Common causes:
 2. Token validation failed
    - Verify AKS Entra ID integration is enabled
    - Check Dashboard logs: `kubectl logs -n kubernetes-dashboard <pod-name>`
-3. Incorrect oauth2-proxy configuration
+3. Incorrect OAuth2 Proxy configuration
    - Ensure `reverse-proxy: true` is set
    - Verify issuer URL matches your tenant
 
@@ -226,7 +226,7 @@ To include groups in the token:
 2. Add **groups claim** and select security groups
 3. Or edit the manifest and add: `"groupMembershipClaims": "SecurityGroup"`
 4. For 200+ groups, ensure scope includes `User.Read` for group overage handling
-5. Verify groups appear in token: check oauth2-proxy logs
+5. Verify groups appear in token: check OAuth2 Proxy logs
 
 **Session expires too quickly**
 
@@ -280,7 +280,7 @@ For detailed Workload Identity setup instructions, see the [Workload Identity se
 
 ## Integration with Other Providers
 
-While this guide focuses on Azure Entra ID, Kubernetes Dashboard can be integrated with other OAuth2 providers supported by oauth2-proxy. The key requirements remain the same:
+While this guide focuses on Azure Entra ID, Kubernetes Dashboard can be integrated with other OAuth2 providers supported by OAuth2 Proxy. The key requirements remain the same:
 
 1. **Authorization Header**: Pass the bearer token via the `Authorization` header
 2. **RBAC Configuration**: Configure Kubernetes RBAC for your authentication provider's users/groups

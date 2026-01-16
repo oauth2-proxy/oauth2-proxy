@@ -3,6 +3,15 @@ id: traefik
 title: Traefik
 ---
 
+Set up OAuth2 Proxy with Traefik v2 using the `ForwardAuth` middleware. Includes examples for both error-based redirects and static upstream configurations.
+
+**Key features:**
+- ForwardAuth middleware integration
+- Error middleware for 401 redirects
+- Static upstream configuration (202 responses)
+- Dynamic file configuration examples
+
+
 ## Configuring for use with the Traefik (v2) `ForwardAuth` middleware
 
 **This option requires `--reverse-proxy` option to be set.**

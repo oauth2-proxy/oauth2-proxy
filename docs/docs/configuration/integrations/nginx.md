@@ -3,6 +3,14 @@ id: nginx
 title: Nginx
 ---
 
+Configure OAuth2 Proxy with Nginx using the `auth_request` directive. Includes examples for both standalone Nginx configurations and Kubernetes ingress-nginx with annotations.
+
+**Key features:**
+- Support for `auth_request` directive
+- Kubernetes Ingress annotations
+- Multi-part cookie handling for large tokens
+- Session refresh support
+
 ## Configuring for use with the Nginx `auth_request` directive
 
 **This option requires `--reverse-proxy` option to be set.**

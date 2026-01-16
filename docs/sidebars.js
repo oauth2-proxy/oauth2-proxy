@@ -27,7 +27,7 @@ const sidebars = {
           label: 'Integration Guides',
           link: {
             type: 'doc',
-            id: 'configuration/integration',
+            id: 'configuration/integrations/index',
           },
           items: [
             "configuration/integrations/nginx",
