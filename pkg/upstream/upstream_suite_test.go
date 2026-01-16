@@ -96,6 +96,7 @@ type testHTTPRequest struct {
 type testWebSocketResponse struct {
 	Message string
 	Origin  string
+	Host    string
 }
 
 type testHTTPUpstream struct{}
@@ -138,6 +139,7 @@ func (t *testHTTPUpstream) websocketHandler() http.Handler {
 		wsResponse := testWebSocketResponse{
 			Message: string(data),
 			Origin:  ws.Request().Header.Get("Origin"),
+			Host:    ws.Request().Host,
 		}
 		err = websocket.JSON.Send(ws, wsResponse)
 		if err != nil {
