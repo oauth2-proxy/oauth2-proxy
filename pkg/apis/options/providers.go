@@ -329,29 +329,6 @@ type LoginGovOptions struct {
 	PubJWKURL string `yaml:"pubjwkURL,omitempty"`
 }
 
-// Legacy default providers configuration
-func providerDefaults() Providers {
-	providers := Providers{
-		{
-			Type: "google",
-			AzureConfig: AzureOptions{
-				Tenant: "common",
-			},
-			OIDCConfig: OIDCOptions{
-				InsecureAllowUnverifiedEmail: ptr.To(DefaultInsecureAllowUnverifiedEmail),
-				InsecureSkipNonce:            ptr.To(DefaultInsecureSkipNonce),
-				SkipDiscovery:                ptr.To(DefaultSkipDiscovery),
-				UserIDClaim:                  OIDCEmailClaim, // Deprecated: Use OIDCEmailClaim
-				EmailClaim:                   OIDCEmailClaim,
-				GroupsClaim:                  OIDCGroupsClaim,
-				AudienceClaims:               OIDCAudienceClaims,
-				ExtraAudiences:               []string{},
-			},
-		},
-	}
-	return providers
-}
-
 // EnsureDefaults sets any default values for Providers fields.
 func (p Providers) EnsureDefaults() {
 	for i := range p {

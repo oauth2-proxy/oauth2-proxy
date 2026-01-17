@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	. "github.com/onsi/ginkgo/v2"
@@ -91,7 +92,7 @@ var _ = Describe("Cookie Tests", func() {
 		}
 
 		validName := "_oauth2_proxy"
-		validSecret := "secretthirtytwobytes+abcdefghijk"
+		validSecret := &options.SecretSource{Value: []byte("secretthirtytwobytes+abcdefghijk")}
 		domains := []string{"www.cookies.test"}
 
 		now := time.Now()
@@ -113,15 +114,14 @@ var _ = Describe("Cookie Tests", func() {
 				name:  validName,
 				value: "1",
 				opts: options.Cookie{
-					Name:     validName,
-					Secret:   validSecret,
-					Domains:  domains,
-					Path:     "",
-					Expire:   time.Hour,
-					Refresh:  15 * time.Minute,
-					Secure:   true,
-					HTTPOnly: false,
-					SameSite: "",
+					Name:         validName,
+					Secret:       validSecret,
+					Domains:      domains,
+					Path:         "",
+					Expire:       time.Hour,
+					Insecure:     ptr.To(false),
+					ScriptAccess: options.ScriptAccessAllowed,
+					SameSite:     "",
 				},
 				expiration:     15 * time.Minute,
 				now:            now,
@@ -132,15 +132,14 @@ var _ = Describe("Cookie Tests", func() {
 				name:  validName,
 				value: "1",
 				opts: options.Cookie{
-					Name:     validName,
-					Secret:   validSecret,
-					Domains:  domains,
-					Path:     "",
-					Expire:   time.Hour * -1,
-					Refresh:  15 * time.Minute,
-					Secure:   true,
-					HTTPOnly: false,
-					SameSite: "",
+					Name:         validName,
+					Secret:       validSecret,
+					Domains:      domains,
+					Path:         "",
+					Expire:       time.Hour * -1,
+					Insecure:     ptr.To(false),
+					ScriptAccess: options.ScriptAccessAllowed,
+					SameSite:     "",
 				},
 				expiration:     time.Hour * -1,
 				now:            now,
@@ -151,15 +150,14 @@ var _ = Describe("Cookie Tests", func() {
 				name:  validName,
 				value: "1",
 				opts: options.Cookie{
-					Name:     validName,
-					Secret:   validSecret,
-					Domains:  domains,
-					Path:     "",
-					Expire:   0,
-					Refresh:  15 * time.Minute,
-					Secure:   true,
-					HTTPOnly: false,
-					SameSite: "",
+					Name:         validName,
+					Secret:       validSecret,
+					Domains:      domains,
+					Path:         "",
+					Expire:       0,
+					Insecure:     ptr.To(false),
+					ScriptAccess: options.ScriptAccessAllowed,
+					SameSite:     "",
 				},
 				expiration:     0,
 				now:            now,

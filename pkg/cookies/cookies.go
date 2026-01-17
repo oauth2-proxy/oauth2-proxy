@@ -10,6 +10,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	requestutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 )
 
 // MakeCookieFromOptions constructs a cookie based on the given *options.CookieOptions,
@@ -25,13 +26,20 @@ func MakeCookieFromOptions(req *http.Request, name string, value string, opts *o
 		domain = opts.Domains[len(opts.Domains)-1]
 	}
 
+	var httpOnly bool
+	if opts.ScriptAccess == options.ScriptAccessAllowed {
+		httpOnly = false
+	} else {
+		httpOnly = true
+	}
+
 	c := &http.Cookie{
 		Name:     name,
 		Value:    value,
 		Path:     opts.Path,
 		Domain:   domain,
-		HttpOnly: opts.HTTPOnly,
-		Secure:   opts.Secure,
+		HttpOnly: httpOnly,
+		Secure:   !ptr.Deref(opts.Insecure, options.DefaultCookieInsecure),
 		SameSite: ParseSameSite(opts.SameSite),
 	}
 
@@ -59,15 +67,15 @@ func GetCookieDomain(req *http.Request, cookieDomains []string) string {
 }
 
 // Parse a valid http.SameSite value from a user supplied string for use of making cookies.
-func ParseSameSite(v string) http.SameSite {
+func ParseSameSite(v options.SameSiteMode) http.SameSite {
 	switch v {
-	case "lax":
+	case options.SameSiteLax:
 		return http.SameSiteLaxMode
-	case "strict":
+	case options.SameSiteStrict:
 		return http.SameSiteStrictMode
-	case "none":
+	case options.SameSiteNone:
 		return http.SameSiteNoneMode
-	case "":
+	case options.SameSiteDefault:
 		return 0
 	default:
 		panic(fmt.Sprintf("Invalid value for SameSite: %s", v))
