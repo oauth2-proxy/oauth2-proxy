@@ -8,6 +8,8 @@
 
 ## Changes since v7.14.1
 
+- [#3294](https://github.com/oauth2-proxy/oauth2-proxy/pull/3294) feat: update the Google provider to use OIDC (@sourava01)
+
 # V7.14.1
 
 ## Release Highlights

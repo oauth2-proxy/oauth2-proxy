@@ -2,24 +2,40 @@ package providers
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
+	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
 	admin "google.golang.org/api/admin/directory/v1"
 	option "google.golang.org/api/option"
 )
 
-func newRedeemServer(body []byte) (*url.URL, *httptest.Server) {
+// googleTestRegisteredClaims creates standard JWT claims for Google provider tests
+func googleTestRegisteredClaims() jwt.RegisteredClaims {
+	return jwt.RegisteredClaims{
+		Audience:  jwt.ClaimStrings{oidcClientID},
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(5) * time.Minute)),
+		IssuedAt:  jwt.NewNumericDate(time.Now()),
+		Issuer:    oidcIssuer,
+		NotBefore: jwt.NewNumericDate(time.Time{}),
+		Subject:   "123456789",
+	}
+}
+
+func newGoogleRedeemServer(body []byte) (*url.URL, *httptest.Server) {
 	s := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		rw.Header().Add("content-type", "application/json")
 		rw.Write(body)
 	}))
 	u, _ := url.Parse(s.URL)
@@ -28,96 +44,198 @@ func newRedeemServer(body []byte) (*url.URL, *httptest.Server) {
 
 func newGoogleProvider(t *testing.T) *GoogleProvider {
 	g := NewWithT(t)
-	p, err := NewGoogleProvider(
-		&ProviderData{
-			ProviderName: "",
-			LoginURL:     &url.URL{},
-			RedeemURL:    &url.URL{},
-			ProfileURL:   &url.URL{},
-			ValidateURL:  &url.URL{},
-			Scope:        ""},
-		options.GoogleOptions{})
-	g.Expect(err).ToNot(HaveOccurred())
+
+	verificationOptions := internaloidc.IDTokenVerificationOptions{
+		AudienceClaims: []string{"aud"},
+		ClientID:       oidcClientID,
+	}
+
+	providerData := &ProviderData{
+		ProviderName: "",
+		LoginURL:     &url.URL{},
+		RedeemURL:    &url.URL{},
+		ProfileURL:   &url.URL{},
+		ValidateURL:  &url.URL{},
+		Scope:        "",
+		EmailClaim:   "email",
+		UserClaim:    "sub",
+		Verifier: internaloidc.NewVerifier(oidc.NewVerifier(
+			oidcIssuer,
+			mockJWKS{},
+			&oidc.Config{ClientID: oidcClientID},
+		), verificationOptions),
+	}
+
+	p := NewGoogleProvider(providerData, options.GoogleOptions{}, options.OIDCOptions{
+		InsecureSkipNonce: func() *bool { b := true; return &b }(),
+	})
+	g.Expect(p).ToNot(BeNil())
 	return p
 }
 
 func TestNewGoogleProvider(t *testing.T) {
 	g := NewWithT(t)
 
+	verificationOptions := internaloidc.IDTokenVerificationOptions{
+		AudienceClaims: []string{"aud"},
+		ClientID:       oidcClientID,
+	}
+
+	providerData := &ProviderData{
+		Verifier: internaloidc.NewVerifier(oidc.NewVerifier(
+			oidcIssuer,
+			mockJWKS{},
+			&oidc.Config{ClientID: oidcClientID},
+		), verificationOptions),
+	}
+
 	// Test that defaults are set when calling for a new provider with nothing set
-	provider, err := NewGoogleProvider(&ProviderData{}, options.GoogleOptions{})
-	g.Expect(err).ToNot(HaveOccurred())
-	providerData := provider.Data()
-
-	g.Expect(providerData.ProviderName).To(Equal("Google"))
-	g.Expect(providerData.LoginURL.String()).To(Equal("https://accounts.google.com/o/oauth2/auth?access_type=offline"))
-	g.Expect(providerData.RedeemURL.String()).To(Equal("https://www.googleapis.com/oauth2/v3/token"))
-	g.Expect(providerData.ProfileURL.String()).To(Equal(""))
-	g.Expect(providerData.ValidateURL.String()).To(Equal("https://www.googleapis.com/oauth2/v1/tokeninfo"))
-	g.Expect(providerData.Scope).To(Equal("profile email"))
+	provider := NewGoogleProvider(providerData, options.GoogleOptions{}, options.OIDCOptions{})
+	g.Expect(provider).ToNot(BeNil())
+	g.Expect(provider.Data().ProviderName).To(Equal("Google"))
+	g.Expect(provider.Data().Scope).To(Equal("openid email profile"))
 }
 
-func TestGoogleProviderOverrides(t *testing.T) {
-	p, err := NewGoogleProvider(
-		&ProviderData{
-			LoginURL: &url.URL{
-				Scheme: "https",
-				Host:   "example.com",
-				Path:   "/oauth/auth"},
-			RedeemURL: &url.URL{
-				Scheme: "https",
-				Host:   "example.com",
-				Path:   "/oauth/token"},
-			ProfileURL: &url.URL{
-				Scheme: "https",
-				Host:   "example.com",
-				Path:   "/oauth/profile"},
-			ValidateURL: &url.URL{
-				Scheme: "https",
-				Host:   "example.com",
-				Path:   "/oauth/tokeninfo"},
-			Scope: "profile"},
-		options.GoogleOptions{})
-	assert.NoError(t, err)
-	assert.NotEqual(t, nil, p)
-	assert.Equal(t, "Google", p.Data().ProviderName)
-	assert.Equal(t, "https://example.com/oauth/auth",
-		p.Data().LoginURL.String())
-	assert.Equal(t, "https://example.com/oauth/token",
-		p.Data().RedeemURL.String())
-	assert.Equal(t, "https://example.com/oauth/profile",
-		p.Data().ProfileURL.String())
-	assert.Equal(t, "https://example.com/oauth/tokeninfo",
-		p.Data().ValidateURL.String())
-	assert.Equal(t, "profile", p.Data().Scope)
-}
-
-type redeemResponse struct {
+type googleRedeemResponse struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
 	ExpiresIn    int64  `json:"expires_in"`
+	TokenType    string `json:"token_type"`
 	IDToken      string `json:"id_token"`
 }
 
-func TestGoogleProviderGetEmailAddress(t *testing.T) {
+func TestGoogleProviderRedeem(t *testing.T) {
 	p := newGoogleProvider(t)
-	body, err := json.Marshal(redeemResponse{
+
+	idToken, err := newSignedTestIDToken(idTokenClaims{
+		Email:            "michael.bland@gsa.gov",
+		Verified:         func() *bool { b := true; return &b }(),
+		RegisteredClaims: googleTestRegisteredClaims(),
+	})
+	assert.NoError(t, err)
+
+	body, err := json.Marshal(googleRedeemResponse{
 		AccessToken:  "a1234",
 		ExpiresIn:    10,
+		TokenType:    "Bearer",
 		RefreshToken: "refresh12345",
-		IDToken:      "ignored prefix." + base64.URLEncoding.EncodeToString([]byte(`{"email": "michael.bland@gsa.gov", "email_verified":true}`)),
+		IDToken:      idToken,
 	})
-	assert.Equal(t, nil, err)
+	assert.NoError(t, err)
+
 	var server *httptest.Server
-	p.RedeemURL, server = newRedeemServer(body)
+	p.RedeemURL, server = newGoogleRedeemServer(body)
 	defer server.Close()
 
-	session, err := p.Redeem(context.Background(), "http://redirect/", "code1234", "123")
-	assert.Equal(t, nil, err)
-	assert.NotEqual(t, session, nil)
+	session, err := p.Redeem(context.Background(), "http://redirect/", "code1234", "")
+	assert.NoError(t, err)
+	assert.NotNil(t, session)
 	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
 	assert.Equal(t, "a1234", session.AccessToken)
 	assert.Equal(t, "refresh12345", session.RefreshToken)
+	assert.Equal(t, idToken, session.IDToken)
+}
+
+func TestGoogleProviderRedeemWithInvalidToken(t *testing.T) {
+	p := newGoogleProvider(t)
+
+	body, err := json.Marshal(googleRedeemResponse{
+		AccessToken:  "a1234",
+		ExpiresIn:    10,
+		TokenType:    "Bearer",
+		RefreshToken: "refresh12345",
+		IDToken:      "invalid.token.format",
+	})
+	assert.NoError(t, err)
+
+	var server *httptest.Server
+	p.RedeemURL, server = newGoogleRedeemServer(body)
+	defer server.Close()
+
+	session, err := p.Redeem(context.Background(), "http://redirect/", "code1234", "")
+	assert.Error(t, err)
+	assert.Nil(t, session)
+}
+
+func TestGoogleProviderRedeemWithMissingIDToken(t *testing.T) {
+	p := newGoogleProvider(t)
+
+	body, err := json.Marshal(googleRedeemResponse{
+		AccessToken:  "a1234",
+		ExpiresIn:    10,
+		TokenType:    "Bearer",
+		RefreshToken: "refresh12345",
+		// No IDToken
+	})
+	assert.NoError(t, err)
+
+	var server *httptest.Server
+	p.RedeemURL, server = newGoogleRedeemServer(body)
+	defer server.Close()
+
+	session, err := p.Redeem(context.Background(), "http://redirect/", "code1234", "")
+	assert.Error(t, err)
+	assert.Nil(t, session)
+}
+
+func TestGoogleProviderValidateSession(t *testing.T) {
+	p := newGoogleProvider(t)
+
+	// Create a valid signed ID token
+	idToken, err := newSignedTestIDToken(idTokenClaims{
+		Email:            "test@example.com",
+		Verified:         func() *bool { b := true; return &b }(),
+		RegisteredClaims: googleTestRegisteredClaims(),
+	})
+	assert.NoError(t, err)
+
+	testCases := map[string]struct {
+		session  *sessions.SessionState
+		expected bool
+	}{
+		"Valid session with ID token": {
+			session: &sessions.SessionState{
+				IDToken: idToken,
+				Email:   "test@example.com",
+			},
+			expected: true,
+		},
+		"Invalid session without ID token": {
+			session: &sessions.SessionState{
+				Email: "test@example.com",
+			},
+			expected: false,
+		},
+		"Invalid session with malformed ID token": {
+			session: &sessions.SessionState{
+				IDToken: "invalid.token",
+				Email:   "test@example.com",
+			},
+			expected: false,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			result := p.ValidateSession(context.Background(), tc.session)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func TestGoogleProviderGetLoginURL(t *testing.T) {
+	p := newGoogleProvider(t)
+	p.LoginURL = &url.URL{
+		Scheme: "https",
+		Host:   "accounts.google.com",
+		Path:   "/o/oauth2/v2/auth",
+	}
+
+	loginURL := p.GetLoginURL("http://redirect/", "state123", "nonce456", url.Values{})
+
+	// Verify access_type=offline is added for refresh tokens
+	assert.Contains(t, loginURL, "access_type=offline")
+	assert.Contains(t, loginURL, "state=state123")
 }
 
 func TestGoogleProviderGroupValidator(t *testing.T) {
@@ -164,75 +282,6 @@ func TestGoogleProviderGroupValidator(t *testing.T) {
 			g.Expect(p.groupValidator(tc.session)).To(Equal(tc.expectedAuthZ))
 		})
 	}
-}
-
-func TestGoogleProviderGetEmailAddressInvalidEncoding(t *testing.T) {
-	p := newGoogleProvider(t)
-	body, err := json.Marshal(redeemResponse{
-		AccessToken: "a1234",
-		IDToken:     "ignored prefix." + `{"email": "michael.bland@gsa.gov"}`,
-	})
-	assert.Equal(t, nil, err)
-	var server *httptest.Server
-	p.RedeemURL, server = newRedeemServer(body)
-	defer server.Close()
-
-	session, err := p.Redeem(context.Background(), "http://redirect/", "code1234", "123")
-	assert.NotEqual(t, nil, err)
-	if session != nil {
-		t.Errorf("expect nill session %#v", session)
-	}
-}
-
-func TestGoogleProviderRedeemFailsNoCLientSecret(t *testing.T) {
-	p := newGoogleProvider(t)
-	p.ProviderData.ClientSecretFile = "srvnoerre"
-
-	session, err := p.Redeem(context.Background(), "http://redirect/", "code1234", "123")
-	assert.NotEqual(t, nil, err)
-	if session != nil {
-		t.Errorf("expect nill session %#v", session)
-	}
-	assert.Equal(t, "could not read client secret file", err.Error())
-}
-
-func TestGoogleProviderGetEmailAddressInvalidJson(t *testing.T) {
-	p := newGoogleProvider(t)
-
-	body, err := json.Marshal(redeemResponse{
-		AccessToken: "a1234",
-		IDToken:     "ignored prefix." + base64.URLEncoding.EncodeToString([]byte(`{"email": michael.bland@gsa.gov}`)),
-	})
-	assert.Equal(t, nil, err)
-	var server *httptest.Server
-	p.RedeemURL, server = newRedeemServer(body)
-	defer server.Close()
-
-	session, err := p.Redeem(context.Background(), "http://redirect/", "code1234", "123")
-	assert.NotEqual(t, nil, err)
-	if session != nil {
-		t.Errorf("expect nill session %#v", session)
-	}
-
-}
-
-func TestGoogleProviderGetEmailAddressEmailMissing(t *testing.T) {
-	p := newGoogleProvider(t)
-	body, err := json.Marshal(redeemResponse{
-		AccessToken: "a1234",
-		IDToken:     "ignored prefix." + base64.URLEncoding.EncodeToString([]byte(`{"not_email": "missing"}`)),
-	})
-	assert.Equal(t, nil, err)
-	var server *httptest.Server
-	p.RedeemURL, server = newRedeemServer(body)
-	defer server.Close()
-
-	session, err := p.Redeem(context.Background(), "http://redirect/", "code1234", "123")
-	assert.NotEqual(t, nil, err)
-	if session != nil {
-		t.Errorf("expect nill session %#v", session)
-	}
-
 }
 
 func TestGoogleProvider_userInGroup(t *testing.T) {
@@ -404,4 +453,94 @@ func TestGoogleProvider_getUserInfo(t *testing.T) {
 	info, err := getUserInfo(adminService, "test@example.com")
 	assert.NoError(t, err)
 	assert.Equal(t, "test.user", info)
+}
+
+func TestGoogleProvider_EnrichSessionWithoutAdminService(t *testing.T) {
+	const sessionEmail = "test@example.com"
+
+	p := newGoogleProvider(t)
+	// No adminService configured - groups should not be populated
+
+	idToken, err := newSignedTestIDToken(idTokenClaims{
+		Email:            sessionEmail,
+		Verified:         func() *bool { b := true; return &b }(),
+		RegisteredClaims: googleTestRegisteredClaims(),
+	})
+	assert.NoError(t, err)
+
+	session := &sessions.SessionState{
+		Email:   sessionEmail,
+		IDToken: idToken,
+	}
+
+	err = p.EnrichSession(context.Background(), session)
+	assert.NoError(t, err)
+	assert.Nil(t, session.Groups) // No groups populated without adminService
+}
+
+func TestGoogleProvider_RefreshSessionWithoutAdminService(t *testing.T) {
+	const sessionEmail = "test@example.com"
+
+	p := newGoogleProvider(t)
+	// No adminService configured
+
+	idToken, err := newSignedTestIDToken(idTokenClaims{
+		Email:            sessionEmail,
+		Verified:         func() *bool { b := true; return &b }(),
+		RegisteredClaims: googleTestRegisteredClaims(),
+	})
+	assert.NoError(t, err)
+
+	// Create mock redeem server for refresh
+	body, err := json.Marshal(googleRedeemResponse{
+		AccessToken:  "new_access_token",
+		ExpiresIn:    3600,
+		TokenType:    "Bearer",
+		RefreshToken: "new_refresh_token",
+		IDToken:      idToken,
+	})
+	assert.NoError(t, err)
+
+	var server *httptest.Server
+	p.RedeemURL, server = newGoogleRedeemServer(body)
+	defer server.Close()
+
+	session := &sessions.SessionState{
+		Email:        sessionEmail,
+		IDToken:      idToken,
+		RefreshToken: "old_refresh_token",
+	}
+
+	refreshed, err := p.RefreshSession(context.Background(), session)
+	assert.NoError(t, err)
+	assert.True(t, refreshed)
+}
+
+func TestGoogleProvider_CreateSessionFromToken(t *testing.T) {
+	const sessionEmail = "test@example.com"
+
+	p := newGoogleProvider(t)
+
+	idToken, err := newSignedTestIDToken(idTokenClaims{
+		Email:            sessionEmail,
+		Verified:         func() *bool { b := true; return &b }(),
+		RegisteredClaims: googleTestRegisteredClaims(),
+	})
+	assert.NoError(t, err)
+
+	session, err := p.CreateSessionFromToken(context.Background(), idToken)
+	assert.NoError(t, err)
+	assert.NotNil(t, session)
+	assert.Equal(t, sessionEmail, session.Email)
+	assert.Equal(t, idToken, session.IDToken)
+	// No adminService configured, so groups should be nil
+	assert.Nil(t, session.Groups)
+}
+
+func TestGoogleProvider_CreateSessionFromTokenWithInvalidToken(t *testing.T) {
+	p := newGoogleProvider(t)
+
+	session, err := p.CreateSessionFromToken(context.Background(), "invalid.token")
+	assert.Error(t, err)
+	assert.Nil(t, session)
 }

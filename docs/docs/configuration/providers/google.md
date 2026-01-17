@@ -3,6 +3,8 @@ id: google
 title: Google (default)
 ---
 
+The Google provider uses OpenID Connect (OIDC) for authentication via Google's JWKS endpoint.
+
 ## Config Options
 
 | Flag                                            | Toml Field                                   | Type   | Description                                                                                                                                                                                 | Default                                             |
@@ -37,7 +39,16 @@ For Google, the registration steps are:
 It's recommended to refresh sessions on a short interval (1h) with `cookie-refresh` setting which validates that the 
 account is still authorized.
 
-#### Restrict auth to specific Google groups on your domain. (optional)
+### Scopes
+
+The Google provider requires the `openid` scope for OIDC ID token verification. If you configure a custom `--scope` without `openid`, it will be automatically appended to the custom scope.
+
+Default scope: `openid email profile`
+
+### Groups Claim
+
+Google does not support a `groups` claim in ID tokens. To include groups information in the session, this provider needs access to the [Google Admin Directory API](https://developers.google.com/admin-sdk/directory). 
+To configure this:
 
 1.  Create a [service account](https://developers.google.com/identity/protocols/oauth2/service-account) and configure it 
     to use [Application Default Credentials / Workload Identity / Workload Identity Federation (recommended)](#using-application-default-credentials-adc--workload-identity--workload-identity-federation-recommended) or, 
@@ -50,6 +61,7 @@ account is still authorized.
 
     ```
     https://www.googleapis.com/auth/admin.directory.group.member.readonly
+    https://www.googleapis.com/auth/admin.directory.group.readonly
     ```
 
 6.  Follow the steps on https://support.google.com/a/answer/60757 to enable Admin API access.
@@ -76,9 +88,14 @@ to set up Workload Identity.
 
 When deployed outside of GCP, [Workload Identity Federation](https://cloud.google.com/docs/authentication/provide-credentials-adc#wlif) might be an option.
 
+### Preferred Username
+
+By default, the Google provider extracts the `name` claim from the ID token as the preferred username.
+
 ##### Using Organization ID as Preferred Username (optional)
-By default, the google provider uses the google id as username. If you would like to use an organization id instead, you can set the `google-use-organization-id` flag to true.
-This requires that the service account used to query the Google Admin SDK has one of the following scopes granted in step 5 above: 
-- `https://www.googleapis.com/auth/admin.directory.user.readonly`, 
-- `https://www.googleapis.com/auth/admin.directory.user` 
-- `https://www.googleapis.com/auth/cloud-platform` 
+
+If you would like to use an organization id instead, you can set the `--google-use-organization-id` flag to `true`.
+This requires that the service account used to query the Google Admin SDK has one of the following scopes granted in step 5 above:
+- `https://www.googleapis.com/auth/admin.directory.user.readonly`
+- `https://www.googleapis.com/auth/admin.directory.user`
+- `https://www.googleapis.com/auth/cloud-platform`
