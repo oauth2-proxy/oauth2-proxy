@@ -179,10 +179,10 @@ func (l *LegacyUpstreams) convert() (UpstreamConfig, error) {
 			upstream.URI = ""
 			upstream.InsecureSkipTLSVerify = ptr.To(false)
 			upstream.DisableKeepAlives = ptr.To(false)
-			upstream.PassHostHeader = nil
-			upstream.ProxyWebSockets = nil
-			upstream.FlushInterval = nil
-			upstream.Timeout = nil
+			upstream.PassHostHeader = ptr.To(false)
+			upstream.ProxyWebSockets = ptr.To(false)
+			upstream.FlushInterval = ptr.To(DefaultUpstreamFlushInterval)
+			upstream.Timeout = ptr.To(DefaultUpstreamTimeout)
 		case "unix":
 			upstream.Path = "/"
 		}

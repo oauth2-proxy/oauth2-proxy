@@ -70,13 +70,13 @@ func validateStaticUpstream(upstream options.Upstream) []string {
 	if ptr.Deref(upstream.InsecureSkipTLSVerify, options.DefaultUpsteamInsecureSkipTLSVerify) {
 		msgs = append(msgs, fmt.Sprintf("upstream %q has insecureSkipTLSVerify, but is a static upstream, this will have no effect.", upstream.ID))
 	}
-	if upstream.FlushInterval != nil && *upstream.FlushInterval != options.DefaultUpstreamFlushInterval {
+	if ptr.Deref(upstream.FlushInterval, options.DefaultUpstreamFlushInterval) != options.DefaultUpstreamFlushInterval {
 		msgs = append(msgs, fmt.Sprintf("upstream %q has flushInterval, but is a static upstream, this will have no effect.", upstream.ID))
 	}
-	if upstream.PassHostHeader != nil {
+	if ptr.Deref(upstream.PassHostHeader, options.DefaultStaticPassHostHeader) != options.DefaultStaticPassHostHeader {
 		msgs = append(msgs, fmt.Sprintf("upstream %q has passHostHeader, but is a static upstream, this will have no effect.", upstream.ID))
 	}
-	if upstream.ProxyWebSockets != nil {
+	if ptr.Deref(upstream.ProxyWebSockets, options.DefaultStaticProxyWebSockets) != options.DefaultStaticProxyWebSockets {
 		msgs = append(msgs, fmt.Sprintf("upstream %q has proxyWebSockets, but is a static upstream, this will have no effect.", upstream.ID))
 	}
 
