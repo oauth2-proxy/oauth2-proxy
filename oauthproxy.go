@@ -397,9 +397,10 @@ func buildSessionChain(opts *options.Options, provider providers.Provider, sessi
 	chain := alice.New()
 
 	if opts.SkipJwtBearerTokens {
-		sessionLoaders := []middlewareapi.TokenToSessionFunc{
-			provider.CreateSessionFromToken,
-		}
+		verifiers := opts.GetJWTBearerVerifiers()
+
+		sessionLoaders := make([]middlewareapi.TokenToSessionFunc, 0, len(verifiers)+1)
+		sessionLoaders = append(sessionLoaders, provider.CreateSessionFromToken)
 
 		for _, verifier := range opts.GetJWTBearerVerifiers() {
 			sessionLoaders = append(sessionLoaders,
@@ -987,7 +988,15 @@ func (p *OAuthProxy) enrichSessionState(ctx context.Context, s *sessionsapi.Sess
 // and optional authorization).
 func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
 	session, err := p.getAuthenticatedSession(rw, req)
-	if err != nil {
+	// If SkipProviderButton is enabled and user needs login, redirect directly
+	// to OAuth provider instead of returning 401. This allows nginx auth_request
+	// to pass through the 302 redirect to the browser, bypassing error_page
+	// handling which can break redirect flows.
+	// See: https://github.com/oauth2-proxy/oauth2-proxy/issues/334
+	if p.SkipProviderButton && err == ErrNeedsLogin {
+		p.doOAuthStart(rw, req, nil)
+		return
+	} else if err != nil {
 		http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}

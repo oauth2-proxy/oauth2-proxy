@@ -22,7 +22,21 @@ const sidebars = {
       collapsed: false,
       items: [
         'configuration/overview',
-        'configuration/integration',
+        {
+          type: 'category',
+          label: 'Integration Guides',
+          link: {
+            type: 'doc',
+            id: 'configuration/integrations/index',
+          },
+          items: [
+            "configuration/integrations/nginx",
+            "configuration/integrations/traefik",
+            "configuration/integrations/caddy",
+            "configuration/integrations/headlamp",
+            "configuration/integrations/kubernetes-dashboard"
+          ],
+        },
         {
           type: 'category',
           label: 'OAuth Provider Configuration',

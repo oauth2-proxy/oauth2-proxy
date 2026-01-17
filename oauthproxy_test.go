@@ -834,8 +834,20 @@ func NewProcessCookieTest(opts ProcessCookieTestOpts, modifiers ...OptionsModifi
 		return nil, err
 	}
 	testProvider := &TestProvider{
-		ProviderData: &providers.ProviderData{},
-		ValidToken:   opts.providerValidateCookieResponse,
+		ProviderData: &providers.ProviderData{
+			ProviderName: "Test Provider",
+			LoginURL: &url.URL{
+				Scheme: "http",
+				Host:   "localhost",
+				Path:   "/oauth/authorize",
+			},
+			RedeemURL: &url.URL{
+				Scheme: "http",
+				Host:   "localhost",
+				Path:   "/oauth/token",
+			},
+		},
+		ValidToken: opts.providerValidateCookieResponse,
 	}
 
 	groups := pcTest.opts.Providers[0].AllowedGroups
@@ -1110,6 +1122,35 @@ func TestAuthOnlyEndpointUnauthorizedOnNoCookieSetError(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
 	bodyBytes, _ := io.ReadAll(test.rw.Body)
 	assert.Equal(t, "Unauthorized\n", string(bodyBytes))
+}
+
+// TestAuthOnlyEndpointRedirectWithSkipProviderButton tests that when SkipProviderButton
+// is true and no session exists, the /auth endpoint should return a 302 redirect
+// to the OAuth provider instead of 401. This is important for nginx auth_request
+// architecture where 401 triggers error_page handling which can break the redirect flow.
+// See: https://github.com/oauth2-proxy/oauth2-proxy/issues/334
+func TestAuthOnlyEndpointRedirectWithSkipProviderButton(t *testing.T) {
+	test, err := NewAuthOnlyEndpointTest("", func(opts *options.Options) {
+		opts.SkipProviderButton = true
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	test.proxy.ServeHTTP(test.rw, test.req)
+
+	// With SkipProviderButton=true and no session, should return 302 redirect
+	// to OAuth provider, NOT 401 Unauthorized
+	assert.Equal(t, http.StatusFound, test.rw.Code)
+	location := test.rw.Header().Get("Location")
+	assert.NotEmpty(t, location, "Expected Location header for redirect")
+
+	// Verify the redirect points to the OAuth provider's authorize endpoint
+	// and contains key OAuth parameters
+	assert.Contains(t, location, "/oauth/authorize", "Expected redirect to OAuth authorize endpoint")
+	assert.Contains(t, location, "client_id=", "Expected client_id in redirect URL")
+	assert.Contains(t, location, "redirect_uri=", "Expected redirect_uri in redirect URL")
+	assert.Contains(t, location, "state=", "Expected state parameter in redirect URL")
 }
 
 func TestAuthOnlyEndpointUnauthorizedOnExpiration(t *testing.T) {

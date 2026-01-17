@@ -195,3 +195,7 @@ scope="openid profile email User.Read"
 entra_id_allowed_tenants=["9188040d-6c67-4c5b-b112-36a304b66dad","<my-tenant-id>"] # Allow only <my-tenant-id> and Personal MS Accounts tenant
 email_domains="*"
 ```
+
+## Kubernetes Dashboard Integration
+
+For a complete guide on integrating oauth2-proxy with Kubernetes Dashboard on AKS using Azure Entra ID authentication, including detailed configuration examples, RBAC setup, troubleshooting, and Workload Identity setup, see the [Kubernetes Dashboard integration guide](../integrations/kubernetes-dashboard.md).
