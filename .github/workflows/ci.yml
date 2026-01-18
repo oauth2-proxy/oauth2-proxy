@@ -33,10 +33,6 @@ jobs:
       run: |
         curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin ${GOLANGCI_LINT_VERSION}
 
-    - name: Install gcov2lcov
-      run: |
-        go install github.com/jandelgado/gcov2lcov@latest
-
     - name: Verify Code Generation
       run: |
         make verify-generate
@@ -61,10 +57,14 @@ jobs:
         make test
 
     - name: Generate Coverage Report
+      if: github.event_name == 'push'
       run: |
+        go install github.com/jandelgado/gcov2lcov@latest
         gcov2lcov -infile=c.out -outfile=lcov.info
 
-    - uses: qltysh/qlty-action/coverage@v2
+    - name: Upload Coverage Report
+      if: github.event_name == 'push'
+      uses: qltysh/qlty-action/coverage@v2
       with:
         oidc: true
         files: lcov.info
