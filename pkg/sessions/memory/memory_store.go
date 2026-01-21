@@ -3,12 +3,12 @@ package memory
 import (
 	"context"
 	"errors"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/persistence"
 	"sync"
 	"time"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/persistence"
 )
 
 // InMemoryStore is an in-memory implementation of the Store interface.
@@ -19,17 +19,17 @@ type InMemoryStore struct {
 }
 
 // NewInMemoryStore creates a new instance of InMemoryStore.
-func NewInMemoryStore(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessions.SessionStore, error) {
+func NewInMemoryStore(_ *options.SessionOptions, cookieOpts *options.Cookie) (sessions.SessionStore, error) {
 	ims := &InMemoryStore{
 		store:    make(map[string][]byte),
 		timeouts: make(map[string]time.Time),
 	}
-	
+
 	return persistence.NewManager(ims, cookieOpts), nil
 }
 
 // Save stores the session data in memory with a specified expiration time.
-func (s *InMemoryStore) Save(ctx context.Context, key string, value []byte, expiration time.Duration) error {
+func (s *InMemoryStore) Save(_ context.Context, key string, value []byte, expiration time.Duration) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -39,7 +39,7 @@ func (s *InMemoryStore) Save(ctx context.Context, key string, value []byte, expi
 }
 
 // Load retrieves the session data from memory.
-func (s *InMemoryStore) Load(ctx context.Context, key string) ([]byte, error) {
+func (s *InMemoryStore) Load(_ context.Context, key string) ([]byte, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -59,7 +59,7 @@ func (s *InMemoryStore) Load(ctx context.Context, key string) ([]byte, error) {
 }
 
 // Clear removes the session data from memory.
-func (s *InMemoryStore) Clear(ctx context.Context, key string) error {
+func (s *InMemoryStore) Clear(_ context.Context, key string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -74,7 +74,7 @@ func (s *InMemoryStore) Lock(key string) sessions.Lock {
 }
 
 // VerifyConnection is a no-op for in-memory storage.
-func (s *InMemoryStore) VerifyConnection(ctx context.Context) error {
+func (s *InMemoryStore) VerifyConnection(_ context.Context) error {
 	return nil
 }
 
@@ -85,7 +85,7 @@ type inMemoryLock struct {
 }
 
 // Obtain tries to create a lock or returns an error if one already exists.
-func (l *inMemoryLock) Obtain(ctx context.Context, expiration time.Duration) error {
+func (l *inMemoryLock) Obtain(_ context.Context, _ time.Duration) error {
 	l.store.mu.Lock()
 	defer l.store.mu.Unlock()
 	// Logic to add a lock with a timeout
@@ -93,7 +93,7 @@ func (l *inMemoryLock) Obtain(ctx context.Context, expiration time.Duration) err
 }
 
 // Peek checks if the lock exists.
-func (l *inMemoryLock) Peek(ctx context.Context) (bool, error) {
+func (l *inMemoryLock) Peek(_ context.Context) (bool, error) {
 	l.store.mu.RLock()
 	defer l.store.mu.RUnlock()
 	// Logic to check if the lock exists
@@ -101,7 +101,7 @@ func (l *inMemoryLock) Peek(ctx context.Context) (bool, error) {
 }
 
 // Refresh updates the expiration timeout of an existing lock.
-func (l *inMemoryLock) Refresh(ctx context.Context, expiration time.Duration) error {
+func (l *inMemoryLock) Refresh(_ context.Context, _ time.Duration) error {
 	l.store.mu.Lock()
 	defer l.store.mu.Unlock()
 	// Logic to update the lock timeout
@@ -109,7 +109,7 @@ func (l *inMemoryLock) Refresh(ctx context.Context, expiration time.Duration) er
 }
 
 // Release removes the existing lock.
-func (l *inMemoryLock) Release(ctx context.Context) error {
+func (l *inMemoryLock) Release(_ context.Context) error {
 	l.store.mu.Unlock()
 	return nil
 }
