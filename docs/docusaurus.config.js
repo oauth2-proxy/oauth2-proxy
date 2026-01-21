@@ -118,7 +118,7 @@ const config = {
       },
       footer: {
         style: 'dark',
-        copyright: `Copyright © ${new Date().getFullYear()} OAuth2 Proxy.`,
+        copyright: `Copyright © ${new Date().getFullYear()} OAuth2 Proxy a Series of LF Projects, LLC.<br>For website terms of use, trademark policy and other project policies please see lfprojects.org/policies/`,
       },
       prism: {
         theme: prismThemes.github,

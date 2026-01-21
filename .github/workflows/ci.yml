@@ -7,6 +7,10 @@ on:
   pull_request:
     branches:
       - '**'
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -14,7 +18,7 @@ jobs:
       COVER: true
     steps:
     - name: Check out code
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
 
     - name: Set up Go
       uses: actions/setup-go@v6
@@ -22,14 +26,12 @@ jobs:
         go-version-file: go.mod
       id: go
 
-    - name: Get dependencies
+    - name: Install golangci-lint
       env:
         # renovate: datasource=github-tags depName=golangci/golangci-lint
-        GOLANGCI_LINT_VERSION: v2.5.0
+        GOLANGCI_LINT_VERSION: v2.8.0
       run: |
         curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin ${GOLANGCI_LINT_VERSION}
-        curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
-        chmod +x ./cc-test-reporter
 
     - name: Verify Code Generation
       run: |
@@ -51,16 +53,27 @@ jobs:
         make release
 
     - name: Test
-      env:
-        CC_TEST_REPORTER_ID: ${{ secrets.CC_TEST_REPORTER_ID }}
       run: |
-        ./.github/workflows/test.sh
+        make test
+
+    - name: Generate Coverage Report
+      if: github.event_name == 'push'
+      run: |
+        go install github.com/jandelgado/gcov2lcov@latest
+        gcov2lcov -infile=c.out -outfile=lcov.info
+
+    - name: Upload Coverage Report
+      if: github.event_name == 'push'
+      uses: qltysh/qlty-action/coverage@v2
+      with:
+        oidc: true
+        files: lcov.info
 
   docker:
     runs-on: ubuntu-latest
     steps:
     - name: Check out code
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3

@@ -519,16 +519,57 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			Expect(websocket.Message.Send(ws, []byte(message))).To(Succeed())
 			var response testWebSocketResponse
 			Expect(websocket.JSON.Receive(ws, &response)).To(Succeed())
-			Expect(response).To(Equal(testWebSocketResponse{
-				Message: message,
-				Origin:  origin,
-			}))
+
+			// When PassHostHeader=true (default), the Host should be the client's original request host
+			Expect(response.Message).To(Equal(message))
+			Expect(response.Origin).To(Equal(origin))
+			Expect(response.Host).To(Equal(proxyURL.Host))
 		})
 
 		It("will proxy HTTP requests", func() {
 			response, err := http.Get(fmt.Sprintf("http://%s", proxyServer.Listener.Addr().String()))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(response.StatusCode).To(Equal(200))
+		})
+
+		It("will proxy websockets respecting PassHostHeader=false", func() {
+			// Create a new proxy server with PassHostHeader=false
+			flush := 1 * time.Second
+			timeout := options.DefaultUpstreamTimeout
+			upstream := options.Upstream{
+				ID:                    "websocketProxyNoPassHost",
+				PassHostHeader:        ptr.To(false),
+				ProxyWebSockets:       ptr.To(true),
+				InsecureSkipTLSVerify: ptr.To(false),
+				FlushInterval:         &flush,
+				Timeout:               &timeout,
+			}
+
+			u, err := url.Parse(serverAddr)
+			Expect(err).ToNot(HaveOccurred())
+
+			handler := newHTTPUpstreamProxy(upstream, u, nil, nil)
+			noPassHostServer := httptest.NewServer(middleware.NewScope(false, "X-Request-Id")(handler))
+			defer noPassHostServer.Close()
+
+			origin := "http://example.localhost"
+			message := "Hello, world!"
+
+			proxyURL, err := url.Parse(fmt.Sprintf("http://%s", noPassHostServer.Listener.Addr().String()))
+			Expect(err).ToNot(HaveOccurred())
+
+			wsAddr := fmt.Sprintf("ws://%s/", proxyURL.Host)
+			ws, err := websocket.Dial(wsAddr, "", origin)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(websocket.Message.Send(ws, []byte(message))).To(Succeed())
+			var response testWebSocketResponse
+			Expect(websocket.JSON.Receive(ws, &response)).To(Succeed())
+
+			// When PassHostHeader=false, the Host should be the upstream server address
+			Expect(response.Host).To(Equal(u.Host))
+			Expect(response.Message).To(Equal(message))
+			Expect(response.Origin).To(Equal(origin))
 		})
 	})
 })

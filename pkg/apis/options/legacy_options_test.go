@@ -204,12 +204,12 @@ var _ = Describe("Legacy Options", func() {
 			URI:                   "",
 			Static:                ptr.To(true),
 			StaticCode:            &validStaticCode,
-			InsecureSkipTLSVerify: ptr.To(false),
-			PassHostHeader:        nil,
-			ProxyWebSockets:       nil,
-			FlushInterval:         nil,
-			Timeout:               nil,
-			DisableKeepAlives:     ptr.To(false),
+			InsecureSkipTLSVerify: ptr.To(DefaultUpsteamInsecureSkipTLSVerify),
+			PassHostHeader:        ptr.To(DefaultStaticPassHostHeader),
+			ProxyWebSockets:       ptr.To(DefaultStaticProxyWebSockets),
+			FlushInterval:         ptr.To(DefaultUpstreamFlushInterval),
+			Timeout:               ptr.To(DefaultUpstreamTimeout),
+			DisableKeepAlives:     ptr.To(DefaultUpstreamDisableKeepAlives),
 		}
 
 		invalidStatic := "static://abc"
@@ -220,12 +220,12 @@ var _ = Describe("Legacy Options", func() {
 			URI:                   "",
 			Static:                ptr.To(true),
 			StaticCode:            &invalidStaticCode,
-			InsecureSkipTLSVerify: ptr.To(false),
-			PassHostHeader:        nil,
-			ProxyWebSockets:       nil,
-			FlushInterval:         nil,
-			Timeout:               nil,
-			DisableKeepAlives:     ptr.To(false),
+			InsecureSkipTLSVerify: ptr.To(DefaultUpsteamInsecureSkipTLSVerify),
+			PassHostHeader:        ptr.To(DefaultStaticPassHostHeader),
+			ProxyWebSockets:       ptr.To(DefaultStaticProxyWebSockets),
+			FlushInterval:         ptr.To(DefaultUpstreamFlushInterval),
+			Timeout:               ptr.To(DefaultUpstreamTimeout),
+			DisableKeepAlives:     ptr.To(DefaultUpstreamDisableKeepAlives),
 		}
 
 		invalidHTTP := ":foo"

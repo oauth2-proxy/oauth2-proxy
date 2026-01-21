@@ -33,9 +33,15 @@ server {
     proxy_pass_request_body           off;
   }
 
+  # Named location for handling OAuth2 sign-in redirects
+  # This ensures the browser receives a proper 302 redirect that it will follow
+  location @oauth2_signin {
+    return 302 /oauth2/sign_in?rd=$scheme://$host$request_uri;
+  }
+
   location / {
     auth_request /oauth2/auth;
-    error_page 401 =403 /oauth2/sign_in;
+    error_page 401 = @oauth2_signin;
 
     # pass information via X-User and X-Email headers to backend,
     # requires running with --set-xauthrequest flag
@@ -76,6 +82,68 @@ server {
   }
 }
 ```
+
+### Understanding the `error_page` redirect pattern
+
+The `auth_request` directive expects the authentication endpoint (`/oauth2/auth`) to return:
+- **2xx**: Request is authenticated, allow access
+- **401 or 403**: Request is not authenticated, deny access
+
+When a 401 is returned, nginx triggers the `error_page` directive. The recommended pattern uses a **named location** (`@oauth2_signin`) that returns a proper **302 redirect**:
+
+
+```nginx
+error_page 401 = @oauth2_signin;
+
+location @oauth2_signin {
+  return 302 /oauth2/sign_in?rd=$scheme://$host$request_uri;
+}
+```
+
+:::warning Avoid `error_page 401 =403` with sign_in
+Some older configurations use `error_page 401 =403 /oauth2/sign_in`. While this works for displaying the sign-in page, it returns a **403 status code** with a `Location` header. Browsers do not automatically follow redirects on 403 responses, which can cause issues when using `--skip-provider-button=true` (users see a "Found." link instead of being automatically redirected).
+
+The named location pattern above ensures the browser receives a standard **302 redirect** that works correctly with all oauth2-proxy configurations.
+:::
+
+### Browser vs API Routes
+
+:::important When to use redirects
+Redirecting authentication failures (302 to `/oauth2/sign_in`) should **only be used for browser-facing routes**. API or machine clients should receive a plain 401/403 response without redirect.
+:::
+
+#### Browser-facing routes (HTML, UI)
+
+For interactive browser routes where users should be redirected to sign in:
+
+```nginx
+location / {
+  auth_request /oauth2/auth;
+  error_page 401 = @oauth2_signin;
+  proxy_pass http://backend/;
+}
+
+location @oauth2_signin {
+  return 302 /oauth2/sign_in?rd=$scheme://$host$request_uri;
+}
+```
+
+#### API / Machine routes (no redirect)
+
+For API endpoints where clients expect a 401/403 status code (not a redirect):
+
+```nginx
+location /api/ {
+  auth_request /oauth2/auth;
+  error_page 401 =401;  # Pass through the 401 status
+  proxy_pass http://backend/;
+}
+```
+
+This ensures:
+- ✅ Browsers get a redirect and smooth login flow
+- ✅ API clients fail fast with appropriate HTTP status codes
+- ✅ `/oauth2/auth` remains a pure boolean oracle (2xx/401)
 
 When you use ingress-nginx in Kubernetes, you can configure the same behavior with the following annotations on your Ingress resource:
 

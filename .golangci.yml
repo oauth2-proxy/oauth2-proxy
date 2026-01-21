@@ -53,6 +53,9 @@ linters:
           - revive
         path: util/.*\.go$
         text: "var-naming: avoid meaningless package names"
+      - linters:
+          - prealloc
+        path: _test\.go
     paths:
       - third_party$
       - builtin$

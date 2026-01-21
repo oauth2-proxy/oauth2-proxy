@@ -21,3 +21,13 @@ A list of changes can be seen in the [CHANGELOG](https://github.com/oauth2-proxy
 ## Architecture
 
 ![OAuth2 Proxy Architecture](/img/simplified-architecture.svg)
+
+
+## Cloud Native Computing Foundation
+
+OAuth2 Proxy is a [Cloud Native Computing Foundation](https://cncf.io) Sandbox project.
+
+![CNCF](https://www.cncf.io/wp-content/uploads/2023/04/cncf-main-site-logo.svg)
+
+The Linux Foundation® (TLF) has registered trademarks and uses trademarks. For a list of TLF trademarks, see [Trademark Usage](https://www.linuxfoundation.org/legal/trademark-usage).
+

@@ -89,6 +89,7 @@ func (p *KeycloakOIDCProvider) extractRoles(s *sessions.SessionState) error {
 		return err
 	}
 
+	//nolint:prealloc
 	var roles []string
 	roles = append(roles, claims.RealmAccess.Roles...)
 	roles = append(roles, getClientRoles(claims)...)
