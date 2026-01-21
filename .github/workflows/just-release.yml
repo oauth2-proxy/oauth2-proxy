@@ -23,8 +23,8 @@ jobs:
       uses: docker/login-action@v3
       with:
         registry: ${{ vars.REGISTRY }}
-        username: ${{ secrets.REGISTRY_USERNAME_NIGHTLY }}
-        password: ${{ secrets.REGISTRY_PASSWORD_NIGHTLY }}
+        username: ${{ secrets.REGISTRY_USERNAME }}
+        password: ${{ secrets.REGISTRY_PASSWORD }}
 
     - name: Build images
       run: |
