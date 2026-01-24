@@ -323,6 +323,13 @@ type OIDCOptions struct {
 	// ExtraAudiences is a list of additional audiences that are allowed
 	// to pass verification in addition to the client id.
 	ExtraAudiences []string `yaml:"extraAudiences,omitempty"`
+	// AuthStyle specifies how the endpoint wants the client ID & client secret sent.
+	// Possible values are:
+	//   - "inParams" (or "params"): sends credentials in the POST body as application/x-www-form-urlencoded parameters
+	//   - "inHeader" (or "header"): sends credentials using HTTP Basic Authorization
+	//   - "" (empty, default): auto-detect by trying both ways
+	// Some providers like Apple require "inParams".
+	AuthStyle string `yaml:"authStyle,omitempty"`
 }
 
 type LoginGovOptions struct {

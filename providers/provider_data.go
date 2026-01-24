@@ -36,7 +36,11 @@ type ProviderData struct {
 	ClientID          string
 	ClientSecret      string
 	ClientSecretFile  string
-	Scope             string
+	// ClientSecretFunc is an optional function to dynamically generate client secret.
+	// If set, it takes precedence over ClientSecret and ClientSecretFile.
+	// This is used by providers like Apple that require a JWT-signed client secret.
+	ClientSecretFunc func() (string, error)
+	Scope            string
 	// The response mode requested from the provider or empty for default ("query")
 	AuthRequestResponseMode string
 	// The picked CodeChallenge Method or empty if none.
@@ -67,6 +71,12 @@ type ProviderData struct {
 func (p *ProviderData) Data() *ProviderData { return p }
 
 func (p *ProviderData) GetClientSecret() (clientSecret string, err error) {
+	// If ClientSecretFunc is set, use it to generate the client secret dynamically
+	// This is used by providers like Apple that require a JWT-signed client secret
+	if p.ClientSecretFunc != nil {
+		return p.ClientSecretFunc()
+	}
+
 	if p.ClientSecret != "" || p.ClientSecretFile == "" {
 		return p.ClientSecret, nil
 	}

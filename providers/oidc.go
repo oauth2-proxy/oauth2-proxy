@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
@@ -21,6 +22,7 @@ type OIDCProvider struct {
 	*ProviderData
 
 	SkipNonce bool
+	AuthStyle oauth2.AuthStyle
 }
 
 const oidcDefaultScope = "openid email profile"
@@ -52,6 +54,19 @@ func NewOIDCProvider(p *ProviderData, opts options.OIDCOptions) *OIDCProvider {
 	return &OIDCProvider{
 		ProviderData: p,
 		SkipNonce:    ptr.Deref(opts.InsecureSkipNonce, options.DefaultInsecureSkipNonce),
+		AuthStyle:    parseAuthStyle(opts.AuthStyle),
+	}
+}
+
+// parseAuthStyle converts the string AuthStyle option to oauth2.AuthStyle
+func parseAuthStyle(style string) oauth2.AuthStyle {
+	switch strings.ToLower(style) {
+	case "inparams", "params":
+		return oauth2.AuthStyleInParams
+	case "inheader", "header":
+		return oauth2.AuthStyleInHeader
+	default:
+		return oauth2.AuthStyleAutoDetect
 	}
 }
 
@@ -87,7 +102,8 @@ func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code, codeVerifi
 		ClientID:     p.ClientID,
 		ClientSecret: clientSecret,
 		Endpoint: oauth2.Endpoint{
-			TokenURL: p.RedeemURL.String(),
+			TokenURL:  p.RedeemURL.String(),
+			AuthStyle: p.AuthStyle,
 		},
 		RedirectURL: redirectURL,
 	}
@@ -173,7 +189,8 @@ func (p *OIDCProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sessi
 		ClientID:     p.ClientID,
 		ClientSecret: clientSecret,
 		Endpoint: oauth2.Endpoint{
-			TokenURL: p.RedeemURL.String(),
+			TokenURL:  p.RedeemURL.String(),
+			AuthStyle: p.AuthStyle,
 		},
 	}
 	t := &oauth2.Token{
