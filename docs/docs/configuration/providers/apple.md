@@ -50,32 +50,22 @@ Your Team ID can be found in the top right corner of the Apple Developer Portal,
 
 ## Usage
 
-To use the Apple provider, start oauth2-proxy with `--provider=apple` and the required options:
-
-```shell
-oauth2-proxy \
-  --provider=apple \
-  --client-id=com.example.yourservice \
-  --apple-team-id=TEAM123456 \
-  --apple-key-id=KEY1234567 \
-  --apple-private-key-file=/path/to/AuthKey_KEY1234567.p8 \
-  --redirect-url=https://your-domain.com/oauth2/callback \
-  --email-domain=* \
-  --cookie-secret=your-cookie-secret
-```
+:::note
+The Apple provider is only configurable via AlphaConfig.
+:::
 
 ### Configuration Options
 
-| Option | Description |
-|--------|-------------|
-| `--apple-team-id` | Your 10-character Apple Developer Team ID |
-| `--apple-key-id` | The 10-character Key ID of your private key |
-| `--apple-private-key-file` | Path to the `.p8` private key file |
-| `--apple-private-key` | The private key content directly (alternative to file) |
+| Option | Type | Description |
+|--------|------|-------------|
+| `teamID` | string | Your 10-character Apple Developer Team ID |
+| `keyID` | string | The 10-character Key ID of your private key |
+| `privateKeyFile` | string | Path to the `.p8` private key file |
+| `privateKey` | string | The private key content directly (alternative to file) |
 
-**Note:** You must provide either `--apple-private-key-file` or `--apple-private-key`, but not both.
+**Note:** You must provide either `privateKeyFile` or `privateKey`, but not both.
 
-### Alpha Configuration Example
+### Example
 
 ```yaml
 providers:
@@ -118,17 +108,31 @@ Apple Sign in with Apple has some unique requirements compared to standard OIDC 
 
 Like other providers, you can restrict access using:
 
-- `--email-domain` to allow only specific email domains
-- `--authenticated-emails-file` to allow only specific email addresses
+- `email_domains` to allow only specific email domains
+- `authenticated_emails_file` to allow only specific email addresses
 
 Example:
-```shell
-oauth2-proxy \
-  --provider=apple \
-  --client-id=com.example.yourservice \
-  --apple-team-id=TEAM123456 \
-  --apple-key-id=KEY1234567 \
-  --apple-private-key-file=/path/to/key.p8 \
-  --email-domain=yourcompany.com \
-  --upstream=http://localhost:3000/
+```yaml
+providers:
+  - id: apple
+    provider: apple
+    clientID: com.example.yourservice
+    appleConfig:
+      teamID: TEAM123456
+      keyID: KEY1234567
+      privateKeyFile: /path/to/key.p8
+
+upstreamConfig:
+  upstreams:
+    - id: backend
+      path: /
+      uri: http://localhost:3000/
+
+injectRequestHeaders:
+  - name: X-Forwarded-Email
+    values:
+      - claim: email
+
+emailDomains:
+  - yourcompany.com
 ```

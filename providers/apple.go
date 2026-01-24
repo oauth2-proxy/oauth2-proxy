@@ -41,6 +41,7 @@ var (
 )
 
 // AppleProvider represents the Apple Sign in with Apple OIDC provider
+// This provider is only configurable via AlphaConfig.
 // See: https://developer.apple.com/documentation/sign_in_with_apple/sign_in_with_apple_rest_api
 type AppleProvider struct {
 	*OIDCProvider
