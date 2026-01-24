@@ -5,21 +5,43 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
 )
+
+const (
+	appleTestIssuer   = "https://appleid.apple.com"
+	appleTestClientID = "com.example.client"
+)
+
+// mockAppleJWKS implements oidc.KeySet for testing
+type mockAppleJWKS struct{}
+
+func (mockAppleJWKS) VerifySignature(_ context.Context, jwt string) ([]byte, error) {
+	decoded, err := base64.RawURLEncoding.DecodeString(strings.Split(jwt, ".")[1])
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode JWT: %v", err)
+	}
+	return decoded, nil
+}
 
 func newAppleServer(body []byte) (*url.URL, *httptest.Server) {
 	s := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
@@ -55,6 +77,11 @@ func newAppleProvider() (*AppleProvider, *ecdsa.PrivateKey, error) {
 		return nil, nil, err
 	}
 
+	verificationOptions := internaloidc.IDTokenVerificationOptions{
+		AudienceClaims: []string{"aud"},
+		ClientID:       appleTestClientID,
+	}
+
 	p, err := NewAppleProvider(
 		&ProviderData{
 			ProviderName: "",
@@ -63,7 +90,14 @@ func newAppleProvider() (*AppleProvider, *ecdsa.PrivateKey, error) {
 			ProfileURL:   &url.URL{},
 			ValidateURL:  &url.URL{},
 			Scope:        "",
-			ClientID:     "com.example.client",
+			ClientID:     appleTestClientID,
+			EmailClaim:   "email",
+			UserClaim:    "sub",
+			Verifier: internaloidc.NewVerifier(oidc.NewVerifier(
+				appleTestIssuer,
+				mockAppleJWKS{},
+				&oidc.Config{ClientID: appleTestClientID},
+			), verificationOptions),
 		},
 		options.AppleOptions{
 			TeamID:     "TEAM123456",
@@ -211,21 +245,21 @@ func TestAppleProviderRedeem(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
-	// Create a mock ID token
+	// Create a mock ID token with claims matching the verifier configuration
 	expiresIn := int64(3600)
 	idTokenClaims := jwt.MapClaims{
-		"iss":   "https://appleid.apple.com",
+		"iss":   appleTestIssuer,
 		"sub":   "user123",
-		"aud":   "com.example.client",
+		"aud":   appleTestClientID,
 		"exp":   time.Now().Add(time.Hour).Unix(),
 		"iat":   time.Now().Unix(),
 		"email": "user@example.com",
 	}
 
-	// Sign with test key for mock purposes
-	privKey, _, _ := generateTestECPrivateKey()
-	idToken := jwt.NewWithClaims(jwt.SigningMethodES256, idTokenClaims)
-	signedIDToken, err := idToken.SignedString(privKey)
+	// Sign with RSA key (RS256) as expected by the verifier
+	rsaKey, _ := rsa.GenerateKey(rand.Reader, 2048)
+	idToken := jwt.NewWithClaims(jwt.SigningMethodRS256, idTokenClaims)
+	signedIDToken, err := idToken.SignedString(rsaKey)
 	assert.NoError(t, err)
 
 	// Set up mock server response

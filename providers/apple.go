@@ -1,7 +1,6 @@
 package providers
 
 import (
-	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"crypto/x509"
@@ -17,16 +16,14 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
+	"golang.org/x/oauth2"
 )
 
 const (
 	appleProviderName = "Apple"
 	appleDefaultScope = "openid email name"
 
-	appleIssuerURL = "https://appleid.apple.com"
-	appleAuthURL   = "https://appleid.apple.com/auth/authorize"
-	appleTokenURL  = "https://appleid.apple.com/auth/token"
-	appleAudience  = "https://appleid.apple.com"
+	appleAudience = "https://appleid.apple.com"
 )
 
 var (
@@ -44,6 +41,7 @@ var (
 )
 
 // AppleProvider represents the Apple Sign in with Apple OIDC provider
+// See: https://developer.apple.com/documentation/sign_in_with_apple/sign_in_with_apple_rest_api
 type AppleProvider struct {
 	*OIDCProvider
 
@@ -66,26 +64,29 @@ func NewAppleProvider(p *ProviderData, appleOpts options.AppleOptions, oidcOpts 
 	})
 	p.getAuthorizationHeaderFunc = makeOIDCHeader
 
-	oidcProvider := &OIDCProvider{
-		ProviderData: p,
-		SkipNonce:    true, // Apple doesn't use nonce in the standard way
-	}
-
 	provider := &AppleProvider{
-		OIDCProvider: oidcProvider,
-		TeamID:       appleOpts.TeamID,
-		KeyID:        appleOpts.KeyID,
+		OIDCProvider: &OIDCProvider{
+			ProviderData: p,
+			SkipNonce:    true, // Apple doesn't use nonce in the standard way
+			AuthStyle:    oauth2.AuthStyleInParams, // Apple requires credentials in POST body
+		},
+		TeamID: appleOpts.TeamID,
+		KeyID:  appleOpts.KeyID,
 	}
 
-	if err := provider.configure(appleOpts); err != nil {
-		return nil, fmt.Errorf("could not configure Apple provider: %v", err)
+	if err := provider.initialize(appleOpts); err != nil {
+		return nil, fmt.Errorf("could not initialize Apple provider: %v", err)
 	}
+
+	// Set up dynamic client secret generation
+	// Apple requires client_secret to be a JWT signed with ES256
+	p.ClientSecretFunc = provider.generateClientSecret
 
 	return provider, nil
 }
 
-// configure validates and sets up the Apple provider with the private key
-func (p *AppleProvider) configure(opts options.AppleOptions) error {
+// initialize validates and configures the Apple provider with the private key
+func (p *AppleProvider) initialize(opts options.AppleOptions) error {
 	if opts.TeamID == "" {
 		return errors.New("apple provider requires teamID")
 	}
@@ -121,6 +122,7 @@ func (p *AppleProvider) configure(opts options.AppleOptions) error {
 }
 
 // parseECPrivateKey parses a PEM-encoded EC private key (Apple .p8 format)
+// See: https://developer.apple.com/documentation/sign_in_with_apple/generate_and_validate_tokens
 func parseECPrivateKey(keyData []byte) (*ecdsa.PrivateKey, error) {
 	// Apple .p8 files contain a PEM-encoded PKCS#8 private key
 	block, _ := pem.Decode(keyData)
@@ -148,6 +150,7 @@ func parseECPrivateKey(keyData []byte) (*ecdsa.PrivateKey, error) {
 
 // generateClientSecret creates a JWT client_secret for Apple token requests
 // Apple requires the client_secret to be a JWT signed with ES256
+// See: https://developer.apple.com/documentation/sign_in_with_apple/generate_and_validate_tokens
 func (p *AppleProvider) generateClientSecret() (string, error) {
 	now := time.Now()
 	claims := &jwt.RegisteredClaims{
@@ -173,124 +176,6 @@ func (p *AppleProvider) GetLoginURL(redirectURI, state, nonce string, extraParam
 	return p.OIDCProvider.GetLoginURL(redirectURI, state, nonce, extraParams)
 }
 
-// Redeem exchanges the authorization code for tokens
-func (p *AppleProvider) Redeem(ctx context.Context, redirectURL, code, codeVerifier string) (*sessions.SessionState, error) {
-	if code == "" {
-		return nil, ErrMissingCode
-	}
-
-	clientSecret, err := p.generateClientSecret()
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate client secret: %v", err)
-	}
-
-	params := url.Values{}
-	params.Add("client_id", p.ClientID)
-	params.Add("client_secret", clientSecret)
-	params.Add("code", code)
-	params.Add("grant_type", "authorization_code")
-	params.Add("redirect_uri", redirectURL)
-	if codeVerifier != "" {
-		params.Add("code_verifier", codeVerifier)
-	}
-
-	var jsonResponse struct {
-		AccessToken  string `json:"access_token"`
-		TokenType    string `json:"token_type"`
-		ExpiresIn    int64  `json:"expires_in"`
-		RefreshToken string `json:"refresh_token"`
-		IDToken      string `json:"id_token"`
-	}
-
-	err = requests.New(p.RedeemURL.String()).
-		WithContext(ctx).
-		WithMethod("POST").
-		WithBody(bytes.NewBufferString(params.Encode())).
-		SetHeader("Content-Type", "application/x-www-form-urlencoded").
-		Do().
-		UnmarshalInto(&jsonResponse)
-	if err != nil {
-		return nil, fmt.Errorf("token exchange failed: %v", err)
-	}
-
-	ctx = oidc.ClientContext(ctx, requests.DefaultHTTPClient)
-
-	// Build session from ID token claims
-	ss, err := p.buildSessionFromClaims(jsonResponse.IDToken, jsonResponse.AccessToken)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build session from claims: %v", err)
-	}
-
-	ss.AccessToken = jsonResponse.AccessToken
-	ss.RefreshToken = jsonResponse.RefreshToken
-	ss.IDToken = jsonResponse.IDToken
-
-	ss.CreatedAtNow()
-	ss.ExpiresIn(time.Duration(jsonResponse.ExpiresIn) * time.Second)
-
-	return ss, nil
-}
-
-// RefreshSession uses the RefreshToken to fetch new Access and ID Tokens
-func (p *AppleProvider) RefreshSession(ctx context.Context, s *sessions.SessionState) (bool, error) {
-	if s == nil || s.RefreshToken == "" {
-		return false, nil
-	}
-
-	clientSecret, err := p.generateClientSecret()
-	if err != nil {
-		return false, fmt.Errorf("failed to generate client secret: %v", err)
-	}
-
-	params := url.Values{}
-	params.Add("client_id", p.ClientID)
-	params.Add("client_secret", clientSecret)
-	params.Add("grant_type", "refresh_token")
-	params.Add("refresh_token", s.RefreshToken)
-
-	var jsonResponse struct {
-		AccessToken  string `json:"access_token"`
-		TokenType    string `json:"token_type"`
-		ExpiresIn    int64  `json:"expires_in"`
-		RefreshToken string `json:"refresh_token"`
-		IDToken      string `json:"id_token"`
-	}
-
-	err = requests.New(p.RedeemURL.String()).
-		WithContext(ctx).
-		WithMethod("POST").
-		WithBody(bytes.NewBufferString(params.Encode())).
-		SetHeader("Content-Type", "application/x-www-form-urlencoded").
-		Do().
-		UnmarshalInto(&jsonResponse)
-	if err != nil {
-		return false, fmt.Errorf("refresh token failed: %v", err)
-	}
-
-	// Update session with new tokens
-	if jsonResponse.IDToken != "" {
-		ctx = oidc.ClientContext(ctx, requests.DefaultHTTPClient)
-		newSession, err := p.buildSessionFromClaims(jsonResponse.IDToken, jsonResponse.AccessToken)
-		if err == nil {
-			s.Email = newSession.Email
-			s.User = newSession.User
-			s.Groups = newSession.Groups
-			s.PreferredUsername = newSession.PreferredUsername
-		}
-		s.IDToken = jsonResponse.IDToken
-	}
-
-	s.AccessToken = jsonResponse.AccessToken
-	if jsonResponse.RefreshToken != "" {
-		s.RefreshToken = jsonResponse.RefreshToken
-	}
-
-	s.CreatedAtNow()
-	s.ExpiresIn(time.Duration(jsonResponse.ExpiresIn) * time.Second)
-
-	return true, nil
-}
-
 // ValidateSession validates the session's ID token
 func (p *AppleProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
 	ctx = oidc.ClientContext(ctx, requests.DefaultHTTPClient)
@@ -300,7 +185,7 @@ func (p *AppleProvider) ValidateSession(ctx context.Context, s *sessions.Session
 		if _, err := p.Verifier.Verify(ctx, s.IDToken); err != nil {
 			return false
 		}
-		// ID token is valid - Apple doesn't provide a token validation endpoint,
+		// ID token is valid - Apple doesn't provide a token validation endpoint
 		return true
 	}
 

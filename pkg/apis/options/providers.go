@@ -331,6 +331,13 @@ type OIDCOptions struct {
 	// between this list and the provider's discovered supported algorithms.
 	// By default `RS256` is used if nothing has been discovered or specified.
 	EnabledSigningAlgs []string `yaml:"enabledSigningAlgs,omitempty"`
+	// AuthStyle specifies how the endpoint wants the client ID & client secret sent.
+	// Possible values are:
+	//   - "inParams" (or "params"): sends credentials in the POST body as application/x-www-form-urlencoded parameters
+	//   - "inHeader" (or "header"): sends credentials using HTTP Basic Authorization
+	//   - "" (empty, default): auto-detect by trying both ways
+	// Some providers like Apple require "inParams".
+	AuthStyle string `yaml:"authStyle,omitempty"`
 }
 
 type LoginGovOptions struct {
