@@ -59,6 +59,16 @@ var _ = Describe("Util Suite", func() {
 				req.Header.Add("X-Forwarded-Host", "external.oauth2proxy.text")
 				Expect(util.GetRequestHost(req)).To(Equal("external.oauth2proxy.text"))
 			})
+
+			It("returns the first X-Forwarded-Host when multiple hosts are present", func() {
+				req.Header.Add("X-Forwarded-Host", "first.host,second.host,third.host")
+				Expect(util.GetRequestHost(req)).To(Equal("first.host"))
+			})
+
+			It("returns the first X-Forwarded-Host when multiple hosts are present with extra spaces", func() {
+				req.Header.Add("X-Forwarded-Host", "  first.host  ,  second.host  ,  third.host  ")
+				Expect(util.GetRequestHost(req)).To(Equal("first.host"))
+			})
 		})
 	})
 
