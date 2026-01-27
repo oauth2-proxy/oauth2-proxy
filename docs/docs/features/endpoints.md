@@ -40,20 +40,40 @@ BEWARE that the domain you want to redirect to (`my-oidc-provider.example.com` i
 
 ### Auth
 
-This endpoint returns 202 Accepted response or a 401 Unauthorized response.
+This endpoint is used for Nginx subrequest authentication. It returns the following status codes based on the request state:
+* **202 Accepted:** The user is authenticated and passes all authorization logic checks.
+* **403 Forbidden:** The user is authenticated but fails the configured logic checks (e.g., wrong group or email domain).
+* **401 Unauthorized:** The user is unable to authenticate (missing or invalid session).
 
 It can be configured using the following query parameters:
 - `allowed_groups`: comma separated list of allowed groups
 - `allowed_email_domains`: comma separated list of allowed email domains
 - `allowed_emails`: comma separated list of allowed emails
+- `allowed_users`: comma separated list of allowed users
+- `require_all_matches`: (boolean, default: `true`) Determines if all defined constraints must pass.
+- `constraints_required`: (boolean, default: `false`) Determines if the request is denied when no constraints are present.
+
+**Logic Behavior:**
+* **Default (AND Logic):** If multiple constraints are provided (e.g., `allowed_users` AND `allowed_groups`), the user must satisfy **ALL** of them.
+* **OR Logic:** If `require_all_matches=false` is set, the user must satisfy **AT LEAST ONE** of the provided constraints.
+* **Empty State:** If no constraints are provided, the request is allowed by default. Set `constraints_required=true` to deny requests that do not match at least one specific restriction.
 
 ### Proxy (/)
 
-This endpoint returns the upstream response if authenticated.
-If unauthenticated it returns a 401 Unauthorized. If the authenticatd user
-is not in one of the allowed groups, or emails then it returns a 403 forbidden
+This endpoint proxies the request to the upstream service. It returns the following status codes based on the request state:
+* **Upstream Response:** The user is authenticated and passes all authorization logic checks.
+* **403 Forbidden:** The user is authenticated but fails the configured logic checks.
+* **401 Unauthorized:** The user is unable to authenticate.
 
 It can be configured using the following query parameters:
 - `allowed_groups`: comma separated list of allowed groups
 - `allowed_email_domains`: comma separated list of allowed email domains
 - `allowed_emails`: comma separated list of allowed emails
+- `allowed_users`: comma separated list of allowed users
+- `require_all_matches`: (boolean, default: `true`) Determines if all defined constraints must pass.
+- `constraints_required`: (boolean, default: `false`) Determines if the request is denied when no constraints are present.
+
+**Logic Behavior:**
+* **Default (AND Logic):** If multiple constraints are provided (e.g., `allowed_users` AND `allowed_groups`), the user must satisfy **ALL** of them.
+* **OR Logic:** If `require_all_matches=false` is set, the user must satisfy **AT LEAST ONE** of the provided constraints.
+* **Empty State:** If no constraints are provided, the request is allowed by default. Set `constraints_required=true` to deny requests that do not match at least one specific restriction.

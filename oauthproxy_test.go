@@ -3445,6 +3445,182 @@ func TestAuthOnlyAllowedEmails(t *testing.T) {
 	}
 }
 
+// TestAuthOnlyAuthorize verifies the authorization logic for the AuthOnly endpoint,
+// covering individual constraints (User, Email, Group, Domain), boolean logic
+// (AND vs OR modes), and comma-separated value parsing.
+func TestAuthOnlyAuthorize(t *testing.T) {
+	testCases := []struct {
+		name               string
+		user               string
+		email              string
+		groups             []string
+		querystring        string
+		expectedStatusCode int
+	}{
+		// 1. User Constraints
+		{
+			name:               "User_NoRestriction",
+			user:               "toto",
+			querystring:        "",
+			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:               "User_Match_Single",
+			user:               "toto",
+			querystring:        "?allowed_users=toto",
+			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:               "User_NoMatch_Single",
+			user:               "toto",
+			querystring:        "?allowed_users=tete",
+			expectedStatusCode: http.StatusForbidden,
+		},
+		{
+			name:               "User_Match_CSV",
+			user:               "toto",
+			querystring:        "?allowed_users=tete,toto",
+			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:               "User_NoMatch_CSV",
+			user:               "toto",
+			querystring:        "?allowed_users=tete,tutu",
+			expectedStatusCode: http.StatusForbidden,
+		},
+		// 2. Email & Domain Constraints
+		{
+			name:               "Email_Match",
+			user:               "user",
+			email:              "user@example.com",
+			querystring:        "?allowed_emails=user@example.com",
+			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:               "Email_NoMatch",
+			user:               "user",
+			email:              "user@example.com",
+			querystring:        "?allowed_emails=admin@example.com",
+			expectedStatusCode: http.StatusForbidden,
+		},
+		{
+			name:               "Domain_Match",
+			user:               "user",
+			email:              "user@example.com",
+			querystring:        "?allowed_email_domains=example.com",
+			expectedStatusCode: http.StatusAccepted,
+		},
+		// 3. Group Constraints
+		{
+			name:               "Group_Match",
+			user:               "user",
+			groups:             []string{"admins", "devs"},
+			querystring:        "?allowed_groups=admins",
+			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:               "Group_NoMatch",
+			user:               "user",
+			groups:             []string{"devs"},
+			querystring:        "?allowed_groups=admins",
+			expectedStatusCode: http.StatusForbidden,
+		},
+		// 4. Default Logic (Implicit AND)
+		// All defined constraints must pass.
+		{
+			name:               "DefaultAND_BothMatch",
+			user:               "toto",
+			email:              "toto@example.com",
+			querystring:        "?allowed_users=toto&allowed_emails=toto@example.com",
+			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:  "DefaultAND_OneFail",
+			user:  "toto",
+			email: "toto@example.com",
+			// User matches, Email fails -> Forbidden
+			querystring:        "?allowed_users=toto&allowed_emails=tete@example.com",
+			expectedStatusCode: http.StatusForbidden,
+		},
+		{
+			name:               "DefaultAND_BothFail",
+			user:               "toto",
+			email:              "toto@example.com",
+			querystring:        "?allowed_users=tete&allowed_emails=tete@example.com",
+			expectedStatusCode: http.StatusForbidden,
+		},
+		// 5. Explicit OR Logic (require_all_matches=false)
+		// Only one defined constraint needs to pass.
+		{
+			name:  "ORMode_OneMatch_OneFail",
+			user:  "toto",
+			email: "toto@example.com",
+			// Email matches, User fails -> Accepted
+			querystring:        "?allowed_emails=toto@example.com&allowed_users=tete&require_all_matches=false",
+			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:               "ORMode_BothFail",
+			user:               "toto",
+			email:              "toto@example.com",
+			querystring:        "?allowed_users=tete&allowed_emails=tete@example.com&require_all_matches=false",
+			expectedStatusCode: http.StatusForbidden,
+		},
+		{
+			name:   "ORMode_GroupFail_DomainPass",
+			user:   "user",
+			email:  "user@company.com",
+			groups: []string{"interns"},
+			// User not in 'admins', but email is 'company.com' -> Accepted
+			querystring:        "?allowed_groups=admins&allowed_email_domains=company.com&require_all_matches=false",
+			expectedStatusCode: http.StatusAccepted,
+		},
+		// 6. Empty State Logic (constraints_required)
+		{
+			name:               "NoConstraints_Required_True",
+			user:               "user",
+			querystring:        "?constraints_required=true",
+			expectedStatusCode: http.StatusForbidden,
+		},
+		{
+			name:               "NoConstraints_Required_False",
+			user:               "user",
+			querystring:        "?constraints_required=false",
+			expectedStatusCode: http.StatusAccepted,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			groups := tc.groups
+			if groups == nil {
+				groups = []string{}
+			}
+
+			created := time.Now()
+			session := &sessions.SessionState{
+				Groups:      groups,
+				User:        tc.user,
+				Email:       tc.email,
+				AccessToken: "oauth_token",
+				CreatedAt:   &created,
+			}
+
+			test, err := NewAuthOnlyEndpointTest(tc.querystring, func(opts *options.Options) {})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			err = test.SaveSession(session)
+			assert.NoError(t, err)
+
+			test.proxy.ServeHTTP(test.rw, test.req)
+
+			assert.Equal(t, tc.expectedStatusCode, test.rw.Code)
+		})
+	}
+}
+
 func TestGetOAuthRedirectURI(t *testing.T) {
 	tests := []struct {
 		name      string
