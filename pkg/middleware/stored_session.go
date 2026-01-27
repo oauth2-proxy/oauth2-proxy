@@ -222,6 +222,7 @@ func (s *storedSessionLoader) refreshSession(rw http.ResponseWriter, req *http.R
 
 	// Session not refreshed, nothing to persist.
 	if !refreshed {
+		logger.Printf("Session not refreshed - User: %s; no refresh token available or provider returned false", session.User)
 		return nil
 	}
 

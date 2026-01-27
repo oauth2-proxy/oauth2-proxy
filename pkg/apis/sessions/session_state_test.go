@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"io"
+	"strings"
 	"testing"
 	"time"
 
@@ -351,5 +352,33 @@ func TestGetClaim(t *testing.T) {
 			gs := NewWithT(t)
 			gs.Expect(ss.GetClaim(tt.claim)).To(Equal(tt.want))
 		})
+	}
+}
+
+func TestSessionState_String_RefreshTokenFalse(t *testing.T) {
+	session := &SessionState{
+		Email: "test@example.com",
+		User:  "testuser",
+		// No RefreshToken set
+	}
+
+	result := session.String()
+
+	if !strings.Contains(result, "refresh_token:false") {
+		t.Errorf("Expected 'refresh_token:false' in output, got: %s", result)
+	}
+}
+
+func TestSessionState_String_RefreshTokenTrue(t *testing.T) {
+	session := &SessionState{
+		Email:        "test@example.com",
+		User:         "testuser",
+		RefreshToken: "some-token",
+	}
+
+	result := session.String()
+
+	if !strings.Contains(result, "refresh_token:true") {
+		t.Errorf("Expected 'refresh_token:true' in output, got: %s", result)
 	}
 }
