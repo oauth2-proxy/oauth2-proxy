@@ -3,7 +3,7 @@ id: apple
 title: Apple
 ---
 
-Apple Sign in with Apple is an OIDC provider that supports authentication using Apple ID.
+[Apple Sign in with Apple](https://developer.apple.com/documentation/sign_in_with_apple) is an OIDC provider that supports authentication using Apple ID.
 
 ## Prerequisites
 
@@ -98,9 +98,9 @@ providers:
 
 Apple Sign in with Apple has some unique requirements compared to standard OIDC providers:
 
-1. **Dynamic Client Secret**: Apple requires the `client_secret` to be a JWT signed with your private key (ES256). OAuth2-Proxy automatically generates this JWT for each token request.
+1. **Dynamic Client Secret**: Apple requires the `client_secret` to be a JWT signed with your private key (ES256). OAuth2 Proxy automatically generates this JWT for each token request.
 
-2. **Form Post Response Mode**: Apple returns the authorization code via form POST rather than query parameters. OAuth2-Proxy handles this automatically.
+2. **Form Post Response Mode**: Apple returns the authorization code via form POST rather than query parameters. OAuth2 Proxy handles this automatically.
 
 3. **Limited User Information**: Apple only provides the user's email (and optionally name) on the first authentication. Subsequent authentications may not include the name.
 
