@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   publish:
-    if: github.event.pull_request.merged && startsWith(github.event.pull_request.head.ref, 'release/')
+    if: github.event.pull_request.merged && startsWith(github.event.pull_request.head.ref, 'release/') && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.tag.outputs.version }}
@@ -27,14 +27,15 @@ jobs:
         fetch-tags: true
 
     - name: Tag release
+      env:
+        BRANCH: ${{ github.event.pull_request.head.ref }}
       run: |
         # Set up github-actions[bot] user
         git config --local user.name "github-actions[bot]"
         git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
         # Get the version from the branch name
-        branch="${{ github.event.pull_request.head.ref }}"
-        version="${branch#release/}"
+        version="${BRANCH#release/}"
         echo ${version}
 
         # Tag and create release
