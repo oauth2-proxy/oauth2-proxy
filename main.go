@@ -14,7 +14,6 @@ import (
 )
 
 func main() {
-	logger.SetFlags(logger.Lshortfile)
 
 	configFlagSet := pflag.NewFlagSet("oauth2-proxy", pflag.ContinueOnError)
 

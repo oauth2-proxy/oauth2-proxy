@@ -39,10 +39,6 @@ const (
 	clientSecret       = "gv3498mfc9t23y23974dm2394dm9"
 )
 
-func init() {
-	logger.SetFlags(logger.Lshortfile)
-}
-
 func TestRobotsTxt(t *testing.T) {
 	opts := baseTestOptions()
 	err := validation.Validate(opts)
