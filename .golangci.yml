@@ -53,7 +53,7 @@ linters:
           - revive
         path: util/.*\.go$
         text: "var-naming: avoid meaningless package names"
-      # pkg/version conflicts with go/version (added in Go 1.22)
+      # pkg/version conflicts with go/version (added in Go 1.22) -- this is temporary
       - linters:
           - revive
         path: pkg/version/.*\.go$
