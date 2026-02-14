@@ -358,7 +358,7 @@ func TestLogRequest_Disabled(t *testing.T) {
 	}
 }
 
-func TestFatal(t *testing.T) {
+func TestFatalMsg(t *testing.T) {
 	resetLogger(t)
 	buf := &bytes.Buffer{}
 	errBuf := &bytes.Buffer{}
@@ -369,7 +369,7 @@ func TestFatal(t *testing.T) {
 	exitFunc = func(code int) { exitCode = code }
 	defer func() { exitFunc = nil }() // will panic on real exit if not restored
 
-	Fatal("fatal error")
+	FatalMsg("fatal error")
 
 	if exitCode != 1 {
 		t.Errorf("expected exit code 1, got %d", exitCode)
@@ -386,13 +386,13 @@ func TestFatal(t *testing.T) {
 	exitFunc = func(code int) {}
 }
 
-func TestDeprecatedPrintf(t *testing.T) {
+func TestInfof(t *testing.T) {
 	resetLogger(t)
 	buf := &bytes.Buffer{}
 	errBuf := &bytes.Buffer{}
 	Setup(slog.LevelInfo, "json", buf, errBuf)
 
-	Printf("hello %s", "world")
+	Infof("hello %s", "world")
 
 	m := parseJSON(t, buf.Bytes())
 	if m["msg"] != "hello world" {
@@ -403,13 +403,13 @@ func TestDeprecatedPrintf(t *testing.T) {
 	}
 }
 
-func TestDeprecatedErrorf(t *testing.T) {
+func TestErrMsgf(t *testing.T) {
 	resetLogger(t)
 	buf := &bytes.Buffer{}
 	errBuf := &bytes.Buffer{}
 	Setup(slog.LevelInfo, "json", buf, errBuf)
 
-	Errorf("error: %s", "something")
+	ErrMsgf("error: %s", "something")
 
 	m := parseJSON(t, errBuf.Bytes())
 	if m["msg"] != "error: something" {
@@ -420,7 +420,7 @@ func TestDeprecatedErrorf(t *testing.T) {
 	}
 }
 
-func TestDeprecatedPrintAuthf(t *testing.T) {
+func TestLogAuth(t *testing.T) {
 	resetLogger(t)
 	buf := &bytes.Buffer{}
 	errBuf := &bytes.Buffer{}
@@ -430,7 +430,7 @@ func TestDeprecatedPrintAuthf(t *testing.T) {
 	scope := &middlewareapi.RequestScope{RequestID: "req-id"}
 	req = middlewareapi.AddRequestScope(req, scope)
 
-	PrintAuthf("user@test.com", req, AuthSuccess, "authenticated via %s", "OAuth2")
+	LogAuth("user@test.com", req, AuthSuccess, "authenticated via OAuth2")
 
 	m := parseJSON(t, buf.Bytes())
 	if m["msg"] != "authenticated via OAuth2" {

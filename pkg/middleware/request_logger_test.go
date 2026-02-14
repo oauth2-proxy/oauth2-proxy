@@ -3,6 +3,7 @@ package middleware
 import (
 	"bytes"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 
@@ -38,7 +39,7 @@ var _ = Describe("Request logger suite", func() {
 	DescribeTable("when service a request",
 		func(in *requestLoggerTableInput) {
 			buf := bytes.NewBuffer(nil)
-			logger.SetOutput(buf)
+			logger.Setup(slog.LevelDebug, "json", buf, buf)
 			logger.SetExcludePaths(in.ExcludePaths)
 
 			req, err := http.NewRequest("GET", in.Path, nil)
