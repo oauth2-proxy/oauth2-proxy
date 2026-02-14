@@ -7,6 +7,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	. "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options/testutil"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/format"
@@ -292,4 +293,78 @@ redirect_url="http://localhost:4180/oauth2/callback"
 			expectedErr:        errors.New("failed to load legacy options: failed to load config: error unmarshalling config: decoding failed due to the following error(s):\n\n'' has invalid keys: unknown_field"),
 		}),
 	)
+
+	Describe("Config Test Mode", func() {
+		const validConfig = `
+http_address="127.0.0.1:4180"
+upstreams="http://httpbin"
+client_id="oauth2-proxy"
+client_secret="b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK"
+cookie_secret="OQINaROshtE9TcZkNAm-5Zs2Pv3xaWytBmc5W7sPX7w="
+email_domains="example.com"
+cookie_secure="false"
+redirect_url="http://localhost:4180/oauth2/callback"
+`
+
+		const invalidConfig = `
+http_address="127.0.0.1:4180"
+upstreams="http://httpbin"
+email_domains="example.com"
+cookie_secure="false"
+redirect_url="http://localhost:4180/oauth2/callback"
+`
+
+		writeTempConfig := func(content string) string {
+			file, err := os.CreateTemp("", "oauth2-proxy-test-config-XXXX.cfg")
+			Expect(err).ToNot(HaveOccurred())
+			defer file.Close()
+
+			_, err = file.WriteString(content)
+			Expect(err).ToNot(HaveOccurred())
+			return file.Name()
+		}
+
+		It("should pass validation with a valid configuration", func() {
+			configFile := writeTempConfig(validConfig)
+			defer os.Remove(configFile)
+
+			flagSet := pflag.NewFlagSet("test", pflag.ContinueOnError)
+			opts, err := loadConfiguration(configFile, "", flagSet, []string{})
+			Expect(err).ToNot(HaveOccurred())
+
+			err = validation.Validate(opts)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("should fail validation with an invalid configuration (missing required fields)", func() {
+			configFile := writeTempConfig(invalidConfig)
+			defer os.Remove(configFile)
+
+			flagSet := pflag.NewFlagSet("test", pflag.ContinueOnError)
+			opts, err := loadConfiguration(configFile, "", flagSet, []string{})
+			Expect(err).ToNot(HaveOccurred())
+
+			err = validation.Validate(opts)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("invalid configuration"))
+		})
+
+		It("should fail to load a configuration file with syntax errors", func() {
+			configFile := writeTempConfig("this is not valid toml ===")
+			defer os.Remove(configFile)
+
+			flagSet := pflag.NewFlagSet("test", pflag.ContinueOnError)
+			_, err := loadConfiguration(configFile, "", flagSet, []string{})
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should register the config-test flag", func() {
+			flagSet := pflag.NewFlagSet("test", pflag.ContinueOnError)
+			flagSet.ParseErrorsAllowlist.UnknownFlags = true
+			configTest := flagSet.Bool("config-test", false, "test the configuration and exit")
+			err := flagSet.Parse([]string{"--config-test"})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(*configTest).To(BeTrue())
+		})
+	})
 })

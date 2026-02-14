@@ -66,11 +66,47 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 
 ### Command Line Options
 
-| Flag        | Description          |
-| ----------- | -------------------- |
-| `--config`  | path to config file  |
-| `--version` | print version string |
+| Flag             | Description                                             |
+| ---------------- | ------------------------------------------------------- |
+| `--config`       | path to config file                                     |
+| `--config-test`  | test configuration and exit (for CI/CD validation)      |
+| `--version`      | print version string                                    |
 
+## Configuration Validation
+
+The `--config-test` flag validates your configuration file without starting the proxy server. This is useful for:
+- **CI/CD pipelines**: Pre-deployment validation
+- **Configuration management**: Testing before applying changes
+- **Debugging**: Verifying syntax and required fields
+
+### Usage
+
+```bash
+# Test legacy config
+oauth2-proxy --config /etc/oauth2-proxy.cfg --config-test
+
+# Test alpha config
+oauth2-proxy --config /etc/core.cfg --alpha-config /etc/alpha.yaml --config-test
+
+# CI/CD pre-deployment check
+oauth2-proxy --config new-config.cfg --config-test && deploy-to-production
+```
+
+### Exit Codes
+
+- **0**: Configuration is valid ✅
+- **1**: Configuration is invalid (errors printed to stderr) ❌
+
+### Validation Coverage
+
+The `--config-test` flag performs the **same comprehensive validation** as normal startup, including:
+- Required fields (client ID, client secret, cookie secret, etc.)
+- Syntax validation (TOML/YAML parsing)
+- Provider configuration
+- Upstream server definitions
+- Session store connectivity (e.g., Redis network checks if configured)
+
+**Note**: Cannot be combined with `--convert-config-to-alpha`.
 
 ### General Provider Options
 
