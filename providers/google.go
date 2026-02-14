@@ -284,7 +284,7 @@ func (p *GoogleProvider) populateAllGroups(adminService *admin.Service) func(s *
 		// Get all groups of the user
 		groups, err := getUserGroups(adminService, s.Email)
 		if err != nil {
-			logger.Errorf("Failed to get user groups for %s: %v", s.Email, err)
+			logger.ErrMsgf("failed to get user groups for %s: %v", s.Email, err)
 			s.Groups = []string{}
 			return true // Allow access even if we can't get groups
 		}
@@ -311,24 +311,24 @@ func getOauth2TokenSource(ctx context.Context, opts options.GoogleOptions, scope
 			Subject:         opts.AdminEmail,
 		})
 		if err != nil {
-			logger.Fatal("failed to fetch application default credentials: ", err)
+			logger.FatalMsg("failed to fetch application default credentials", "error", err)
 		}
 		return ts
 	}
 
 	credentialsReader, err := os.Open(opts.ServiceAccountJSON)
 	if err != nil {
-		logger.Fatal("couldn't open Google credentials file: ", err)
+		logger.FatalMsg("couldn't open Google credentials file", "error", err)
 	}
 
 	data, err := io.ReadAll(credentialsReader)
 	if err != nil {
-		logger.Fatal("can't read Google credentials file:", err)
+		logger.FatalMsg("can't read Google credentials file", "error", err)
 	}
 
 	conf, err := google.JWTConfigFromJSON(data, scope)
 	if err != nil {
-		logger.Fatal("can't load Google credentials file:", err)
+		logger.FatalMsg("can't load Google credentials file", "error", err)
 	}
 
 	conf.Subject = opts.AdminEmail
@@ -357,24 +357,24 @@ func getAdminService(opts options.GoogleOptions) *admin.Service {
 			retrieveErrBody := map[string]interface{}{}
 
 			if err := json.Unmarshal(retrieveErr.Body, &retrieveErrBody); err != nil {
-				logger.Fatal("error unmarshalling retrieveErr body:", err)
+				logger.FatalMsg("error unmarshalling retrieveErr body", "error", err)
 			}
 
 			if retrieveErrBody["error"] == "unauthorized_client" && retrieveErrBody["error_description"] == "Client is unauthorized to retrieve access tokens using this method, or client not authorized for any of the scopes requested." {
 				continue
 			}
 
-			logger.Fatal("error retrieving token:", err)
+			logger.FatalMsg("error retrieving token", "error", err)
 		}
 	}
 
 	if client == nil {
-		logger.Fatal("error: google credentials do not have enough permissions to access admin API scope")
+		logger.FatalMsg("error: google credentials do not have enough permissions to access admin API scope")
 	}
 
 	adminService, err := admin.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
-		logger.Fatal(err)
+		logger.FatalMsg("failed to create admin service", "error", err)
 	}
 	return adminService
 }
@@ -385,26 +385,26 @@ func getTargetPrincipal(ctx context.Context, opts options.GoogleOptions) (target
 	if targetPrincipal != "" {
 		return targetPrincipal
 	}
-	logger.Print("INFO: no target principal set, trying to automatically determine one instead.")
+	logger.Info("no target principal set, trying to automatically determine one instead.")
 	credential, err := google.FindDefaultCredentials(ctx)
 	if err != nil {
-		logger.Fatal("failed to fetch application default credentials: ", err)
+		logger.FatalMsg("failed to fetch application default credentials", "error", err)
 	}
 	content := map[string]interface{}{}
 
 	err = json.Unmarshal(credential.JSON, &content)
 	switch {
 	case err != nil && !metadata.OnGCE():
-		logger.Fatal("unable to unmarshal Application Default Credentials JSON", err)
+		logger.FatalMsg("unable to unmarshal Application Default Credentials JSON", "error", err)
 	case content["client_email"] != nil:
 		targetPrincipal = fmt.Sprintf("%v", content["client_email"])
 	case metadata.OnGCE():
 		targetPrincipal, err = metadata.EmailWithContext(ctx, "")
 		if err != nil {
-			logger.Fatal("error while calling the GCE metadata server", err)
+			logger.FatalMsg("error while calling the GCE metadata server", "error", err)
 		}
 	default:
-		logger.Fatal("unable to determine Application Default Credentials TargetPrincipal, try overriding with --target-principal instead.")
+		logger.FatalMsg("unable to determine Application Default Credentials TargetPrincipal, try overriding with --target-principal instead.")
 	}
 	return targetPrincipal
 }
@@ -476,7 +476,7 @@ func userInGroup(service *admin.Service, group string, email string) bool {
 	gerr, ok := err.(*googleapi.Error)
 	switch {
 	case ok && gerr.Code == 404:
-		logger.Errorf("error checking membership in group %s: group does not exist", group)
+		logger.ErrMsg("error checking membership in group: group does not exist", "group", group)
 	case ok && gerr.Code == 400:
 		// It is possible for Members.HasMember to return false even if the email is a group member.
 		// One case that can cause this is if the user email is from a different domain than the group,
@@ -485,7 +485,7 @@ func userInGroup(service *admin.Service, group string, email string) bool {
 		req := service.Members.Get(group, email)
 		r, err := req.Do()
 		if err != nil {
-			logger.Errorf("error using get API to check member %s of google group %s: user not in the group", email, group)
+			logger.ErrMsg("error using get API to check member of google group: user not in the group", "email", email, "group", group)
 			return false
 		}
 
@@ -495,7 +495,7 @@ func userInGroup(service *admin.Service, group string, email string) bool {
 			return true
 		}
 	default:
-		logger.Errorf("error checking group membership: %v", err)
+		logger.ErrMsgf("error checking group membership: %v", err)
 	}
 	return false
 }

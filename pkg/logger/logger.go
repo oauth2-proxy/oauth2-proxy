@@ -40,8 +40,8 @@ var (
 	defaultLogger           = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: logLevel, AddSource: true}))
 	writer        io.Writer = os.Stdout
 	errWriter     io.Writer = os.Stderr
-	logFormat     string    = "json"
-	errToInfo     bool      = false
+	logFormat               = "json"
+	errToInfo               = false
 
 	getClientFunc GetClientFunc = func(r *http.Request) string { return r.RemoteAddr }
 	excludePaths  map[string]struct{}
@@ -243,7 +243,8 @@ func LogAuth(username string, req *http.Request, status AuthStatus, msg string, 
 	client := clientFunc(req)
 	scope := middlewareapi.GetRequestScope(req)
 
-	attrs := []any{
+	attrs := make([]any, 0, 16+len(args))
+	attrs = append(attrs,
 		"user", username,
 		"client", client,
 		"host", requestutil.GetRequestHost(req),
@@ -252,7 +253,7 @@ func LogAuth(username string, req *http.Request, status AuthStatus, msg string, 
 		"user_agent", req.UserAgent(),
 		"request_id", scope.RequestID,
 		"status", string(status),
-	}
+	)
 	attrs = append(attrs, args...)
 
 	var level slog.Level

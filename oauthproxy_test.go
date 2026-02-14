@@ -173,7 +173,7 @@ func Test_enrichSession(t *testing.T) {
 
 func TestBasicAuthPassword(t *testing.T) {
 	providerServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		logger.Printf("%#v", r)
+		logger.Infof("%#v", r)
 		var payload string
 		switch r.URL.Path {
 		case "/oauth/token":

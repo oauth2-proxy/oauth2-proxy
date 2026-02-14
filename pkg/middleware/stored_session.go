@@ -91,10 +91,10 @@ func (s *storedSessionLoader) loadSession(next http.Handler) http.Handler {
 		if err != nil && !errors.Is(err, http.ErrNoCookie) {
 			// In the case when there was an error loading the session,
 			// we should clear the session
-			logger.Errorf("Error loading cookied session: %v, removing session", err)
+			logger.ErrMsgf("error loading cookied session: %v, removing session", err)
 			err = s.store.Clear(rw, req)
 			if err != nil {
-				logger.Errorf("Error removing session: %v", err)
+				logger.ErrMsgf("error removing session: %v", err)
 			}
 		}
 
@@ -158,7 +158,7 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
 			return
 		}
 		if err := session.ReleaseLock(req.Context()); err != nil {
-			logger.Errorf("unable to release lock: %v", err)
+			logger.ErrMsgf("unable to release lock: %v", err)
 		}
 	}()
 
@@ -186,11 +186,11 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
 	}
 
 	// We are holding the lock and the session needs a refresh
-	logger.Printf("Refreshing session - User: %s; SessionAge: %s", session.User, session.Age())
+	logger.Info("refreshing session", "user", session.User, "session_age", session.Age())
 	if err := s.refreshSession(rw, req, session); err != nil {
 		// If a preemptive refresh fails, we still keep the session
 		// if validateSession succeeds.
-		logger.Errorf("Unable to refresh session: %v", err)
+		logger.ErrMsgf("unable to refresh session: %v", err)
 	}
 
 	// Validate all sessions after any Redeem/Refresh operation (fail or success)
@@ -232,7 +232,7 @@ func (s *storedSessionLoader) refreshSession(rw http.ResponseWriter, req *http.R
 	// Because the session was refreshed, make sure to save it
 	err = s.store.Save(rw, req, session)
 	if err != nil {
-		logger.PrintAuthf(session.Email, req, logger.AuthError, "error saving session: %v", err)
+		logger.LogAuth(session.Email, req, logger.AuthError, fmt.Sprintf("error saving session: %v", err))
 		return fmt.Errorf("error saving session: %v", err)
 	}
 	return nil

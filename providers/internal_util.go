@@ -24,14 +24,14 @@ func stripToken(endpoint string) string {
 func stripParam(param, endpoint string) string {
 	u, err := url.Parse(endpoint)
 	if err != nil {
-		logger.Errorf("error attempting to strip %s: %s", param, err)
+		logger.ErrMsgf("error attempting to strip %s: %s", param, err)
 		return endpoint
 	}
 
 	if u.RawQuery != "" {
 		values, err := url.ParseQuery(u.RawQuery)
 		if err != nil {
-			logger.Errorf("error attempting to strip %s: %s", param, err)
+			logger.ErrMsgf("error attempting to strip %s: %s", param, err)
 			return u.String()
 		}
 
@@ -66,17 +66,17 @@ func validateToken(ctx context.Context, p Provider, accessToken string, header h
 		WithHeaders(header).
 		Do()
 	if result.Error() != nil {
-		logger.Errorf("GET %s", stripToken(endpoint))
-		logger.Errorf("token validation request failed: %s", result.Error())
+		logger.ErrMsgf("GET %s", stripToken(endpoint))
+		logger.ErrMsgf("token validation request failed: %s", result.Error())
 		return false
 	}
 
-	logger.Printf("%d GET %s %s", result.StatusCode(), stripToken(endpoint), result.Body())
+	logger.Infof("%d GET %s %s", result.StatusCode(), stripToken(endpoint), result.Body())
 
 	if result.StatusCode() == 200 {
 		return true
 	}
-	logger.Errorf("token validation request failed: status %d - %s", result.StatusCode(), result.Body())
+	logger.ErrMsgf("token validation request failed: status %d - %s", result.StatusCode(), result.Body())
 	return false
 }
 

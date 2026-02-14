@@ -33,33 +33,33 @@ func main() {
 	}
 
 	if *convertConfig && *alphaConfig != "" {
-		logger.Fatal("cannot use alpha-config and convert-config-to-alpha together")
+		logger.FatalMsg("cannot use alpha-config and convert-config-to-alpha together")
 	}
 
 	opts, err := loadConfiguration(*config, *alphaConfig, configFlagSet, os.Args[1:])
 	if err != nil {
-		logger.Fatalf("ERROR: %v", err)
+		logger.FatalMsg("failed to load configuration", "error", err)
 	}
 
 	if *convertConfig {
 		if err := printConvertedConfig(opts); err != nil {
-			logger.Fatalf("ERROR: could not convert config: %v", err)
+			logger.FatalMsg("could not convert config", "error", err)
 		}
 		return
 	}
 
 	if err = validation.Validate(opts); err != nil {
-		logger.Fatalf("%s", err)
+		logger.FatalMsg("invalid configuration", "error", err)
 	}
 
 	validator := NewValidator(opts.EmailDomains, opts.AuthenticatedEmailsFile)
 	oauthproxy, err := NewOAuthProxy(opts, validator)
 	if err != nil {
-		logger.Fatalf("ERROR: Failed to initialise OAuth2 Proxy: %v", err)
+		logger.FatalMsg("failed to initialise OAuth2 Proxy", "error", err)
 	}
 
 	if err := oauthproxy.Start(); err != nil {
-		logger.Fatalf("ERROR: Failed to start OAuth2 Proxy: %v", err)
+		logger.FatalMsg("failed to start OAuth2 Proxy", "error", err)
 	}
 }
 
@@ -73,7 +73,7 @@ func loadConfiguration(config, yamlConfig string, extraFlags *pflag.FlagSet, arg
 	}
 
 	if yamlConfig != "" {
-		logger.Printf("WARNING: You are using alpha configuration. The structure in this configuration file may change without notice. You MUST remove conflicting options from your existing configuration.")
+		logger.Warn("alpha configuration in use: the structure in this configuration file may change without notice, remove conflicting options from your existing configuration")
 		opts, err = loadYamlOptions(yamlConfig, config, extraFlags, args)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load yaml options: %w", err)

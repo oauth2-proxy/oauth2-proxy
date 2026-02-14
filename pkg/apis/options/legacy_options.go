@@ -163,7 +163,7 @@ func (l *LegacyUpstreams) convert() (UpstreamConfig, error) {
 		case "static":
 			responseCode, err := strconv.Atoi(u.Host)
 			if err != nil {
-				logger.Errorf("unable to convert %q to int, use default \"200\"", u.Host)
+				logger.ErrMsgf("unable to convert %q to int, use default \"200\"", u.Host)
 				responseCode = 200
 			}
 			upstream.Static = ptr.To(true)
@@ -778,8 +778,8 @@ func (l *LegacyProvider) convert() (Providers, error) {
 	case "google":
 		if len(l.GoogleGroupsLegacy) != 0 && !reflect.DeepEqual(l.GoogleGroupsLegacy, l.GoogleGroups) {
 			// Log the deprecation notice
-			logger.Error(
-				"WARNING: The 'OAUTH2_PROXY_GOOGLE_GROUP' environment variable is deprecated and will likely be removed in the next major release. Use 'OAUTH2_PROXY_GOOGLE_GROUPS' instead.",
+			logger.Warn(
+				"the 'OAUTH2_PROXY_GOOGLE_GROUP' environment variable is deprecated and will likely be removed in the next major release. Use 'OAUTH2_PROXY_GOOGLE_GROUPS' instead.",
 			)
 			l.GoogleGroups = l.GoogleGroupsLegacy
 		}

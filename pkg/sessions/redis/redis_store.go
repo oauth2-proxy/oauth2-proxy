@@ -193,7 +193,7 @@ func setupTLSConfig(opts options.RedisStoreOptions, opt *redis.Options) error {
 	if opts.CAPath != "" {
 		rootCAs, err := x509.SystemCertPool()
 		if err != nil {
-			logger.Errorf("failed to load system cert pool for redis connection, falling back to empty cert pool")
+			logger.ErrMsg("failed to load system cert pool for redis connection, falling back to empty cert pool")
 		}
 		if rootCAs == nil {
 			rootCAs = x509.NewCertPool()
@@ -205,7 +205,7 @@ func setupTLSConfig(opts options.RedisStoreOptions, opt *redis.Options) error {
 
 		// Append our cert to the system pool
 		if ok := rootCAs.AppendCertsFromPEM(certs); !ok {
-			logger.Errorf("no certs appended, using system certs only")
+			logger.ErrMsg("no certs appended, using system certs only")
 		}
 
 		if opt.TLSConfig == nil {

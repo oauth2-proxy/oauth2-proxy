@@ -82,7 +82,7 @@ func (a *appDirector) validateRedirect(redirect string, errorFormat string) stri
 		return redirect
 	}
 	if redirect != "" {
-		logger.Errorf(errorFormat, redirect)
+		logger.ErrMsgf(errorFormat, redirect)
 	}
 	return ""
 }

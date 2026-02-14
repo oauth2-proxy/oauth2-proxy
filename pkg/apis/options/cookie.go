@@ -72,7 +72,7 @@ func (c *Cookie) GetSecret() (secret string, err error) {
 
 	fileSecret, err := os.ReadFile(c.SecretFile)
 	if err != nil {
-		logger.Errorf("error reading cookie secret file %s: %s", c.SecretFile, err)
+		logger.ErrMsgf("error reading cookie secret file %s: %s", c.SecretFile, err)
 		return "", errors.New("could not read cookie secret file")
 	}
 
