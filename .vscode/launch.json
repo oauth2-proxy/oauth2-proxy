@@ -2,13 +2,6 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch test function",
-            "type": "go",
-            "request": "launch",
-            "mode": "test",
-            "program": "${fileDirname}",
-        },
-        {
             "name": "OAuth2 Proxy for Dex",
             "type": "go",
             "request": "launch",
