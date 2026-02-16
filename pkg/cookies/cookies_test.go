@@ -106,7 +106,7 @@ var _ = Describe("Cookie Tests", func() {
 				)
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(MakeCookieFromOptions(req, in.name, in.value, &in.opts, in.expiration).MaxAge).To(Equal(in.expectedOutput))
+				Expect(MakeCookieFromOptions(req, in.name, in.value, &in.opts, in.expiration, in.opts.SameSite).MaxAge).To(Equal(in.expectedOutput))
 			},
 			Entry("persistent cookie", makeCookieFromOptionsTableInput{
 				host:  "www.cookies.test",

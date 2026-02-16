@@ -146,6 +146,7 @@ func (s *SessionStore) makeCookie(req *http.Request, name string, value string, 
 		value,
 		s.Cookie,
 		expiration,
+		s.Cookie.SameSite,
 	)
 }
 
