@@ -52,6 +52,7 @@ const (
 	oauthStartPath    = "/start"
 	oauthCallbackPath = "/callback"
 	authOnlyPath      = "/auth"
+	authSignInPath    = "/auth/sign_in"
 	userInfoPath      = "/userinfo"
 	staticPathPrefix  = "/static/"
 
@@ -322,13 +323,15 @@ func (p *OAuthProxy) buildServeMux(proxyPrefix string) {
 	// Register the robots path writer
 	r.Path(robotsPath).HandlerFunc(p.pageWriter.WriteRobotsTxt)
 
-	// The authonly path should be registered separately to prevent it from getting no-cache headers.
-	// We do this to allow users to have a short cache (via nginx) of the response to reduce the
+	// The auth-only paths should be registered separately to prevent them from getting no-cache headers.
+	// For /auth, this allows users to have a short cache (via nginx) of the response to reduce the
 	// likelihood of multiple requests trying to refresh sessions simultaneously.
+	// The /auth/sign_in endpoint sets its own no-cache headers internally since its responses are user-specific.
 	r.Path(proxyPrefix + authOnlyPath).Handler(p.sessionChain.ThenFunc(p.AuthOnly))
+	r.Path(proxyPrefix + authSignInPath).Handler(p.sessionChain.ThenFunc(p.AuthOnlyWithSignIn))
 
-	// This will register all of the paths under the proxy prefix, except the auth only path so that no cache headers
-	// are not applied.
+	// This will register all of the paths under the proxy prefix, except the auth-only paths so that
+	// no-cache headers are not applied to them.
 	p.buildProxySubrouter(r.PathPrefix(proxyPrefix).Subrouter())
 
 	// Register serveHTTP last so it catches anything that isn't already caught earlier.
@@ -1021,6 +1024,46 @@ func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
 	p.headersChain.Then(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
 		rw.WriteHeader(http.StatusAccepted)
 	})).ServeHTTP(rw, req)
+}
+
+// AuthOnlyWithSignIn checks whether the user is currently logged in and
+// redirects to sign-in if not.
+//
+// Returns:
+//   - 202 Accepted when authenticated and authorized
+//   - 403 Forbidden when authenticated but not authorized (provider-level or query-param checks)
+//   - Redirect to sign-in flow (or OAuth provider if SkipProviderButton is set) when no valid session exists
+//   - 500 Internal Server Error on unexpected errors
+func (p *OAuthProxy) AuthOnlyWithSignIn(rw http.ResponseWriter, req *http.Request) {
+	prepareNoCache(rw)
+	session, err := p.getAuthenticatedSession(rw, req)
+	switch {
+	case err == nil:
+		if !authOnlyAuthorize(req, session) {
+			http.Error(rw, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+			return
+		}
+		p.addHeadersForProxying(rw, session)
+		p.headersChain.Then(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
+			rw.WriteHeader(http.StatusAccepted)
+		})).ServeHTTP(rw, req)
+	case errors.Is(err, ErrNeedsLogin):
+		logger.Printf("No valid authentication in request. Initiating login.")
+		if p.SkipProviderButton {
+			p.doOAuthStart(rw, req, nil)
+		} else {
+			p.SignInPage(rw, req, http.StatusForbidden)
+		}
+	case errors.Is(err, ErrAccessDenied):
+		if p.forceJSONErrors {
+			p.errorJSON(rw, http.StatusForbidden)
+		} else {
+			p.ErrorPage(rw, req, http.StatusForbidden, "The session failed authorization checks")
+		}
+	default:
+		logger.Errorf("Unexpected internal error: %v", err)
+		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+	}
 }
 
 // Proxy proxies the user request if the user is authenticated else it prompts
