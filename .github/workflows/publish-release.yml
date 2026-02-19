@@ -42,11 +42,18 @@ jobs:
         git tag -a "${version}" -m "Release ${version}"
         echo "version=${version}" >> $GITHUB_OUTPUT
       id: tag
-    
-    - name: Set up go
+
+    - name: Get Go version
+      run: |
+        version=$(grep "^go " go.mod | cut -d' ' -f2)
+        echo "version=${version}" >> "$GITHUB_OUTPUT"
+      id: go-version
+
+    - name: Set up Go
       uses: actions/setup-go@v6
       with:
-        go-version-file: go.mod
+        go-version: ${{ steps.go-version.outputs.version }}
+        check-latest: true
 
     - name: Get dependencies
       env:
