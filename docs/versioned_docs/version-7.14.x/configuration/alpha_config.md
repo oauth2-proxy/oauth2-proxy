@@ -152,7 +152,7 @@ injectResponseHeaders:
           value: c3VwZXItc2VjcmV0LXBhc3N3b3Jk # base64 encoded password
 ```
 
-**Value sources:** 
+**Value sources:**
 * `claimSource` - `claim` (session claims either from id token or from profile URL)
 * `secretSource` - `value` (base64), `fromFile` (file path)
 
@@ -279,7 +279,7 @@ ClaimSource allows loading a header value from a claim within the session
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `claim` | _string_ | Claim is the name of the claim in the session that the value should be<br/>loaded from. Available claims: `access_token` `id_token` `created_at`<br/>`expires_on` `refresh_token` `email` `user` `groups` `preferred_username`. |
+| `claim` | _string_ | Claim is the name of the claim in the session that the value should be<br/>loaded from. Available claims: `access_token` `id_token` `created_at`<br/>`expires_on` `refresh_token` `email` `user` `groups` `preferred_username`,<br/>plus any custom claims configured in `oidcConfig.additionalClaims`. |
 | `prefix` | _string_ | Prefix is an optional prefix that will be prepended to the value of the<br/>claim if it is non-empty. |
 | `basicAuthPassword` | _[SecretSource](#secretsource)_ | BasicAuthPassword converts this claim into a basic auth header.<br/>Note the value of claim will become the basic auth username and the<br/>basicAuthPassword will be used as the password value. |
 
@@ -488,6 +488,7 @@ character.
 | `userIDClaim` | _string_ | UserIDClaim indicates which claim contains the user ID<br/>default set to 'email' |
 | `audienceClaims` | _[]string_ | AudienceClaim allows to define any claim that is verified against the client id<br/>By default `aud` claim is used for verification. |
 | `extraAudiences` | _[]string_ | ExtraAudiences is a list of additional audiences that are allowed<br/>to pass verification in addition to the client id. |
+| `additionalClaims` | _[]string_ | AdditionalClaims is a list of additional claim names to pull from the ID token<br/>or profile URL and store in the session for use with ClaimSource. |
 
 ### Provider
 

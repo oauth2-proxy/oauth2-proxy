@@ -51,6 +51,7 @@ type ProviderData struct {
 	GroupsClaim              string
 	Verifier                 internaloidc.IDTokenVerifier
 	SkipClaimsFromProfileURL bool
+	AdditionalClaims         []string
 
 	// Universal Group authorization data structure
 	// any provider can set to consume
@@ -265,6 +266,23 @@ func (p *ProviderData) buildSessionFromClaims(rawIDToken, accessToken string) (*
 	} {
 		if _, err := extractor.GetClaimInto(c.claim, c.dst); err != nil {
 			return nil, err
+		}
+	}
+
+	if len(p.AdditionalClaims) > 0 {
+		for _, claim := range p.AdditionalClaims {
+			var values []string
+			exists, err := extractor.GetClaimInto(claim, &values)
+			if err != nil {
+				return nil, err
+			}
+			if !exists || len(values) == 0 {
+				continue
+			}
+			if ss.ExtraClaims == nil {
+				ss.ExtraClaims = map[string][]string{}
+			}
+			ss.ExtraClaims[claim] = append([]string(nil), values...)
 		}
 	}
 

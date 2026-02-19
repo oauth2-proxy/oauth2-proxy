@@ -318,6 +318,9 @@ type OIDCOptions struct {
 	// ExtraAudiences is a list of additional audiences that are allowed
 	// to pass verification in addition to the client id.
 	ExtraAudiences []string `yaml:"extraAudiences,omitempty"`
+	// AdditionalClaims defines additional claims to pull from the ID token or
+	// profile URL and store in the session for claimSource usage.
+	AdditionalClaims []string `yaml:"additionalClaims,omitempty"`
 }
 
 type LoginGovOptions struct {

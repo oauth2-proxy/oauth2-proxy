@@ -180,6 +180,37 @@ var _ = Describe("Headers Suite", func() {
 			},
 			expectedErr: "",
 		}),
+		Entry("with configured additional claims in response headers", headersTableInput{
+			headers: []options.Header{
+				{
+					Name: "X-User-Display-Name",
+					Values: []options.HeaderValue{{
+						ClaimSource: &options.ClaimSource{Claim: "displayName"},
+					}},
+				},
+				{
+					Name: "X-User-Job-Title",
+					Values: []options.HeaderValue{{
+						ClaimSource: &options.ClaimSource{Claim: "jobTitle"},
+					}},
+				},
+			},
+			initialHeaders: http.Header{
+				"Foo": []string{"bar", "baz"},
+			},
+			session: &sessionsapi.SessionState{
+				ExtraClaims: map[string][]string{
+					"displayName": []string{"Jane D."},
+					"jobTitle":    []string{"Principal Consultant"},
+				},
+			},
+			expectedHeaders: http.Header{
+				"Foo":                 []string{"bar,baz"},
+				"X-User-Display-Name": []string{"Jane D."},
+				"X-User-Job-Title":    []string{"Principal Consultant"},
+			},
+			expectedErr: "",
+		}),
 		Entry("with an invalid basicAuthPassword claim valued header", headersTableInput{
 			headers: []options.Header{
 				{

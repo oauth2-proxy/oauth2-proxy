@@ -95,6 +95,20 @@ var (
 		RegisteredClaims: registeredClaims,
 	}
 
+	displayNameAndJobTitleIDToken = idTokenClaims{
+		Name:             "Jane Dobbs",
+		Email:            "janed@me.com",
+		Phone:            "+4798765432",
+		Picture:          "http://mugbook.com/janed/me.jpg",
+		Groups:           []string{"test:a", "test:b"},
+		Roles:            []string{"test:c", "test:d"},
+		DisplayName:      "Jane D.",
+		JobTitle:         "Principal Consultant",
+		Verified:         &verified,
+		Nonce:            encryption.HashNonce([]byte(oidcNonce)),
+		RegisteredClaims: registeredClaims,
+	}
+
 	unverifiedIDToken = idTokenClaims{
 		Name:             "Mystery Man",
 		Email:            "unverified@email.com",
@@ -118,6 +132,8 @@ type idTokenClaims struct {
 	Picture  string      `json:"picture,omitempty"`
 	Groups   interface{} `json:"groups,omitempty"`
 	Roles    interface{} `json:"roles,omitempty"`
+	DisplayName string      `json:"displayName,omitempty"`
+	JobTitle    string      `json:"jobTitle,omitempty"`
 	Verified *bool       `json:"email_verified,omitempty"`
 	Nonce    string      `json:"nonce,omitempty"`
 	jwt.RegisteredClaims
@@ -234,6 +250,7 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 		GroupsClaim              string
 		SkipClaimsFromProfileURL bool
 		SetProfileURL            bool
+		AdditionalClaims         []string
 		ExpectedError            error
 		ExpectedSession          *sessions.SessionState
 		ExpectProfileURLCalled   bool
@@ -405,6 +422,42 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 				PreferredUsername: "Jane Dobbs",
 			},
 		},
+		"Extra Claims": {
+			IDToken:         defaultIDToken,
+			AllowUnverified: true,
+			EmailClaim:      "email",
+			GroupsClaim:     "groups",
+			UserClaim:       "sub",
+			AdditionalClaims: []string{"picture", "roles"},
+			ExpectedSession: &sessions.SessionState{
+				User:              "123456789",
+				Email:             "janed@me.com",
+				Groups:            []string{"test:a", "test:b"},
+				PreferredUsername: "Jane Dobbs",
+				ExtraClaims: map[string][]string{
+					"picture": {"http://mugbook.com/janed/me.jpg"},
+					"roles":   {"test:c", "test:d"},
+				},
+			},
+		},
+		"Extra Claims (displayName and jobTitle)": {
+			IDToken:          displayNameAndJobTitleIDToken,
+			AllowUnverified:  true,
+			EmailClaim:       "email",
+			GroupsClaim:      "groups",
+			UserClaim:        "sub",
+			AdditionalClaims: []string{"displayName", "jobTitle"},
+			ExpectedSession: &sessions.SessionState{
+				User:              "123456789",
+				Email:             "janed@me.com",
+				Groups:            []string{"test:a", "test:b"},
+				PreferredUsername: "Jane Dobbs",
+				ExtraClaims: map[string][]string{
+					"displayName": {"Jane D."},
+					"jobTitle":    {"Principal Consultant"},
+				},
+			},
+		},
 		"Request claims from ProfileURL": {
 			IDToken:                minimalIDToken,
 			SetProfileURL:          true,
@@ -453,6 +506,7 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 			provider.EmailClaim = tc.EmailClaim
 			provider.GroupsClaim = tc.GroupsClaim
 			provider.SkipClaimsFromProfileURL = tc.SkipClaimsFromProfileURL
+			provider.AdditionalClaims = tc.AdditionalClaims
 
 			rawIDToken, err := newSignedTestIDToken(tc.IDToken)
 			g.Expect(err).ToNot(HaveOccurred())

@@ -50,7 +50,8 @@ type HeaderValue struct {
 type ClaimSource struct {
 	// Claim is the name of the claim in the session that the value should be
 	// loaded from. Available claims: `access_token` `id_token` `created_at`
-	// `expires_on` `refresh_token` `email` `user` `groups` `preferred_username`.
+	// `expires_on` `refresh_token` `email` `user` `groups` `preferred_username`,
+	// plus any custom claims configured in `oidcConfig.additionalClaims`.
 	Claim string `yaml:"claim,omitempty"`
 
 	// Prefix is an optional prefix that will be prepended to the value of the
