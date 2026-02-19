@@ -22,7 +22,7 @@ jobs:
 
     - name: Get Go version
       run: |
-        version=$(grep "^go " go.mod | cut -d' ' -f2)
+        version=$(grep "^go " go.mod | cut -d' ' -f2 | cut -d. -f1,2)
         echo "version=${version}" >> "$GITHUB_OUTPUT"
       id: go-version
 
