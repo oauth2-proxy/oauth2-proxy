@@ -11,6 +11,8 @@
 ## Changes since v7.14.2
 - [#????](https://github.com/oauth2-proxy/oauth2-proxy/pull/1947) Added new option to configure the SameSite value of CSRF cookie (e.g.: "--cookie-csrf-samesite"). 
 
+- [#3183](https://github.com/oauth2-proxy/oauth2-proxy/pull/3183) fix: allow URL parameters to configure username, password and max idle connection timeout if the matching configuration is empty.
+
 # V7.14.2
 
 ## Release Highlights
