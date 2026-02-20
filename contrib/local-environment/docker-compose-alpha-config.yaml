@@ -10,7 +10,6 @@
 #    make alpha-config-<command> (eg make nginx-up, make nginx-down)
 #
 # Access http://localhost:4180 to initiate a login cycle
-version: "3.0"
 services:
   oauth2-proxy:
     container_name: oauth2-proxy
