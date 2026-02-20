@@ -227,6 +227,7 @@ func (t *ticket) clearCookie(rw http.ResponseWriter, req *http.Request) {
 		"",
 		t.options,
 		time.Hour*-1,
+		t.options.SameSite,
 	))
 }
 
@@ -250,6 +251,7 @@ func (t *ticket) makeCookie(req *http.Request, value string, expires time.Durati
 		value,
 		t.options,
 		expires,
+		t.options.SameSite,
 	), nil
 }
 

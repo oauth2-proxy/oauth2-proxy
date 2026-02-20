@@ -222,6 +222,7 @@ var _ = Describe("CSRF Cookie with non-fixed name Tests", func() {
 						encoded,
 						csrf.cookieOpts,
 						csrf.cookieOpts.CSRFExpire,
+						csrf.cookieOpts.CSRFSameSite,
 					)
 					cookies = append(cookies, fmt.Sprintf("%v=%v", cookie.Name, cookie.Value))
 				}
