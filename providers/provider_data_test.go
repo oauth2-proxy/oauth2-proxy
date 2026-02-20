@@ -126,16 +126,16 @@ var (
 )
 
 type idTokenClaims struct {
-	Name     string      `json:"preferred_username,omitempty"`
-	Email    string      `json:"email,omitempty"`
-	Phone    string      `json:"phone_number,omitempty"`
-	Picture  string      `json:"picture,omitempty"`
-	Groups   interface{} `json:"groups,omitempty"`
-	Roles    interface{} `json:"roles,omitempty"`
+	Name        string      `json:"preferred_username,omitempty"`
+	Email       string      `json:"email,omitempty"`
+	Phone       string      `json:"phone_number,omitempty"`
+	Picture     string      `json:"picture,omitempty"`
+	Groups      interface{} `json:"groups,omitempty"`
+	Roles       interface{} `json:"roles,omitempty"`
 	DisplayName string      `json:"displayName,omitempty"`
 	JobTitle    string      `json:"jobTitle,omitempty"`
-	Verified *bool       `json:"email_verified,omitempty"`
-	Nonce    string      `json:"nonce,omitempty"`
+	Verified    *bool       `json:"email_verified,omitempty"`
+	Nonce       string      `json:"nonce,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -243,17 +243,21 @@ func TestProviderData_verifyIDToken(t *testing.T) {
 
 func TestProviderData_buildSessionFromClaims(t *testing.T) {
 	testCases := map[string]struct {
-		IDToken                  idTokenClaims
-		AllowUnverified          bool
-		UserClaim                string
-		EmailClaim               string
-		GroupsClaim              string
-		SkipClaimsFromProfileURL bool
-		SetProfileURL            bool
-		AdditionalClaims         []string
-		ExpectedError            error
-		ExpectedSession          *sessions.SessionState
-		ExpectProfileURLCalled   bool
+		IDToken                        idTokenClaims
+		AllowUnverified                bool
+		UserClaim                      string
+		EmailClaim                     string
+		GroupsClaim                    string
+		SkipClaimsFromProfileURL       bool
+		SetProfileURL                  bool
+		SetProfileURLFallback          bool
+		ProfileURLPayload              string
+		ProfileURLFallbackPayload      string
+		AdditionalClaims               []string
+		ExpectedError                  error
+		ExpectedSession                *sessions.SessionState
+		ExpectProfileURLCalled         bool
+		ExpectProfileURLFallbackCalled bool
 	}{
 		"Standard": {
 			IDToken:         defaultIDToken,
@@ -423,11 +427,11 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 			},
 		},
 		"Extra Claims": {
-			IDToken:         defaultIDToken,
-			AllowUnverified: true,
-			EmailClaim:      "email",
-			GroupsClaim:     "groups",
-			UserClaim:       "sub",
+			IDToken:          defaultIDToken,
+			AllowUnverified:  true,
+			EmailClaim:       "email",
+			GroupsClaim:      "groups",
+			UserClaim:        "sub",
 			AdditionalClaims: []string{"picture", "roles"},
 			ExpectedSession: &sessions.SessionState{
 				User:              "123456789",
@@ -461,14 +465,55 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 		"Request claims from ProfileURL": {
 			IDToken:                minimalIDToken,
 			SetProfileURL:          true,
+			ProfileURLPayload:      "{}",
 			ExpectProfileURLCalled: true,
 			ExpectedSession:        &sessions.SessionState{},
 		},
 		"Skip claims request to ProfileURL": {
 			IDToken:                  minimalIDToken,
 			SetProfileURL:            true,
+			ProfileURLPayload:        "{}",
 			SkipClaimsFromProfileURL: true,
 			ExpectedSession:          &sessions.SessionState{},
+		},
+		"Extra Claims from fallback ProfileURL": {
+			IDToken:                   minimalIDToken,
+			SetProfileURL:             true,
+			ProfileURLPayload:         "{}",
+			SetProfileURLFallback:     true,
+			ProfileURLFallbackPayload: `{"displayName":"Graph Jane","jobTitle":"Principal Consultant"}`,
+			AdditionalClaims:          []string{"displayName", "jobTitle"},
+			ExpectedSession: &sessions.SessionState{
+				ExtraClaims: map[string][]string{
+					"displayName": {"Graph Jane"},
+					"jobTitle":    {"Principal Consultant"},
+				},
+			},
+			ExpectProfileURLCalled:         true,
+			ExpectProfileURLFallbackCalled: true,
+		},
+		"Extra Claims prefer ID token over ProfileURL and fallback": {
+			IDToken:                   displayNameAndJobTitleIDToken,
+			AllowUnverified:           true,
+			EmailClaim:                "email",
+			GroupsClaim:               "groups",
+			UserClaim:                 "sub",
+			SetProfileURL:             true,
+			ProfileURLPayload:         `{"displayName":"UserInfo Jane"}`,
+			SetProfileURLFallback:     true,
+			ProfileURLFallbackPayload: `{"displayName":"Graph Jane"}`,
+			AdditionalClaims:          []string{"displayName"},
+			ExpectedSession: &sessions.SessionState{
+				User:              "123456789",
+				Email:             "janed@me.com",
+				Groups:            []string{"test:a", "test:b"},
+				PreferredUsername: "Jane Dobbs",
+				ExtraClaims: map[string][]string{
+					"displayName": {"Jane D."},
+				},
+			},
+			ExpectProfileURLCalled:         false,
+			ExpectProfileURLFallbackCalled: false,
 		},
 	}
 	for testName, tc := range testCases {
@@ -476,16 +521,35 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 			g := NewWithT(t)
 
 			var (
-				profileURL       *url.URL
-				profileURLCalled bool
+				profileURL               *url.URL
+				profileURLFallback       *url.URL
+				profileURLCalled         bool
+				profileURLFallbackCalled bool
 			)
 			if tc.SetProfileURL {
 				profileURLSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					profileURLCalled = true
-					w.Write([]byte("{}"))
+					payload := tc.ProfileURLPayload
+					if payload == "" {
+						payload = "{}"
+					}
+					w.Write([]byte(payload))
 				}))
 				defer profileURLSrv.Close()
 				profileURL, _ = url.Parse(profileURLSrv.URL)
+			}
+
+			if tc.SetProfileURLFallback {
+				profileURLFallbackSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					profileURLFallbackCalled = true
+					payload := tc.ProfileURLFallbackPayload
+					if payload == "" {
+						payload = "{}"
+					}
+					w.Write([]byte(payload))
+				}))
+				defer profileURLFallbackSrv.Close()
+				profileURLFallback, _ = url.Parse(profileURLFallbackSrv.URL)
 			}
 
 			verificationOptions := internaloidc.IDTokenVerificationOptions{
@@ -499,6 +563,7 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 					&oidc.Config{ClientID: oidcClientID},
 				), verificationOptions),
 				ProfileURL:                 profileURL,
+				ProfileURLFallback:         profileURLFallback,
 				getAuthorizationHeaderFunc: func(s string) http.Header { return http.Header{} },
 			}
 			provider.AllowUnverifiedEmail = tc.AllowUnverified
@@ -519,6 +584,7 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 				g.Expect(ss).To(Equal(tc.ExpectedSession))
 			}
 			g.Expect(profileURLCalled).To(Equal(tc.ExpectProfileURLCalled))
+			g.Expect(profileURLFallbackCalled).To(Equal(tc.ExpectProfileURLFallbackCalled))
 		})
 	}
 }

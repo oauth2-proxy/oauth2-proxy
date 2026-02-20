@@ -34,6 +34,8 @@ var _ = Describe("Providers", func() {
 	emptyIDMsg := "provider has empty id: ids are required for all providers"
 	duplicateProviderIDMsg := "multiple providers found with id ProviderID: provider ids must be unique"
 	skipButtonAndMultipleProvidersMsg := "SkipProviderButton and multiple providers are mutually exclusive"
+	invalidAdditionalClaimAccessToken := "provider \"ProviderID\" has invalid oidcConfig.additionalClaims entry \"access_token\": sensitive token claims are not allowed"
+	invalidAdditionalClaimRefreshToken := "provider \"ProviderID\" has invalid oidcConfig.additionalClaims entry \"refresh_token\": sensitive token claims are not allowed"
 
 	DescribeTable("validateProviders",
 		func(o *validateProvidersTableInput) {
@@ -78,6 +80,36 @@ var _ = Describe("Providers", func() {
 				},
 			},
 			errStrings: []string{skipButtonAndMultipleProvidersMsg},
+		}),
+		Entry("with sensitive additional claim access_token", &validateProvidersTableInput{
+			options: &options.Options{
+				Providers: options.Providers{
+					{
+						ID:           "ProviderID",
+						ClientID:     "ClientID",
+						ClientSecret: "ClientSecret",
+						OIDCConfig: options.OIDCOptions{
+							AdditionalClaims: []string{"access_token"},
+						},
+					},
+				},
+			},
+			errStrings: []string{invalidAdditionalClaimAccessToken},
+		}),
+		Entry("with sensitive additional claim refresh_token", &validateProvidersTableInput{
+			options: &options.Options{
+				Providers: options.Providers{
+					{
+						ID:           "ProviderID",
+						ClientID:     "ClientID",
+						ClientSecret: "ClientSecret",
+						OIDCConfig: options.OIDCOptions{
+							AdditionalClaims: []string{"refresh_token"},
+						},
+					},
+				},
+			},
+			errStrings: []string{invalidAdditionalClaimRefreshToken},
 		}),
 	)
 })

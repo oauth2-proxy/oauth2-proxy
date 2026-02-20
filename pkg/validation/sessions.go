@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -20,13 +21,9 @@ func validateSessionCookieMinimal(o *options.Options) []string {
 	for _, header := range append(o.InjectRequestHeaders, o.InjectResponseHeaders...) {
 		for _, value := range header.Values {
 			if value.ClaimSource != nil {
-				if value.ClaimSource.Claim == "access_token" {
+				if isSensitiveTokenClaim(value.ClaimSource.Claim) {
 					msgs = append(msgs,
-						fmt.Sprintf("access_token claim for header %q requires oauth tokens in sessions. session_cookie_minimal cannot be set", header.Name))
-				}
-				if value.ClaimSource.Claim == "id_token" {
-					msgs = append(msgs,
-						fmt.Sprintf("id_token claim for header %q requires oauth tokens in sessions. session_cookie_minimal cannot be set", header.Name))
+						fmt.Sprintf("%s claim for header %q requires oauth tokens in sessions. session_cookie_minimal cannot be set", value.ClaimSource.Claim, header.Name))
 				}
 			}
 		}
@@ -37,6 +34,15 @@ func validateSessionCookieMinimal(o *options.Options) []string {
 			"cookie_refresh > 0 requires oauth tokens in sessions. session_cookie_minimal cannot be set")
 	}
 	return msgs
+}
+
+func isSensitiveTokenClaim(claim string) bool {
+	switch strings.TrimSpace(claim) {
+	case "access_token", "id_token", "refresh_token":
+		return true
+	default:
+		return false
+	}
 }
 
 // validateRedisSessionStore builds a Redis Client from the options and

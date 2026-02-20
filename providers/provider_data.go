@@ -27,16 +27,17 @@ const (
 // ProviderData contains information required to configure all implementations
 // of OAuth2 providers
 type ProviderData struct {
-	ProviderName      string
-	LoginURL          *url.URL
-	RedeemURL         *url.URL
-	ProfileURL        *url.URL
-	ProtectedResource *url.URL
-	ValidateURL       *url.URL
-	ClientID          string
-	ClientSecret      string
-	ClientSecretFile  string
-	Scope             string
+	ProviderName       string
+	LoginURL           *url.URL
+	RedeemURL          *url.URL
+	ProfileURL         *url.URL
+	ProfileURLFallback *url.URL
+	ProtectedResource  *url.URL
+	ValidateURL        *url.URL
+	ClientID           string
+	ClientSecret       string
+	ClientSecretFile   string
+	Scope              string
 	// The response mode requested from the provider or empty for default ("query")
 	AuthRequestResponseMode string
 	// The picked CodeChallenge Method or empty if none.
@@ -307,11 +308,13 @@ func (p *ProviderData) buildSessionFromClaims(rawIDToken, accessToken string) (*
 
 func (p *ProviderData) getClaimExtractor(rawIDToken, accessToken string) (util.ClaimExtractor, error) {
 	profileURL := p.ProfileURL
+	profileURLFallback := p.ProfileURLFallback
 	if p.SkipClaimsFromProfileURL {
 		profileURL = &url.URL{}
+		profileURLFallback = &url.URL{}
 	}
 
-	extractor, err := util.NewClaimExtractor(context.TODO(), rawIDToken, profileURL, p.getAuthorizationHeader(accessToken))
+	extractor, err := util.NewClaimExtractor(context.TODO(), rawIDToken, profileURL, profileURLFallback, p.getAuthorizationHeader(accessToken))
 	if err != nil {
 		return nil, fmt.Errorf("could not initialise claim extractor: %v", err)
 	}

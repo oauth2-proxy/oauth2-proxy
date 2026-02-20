@@ -74,7 +74,7 @@ var _ = Describe("Claim Extractor Suite", func() {
 
 		DescribeTable("NewClaimExtractor",
 			func(in newClaimExtractorTableInput) {
-				_, err := NewClaimExtractor(context.Background(), in.idToken, nil, nil)
+				_, err := NewClaimExtractor(context.Background(), in.idToken, nil, nil, nil)
 				if in.expectedError != nil {
 					Expect(err).To(MatchError(in.expectedError))
 				} else {
@@ -257,6 +257,18 @@ var _ = Describe("Claim Extractor Suite", func() {
 				expectedValue: []interface{}{"nestedClaimContainingHypenGroup1", "nestedClaimContainingHypenGroup2"},
 				expectedError: nil,
 			}),
+			Entry("does not support indexed JSON path claims", getClaimTableInput{
+				testClaimExtractorOpts: testClaimExtractorOpts{
+					idTokenPayload:        basicIDTokenPayload,
+					setProfileURL:         true,
+					profileRequestHeaders: newAuthorizedHeader(),
+					profileRequestHandler: requiresAuthProfileHandler,
+				},
+				claim:         "groups.0",
+				expectExists:  false,
+				expectedValue: nil,
+				expectedError: nil,
+			}),
 		)
 	})
 
@@ -308,6 +320,81 @@ var _ = Describe("Claim Extractor Suite", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(exists).To(BeFalse())
 		Expect(value).To(BeNil())
+	})
+
+	It("GetClaim should use fallback profile URL when primary profile URL request fails", func() {
+		primaryRequestHandler := func(rw http.ResponseWriter, _ *http.Request) {
+			rw.WriteHeader(500)
+			rw.Write([]byte("boom"))
+		}
+
+		fallbackRequestHandler := func(rw http.ResponseWriter, req *http.Request) {
+			if !hasAuthorizedHeader(req.Header) {
+				rw.WriteHeader(403)
+				rw.Write([]byte("Unauthorized"))
+				return
+			}
+
+			rw.Write([]byte(`{"displayName":"Graph Jane"}`))
+		}
+
+		claimExtractor, serverClose, err := newTestClaimExtractor(testClaimExtractorOpts{
+			idTokenPayload:         "{}",
+			setProfileURL:          true,
+			profileRequestHeaders:  newAuthorizedHeader(),
+			profileRequestHandler:  primaryRequestHandler,
+			setFallbackProfileURL:  true,
+			fallbackRequestHandler: fallbackRequestHandler,
+		})
+		Expect(err).ToNot(HaveOccurred())
+		if serverClose != nil {
+			defer serverClose()
+		}
+
+		value, exists, err := claimExtractor.GetClaim("displayName")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(exists).To(BeTrue())
+		Expect(value).To(Equal("Graph Jane"))
+	})
+
+	It("GetClaim should keep primary profile URL precedence over fallback", func() {
+		primaryRequestHandler := func(rw http.ResponseWriter, req *http.Request) {
+			if !hasAuthorizedHeader(req.Header) {
+				rw.WriteHeader(403)
+				rw.Write([]byte("Unauthorized"))
+				return
+			}
+
+			rw.Write([]byte(`{"displayName":"UserInfo Jane"}`))
+		}
+
+		fallbackRequestHandler := func(rw http.ResponseWriter, req *http.Request) {
+			if !hasAuthorizedHeader(req.Header) {
+				rw.WriteHeader(403)
+				rw.Write([]byte("Unauthorized"))
+				return
+			}
+
+			rw.Write([]byte(`{"displayName":"Graph Jane"}`))
+		}
+
+		claimExtractor, serverClose, err := newTestClaimExtractor(testClaimExtractorOpts{
+			idTokenPayload:         "{}",
+			setProfileURL:          true,
+			profileRequestHeaders:  newAuthorizedHeader(),
+			profileRequestHandler:  primaryRequestHandler,
+			setFallbackProfileURL:  true,
+			fallbackRequestHandler: fallbackRequestHandler,
+		})
+		Expect(err).ToNot(HaveOccurred())
+		if serverClose != nil {
+			defer serverClose()
+		}
+
+		value, exists, err := claimExtractor.GetClaim("displayName")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(exists).To(BeTrue())
+		Expect(value).To(Equal("UserInfo Jane"))
 	})
 
 	type getClaimIntoTableInput struct {
@@ -552,27 +639,48 @@ var _ = Describe("Claim Extractor Suite", func() {
 // ******************************************
 
 type testClaimExtractorOpts struct {
-	idTokenPayload        string
-	setProfileURL         bool
-	profileRequestHeaders http.Header
-	profileRequestHandler http.HandlerFunc
+	idTokenPayload         string
+	setProfileURL          bool
+	profileRequestHeaders  http.Header
+	profileRequestHandler  http.HandlerFunc
+	setFallbackProfileURL  bool
+	fallbackRequestHandler http.HandlerFunc
 }
 
 func newTestClaimExtractor(in testClaimExtractorOpts) (ClaimExtractor, func(), error) {
 	var profileURL *url.URL
+	var fallbackProfileURL *url.URL
 	var closeServer func()
+	cleanup := []func(){}
 	if in.setProfileURL {
 		server := httptest.NewServer(http.HandlerFunc(in.profileRequestHandler))
-		closeServer = server.Close
+		cleanup = append(cleanup, server.Close)
 
 		var err error
 		profileURL, err = url.Parse("http://" + server.Listener.Addr().String() + profilePath)
 		Expect(err).ToNot(HaveOccurred())
 	}
 
+	if in.setFallbackProfileURL {
+		server := httptest.NewServer(http.HandlerFunc(in.fallbackRequestHandler))
+		cleanup = append(cleanup, server.Close)
+
+		var err error
+		fallbackProfileURL, err = url.Parse("http://" + server.Listener.Addr().String() + profilePath)
+		Expect(err).ToNot(HaveOccurred())
+	}
+
+	if len(cleanup) > 0 {
+		closeServer = func() {
+			for _, c := range cleanup {
+				c()
+			}
+		}
+	}
+
 	rawIDToken := createJWTFromPayload(in.idTokenPayload)
 
-	claimExtractor, err := NewClaimExtractor(context.Background(), rawIDToken, profileURL, in.profileRequestHeaders)
+	claimExtractor, err := NewClaimExtractor(context.Background(), rawIDToken, profileURL, fallbackProfileURL, in.profileRequestHeaders)
 	return claimExtractor, closeServer, err
 }
 

@@ -153,8 +153,16 @@ injectResponseHeaders:
 ```
 
 **Value sources:** 
-* `claimSource` - `claim` (session claims either from id token or from profile URL)
+* `claimSource` - `claim` (session claims from standard session fields or from `oidcConfig.additionalClaims`)
 * `secretSource` - `value` (base64), `fromFile` (file path)
+
+For `oidcConfig.additionalClaims`, claim values are resolved in this order:
+1. ID token
+2. OIDC `userinfo_endpoint` (when available via discovery)
+3. configured `profileURL` as fallback
+
+Only allowlisted additional claims are persisted in session `extraClaims`.
+Sensitive token claim names `access_token`, `id_token`, and `refresh_token` are rejected in `additionalClaims`.
 
 **Request option:** `preserveRequestValue: true` retains existing header values
 

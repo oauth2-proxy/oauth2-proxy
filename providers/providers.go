@@ -86,6 +86,9 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 		AuthRequestResponseMode: providerConfig.AuthRequestResponseMode,
 	}
 
+	configuredProfileURL := providerConfig.ProfileURL
+	profileURLFallback := ""
+
 	needsVerifier, err := providerRequiresOIDCProviderVerifier(providerConfig.Type)
 	if err != nil {
 		return nil, err
@@ -113,7 +116,12 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 			pkce := pv.Provider().PKCE()
 			providerConfig.LoginURL = endpoints.AuthURL
 			providerConfig.RedeemURL = endpoints.TokenURL
-			providerConfig.ProfileURL = endpoints.UserInfoURL
+			if endpoints.UserInfoURL != "" {
+				providerConfig.ProfileURL = endpoints.UserInfoURL
+				if configuredProfileURL != "" && configuredProfileURL != endpoints.UserInfoURL {
+					profileURLFallback = configuredProfileURL
+				}
+			}
 			providerConfig.OIDCConfig.JwksURL = endpoints.JWKsURL
 			p.SupportedCodeChallengeMethods = pkce.CodeChallengeAlgs
 		}
@@ -124,11 +132,12 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 		dst **url.URL
 		raw string
 	}{
-		"login":    {dst: &p.LoginURL, raw: providerConfig.LoginURL},
-		"redeem":   {dst: &p.RedeemURL, raw: providerConfig.RedeemURL},
-		"profile":  {dst: &p.ProfileURL, raw: providerConfig.ProfileURL},
-		"validate": {dst: &p.ValidateURL, raw: providerConfig.ValidateURL},
-		"resource": {dst: &p.ProtectedResource, raw: providerConfig.ProtectedResource},
+		"login":            {dst: &p.LoginURL, raw: providerConfig.LoginURL},
+		"redeem":           {dst: &p.RedeemURL, raw: providerConfig.RedeemURL},
+		"profile":          {dst: &p.ProfileURL, raw: providerConfig.ProfileURL},
+		"profile fallback": {dst: &p.ProfileURLFallback, raw: profileURLFallback},
+		"validate":         {dst: &p.ValidateURL, raw: providerConfig.ValidateURL},
+		"resource":         {dst: &p.ProtectedResource, raw: providerConfig.ProtectedResource},
 	} {
 		var err error
 		*u.dst, err = url.Parse(u.raw)

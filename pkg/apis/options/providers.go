@@ -118,7 +118,9 @@ type Provider struct {
 	AuthRequestResponseMode string `yaml:"authRequestResponseMode,omitempty"`
 	// RedeemURL is the token redemption endpoint
 	RedeemURL string `yaml:"redeemURL,omitempty"`
-	// ProfileURL is the profile access endpoint
+	// ProfileURL is the profile access endpoint.
+	// When OIDC discovery is enabled and userinfo_endpoint is discovered, that endpoint is used as the primary profile source.
+	// In that case, a configured ProfileURL is used as a fallback profile source.
 	ProfileURL string `yaml:"profileURL,omitempty"`
 	// SkipClaimsFromProfileURL allows to skip request to Profile URL for resolving claims not present in id_token
 	// default set to 'false'
@@ -318,8 +320,10 @@ type OIDCOptions struct {
 	// ExtraAudiences is a list of additional audiences that are allowed
 	// to pass verification in addition to the client id.
 	ExtraAudiences []string `yaml:"extraAudiences,omitempty"`
-	// AdditionalClaims defines additional claims to pull from the ID token or
-	// profile URL and store in the session for claimSource usage.
+	// AdditionalClaims defines an allowlist of additional claim names to pull from the ID token,
+	// then from discovered userinfo endpoint, then from fallback profile URL (if configured).
+	// Only these claims are stored in the session for claimSource usage.
+	// Sensitive token claim names (`access_token`, `id_token`, `refresh_token`) are not allowed.
 	AdditionalClaims []string `yaml:"additionalClaims,omitempty"`
 }
 
