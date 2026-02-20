@@ -43,7 +43,7 @@ func cookieFlagSet() *pflag.FlagSet {
 	flagSet.Bool("cookie-csrf-per-request", false, "When this property is set to true, then the CSRF cookie name is built based on the state and varies per request. If property is set to false, then CSRF cookie has the same name for all requests.")
 	flagSet.Int("cookie-csrf-per-request-limit", 0, "Sets a limit on the number of CSRF requests cookies that oauth2-proxy will create. The oldest cookies will be removed. Useful if users end up with 431 Request headers too large status codes.")
 	flagSet.Duration("cookie-csrf-expire", time.Duration(15)*time.Minute, "expire timeframe for CSRF cookie")
-	flagSet.String("cookie-csrf-samesite", "", "set SameSite CSRF cookie attribute (ie: \"lax\", \"strict\", \"none\", or \"\"). ")
+	flagSet.String("cookie-csrf-samesite", "", "set SameSite CSRF cookie attribute (ie: \"lax\", \"strict\", \"none\", or \"\"). When using the default setting, the CSRF cookie samesite value is taken from the session cookie configuration.")
 	return flagSet
 }
 
