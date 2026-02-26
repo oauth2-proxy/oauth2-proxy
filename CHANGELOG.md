@@ -6,6 +6,16 @@
 
 ## Breaking Changes
 
+## Changes since v7.14.3
+
+# V7.14.3
+
+## Release Highlights
+
+## Important Notes
+
+## Breaking Changes
+
 ## Changes since v7.14.2
 
 - [#3183](https://github.com/oauth2-proxy/oauth2-proxy/pull/3183) fix: allow URL parameters to configure username, password and max idle connection timeout if the matching configuration is empty.
