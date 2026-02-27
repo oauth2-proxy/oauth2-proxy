@@ -7,6 +7,8 @@ import (
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/version"
 	"github.com/spf13/pflag"
@@ -57,6 +59,21 @@ func main() {
 	oauthproxy, err := NewOAuthProxy(opts, validator)
 	if err != nil {
 		logger.Fatalf("ERROR: Failed to initialise OAuth2 Proxy: %v", err)
+	}
+
+	// Set up dynamic CA certificate reloading if CA files are configured
+	if !opts.SSLInsecureSkipVerify && len(opts.Providers[0].CAFiles) > 0 {
+		caLoader, err := requests.NewDynamicCALoader(
+			opts.Providers[0].CAFiles,
+			ptr.Deref(opts.Providers[0].UseSystemTrustStore, options.DefaultUseSystemTrustStore),
+		)
+		if err != nil {
+			logger.Fatalf("ERROR: Failed to load CA certificates: %v", err)
+		}
+		requests.SetDefaultTransport(requests.NewDynamicTLSTransport(caLoader))
+		if err := caLoader.StartWatching(nil); err != nil {
+			logger.Printf("WARNING: Failed to start CA file watching: %v", err)
+		}
 	}
 
 	if err := oauthproxy.Start(); err != nil {
