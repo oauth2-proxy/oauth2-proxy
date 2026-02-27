@@ -746,14 +746,16 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
+	// Call backend logout before clearing the session so we still have the session
+	// (and id_token) available to invoke the provider's logout endpoint
+	p.backendLogout(rw, req)
+
 	err = p.ClearSessionCookie(rw, req)
 	if err != nil {
 		logger.Errorf("Error clearing session cookie: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
-
-	p.backendLogout(rw, req)
 
 	http.Redirect(rw, req, redirect, http.StatusFound)
 }
