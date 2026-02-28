@@ -183,10 +183,13 @@ var _ = Describe("Stored Session Suite", func() {
 				rw := httptest.NewRecorder()
 
 				opts := &StoredSessionLoaderOptions{
-					SessionStore:    in.store,
-					RefreshPeriod:   in.refreshPeriod,
-					RefreshSession:  in.refreshSession,
-					ValidateSession: in.validateSession,
+					SessionStore:                in.store,
+					RefreshPeriod:               in.refreshPeriod,
+					SessionRefreshLockDuration:  2 * time.Second,
+					SessionRefreshObtainTimeout: 5 * time.Second,
+					SessionRefreshRetryPeriod:   10 * time.Millisecond,
+					RefreshSession:              in.refreshSession,
+					ValidateSession:             in.validateSession,
 				}
 
 				// Create the handler with a next handler that will capture the session
@@ -383,8 +386,11 @@ var _ = Describe("Stored Session Suite", func() {
 
 						sessionRefreshed := false
 						opts := &StoredSessionLoaderOptions{
-							SessionStore:  store,
-							RefreshPeriod: in.refreshPeriod,
+							SessionStore:                store,
+							RefreshPeriod:               in.refreshPeriod,
+							SessionRefreshLockDuration:  2 * time.Second,
+							SessionRefreshObtainTimeout: 5 * time.Second,
+							SessionRefreshRetryPeriod:   10 * time.Millisecond,
 							RefreshSession: func(ctx context.Context, s *sessionsapi.SessionState) (bool, error) {
 								time.Sleep(10 * time.Millisecond)
 								sessionRefreshed = true
@@ -479,8 +485,11 @@ var _ = Describe("Stored Session Suite", func() {
 				}
 
 				s := &storedSessionLoader{
-					refreshPeriod: in.refreshPeriod,
-					store:         store,
+					refreshPeriod:               in.refreshPeriod,
+					store:                       store,
+					sessionRefreshLockDuration:  2 * time.Second,
+					sessionRefreshObtainTimeout: 5 * time.Second,
+					sessionRefreshRetryPeriod:   10 * time.Millisecond,
 					sessionRefresher: func(_ context.Context, ss *sessionsapi.SessionState) (bool, error) {
 						refreshed = true
 						switch ss.RefreshToken {

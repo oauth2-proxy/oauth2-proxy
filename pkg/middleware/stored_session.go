@@ -14,23 +14,6 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
 )
 
-const (
-	// When attempting to obtain the lock, if it's not done before this timeout
-	// then exit and fail the refresh attempt.
-	// TODO: This should probably be configurable by the end user.
-	sessionRefreshObtainTimeout = 5 * time.Second
-
-	// Maximum time allowed for a session refresh attempt.
-	// If the refresh request isn't finished within this time, the lock will be
-	// released.
-	// TODO: This should probably be configurable by the end user.
-	sessionRefreshLockDuration = 2 * time.Second
-
-	// How long to wait after failing to obtain the lock before trying again.
-	// TODO: This should probably be configurable by the end user.
-	sessionRefreshRetryPeriod = 10 * time.Millisecond
-)
-
 // StoredSessionLoaderOptions contains all of the requirements to construct
 // a stored session loader.
 // All options must be provided.
@@ -40,6 +23,17 @@ type StoredSessionLoaderOptions struct {
 
 	// How often should sessions be refreshed
 	RefreshPeriod time.Duration
+
+	// Maximum time allowed for a session refresh attempt.
+	// If the refresh request isn't finished within this time, the lock will be released.
+	SessionRefreshLockDuration time.Duration
+
+	// Timeout when attempting to obtain the session lock.
+	// If the lock is not obtained before this timeout, the refresh attempt will fail.
+	SessionRefreshObtainTimeout time.Duration
+
+	// How long to wait after failing to obtain the lock before trying again.
+	SessionRefreshRetryPeriod time.Duration
 
 	// Provider based session refreshing
 	RefreshSession func(context.Context, *sessionsapi.SessionState) (bool, error)
@@ -56,10 +50,13 @@ type StoredSessionLoaderOptions struct {
 // If a session was loader by a previous handler, it will not be replaced.
 func NewStoredSessionLoader(opts *StoredSessionLoaderOptions) alice.Constructor {
 	ss := &storedSessionLoader{
-		store:            opts.SessionStore,
-		refreshPeriod:    opts.RefreshPeriod,
-		sessionRefresher: opts.RefreshSession,
-		sessionValidator: opts.ValidateSession,
+		store:                       opts.SessionStore,
+		refreshPeriod:               opts.RefreshPeriod,
+		sessionRefreshLockDuration:  opts.SessionRefreshLockDuration,
+		sessionRefreshObtainTimeout: opts.SessionRefreshObtainTimeout,
+		sessionRefreshRetryPeriod:   opts.SessionRefreshRetryPeriod,
+		sessionRefresher:            opts.RefreshSession,
+		sessionValidator:            opts.ValidateSession,
 	}
 	return ss.loadSession
 }
@@ -67,10 +64,13 @@ func NewStoredSessionLoader(opts *StoredSessionLoaderOptions) alice.Constructor 
 // storedSessionLoader is responsible for loading sessions from cookie
 // identified sessions in the session store.
 type storedSessionLoader struct {
-	store            sessionsapi.SessionStore
-	refreshPeriod    time.Duration
-	sessionRefresher func(context.Context, *sessionsapi.SessionState) (bool, error)
-	sessionValidator func(context.Context, *sessionsapi.SessionState) bool
+	store                       sessionsapi.SessionStore
+	refreshPeriod               time.Duration
+	sessionRefreshLockDuration  time.Duration
+	sessionRefreshObtainTimeout time.Duration
+	sessionRefreshRetryPeriod   time.Duration
+	sessionRefresher            func(context.Context, *sessionsapi.SessionState) (bool, error)
+	sessionValidator            func(context.Context, *sessionsapi.SessionState) bool
 }
 
 // loadSession attempts to load a session as identified by the request cookies.
@@ -131,7 +131,7 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
 	}
 
 	var lockObtained bool
-	ctx, cancel := context.WithTimeout(context.Background(), sessionRefreshObtainTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), s.sessionRefreshObtainTimeout)
 	defer cancel()
 
 	for !lockObtained {
@@ -139,11 +139,11 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
 		case <-ctx.Done():
 			return errors.New("timeout obtaining session lock")
 		default:
-			err := session.ObtainLock(req.Context(), sessionRefreshLockDuration)
+			err := session.ObtainLock(req.Context(), s.sessionRefreshLockDuration)
 			if err != nil && !errors.Is(err, sessionsapi.ErrLockNotObtained) {
 				return fmt.Errorf("error occurred while trying to obtain lock: %v", err)
 			} else if errors.Is(err, sessionsapi.ErrLockNotObtained) {
-				time.Sleep(sessionRefreshRetryPeriod)
+				time.Sleep(s.sessionRefreshRetryPeriod)
 				continue
 			}
 			// No error means we obtained the lock

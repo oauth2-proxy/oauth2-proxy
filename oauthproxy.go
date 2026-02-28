@@ -415,10 +415,13 @@ func buildSessionChain(opts *options.Options, provider providers.Provider, sessi
 	}
 
 	chain = chain.Append(middleware.NewStoredSessionLoader(&middleware.StoredSessionLoaderOptions{
-		SessionStore:    sessionStore,
-		RefreshPeriod:   opts.Cookie.Refresh,
-		RefreshSession:  provider.RefreshSession,
-		ValidateSession: provider.ValidateSession,
+		SessionStore:                sessionStore,
+		RefreshPeriod:               opts.Cookie.Refresh,
+		SessionRefreshLockDuration:  opts.Cookie.SessionRefreshLockDuration,
+		SessionRefreshObtainTimeout: opts.Cookie.SessionRefreshObtainTimeout,
+		SessionRefreshRetryPeriod:   opts.Cookie.SessionRefreshRetryPeriod,
+		RefreshSession:              provider.RefreshSession,
+		ValidateSession:             provider.ValidateSession,
 	}))
 
 	return chain
