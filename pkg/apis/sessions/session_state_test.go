@@ -155,6 +155,26 @@ func TestAge(t *testing.T) {
 	assert.Equal(t, time.Hour, ss.Age().Round(time.Minute))
 }
 
+func TestGetClaimAdditionalClaims(t *testing.T) {
+	ss := &SessionState{
+		ExtraClaims: map[string][]string{
+			"displayName": []string{"Jane D."},
+			"jobTitle":    []string{"Principal Consultant"},
+		},
+	}
+
+	assert.Equal(t, []string{"Jane D."}, ss.GetClaim("displayName"))
+	assert.Equal(t, []string{"Principal Consultant"}, ss.GetClaim("jobTitle"))
+	assert.Equal(t, []string{}, ss.GetClaim("missing"))
+
+	result := ss.GetClaim("displayName")
+	result[0] = "Mutated"
+	assert.Equal(t, []string{"Jane D."}, ss.GetClaim("displayName"))
+
+	var nilSession *SessionState
+	assert.Equal(t, []string{}, nilSession.GetClaim("displayName"))
+}
+
 // TestEncodeAndDecodeSessionState encodes & decodes various session states
 // and confirms the operation is 1:1
 func TestEncodeAndDecodeSessionState(t *testing.T) {

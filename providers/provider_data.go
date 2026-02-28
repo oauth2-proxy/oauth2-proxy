@@ -27,16 +27,17 @@ const (
 // ProviderData contains information required to configure all implementations
 // of OAuth2 providers
 type ProviderData struct {
-	ProviderName      string
-	LoginURL          *url.URL
-	RedeemURL         *url.URL
-	ProfileURL        *url.URL
-	ProtectedResource *url.URL
-	ValidateURL       *url.URL
-	ClientID          string
-	ClientSecret      string
-	ClientSecretFile  string
-	Scope             string
+	ProviderName       string
+	LoginURL           *url.URL
+	RedeemURL          *url.URL
+	ProfileURL         *url.URL
+	ProfileURLFallback *url.URL
+	ProtectedResource  *url.URL
+	ValidateURL        *url.URL
+	ClientID           string
+	ClientSecret       string
+	ClientSecretFile   string
+	Scope              string
 	// The response mode requested from the provider or empty for default ("query")
 	AuthRequestResponseMode string
 	// The picked CodeChallenge Method or empty if none.
@@ -51,6 +52,7 @@ type ProviderData struct {
 	GroupsClaim              string
 	Verifier                 internaloidc.IDTokenVerifier
 	SkipClaimsFromProfileURL bool
+	AdditionalClaims         []string
 
 	// Universal Group authorization data structure
 	// any provider can set to consume
@@ -268,6 +270,23 @@ func (p *ProviderData) buildSessionFromClaims(rawIDToken, accessToken string) (*
 		}
 	}
 
+	if len(p.AdditionalClaims) > 0 {
+		for _, claim := range p.AdditionalClaims {
+			var values []string
+			exists, err := extractor.GetClaimInto(claim, &values)
+			if err != nil {
+				return nil, err
+			}
+			if !exists || len(values) == 0 {
+				continue
+			}
+			if ss.ExtraClaims == nil {
+				ss.ExtraClaims = map[string][]string{}
+			}
+			ss.ExtraClaims[claim] = append([]string(nil), values...)
+		}
+	}
+
 	// `email_verified` must be present and explicitly set to `false` to be
 	// considered unverified.
 	verifyEmail := (p.EmailClaim == options.OIDCEmailClaim) && !p.AllowUnverifiedEmail
@@ -289,11 +308,13 @@ func (p *ProviderData) buildSessionFromClaims(rawIDToken, accessToken string) (*
 
 func (p *ProviderData) getClaimExtractor(rawIDToken, accessToken string) (util.ClaimExtractor, error) {
 	profileURL := p.ProfileURL
+	profileURLFallback := p.ProfileURLFallback
 	if p.SkipClaimsFromProfileURL {
 		profileURL = &url.URL{}
+		profileURLFallback = &url.URL{}
 	}
 
-	extractor, err := util.NewClaimExtractor(context.TODO(), rawIDToken, profileURL, p.getAuthorizationHeader(accessToken))
+	extractor, err := util.NewClaimExtractor(context.TODO(), rawIDToken, profileURL, profileURLFallback, p.getAuthorizationHeader(accessToken))
 	if err != nil {
 		return nil, fmt.Errorf("could not initialise claim extractor: %v", err)
 	}

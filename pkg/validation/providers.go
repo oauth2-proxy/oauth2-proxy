@@ -59,6 +59,21 @@ func validateProvider(provider options.Provider, providerIDs map[string]struct{}
 		msgs = append(msgs, validateEntraConfig(provider)...)
 	}
 
+	msgs = append(msgs, validateAdditionalClaims(provider)...)
+
+	return msgs
+}
+
+func validateAdditionalClaims(provider options.Provider) []string {
+	msgs := []string{}
+
+	for _, claim := range provider.OIDCConfig.AdditionalClaims {
+		if isSensitiveTokenClaim(claim) {
+			msgs = append(msgs,
+				fmt.Sprintf("provider %q has invalid oidcConfig.additionalClaims entry %q: sensitive token claims are not allowed", provider.ID, claim))
+		}
+	}
+
 	return msgs
 }
 

@@ -152,9 +152,17 @@ injectResponseHeaders:
           value: c3VwZXItc2VjcmV0LXBhc3N3b3Jk # base64 encoded password
 ```
 
-**Value sources:** 
-* `claimSource` - `claim` (session claims either from id token or from profile URL)
+**Value sources:**
+* `claimSource` - `claim` (session claims from standard session fields or from `oidcConfig.additionalClaims`)
 * `secretSource` - `value` (base64), `fromFile` (file path)
+
+For `oidcConfig.additionalClaims`, claim values are resolved in this order:
+1. ID token
+2. OIDC `userinfo_endpoint` (when available via discovery)
+3. configured `profileURL` as fallback
+
+Only allowlisted additional claims are persisted in session `extraClaims`.
+Sensitive token claim names `access_token`, `id_token`, and `refresh_token` are rejected in `additionalClaims`.
 
 **Request option:** `preserveRequestValue: true` retains existing header values
 
@@ -279,7 +287,7 @@ ClaimSource allows loading a header value from a claim within the session
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `claim` | _string_ | Claim is the name of the claim in the session that the value should be<br/>loaded from. Available claims: `access_token` `id_token` `created_at`<br/>`expires_on` `refresh_token` `email` `user` `groups` `preferred_username`. |
+| `claim` | _string_ | Claim is the name of the claim in the session that the value should be<br/>loaded from. Available claims: `access_token` `id_token` `created_at`<br/>`expires_on` `refresh_token` `email` `user` `groups` `preferred_username`,<br/>plus any custom claims configured in `oidcConfig.additionalClaims`. |
 | `prefix` | _string_ | Prefix is an optional prefix that will be prepended to the value of the<br/>claim if it is non-empty. |
 | `basicAuthPassword` | _[SecretSource](#secretsource)_ | BasicAuthPassword converts this claim into a basic auth header.<br/>Note the value of claim will become the basic auth username and the<br/>basicAuthPassword will be used as the password value. |
 
@@ -488,6 +496,7 @@ character.
 | `userIDClaim` | _string_ | UserIDClaim indicates which claim contains the user ID<br/>default set to 'email' |
 | `audienceClaims` | _[]string_ | AudienceClaim allows to define any claim that is verified against the client id<br/>By default `aud` claim is used for verification. |
 | `extraAudiences` | _[]string_ | ExtraAudiences is a list of additional audiences that are allowed<br/>to pass verification in addition to the client id. |
+| `additionalClaims` | _[]string_ | AdditionalClaims is an allowlist of additional claim names to pull from the ID token,<br/>then OIDC userinfo endpoint, then fallback profileURL, and store in the session for ClaimSource use.<br/>Sensitive token claim names (`access_token`, `id_token`, `refresh_token`) are not allowed. |
 
 ### Provider
 
@@ -519,7 +528,7 @@ Provider holds all configuration for a single provider
 | `loginURLParameters` | _[[]LoginURLParameter](#loginurlparameter)_ | LoginURLParameters defines the parameters that can be passed from the start URL to the IdP login URL |
 | `authRequestResponseMode` | _string_ | AuthRequestResponseMode defines the response mode to request during authorization request |
 | `redeemURL` | _string_ | RedeemURL is the token redemption endpoint |
-| `profileURL` | _string_ | ProfileURL is the profile access endpoint |
+| `profileURL` | _string_ | ProfileURL is the profile access endpoint.<br/>When OIDC discovery provides `userinfo_endpoint`, that endpoint is primary and profileURL is used as fallback. |
 | `skipClaimsFromProfileURL` | _bool_ | SkipClaimsFromProfileURL allows to skip request to Profile URL for resolving claims not present in id_token<br/>default set to 'false' |
 | `resource` | _string_ | ProtectedResource is the resource that is protected (Azure AD and ADFS only) |
 | `validateURL` | _string_ | ValidateURL is the access token validation endpoint |

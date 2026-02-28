@@ -104,6 +104,53 @@ For personal microsoft accounts, required scope is `openid profile email`.
 
 See: [Overview of permissions and consent in the Microsoft identity platform](https://learn.microsoft.com/en-us/entra/identity-platform/permissions-consent-overview).
 
+### Additional claims for `auth_request` response headers
+
+You can expose extra identity fields via `claimSource` when they are explicitly allowlisted in `oidcConfig.additionalClaims`.
+
+Claim lookup order is:
+1. ID token
+2. OIDC `userinfo_endpoint` (from discovery)
+3. configured `profileURL` fallback (for example Microsoft Graph `/me`)
+
+For Entra ID specifically:
+- `jobTitle` is typically available from Microsoft Graph `/me`, not in the ID token.
+- Display name may be `name` in ID token, while Graph returns `displayName`.
+
+Minimal alpha-config example (ID token `name`, Graph `/me` fallback for `displayName` and `jobTitle`):
+
+```yaml
+providers:
+    - id: entra
+        provider: entra-id
+        clientID: "${OAUTH_CLIENT_ID}"
+        clientSecret: "${OAUTH_CLIENT_SECRET}"
+        oidcConfig:
+            issuerURL: "https://login.microsoftonline.com/<tenant-id>/v2.0"
+            additionalClaims:
+                - name
+                - displayName
+                - jobTitle
+        # If discovery returns userinfo_endpoint, this profileURL is used as fallback
+        # when claims are missing or userinfo cannot satisfy them.
+        profileURL: "https://graph.microsoft.com/v1.0/me?$select=displayName,jobTitle"
+        scope: "openid profile email User.Read"
+
+injectResponseHeaders:
+    - name: X-Auth-Request-Name
+        values:
+            - claimSource:
+                    claim: name
+    - name: X-Auth-Request-DisplayName
+        values:
+            - claimSource:
+                    claim: displayName
+    - name: X-Auth-Request-JobTitle
+        values:
+            - claimSource:
+                    claim: jobTitle
+```
+
 ### Multi-tenant apps
 To authenticate apps from multiple tenants (including personal Microsoft accounts), set the common OIDC issuer url and disable verification:
 ```toml

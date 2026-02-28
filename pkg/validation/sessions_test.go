@@ -12,9 +12,10 @@ import (
 
 var _ = Describe("Sessions", func() {
 	const (
-		idTokenConflictMsg     = "id_token claim for header \"X-ID-Token\" requires oauth tokens in sessions. session_cookie_minimal cannot be set"
-		accessTokenConflictMsg = "access_token claim for header \"X-Access-Token\" requires oauth tokens in sessions. session_cookie_minimal cannot be set"
-		cookieRefreshMsg       = "cookie_refresh > 0 requires oauth tokens in sessions. session_cookie_minimal cannot be set"
+		idTokenConflictMsg      = "id_token claim for header \"X-ID-Token\" requires oauth tokens in sessions. session_cookie_minimal cannot be set"
+		accessTokenConflictMsg  = "access_token claim for header \"X-Access-Token\" requires oauth tokens in sessions. session_cookie_minimal cannot be set"
+		refreshTokenConflictMsg = "refresh_token claim for header \"X-Refresh-Token\" requires oauth tokens in sessions. session_cookie_minimal cannot be set"
+		cookieRefreshMsg        = "cookie_refresh > 0 requires oauth tokens in sessions. session_cookie_minimal cannot be set"
 	)
 
 	type cookieMinimalTableInput struct {
@@ -133,6 +134,28 @@ var _ = Describe("Sessions", func() {
 				},
 			},
 			errStrings: []string{accessTokenConflictMsg},
+		}),
+		Entry("Request Header refresh_token conflict", &cookieMinimalTableInput{
+			opts: &options.Options{
+				Session: options.SessionOptions{
+					Cookie: options.CookieStoreOptions{
+						Minimal: true,
+					},
+				},
+				InjectRequestHeaders: []options.Header{
+					{
+						Name: "X-Refresh-Token",
+						Values: []options.HeaderValue{
+							{
+								ClaimSource: &options.ClaimSource{
+									Claim: "refresh_token",
+								},
+							},
+						},
+					},
+				},
+			},
+			errStrings: []string{refreshTokenConflictMsg},
 		}),
 		Entry("CookieRefresh conflict", &cookieMinimalTableInput{
 			opts: &options.Options{

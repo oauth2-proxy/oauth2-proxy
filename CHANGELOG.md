@@ -27,6 +27,7 @@ We improved our supply chain security by added additional checks to prevent pote
 ## Changes since v7.14.2
 
 - [#3183](https://github.com/oauth2-proxy/oauth2-proxy/pull/3183) fix: allow URL parameters to configure username, password and max idle connection timeout if the matching configuration is empty.
+- [#3340](https://github.com/oauth2-proxy/oauth2-proxy/issues/3340) feat: allow injecting additional OIDC claims via `oidcConfig.additionalClaims`
 
 # V7.14.2
 
@@ -78,7 +79,7 @@ We improved our supply chain security by added additional checks to prevent pote
 
 ## Important Notes
 
-This release introduces a breaking change for Alpha Config users and moves us significantly 
+This release introduces a breaking change for Alpha Config users and moves us significantly
 closer to removing legacy configuration parameters, making the codebase of OAuth2 Proxy more
 future proof and extensible.
 
@@ -155,7 +156,7 @@ the project for future maintainability and future improvements like structured l
 - [#3292](https://github.com/oauth2-proxy/oauth2-proxy/pull/3292) chore(deps): upgrade gomod and bump to golang v1.25.5 (@tuunit)
 - [#3304](https://github.com/oauth2-proxy/oauth2-proxy/pull/3304) fix: added conditional so default is not always set and env vars are honored fixes 3303 (@pixeldrew)
 - [#3264](https://github.com/oauth2-proxy/oauth2-proxy/pull/3264) fix: more aggressively truncate logged access_token (@MartinNowak / @tuunit)
-- [#3267](https://github.com/oauth2-proxy/oauth2-proxy/pull/3267) fix: Session refresh handling in OIDC provider (@gysel) 
+- [#3267](https://github.com/oauth2-proxy/oauth2-proxy/pull/3267) fix: Session refresh handling in OIDC provider (@gysel)
 - [#3290](https://github.com/oauth2-proxy/oauth2-proxy/pull/3290) fix: WebSocket proxy to respect PassHostHeader setting (@UnsignedLong)
 
 # V7.13.0
