@@ -1154,19 +1154,55 @@ func authOnlyAuthorize(req *http.Request, s *sessionsapi.SessionState) bool {
 		return true
 	}
 
-	constraints := []func(*http.Request, *sessionsapi.SessionState) bool{
+	// By default, all checks are required to pass (AND logic).
+	// If `require_all_matches=false` is set, only one check needs to pass (OR logic).
+	requireAllMatches := !(req.URL.Query().Get("require_all_matches") == "false")
+
+	// By default, if no constraints are set, the request is allowed.
+	// If `constraints_required=true` is set, at least one constraint must be present
+	// and pass for the request to be allowed.
+	constraintsRequired := req.URL.Query().Get("constraints_required") == "true"
+
+	constraints := []func(*http.Request, *sessionsapi.SessionState) (allowed, found bool){
 		checkAllowedGroups,
 		checkAllowedEmailDomains,
 		checkAllowedEmails,
+		checkAllowedUsers,
 	}
 
-	for _, constraint := range constraints {
-		if !constraint(req, s) {
-			return false
+	var constraintsFound bool
+	var passedCount int
+	var failedCount int
+
+	for _, check := range constraints {
+		allowed, found := check(req, s)
+
+		// We only care about constraints that are actually configured (found)
+		if found {
+			constraintsFound = true
+			if allowed {
+				passedCount++
+			} else {
+				failedCount++
+			}
 		}
 	}
 
-	return true
+	// CASE 1: No constraints were configured/found.
+	if !constraintsFound {
+		// By default, allow the request if no constraints are set.
+		// If constraints are required, deny because none were present.
+		return !constraintsRequired
+	}
+
+	// CASE 2: Constraints were found. Apply the combination logic.
+	if requireAllMatches {
+		// Default behavior: All configured constraints must pass (AND logic).
+		return failedCount == 0
+	}
+
+	// Alternative behavior: Only one configured constraint needs to pass (OR logic).
+	return passedCount > 0
 }
 
 // extractAllowedEntities aims to extract and split allowed entities linked by a key,
@@ -1189,15 +1225,15 @@ func extractAllowedEntities(req *http.Request, key string) map[string]struct{} {
 
 // checkAllowedEmailDomains allow email domain restrictions based on the `allowed_email_domains`
 // querystring parameter
-func checkAllowedEmailDomains(req *http.Request, s *sessionsapi.SessionState) bool {
+func checkAllowedEmailDomains(req *http.Request, s *sessionsapi.SessionState) (allowed, found bool) {
 	allowedEmailDomains := extractAllowedEntities(req, "allowed_email_domains")
 	if len(allowedEmailDomains) == 0 {
-		return true
+		return true, false
 	}
 
 	splitEmail := strings.Split(s.Email, "@")
 	if len(splitEmail) != 2 {
-		return false
+		return false, true
 	}
 
 	endpoint, _ := url.Parse("")
@@ -1208,35 +1244,51 @@ func checkAllowedEmailDomains(req *http.Request, s *sessionsapi.SessionState) bo
 		allowedEmailDomainsList = append(allowedEmailDomainsList, ed)
 	}
 
-	return util.IsEndpointAllowed(endpoint, allowedEmailDomainsList)
+	return util.IsEndpointAllowed(endpoint, allowedEmailDomainsList), true
 }
 
 // checkAllowedGroups allow secondary group restrictions based on the `allowed_groups`
 // querystring parameter
-func checkAllowedGroups(req *http.Request, s *sessionsapi.SessionState) bool {
+func checkAllowedGroups(req *http.Request, s *sessionsapi.SessionState) (allowed, found bool) {
 	allowedGroups := extractAllowedEntities(req, "allowed_groups")
 	if len(allowedGroups) == 0 {
-		return true
+		return true, false
 	}
 
 	for _, group := range s.Groups {
 		if _, ok := allowedGroups[group]; ok {
-			return true
+			return true, true
 		}
 	}
 
-	return false
+	return false, true
+}
+
+// checkAllowedUsers allow user restrictions based on the `allowed_users`
+// querystring parameter
+func checkAllowedUsers(req *http.Request, s *sessionsapi.SessionState) (allowed, found bool) {
+	allowedUsers := extractAllowedEntities(req, "allowed_users")
+	if len(allowedUsers) == 0 {
+		return true, false
+	}
+
+	for user := range allowedUsers {
+		if user == s.User {
+			allowed = true
+			break
+		}
+	}
+
+	return allowed, true
 }
 
 // checkAllowedEmails allow email restrictions based on the `allowed_emails`
 // querystring parameter
-func checkAllowedEmails(req *http.Request, s *sessionsapi.SessionState) bool {
+func checkAllowedEmails(req *http.Request, s *sessionsapi.SessionState) (allowed, found bool) {
 	allowedEmails := extractAllowedEntities(req, "allowed_emails")
 	if len(allowedEmails) == 0 {
-		return true
+		return true, false
 	}
-
-	allowed := false
 
 	for email := range allowedEmails {
 		if email == s.Email {
@@ -1245,7 +1297,7 @@ func checkAllowedEmails(req *http.Request, s *sessionsapi.SessionState) bool {
 		}
 	}
 
-	return allowed
+	return allowed, true
 }
 
 // encodeState builds the OAuth state param out of our nonce and
