@@ -1,6 +1,6 @@
 module github.com/oauth2-proxy/oauth2-proxy/v7
 
-go 1.25.6
+go 1.25.0
 
 require (
 	cloud.google.com/go/compute/metadata v0.9.0

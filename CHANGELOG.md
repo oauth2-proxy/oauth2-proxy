@@ -6,6 +6,24 @@
 
 ## Breaking Changes
 
+## Changes since v7.14.3
+
+# V7.14.3
+
+## Release Highlights
+
+- 🔵 Go1.25.7 and upgrade of dependencies to latest versions
+  - Fixes [CVE-2025-68121](https://nvd.nist.gov/vuln/detail/cve-2025-68121)
+- 🐛 Bug fixes
+  - Allow Redis URL parameters to configure username, password and max idle connection timeout if the matching configuration is empty.
+
+## Important Notes
+
+We improved our supply chain security by added additional checks to prevent potential command injection in the publish release workflow and to ensure that it can only be triggered from branches originating in the local repository. This potential issue was reported by automated systems as well as a couple of security researchers, and we want to thank everyone for their diligence in looking out for the security of the project. Especially Aastha Aggarwal for her detailed report and follow-up. @Aastha2602
+
+
+## Breaking Changes
+
 ## Changes since v7.14.2
 
 - [#3183](https://github.com/oauth2-proxy/oauth2-proxy/pull/3183) fix: allow URL parameters to configure username, password and max idle connection timeout if the matching configuration is empty.
