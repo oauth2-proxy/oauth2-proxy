@@ -234,7 +234,7 @@ func decodeCSRFCookie(cookie *http.Cookie, opts *options.Cookie) (*csrf, error) 
 		return nil, fmt.Errorf("error getting cookie secret: %v", err)
 	}
 
-	val, t, ok := encryption.Validate(cookie, secret, opts.Expire)
+	val, t, ok := encryption.Validate(cookie, secret, opts.CSRFExpire)
 	if !ok {
 		return nil, errors.New("CSRF cookie failed validation")
 	}
