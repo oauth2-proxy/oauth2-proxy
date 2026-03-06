@@ -27,6 +27,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/app/redirect"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/authentication/basic"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/cookies"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/dpop"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/proxyhttp"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
@@ -118,6 +119,15 @@ type OAuthProxy struct {
 
 // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
 func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthProxy, error) {
+	var dpopValidator dpop.Validator
+	if opts.DPoP.Enable {
+		dpopStore, err := dpop.NewDpopStore(opts)
+		if err != nil {
+			return nil, fmt.Errorf("error initialising DPoP store: %v", err)
+		}
+		dpopValidator = dpop.NewDpopValidator(opts.DPoP.TimeWindow, dpopStore)
+	}
+
 	sessionStore, err := sessions.NewSessionStore(&opts.Session, &opts.Cookie)
 	if err != nil {
 		return nil, fmt.Errorf("error initialising session store: %v", err)
@@ -204,7 +214,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 	if err != nil {
 		return nil, fmt.Errorf("could not build pre-auth chain: %v", err)
 	}
-	sessionChain := buildSessionChain(opts, provider, sessionStore, basicAuthValidator)
+	sessionChain := buildSessionChain(opts, provider, sessionStore, basicAuthValidator, dpopValidator)
 	headersChain, err := buildHeadersChain(opts)
 	if err != nil {
 		return nil, fmt.Errorf("could not build headers chain: %v", err)
@@ -393,7 +403,7 @@ func buildPreAuthChain(opts *options.Options, sessionStore sessionsapi.SessionSt
 	return chain, nil
 }
 
-func buildSessionChain(opts *options.Options, provider providers.Provider, sessionStore sessionsapi.SessionStore, validator basic.Validator) alice.Chain {
+func buildSessionChain(opts *options.Options, provider providers.Provider, sessionStore sessionsapi.SessionStore, validator basic.Validator, dpopValidator dpop.Validator) alice.Chain {
 	chain := alice.New()
 
 	if opts.SkipJwtBearerTokens {
@@ -407,7 +417,7 @@ func buildSessionChain(opts *options.Options, provider providers.Provider, sessi
 				middlewareapi.CreateTokenToSessionFunc(verifier.Verify))
 		}
 
-		chain = chain.Append(middleware.NewJwtSessionLoader(sessionLoaders, opts.BearerTokenLoginFallback))
+		chain = chain.Append(middleware.NewJwtSessionLoader(sessionLoaders, opts.BearerTokenLoginFallback, dpopValidator))
 	}
 
 	if validator != nil {

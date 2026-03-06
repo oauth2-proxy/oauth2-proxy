@@ -115,7 +115,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				// Create the handler with a next handler that will capture the session
 				// from the scope
 				var gotSession *sessionsapi.SessionState
-				handler := NewJwtSessionLoader(sessionLoaders, true)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				handler := NewJwtSessionLoader(sessionLoaders, true, nil)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					gotSession = middlewareapi.GetRequestScope(r).Session
 				}))
 				handler.ServeHTTP(rw, req)
@@ -185,7 +185,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				// Create the handler with a next handler that will capture the session
 				// from the scope
 				var gotSession *sessionsapi.SessionState
-				handler := NewJwtSessionLoader(sessionLoaders, false)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				handler := NewJwtSessionLoader(sessionLoaders, false, nil)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					gotSession = middlewareapi.GetRequestScope(r).Session
 				}))
 				handler.ServeHTTP(rw, req)
@@ -263,6 +263,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				sessionLoaders: []middlewareapi.TokenToSessionFunc{
 					middlewareapi.CreateTokenToSessionFunc(verifier),
 				},
+				dpopValidator: nil,
 			}
 		})
 
@@ -334,84 +335,153 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 
 		BeforeEach(func() {
 			j = &jwtSessionLoader{
-				jwtRegex: regexp.MustCompile(jwtRegexFormat),
+				jwtRegex:      regexp.MustCompile(jwtRegexFormat),
+				dpopValidator: nil,
 			}
 		})
 
 		type findBearerTokenFromHeaderTableInput struct {
 			header        string
 			expectedErr   error
+<<<<<<< Updated upstream
+=======
+			expectedType  string
+>>>>>>> Stashed changes
 			expectedToken string
 		}
 
 		DescribeTable("with a header",
 			func(in findBearerTokenFromHeaderTableInput) {
+<<<<<<< Updated upstream
 				token, err := j.findTokenFromHeader(in.header)
+=======
+				tokenType, token, err := j.findTokenFromHeader(in.header)
+>>>>>>> Stashed changes
 				if in.expectedErr != nil {
 					Expect(err).To(MatchError(in.expectedErr))
 				} else {
 					Expect(err).ToNot(HaveOccurred())
 				}
+<<<<<<< Updated upstream
+=======
+				Expect(tokenType).To(Equal(in.expectedType))
+>>>>>>> Stashed changes
 				Expect(token).To(Equal(in.expectedToken))
 			},
 			Entry("Bearer", findBearerTokenFromHeaderTableInput{
 				header:        "Bearer",
 				expectedErr:   errors.New("invalid authorization header: \"Bearer\""),
+<<<<<<< Updated upstream
+=======
+				expectedType:  "",
+>>>>>>> Stashed changes
 				expectedToken: "",
 			}),
 			Entry("Bearer abc def", findBearerTokenFromHeaderTableInput{
 				header:        "Bearer abc def",
 				expectedErr:   errors.New("invalid authorization header: \"Bearer abc def\""),
+<<<<<<< Updated upstream
+=======
+				expectedType:  "",
+>>>>>>> Stashed changes
 				expectedToken: "",
 			}),
 			Entry("Bearer abcdef", findBearerTokenFromHeaderTableInput{
 				header:        "Bearer abcdef",
 				expectedErr:   errors.New("no valid bearer token found in authorization header"),
+<<<<<<< Updated upstream
+=======
+				expectedType:  "",
+>>>>>>> Stashed changes
 				expectedToken: "",
 			}),
 			Entry("Bearer <valid-token>", findBearerTokenFromHeaderTableInput{
 				header:        fmt.Sprintf("Bearer %s", validToken),
 				expectedErr:   nil,
+<<<<<<< Updated upstream
+=======
+				expectedType:  "Bearer",
+				expectedToken: validToken,
+			}),
+			Entry("DPoP <valid-token>", findBearerTokenFromHeaderTableInput{
+				header:        fmt.Sprintf("DPoP %s", validToken),
+				expectedErr:   nil,
+				expectedType:  "DPoP",
+>>>>>>> Stashed changes
 				expectedToken: validToken,
 			}),
 			Entry("Bearer <valid-token-with-whitespace>", findBearerTokenFromHeaderTableInput{
 				header:        fmt.Sprintf("Bearer %s", validTokenWithSpace),
 				expectedErr:   nil,
+<<<<<<< Updated upstream
+=======
+				expectedType:  "Bearer",
+>>>>>>> Stashed changes
 				expectedToken: validTokenWithSpace,
 			}),
 			Entry("Basic invalid-base64", findBearerTokenFromHeaderTableInput{
 				header:        "Basic invalid-base64",
 				expectedErr:   errors.New("invalid basic auth token: illegal base64 data at input byte 7"),
+<<<<<<< Updated upstream
+=======
+				expectedType:  "",
+>>>>>>> Stashed changes
 				expectedToken: "",
 			}),
 			Entry("Basic Base64(<validToken>:) (No password)", findBearerTokenFromHeaderTableInput{
 				header:        "Basic ZXlKZm9vYmFyLmV5SmZvb2Jhci4xMjM0NWFzZGY6",
 				expectedErr:   nil,
+<<<<<<< Updated upstream
 				expectedToken: validToken,
 			}),
 			Entry("Basic Base64(<validToken>:x-oauth-basic) (Sentinel password)", findBearerTokenFromHeaderTableInput{
 				header:        "Basic ZXlKZm9vYmFyLmV5SmZvb2Jhci4xMjM0NWFzZGY6eC1vYXV0aC1iYXNpYw==",
 				expectedErr:   nil,
+=======
+				expectedType:  "Bearer",
+				expectedToken: validToken,
+			}),
+			Entry("Basic Base64(<verifiedToken>:x-oauth-basic) (Sentinel password)", findBearerTokenFromHeaderTableInput{
+				header:        "Basic ZXlKZm9vYmFyLmV5SmZvb2Jhci4xMjM0NWFzZGY6eC1vYXV0aC1iYXNpYw==",
+				expectedErr:   nil,
+				expectedType:  "Bearer",
+>>>>>>> Stashed changes
 				expectedToken: validToken,
 			}),
 			Entry("Basic Base64(any-user:<validToken>) (Matching password)", findBearerTokenFromHeaderTableInput{
 				header:        "Basic YW55LXVzZXI6ZXlKZm9vYmFyLmV5SmZvb2Jhci4xMjM0NWFzZGY=",
 				expectedErr:   nil,
+<<<<<<< Updated upstream
+=======
+				expectedType:  "Bearer",
+>>>>>>> Stashed changes
 				expectedToken: validToken,
 			}),
 			Entry("Basic Base64(any-user:any-password) (No matches)", findBearerTokenFromHeaderTableInput{
 				header:        "Basic YW55LXVzZXI6YW55LXBhc3N3b3Jk",
 				expectedErr:   errors.New("invalid basic auth token found in authorization header"),
+<<<<<<< Updated upstream
+=======
+				expectedType:  "",
+>>>>>>> Stashed changes
 				expectedToken: "",
 			}),
 			Entry("Basic Base64(any-user any-password) (Invalid format)", findBearerTokenFromHeaderTableInput{
 				header:        "Basic YW55LXVzZXIgYW55LXBhc3N3b3Jk",
 				expectedErr:   errors.New("invalid format: \"any-user any-password\""),
+<<<<<<< Updated upstream
+=======
+				expectedType:  "",
+>>>>>>> Stashed changes
 				expectedToken: "",
 			}),
 			Entry("Something <valid-token>", findBearerTokenFromHeaderTableInput{
 				header:        fmt.Sprintf("Something %s", validToken),
 				expectedErr:   errors.New("no valid bearer token found in authorization header"),
+<<<<<<< Updated upstream
+=======
+				expectedType:  "",
+>>>>>>> Stashed changes
 				expectedToken: "",
 			}),
 		)
