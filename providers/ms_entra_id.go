@@ -73,6 +73,11 @@ func (p *MicrosoftEntraIDProvider) EnrichSession(ctx context.Context, session *s
 		if err = p.addGraphGroupsToSession(ctx, session); err != nil {
 			return fmt.Errorf("unable to enrich session: %v", err)
 		}
+	} else {
+		logger.Printf("reading groups from Graph API")
+		if err = p.addGraphGroupsToSession(ctx, session); err != nil {
+			return fmt.Errorf("unable to enrich session: %v", err)
+		}
 	}
 
 	return nil
@@ -251,7 +256,10 @@ func (p *MicrosoftEntraIDProvider) addGraphGroupsToSession(ctx context.Context, 
 
 		for i := range reqGroups {
 			value := response.Get("value").GetIndex(i).Get("id").MustString()
-			allGroups = append(allGroups, value)
+			// allGroups = append(allGroups, value)
+			if _, ok := p.AllowedGroups[value]; ok {
+				allGroups = append(allGroups, value)
+			}
 		}
 
 		// https://learn.microsoft.com/en-us/graph/paging?view=graph-rest-1.0&tabs=http#how-paging-works
