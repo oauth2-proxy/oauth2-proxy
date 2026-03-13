@@ -124,7 +124,12 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 	}
 
 	var basicAuthValidator basic.Validator
-	if opts.HtpasswdFile != "" {
+	if opts.RedirectSignUrl != "" {
+		basicAuthValidator = &basic.AppLoginValidator{
+			LoginURL: opts.RedirectSignUrl,
+			Timeout:  60 * time.Second,
+		}
+	} else if opts.HtpasswdFile != "" {
 		logger.Printf("using htpasswd file: %s", opts.HtpasswdFile)
 		var err error
 		basicAuthValidator, err = basic.NewHTPasswdValidator(opts.HtpasswdFile)
