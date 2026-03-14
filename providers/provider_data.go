@@ -45,12 +45,26 @@ type ProviderData struct {
 	SupportedCodeChallengeMethods []string `json:"code_challenge_methods_supported,omitempty"`
 
 	// Common OIDC options for any OIDC-based providers to consume
-	AllowUnverifiedEmail     bool
-	UserClaim                string
-	EmailClaim               string
-	GroupsClaim              string
-	Verifier                 internaloidc.IDTokenVerifier
-	AdditionalClaims         []string `json:"additionalClaims,omitempty"`
+	AllowUnverifiedEmail bool
+
+	// UserClaim is the claim to use for populating the SessionState.User field.  Defaults to "sub" if not set.
+	UserClaim string
+
+	// EmailClaim is the claim to use for populating the SessionState.Email field.
+	EmailClaim string
+
+	// GroupsClaim is the claim to use for populating the SessionState.Groups field.
+	// If not set, groups will not be extracted from the ID Token or userinfo response.
+	GroupsClaim string
+
+	// Verifier is the OIDC ID Token Verifier to be used by any OIDC-based providers to verify ID Tokens returned by the provider.
+	// It must be set up by the provider implementation and is not expected to be configured directly by users.
+	Verifier internaloidc.IDTokenVerifier
+
+	// Additional claims to be obtained from the upstream IDP, either from the id_token or from the userinfo endpoint if configured.
+	AdditionalClaims []string `json:"additionalClaims,omitempty"`
+
+	// SkipClaimsFromProfileURL indicates that claims should not be fetched from the ProfileURL, even if it is set.
 	SkipClaimsFromProfileURL bool
 
 	// Universal Group authorization data structure
@@ -269,7 +283,6 @@ func (p *ProviderData) buildSessionFromClaims(rawIDToken, accessToken string) (*
 		}
 	}
 
-	// Extract additional claims
 	if p.AdditionalClaims != nil {
 		p.extractAdditionalClaims(extractor, ss)
 	}
@@ -309,10 +322,15 @@ func (p *ProviderData) getClaimExtractor(rawIDToken, accessToken string) (util.C
 
 func (p *ProviderData) extractAdditionalClaims(extractor util.ClaimExtractor, ss *sessions.SessionState) {
 	if ss.AdditionalClaims == nil {
-		ss.AdditionalClaims = make(map[string]interface{})
+		ss.AdditionalClaims = make(map[string]any)
 	}
 	for _, claim := range p.AdditionalClaims {
-		if value, exists, err := extractor.GetClaim(claim); err == nil && exists {
+		value, exists, err := extractor.GetClaim(claim)
+		if err != nil {
+			logger.Printf("error extracting additional claim %q: %v", claim, err)
+			continue
+		}
+		if exists {
 			ss.AdditionalClaims[claim] = value
 		}
 	}

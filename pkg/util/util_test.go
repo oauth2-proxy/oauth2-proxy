@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -256,23 +257,11 @@ func TestGetCertPool(t *testing.T) {
 	}
 }
 
-func stringPointer(s string) *string {
-	return &s
-}
-
-func stringSlicePointer(s []string) *[]string {
-	return &s
-}
-
-func boolPointer(b bool) *bool {
-	return &b
-}
-
 type coerceClaimTableInput struct {
 	name          string
-	value         interface{}
-	dst           interface{}
-	expectedDst   interface{}
+	value         any
+	dst           any
+	expectedDst   any
 	expectedError error
 }
 
@@ -281,34 +270,34 @@ func TestCoerceClaim(t *testing.T) {
 		{
 			name:        "coerces a string to a string",
 			value:       "some_string",
-			dst:         stringPointer(""),
-			expectedDst: stringPointer("some_string"),
+			dst:         ptr.To(""),
+			expectedDst: ptr.To("some_string"),
 		},
 		{
 			name:        "coerces a slice to a string slice",
-			value:       []interface{}{"a", "b"},
-			dst:         stringSlicePointer([]string{}),
-			expectedDst: stringSlicePointer([]string{"a", "b"}),
+			value:       []any{"a", "b"},
+			dst:         ptr.To([]string{}),
+			expectedDst: ptr.To([]string{"a", "b"}),
 		},
 		{
 			name:        "coerces a bool to a bool",
 			value:       true,
-			dst:         boolPointer(false),
-			expectedDst: boolPointer(true),
+			dst:         ptr.To(false),
+			expectedDst: ptr.To(true),
 		},
 		{
 			name:        "coerces a string to a bool",
 			value:       "true",
-			dst:         boolPointer(false),
-			expectedDst: boolPointer(true),
+			dst:         ptr.To(false),
+			expectedDst: ptr.To(true),
 		},
 		{
 			name: "coerces a map to a string",
-			value: map[string]interface{}{
-				"foo": []interface{}{"bar", "baz"},
+			value: map[string]any{
+				"foo": []any{"bar", "baz"},
 			},
-			dst:         stringPointer(""),
-			expectedDst: stringPointer("{\"foo\":[\"bar\",\"baz\"]}"),
+			dst:         ptr.To(""),
+			expectedDst: ptr.To("{\"foo\":[\"bar\",\"baz\"]}"),
 		},
 	}
 

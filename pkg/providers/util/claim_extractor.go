@@ -18,10 +18,10 @@ import (
 // present, from the profile URL.
 type ClaimExtractor interface {
 	// GetClaim fetches a named claim and returns the value.
-	GetClaim(claim string) (interface{}, bool, error)
+	GetClaim(claim string) (any, bool, error)
 
 	// GetClaimInto fetches a named claim and puts the value into the destination.
-	GetClaimInto(claim string, dst interface{}) (bool, error)
+	GetClaimInto(claim string, dst any) (bool, error)
 }
 
 // NewClaimExtractor constructs a new ClaimExtractor from the raw ID Token.
@@ -30,12 +30,12 @@ type ClaimExtractor interface {
 func NewClaimExtractor(ctx context.Context, idToken string, profileURL *url.URL, profileRequestHeaders http.Header) (ClaimExtractor, error) {
 	payload, err := parseJWT(idToken)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse ID Token: %v", err)
+		return nil, fmt.Errorf("failed to parse ID Token: %w", err)
 	}
 
 	tokenClaims, err := simplejson.NewJson(payload)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse ID Token payload: %v", err)
+		return nil, fmt.Errorf("failed to parse ID Token payload: %w", err)
 	}
 
 	return &claimExtractor{
@@ -58,7 +58,7 @@ type claimExtractor struct {
 // GetClaim will return the value claim if it exists.
 // It will only return an error if the profile URL needs to be fetched due to
 // the claim not being present in the ID Token.
-func (c *claimExtractor) GetClaim(claim string) (interface{}, bool, error) {
+func (c *claimExtractor) GetClaim(claim string) (any, bool, error) {
 	if claim == "" {
 		return nil, false, nil
 	}
@@ -123,7 +123,7 @@ func (c *claimExtractor) loadProfileClaims() (*simplejson.Json, error) {
 // GetClaimInto loads a claim and places it into the destination interface.
 // This will attempt to coerce the claim into the specified type.
 // If it cannot be coerced, an error may be returned.
-func (c *claimExtractor) GetClaimInto(claim string, dst interface{}) (bool, error) {
+func (c *claimExtractor) GetClaimInto(claim string, dst any) (bool, error) {
 	value, exists, err := c.GetClaim(claim)
 	if err != nil {
 		return false, fmt.Errorf("could not get claim %q: %v", claim, err)
@@ -132,7 +132,7 @@ func (c *claimExtractor) GetClaimInto(claim string, dst interface{}) (bool, erro
 		return false, nil
 	}
 	if err := util.CoerceClaim(value, dst); err != nil {
-		return false, fmt.Errorf("could no coerce claim: %v", err)
+		return false, fmt.Errorf("could not coerce claim: %v", err)
 	}
 
 	return true, nil
@@ -155,7 +155,7 @@ func parseJWT(p string) ([]byte, error) {
 // getClaimFrom gets a claim from a Json object.
 // It can accept either a single claim name or a json path. The claim is always evaluated first as a single claim name.
 // Paths with indexes are not supported.
-func getClaimFrom(claim string, src *simplejson.Json) interface{} {
+func getClaimFrom(claim string, src *simplejson.Json) any {
 	if value, ok := src.CheckGet(claim); ok {
 		return value.Interface()
 	}

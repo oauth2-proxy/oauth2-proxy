@@ -198,7 +198,7 @@ func RemoveDuplicateStr(strSlice []string) []string {
 // CoerceClaim tries to convert the value into the destination interface type.
 // If it can convert the value, it will then store the value in the destination
 // interface.
-func CoerceClaim(value, dst interface{}) error {
+func CoerceClaim(value, dst any) error {
 	switch d := dst.(type) {
 	case *string:
 		str, err := toString(value)
@@ -222,15 +222,13 @@ func CoerceClaim(value, dst interface{}) error {
 
 // toStringSlice converts an interface (either a slice or single value) into
 // a slice of strings.
-func toStringSlice(value interface{}) ([]string, error) {
-	var sliceValues []interface{}
+func toStringSlice(value any) ([]string, error) {
+	var sliceValues []any
 	switch v := value.(type) {
-	case []interface{}:
+	case []any:
 		sliceValues = v
-	case interface{}:
-		sliceValues = []interface{}{v}
 	default:
-		sliceValues = cast.ToSlice(value)
+		sliceValues = []any{v}
 	}
 
 	out := []string{}
@@ -246,7 +244,7 @@ func toStringSlice(value interface{}) ([]string, error) {
 
 // toString coerces a value into a string.
 // If it is non-string, marshal it into JSON.
-func toString(value interface{}) (string, error) {
+func toString(value any) (string, error) {
 	if str, err := cast.ToStringE(value); err == nil {
 		return str, nil
 	}

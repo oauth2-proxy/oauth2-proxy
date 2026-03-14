@@ -76,7 +76,7 @@ var _ = Describe("Claim Extractor Suite", func() {
 			func(in newClaimExtractorTableInput) {
 				_, err := NewClaimExtractor(context.Background(), in.idToken, nil, nil)
 				if in.expectedError != nil {
-					Expect(err).To(MatchError(in.expectedError))
+					Expect(err).To(MatchError(in.expectedError.Error()))
 				} else {
 					Expect(err).ToNot(HaveOccurred())
 				}
@@ -405,7 +405,7 @@ var _ = Describe("Claim Extractor Suite", func() {
 			into:          "",
 			expectExists:  false,
 			expectedValue: "",
-			expectedError: errors.New("could no coerce claim: unknown type for destination: string"),
+			expectedError: errors.New("could not coerce claim: unknown type for destination: string"),
 		}),
 		Entry("flattens a complex claim value into a JSON string", getClaimIntoTableInput{
 			testClaimExtractorOpts: testClaimExtractorOpts{
