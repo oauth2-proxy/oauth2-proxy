@@ -2028,6 +2028,44 @@ func Test_noCacheHeaders(t *testing.T) {
 	})
 }
 
+func TestSignOutCallsBackendLogoutURL(t *testing.T) {
+	const testIDToken = "test-id-token-12345"
+	var receivedURL string
+	backendLogoutServer := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		receivedURL = req.URL.String()
+		rw.WriteHeader(http.StatusOK)
+	}))
+	defer backendLogoutServer.Close()
+
+	opts := baseTestOptions()
+	opts.Providers[0].BackendLogoutURL = backendLogoutServer.URL + "/logout?id_token_hint={id_token}"
+	err := validation.Validate(opts)
+	require.NoError(t, err)
+
+	proxy, err := NewOAuthProxy(opts, func(string) bool { return true })
+	require.NoError(t, err)
+
+	// Save a session with IDToken so backend logout can use it
+	rw := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	err = proxy.sessionStore.Save(rw, req, &sessions.SessionState{
+		Email:   "user@example.com",
+		IDToken: testIDToken,
+	})
+	require.NoError(t, err)
+	cookie := rw.Header().Values("Set-Cookie")[0]
+
+	// Hit sign_out with the session cookie; backend logout should be called before session is cleared
+	signOutReq := httptest.NewRequest(http.MethodGet, "/oauth2/sign_out", nil)
+	signOutReq.Header.Set("Cookie", cookie)
+	rec := httptest.NewRecorder()
+	proxy.ServeHTTP(rec, signOutReq)
+
+	assert.Equal(t, http.StatusFound, rec.Code, "sign_out should redirect")
+	assert.Contains(t, receivedURL, "id_token_hint="+testIDToken,
+		"backend logout URL should have been called with id_token from session")
+}
+
 func baseTestOptions() *options.Options {
 	opts := options.NewOptions()
 	opts.Cookie.Secret = rawCookieSecret
