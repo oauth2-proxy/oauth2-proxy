@@ -8,6 +8,8 @@
 
 ## Changes since v7.14.3
 
+- [#3352](https://github.com/oauth2-proxy/oauth2-proxy/pull/3352) fix: backend logout URL call on sign out (#3172)(@vsejpal)
+
 # V7.14.3
 
 ## Release Highlights
