@@ -30,16 +30,23 @@ for ARCH in "${ARCHS[@]}"; do
 	GO_OS=$(echo $ARCH | awk -F- '{print $1}')
 	GO_ARCH=$(echo $ARCH | awk -F- '{print $2}')
 
+	# Determine binary name based on OS
+	if [[ "${GO_OS}" == "windows" ]]; then
+		BINARY_NAME="${BINARY}.exe"
+	else
+		BINARY_NAME="${BINARY}"
+	fi
+
 	# Create architecture specific binaries
 	if [[ ${GO_ARCH} == armv* ]]; then
 	  GO_ARM=$(echo $GO_ARCH | awk -Fv '{print $2}')
 		GO111MODULE=on GOOS=${GO_OS} GOARCH=arm GOARM=${GO_ARM} CGO_ENABLED=0 go build \
 			-ldflags="-X github.com/oauth2-proxy/oauth2-proxy/v7/pkg/version.VERSION=${VERSION}" \
-			-o release/${BINARY}-${VERSION}.${ARCH}/${BINARY} .
+			-o release/${BINARY}-${VERSION}.${ARCH}/${BINARY_NAME} .
 	else
 		GO111MODULE=on GOOS=${GO_OS} GOARCH=${GO_ARCH} CGO_ENABLED=0 go build \
 			-ldflags="-X github.com/oauth2-proxy/oauth2-proxy/v7/pkg/version.VERSION=${VERSION}" \
-			-o release/${BINARY}-${VERSION}.${ARCH}/${BINARY} .
+			-o release/${BINARY}-${VERSION}.${ARCH}/${BINARY_NAME} .
 	fi
 
 	cd release
@@ -51,7 +58,7 @@ for ARCH in "${ARCHS[@]}"; do
 	sha256sum ${BINARY}-${VERSION}.${ARCH}.tar.gz > ${BINARY}-${VERSION}.${ARCH}.tar.gz-sha256sum.txt
 
 	# Create sha256sum for architecture specific binary
-  sha256sum ${BINARY}-${VERSION}.${ARCH}/${BINARY} > ${BINARY}-${VERSION}.${ARCH}-sha256sum.txt
+  sha256sum ${BINARY}-${VERSION}.${ARCH}/${BINARY_NAME} > ${BINARY}-${VERSION}.${ARCH}-sha256sum.txt
 
 	cd ..
 done
