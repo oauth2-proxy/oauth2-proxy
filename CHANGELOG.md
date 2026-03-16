@@ -2,11 +2,7 @@
 
 ## Release Highlights
 
-- It is now possible to set a SameSite in CSRF cookie different from the one defined for the session cookie.
-
 ## Important Notes
-
-- [#3347](https://github.com/oauth2-proxy/oauth2-proxy/pull/3347) New option "--cookie-csrf-samesite" added, to define the SameSite value of CSRF cookie. If option is not configured, then CSRF cookie SameSite is equal to the one configured for the session cookie.
 
 ## Breaking Changes
 
