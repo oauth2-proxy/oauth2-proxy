@@ -69,6 +69,11 @@ func providerRequiresClientSecret(provider options.Provider) bool {
 		return false
 	}
 
+	// PKCE with S256 doesn't require client secret
+	if provider.Type == "oidc" && provider.CodeChallengeMethod == "S256" {
+		return false
+	}
+
 	if provider.Type == "login.gov" {
 		return false
 	}
