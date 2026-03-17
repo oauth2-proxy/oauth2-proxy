@@ -71,4 +71,7 @@ LABEL org.opencontainers.image.licenses=MIT \
       org.opencontainers.image.title=oauth2-proxy \
       org.opencontainers.image.version=${VERSION}
 
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD ["/bin/oauth2-proxy", "health"]
+
 ENTRYPOINT ["/bin/oauth2-proxy"]

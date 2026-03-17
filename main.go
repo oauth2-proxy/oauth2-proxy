@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/healthcheck"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/version"
@@ -15,6 +17,12 @@ import (
 
 func main() {
 	logger.SetFlags(logger.Lshortfile)
+
+	// Check if "health" subcommand is being invoked (e.g., "oauth2-proxy health")
+	if len(os.Args) > 1 && os.Args[1] == "health" {
+		runHealthCheck(os.Args[2:])
+		return
+	}
 
 	configFlagSet := pflag.NewFlagSet("oauth2-proxy", pflag.ContinueOnError)
 
@@ -26,10 +34,16 @@ func main() {
 	alphaConfig := configFlagSet.String("alpha-config", "", "path to alpha config file (use at your own risk - the structure in this config file may change between minor releases)")
 	convertConfig := configFlagSet.Bool("convert-config-to-alpha", false, "if true, the proxy will load configuration as normal and convert existing configuration to the alpha config structure, and print it to stdout")
 	showVersion := configFlagSet.Bool("version", false, "print version string")
+	checkHealth := configFlagSet.Bool("healthcheck", false, "perform a health check against a running oauth2-proxy instance and exit")
 	configFlagSet.Parse(os.Args[1:])
 
 	if *showVersion {
 		fmt.Printf("oauth2-proxy %s (built with %s)\n", version.VERSION, runtime.Version())
+		return
+	}
+
+	if *checkHealth {
+		runHealthCheckFromConfig(*config, *alphaConfig, configFlagSet, os.Args[1:])
 		return
 	}
 
@@ -62,6 +76,66 @@ func main() {
 	if err := oauthproxy.Start(); err != nil {
 		logger.Fatalf("ERROR: Failed to start OAuth2 Proxy: %v", err)
 	}
+}
+
+// runHealthCheck handles the "health" subcommand with its own flag set.
+func runHealthCheck(args []string) {
+	fs := pflag.NewFlagSet("health", pflag.ContinueOnError)
+	httpAddr := fs.String("http-address", healthcheck.DefaultHTTPAddress, "HTTP address of the oauth2-proxy instance to check")
+	httpsAddr := fs.String("https-address", "", "HTTPS address of the oauth2-proxy instance to check")
+	pingPath := fs.String("ping-path", healthcheck.DefaultPingPath, "path of the ping endpoint")
+	timeout := fs.Duration("timeout", healthcheck.DefaultTimeout, "timeout for the health check request")
+	insecure := fs.Bool("insecure-skip-verify", false, "skip TLS certificate verification for HTTPS health checks")
+
+	if err := fs.Parse(args); err != nil {
+		logger.Fatalf("ERROR: %v", err)
+	}
+
+	opts := healthcheck.CheckOptions{
+		HTTPAddress:        *httpAddr,
+		HTTPSAddress:       *httpsAddr,
+		PingPath:           *pingPath,
+		Timeout:            *timeout,
+		InsecureSkipVerify: *insecure,
+	}
+
+	if err := healthcheck.Run(opts); err != nil {
+		fmt.Fprintf(os.Stderr, "healthcheck failed: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("OK")
+}
+
+// runHealthCheckFromConfig performs a health check using the loaded configuration.
+// This supports the --healthcheck flag which respects the same configuration as the proxy.
+func runHealthCheckFromConfig(config, alphaConfig string, extraFlags *pflag.FlagSet, args []string) {
+	opts, err := loadConfiguration(config, alphaConfig, extraFlags, args)
+	if err != nil {
+		// If config loading fails, fall back to defaults
+		logger.Printf("WARNING: failed to load configuration: %v; using defaults", err)
+		checkOpts := healthcheck.DefaultCheckOptions()
+		if err := healthcheck.Run(checkOpts); err != nil {
+			fmt.Fprintf(os.Stderr, "healthcheck failed: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println("OK")
+		return
+	}
+
+	checkOpts := healthcheck.CheckOptions{
+		HTTPAddress:  opts.Server.BindAddress,
+		HTTPSAddress: opts.Server.SecureBindAddress,
+		PingPath:     opts.PingPath,
+		Timeout:      5 * time.Second,
+	}
+
+	if err := healthcheck.Run(checkOpts); err != nil {
+		fmt.Fprintf(os.Stderr, "healthcheck failed: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("OK")
 }
 
 // loadConfiguration will load in the user's configuration.
