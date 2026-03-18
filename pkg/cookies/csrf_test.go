@@ -119,8 +119,32 @@ var _ = Describe("CSRF Cookie Tests", func() {
 				Value: encoded,
 			}
 
-			_, _, valid := encryption.Validate(cookie, cookieOpts.Secret, cookieOpts.Expire)
+			_, _, valid := encryption.Validate(cookie, cookieOpts.Secret, cookieOpts.CSRFExpire)
 			Expect(valid).To(BeTrue())
+		})
+
+		It("validates CSRF token using CSRFExpire when Expire is lower", func() {
+			// Set Expire to be much lower than CSRFExpire
+			cookieOpts.Expire = time.Second
+			cookieOpts.CSRFExpire = time.Hour
+
+			privateCSRF.OAuthState = []byte(csrfState)
+			privateCSRF.OIDCNonce = []byte(csrfNonce)
+
+			encoded, err := privateCSRF.encodeCookie()
+			Expect(err).ToNot(HaveOccurred())
+
+			cookie := &http.Cookie{
+				Name:  privateCSRF.cookieName(),
+				Value: encoded,
+			}
+
+			// The cookie should still be valid even though Expire is only 1 second
+			decoded, err := decodeCSRFCookie(cookie, cookieOpts)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(decoded).ToNot(BeNil())
+			Expect(decoded.OAuthState).To(Equal([]byte(csrfState)))
+			Expect(decoded.OIDCNonce).To(Equal([]byte(csrfNonce)))
 		})
 	})
 

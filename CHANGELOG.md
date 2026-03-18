@@ -13,6 +13,7 @@
 - [#2685](https://github.com/oauth2-proxy/oauth2-proxy/pull/2685) feat: allow arbitrary claims from the IDToken and IdentityProvider UserInfo endpoint to be added to the session state (@vegetablest)
 - [#3278](https://github.com/oauth2-proxy/oauth2-proxy/pull/3278) feat: possibility to inject id_token in redirect url during sign out (@albanf)
 - [#2851](https://github.com/oauth2-proxy/oauth2-proxy/pull/2851) feat: add support for specifying allowed OIDC JWT signing algorithms (#2753) (@andoks / @tuunit)
+- [#3369](https://github.com/oauth2-proxy/oauth2-proxy/pull/3369) fix: use CSRFExpire instead of Expire for CSRF cookie validation (@Br1an67)
 
 # V7.14.3
 
