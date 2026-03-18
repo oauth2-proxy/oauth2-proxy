@@ -15,6 +15,10 @@ var CookieSessionStoreType = "cookie"
 // used for storing sessions.
 var RedisSessionStoreType = "redis"
 
+// InMemorySessionStoreType defines the session store type as "memory"
+// typically used for memory-based session management.
+var InMemorySessionStoreType = "memory"
+
 // CookieStoreOptions contains configuration options for the CookieSessionStore.
 type CookieStoreOptions struct {
 	Minimal bool `flag:"session-cookie-minimal" cfg:"session_cookie_minimal"`
