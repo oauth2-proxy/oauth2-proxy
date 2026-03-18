@@ -106,6 +106,17 @@ the new config.
 oauth2-proxy --alpha-config ./path/to/new/config.yaml --config ./path/to/existing/config.cfg
 ```
 
+### Validating Alpha Configuration
+
+Use `--config-test` to validate your alpha configuration without starting the proxy:
+
+```bash
+oauth2-proxy --config core.cfg --alpha-config alpha.yaml --config-test
+```
+
+This is useful for CI/CD pipelines to catch configuration errors before deployment.
+See the [Configuration Validation](./overview.md#configuration-validation) section for more details.
+
 ### How to use environment variables
 
 The alpha package supports the use of environment variables in place of yaml values, allowing sensitive data to be pulled from somewhere other than the yaml file.
