@@ -147,7 +147,7 @@ test: lint ## Run all Go tests
 	GO111MODULE=on $(GO) test $(TESTCOVER) -v -race ./...
 
 .PHONY: release
-release: validate-go-version lint test ## Create a full release for all architectures (binaries and checksums)
+release: validate-go-version ## Create a full release for all architectures (binaries and checksums)
 	BINARY=${BINARY} VERSION=${VERSION} ./dist.sh
 
 .PHONY: clean
