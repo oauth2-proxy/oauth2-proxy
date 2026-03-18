@@ -10,6 +10,7 @@
 #
 # Access http://oauth2-proxy.localtest.me:4180 to initiate a login cycle using user=admin@example.com, password=password
 # Access http://keycloak.localtest.me:9080 with the same credentials to check out the settings
+version: '3.0'
 services:
   oauth2-proxy:
     container_name: oauth2-proxy
