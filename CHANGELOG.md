@@ -16,6 +16,7 @@
 - [#3369](https://github.com/oauth2-proxy/oauth2-proxy/pull/3369) fix: use CSRFExpire instead of Expire for CSRF cookie validation (@Br1an67)
 - [#3365](https://github.com/oauth2-proxy/oauth2-proxy/pull/3365) fix: filter empty strings from allowed groups (@Br1an67)
 - [#3338](https://github.com/oauth2-proxy/oauth2-proxy/pull/3338) feat: add --config-test flag for validating configuration (@MayorFaj)
+- [#3347](https://github.com/oauth2-proxy/oauth2-proxy/pull/3347) feat: add same site option for csrf cookies (@jvnoije)
 
 # V7.14.3
 
@@ -36,7 +37,6 @@ We improved our supply chain security by added additional checks to prevent pote
 ## Changes since v7.14.2
 
 - [#3183](https://github.com/oauth2-proxy/oauth2-proxy/pull/3183) fix: allow URL parameters to configure username, password and max idle connection timeout if the matching configuration is empty.
-- [#3347](https://github.com/oauth2-proxy/oauth2-proxy/pull/3347) Added new option to configure the SameSite value of CSRF cookie (e.g.: "--cookie-csrf-samesite").
 
 # V7.14.2
 
