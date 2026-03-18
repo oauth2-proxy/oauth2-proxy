@@ -171,6 +171,58 @@ injectResponseHeaders:
 
 **Incompatibility:** Remove legacy flags `pass-user-headers`, `set-xauthrequest`
 
+### How to utilize arbitrary claims provided by your Identity Provider
+
+With the additionalClaims attribute you can specify which claims you want to extract
+from the ID Token or userinfo (ProfileURL) endpoint.
+
+Configure these on the relevant provider entry:
+
+```yaml
+providers:
+  - id: my-oidc-provider
+    provider: oidc
+    clientID: ${OAUTH_CLIENT_ID}
+    clientSecret: ${OAUTH_CLIENT_SECRET}
+    oidcConfig:
+      issuerURL: https://issuer.example.com
+    profileURL: https://issuer.example.com/oauth2/userinfo
+    additionalClaims:
+      - department
+      - employee_id
+      - organization.name
+```
+
+OAuth2 Proxy resolves each configured claim using the following order:
+
+1. The raw ID token is checked first.
+2. If the claim is not present there and `profileURL` is configured, the userinfo endpoint is queried.
+3. If `skipClaimsFromProfileURL: true` is set, only the ID token is used.
+
+Claims that are not found are ignored rather than causing authentication to fail.
+
+You can use dot-separated paths for nested JSON objects, for example `organization.name`.
+Array indexes are not supported.
+
+Once loaded, these claims are stored in the session as `additionalClaims`. They can then be
+used anywhere session claims are accepted, including header injection:
+
+```yaml
+injectRequestHeaders:
+  - name: X-Department
+    values:
+      - claimSource:
+          claim: department
+  - name: X-Organization
+    values:
+      - claimSource:
+          claim: organization.name
+```
+
+This is useful when your IdP exposes application-specific attributes such as department,
+tenant, employee ID, entitlement, or other custom claims that are not part of the default
+OAuth2 Proxy session fields.
+
 ## Removed options
 
 The following flags/options and their respective environment variables are no
