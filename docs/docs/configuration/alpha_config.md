@@ -488,6 +488,7 @@ character.
 | `userIDClaim` | _string_ | UserIDClaim indicates which claim contains the user ID<br/>default set to 'email' |
 | `audienceClaims` | _[]string_ | AudienceClaim allows to define any claim that is verified against the client id<br/>By default `aud` claim is used for verification. |
 | `extraAudiences` | _[]string_ | ExtraAudiences is a list of additional audiences that are allowed<br/>to pass verification in addition to the client id. |
+| `enabledSigningAlgs` | _[]string_ | EnabledSigningAlgs is a list of allowed JWT signing algorithms.<br/>When discovery is enabled, the effective set is the intersection<br/>between this list and the provider's discovered supported algorithms.<br/>By default `RS256` is used if nothing has been discovered or specified. |
 
 ### Provider
 

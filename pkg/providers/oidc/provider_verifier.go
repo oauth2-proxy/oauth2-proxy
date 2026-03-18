@@ -155,11 +155,46 @@ func getVerifierBuilder(ctx context.Context, opts ProviderVerifierOptions) (veri
 		return nil, nil, fmt.Errorf("error while discovery OIDC configuration: %w", err)
 	}
 
+	supportedSigningAlgs, err := intersectSigningAlgs(provider.SupportedSigningAlgs(), opts.SupportedSigningAlgs)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error while determining supported signing algorithms: %w", err)
+	}
+
 	return newVerifierBuilder(
 		opts.IssuerURL,
 		oidc.NewRemoteKeySet(ctx, provider.Endpoints().JWKsURL),
-		provider.SupportedSigningAlgs(),
+		supportedSigningAlgs,
 	), provider, nil
+}
+
+// intersectSigningAlgs returns the intersecting list of signing algorithms from the oidc discovery
+// and the signing algorithms provided through the options.
+func intersectSigningAlgs(discoveredSigningAlgs, configuredSigningAlgs []string) ([]string, error) {
+	if len(configuredSigningAlgs) == 0 {
+		return discoveredSigningAlgs, nil
+	}
+
+	if len(discoveredSigningAlgs) == 0 {
+		return configuredSigningAlgs, nil
+	}
+
+	discovered := make(map[string]struct{}, len(discoveredSigningAlgs))
+	for _, signingAlg := range discoveredSigningAlgs {
+		discovered[signingAlg] = struct{}{}
+	}
+
+	intersection := make([]string, 0, len(configuredSigningAlgs))
+	for _, signingAlg := range configuredSigningAlgs {
+		if _, ok := discovered[signingAlg]; ok {
+			intersection = append(intersection, signingAlg)
+		}
+	}
+
+	if len(intersection) == 0 {
+		return nil, fmt.Errorf("no supported signing algorithms in common between provider and configuration: discovered=%v, configured=%v", discoveredSigningAlgs, configuredSigningAlgs)
+	}
+
+	return intersection, nil
 }
 
 // GetPublicKeyFromBytes parses a PEM-encoded public key from a byte array
