@@ -89,7 +89,8 @@ oauth2-proxy --config /etc/oauth2-proxy.cfg --config-test
 oauth2-proxy --config /etc/core.cfg --alpha-config /etc/alpha.yaml --config-test
 
 # CI/CD pre-deployment check
-oauth2-proxy --config new-config.cfg --config-test && deploy-to-production
+# Returns with exit code 1 if any validation errors occur
+oauth2-proxy --config new-config.cfg --config-test 
 ```
 
 ### Exit Codes

@@ -15,6 +15,7 @@
 - [#2851](https://github.com/oauth2-proxy/oauth2-proxy/pull/2851) feat: add support for specifying allowed OIDC JWT signing algorithms (#2753) (@andoks / @tuunit)
 - [#3369](https://github.com/oauth2-proxy/oauth2-proxy/pull/3369) fix: use CSRFExpire instead of Expire for CSRF cookie validation (@Br1an67)
 - [#3365](https://github.com/oauth2-proxy/oauth2-proxy/pull/3365) fix: filter empty strings from allowed groups (@Br1an67)
+- [#3338](https://github.com/oauth2-proxy/oauth2-proxy/pull/3338) feat: add --config-test flag for validating configuration (@MayorFaj)
 
 # V7.14.3
 
