@@ -12,6 +12,7 @@
 - [#3332](https://github.com/oauth2-proxy/oauth2-proxy/pull/3332) ci: distribute windows binary with .exe extension (@igitur)
 - [#2685](https://github.com/oauth2-proxy/oauth2-proxy/pull/2685) feat: allow arbitrary claims from the IDToken and IdentityProvider UserInfo endpoint to be added to the session state (@vegetablest)
 - [#3278](https://github.com/oauth2-proxy/oauth2-proxy/pull/3278) feat: possibility to inject id_token in redirect url during sign out (@albanf)
+- [#3177](https://github.com/oauth2-proxy/oauth2-proxy/pull/3177) feat: add options to automate retries for IdP or CSRF erros (@TimFiernkranz)
 
 # V7.14.3
 
@@ -30,8 +31,6 @@ We improved our supply chain security by added additional checks to prevent pote
 ## Breaking Changes
 
 ## Changes since v7.14.2
-- [#3177](https://github.com/oauth2-proxy/oauth2-proxy/pull/3177) feat: add options to automate retries for IdP or CSRF erros (@TimFiernkranz)
-
 - [#3183](https://github.com/oauth2-proxy/oauth2-proxy/pull/3183) fix: allow URL parameters to configure username, password and max idle connection timeout if the matching configuration is empty.
 
 # V7.14.2
