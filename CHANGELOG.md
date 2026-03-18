@@ -6,6 +6,29 @@
 
 ## Breaking Changes
 
+## Changes since v7.15.0
+
+# V7.15.0
+
+## Release Highlights
+
+- 🔒 OIDC JWT signing algorithms can now be configured
+- 🍪 CSRF cookie improvements (SameSite option, proper expiration validation)
+- 🧪 Configuration validation flag: --config-test
+- 🔌 Unix socket file mode support
+- 👤 Session state can now be extend with arbitrary claims from ID Token and upstream IDP user profiles endpoint
+    - This opens the door for multiple features like:
+    - Additional arbitrary header values for any claims your IDP provides
+    - Extended OAuth2 Proxy UserInfo endpoint with all additional claims
+    - Read the docs [here](https://oauth2-proxy.github.io/oauth2-proxy/configuration/alpha-config#how-to-utilize-arbitrary-claims-provided-by-your-identity-provider)
+
+## Important Notes
+
+CSRF cookie validation now correctly uses `CSRFExpire` instead of `Expire`. If you relied on the previous behavior, review your session timeout configuration.
+Check the [documentation(https://oauth2-proxy.github.io/oauth2-proxy/configuration/overview#cookie-options) for `cookie-csrf-expire`.
+
+## Breaking Changes
+
 ## Changes since v7.14.3
 
 - [#3352](https://github.com/oauth2-proxy/oauth2-proxy/pull/3352) fix: backend logout URL call on sign out (#3172)(@vsejpal)
