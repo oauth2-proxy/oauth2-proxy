@@ -3628,5 +3628,5 @@ func TestIdTokenPlaceholderInSignOut(t *testing.T) {
 	proxy.SignOut(rw, req)
 	newLocation := rw.Header().Values("Location")[0]
 
-	assert.Equal(t, "https://idp.com/endsession?id_token_hint=eYjjjjjj.vvvv.ddd&post_logout_redirect_uri=http://myapp.com", newLocation)
+	assert.Equal(t, "https://my-oidc-provider.example.com/sign_out_page?id_token_hint=eYjjjjjj.vvvv.ddd&post_logout_redirect_uri=https://my-app.example.com/", newLocation)
 }
