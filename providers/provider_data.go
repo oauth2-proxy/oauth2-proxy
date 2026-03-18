@@ -194,9 +194,11 @@ func regexpForRule(rule options.URLParameterRule) string {
 func (p *ProviderData) setAllowedGroups(groups []string) {
 	p.AllowedGroups = make(map[string]struct{}, len(groups))
 	for _, group := range groups {
-		if group != "" {
-			p.AllowedGroups[group] = struct{}{}
+		if len(group) == 0 {
+			continue
 		}
+
+		p.AllowedGroups[group] = struct{}{}
 	}
 }
 
