@@ -120,14 +120,14 @@ func (p *OIDCProvider) ValidateSession(ctx context.Context, s *sessions.SessionS
 	if s.Refreshed {
 		validateEndpointAvailable := p.Data().ValidateURL != nil && p.Data().ValidateURL.String() != ""
 		if validateEndpointAvailable && !validateToken(ctx, p, s.AccessToken, makeOIDCHeader(s.AccessToken)) {
-			logger.Errorf("access_token validation failed")
+			logger.ErrMsg("access_token validation failed")
 			return false
 		}
 		return true
 	}
 
 	if _, err := p.Verifier.Verify(ctx, s.IDToken); err != nil {
-		logger.Errorf("id_token verification failed: %v", err)
+		logger.ErrMsgf("id_token verification failed: %v", err)
 		return false
 	}
 
@@ -136,7 +136,7 @@ func (p *OIDCProvider) ValidateSession(ctx context.Context, s *sessions.SessionS
 	}
 
 	if err := p.checkNonce(s); err != nil {
-		logger.Errorf("nonce verification failed: %v", err)
+		logger.ErrMsgf("nonce verification failed: %v", err)
 		return false
 	}
 

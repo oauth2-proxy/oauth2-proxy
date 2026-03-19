@@ -127,7 +127,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 
 	var basicAuthValidator basic.Validator
 	if opts.HtpasswdFile != "" {
-		logger.Printf("using htpasswd file: %s", opts.HtpasswdFile)
+		logger.Info("using htpasswd file", "path", opts.HtpasswdFile)
 		var err error
 		basicAuthValidator, err = basic.NewHTPasswdValidator(opts.HtpasswdFile)
 		if err != nil {
@@ -161,12 +161,12 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 	}
 
 	if opts.SkipJwtBearerTokens {
-		logger.Printf("Skipping JWT tokens from configured OIDC issuer: %q", opts.Providers[0].OIDCConfig.IssuerURL)
+		logger.Info("skipping JWT tokens from configured OIDC issuer", "issuer", opts.Providers[0].OIDCConfig.IssuerURL)
 		for _, issuer := range opts.ExtraJwtIssuers {
-			logger.Printf("Skipping JWT tokens from extra JWT issuer: %q", issuer)
+			logger.Info("skipping JWT tokens from extra JWT issuer", "issuer", issuer)
 		}
 		if !opts.BearerTokenLoginFallback {
-			logger.Println("Denying requests with invalid JWT tokens")
+			logger.Info("denying requests with invalid JWT tokens")
 		}
 
 	}
@@ -175,13 +175,22 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		redirectURL.Path = fmt.Sprintf("%s/callback", opts.ProxyPrefix)
 	}
 
-	logger.Printf("OAuthProxy configured for %s Client ID: %s", provider.Data().ProviderName, opts.Providers[0].ClientID)
+	logger.Info("OAuthProxy configured", "provider", provider.Data().ProviderName, "client_id", opts.Providers[0].ClientID)
 	refresh := "disabled"
 	if opts.Cookie.Refresh != time.Duration(0) {
 		refresh = fmt.Sprintf("after %s", opts.Cookie.Refresh)
 	}
 
-	logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s", opts.Cookie.Name, opts.Cookie.Secure, opts.Cookie.HTTPOnly, opts.Cookie.Expire, strings.Join(opts.Cookie.Domains, ","), opts.Cookie.Path, opts.Cookie.SameSite, refresh)
+	logger.Info("cookie settings",
+		"name", opts.Cookie.Name,
+		"secure", opts.Cookie.Secure,
+		"httponly", opts.Cookie.HTTPOnly,
+		"expiry", opts.Cookie.Expire,
+		"domains", strings.Join(opts.Cookie.Domains, ","),
+		"path", opts.Cookie.Path,
+		"samesite", opts.Cookie.SameSite,
+		"refresh", refresh,
+	)
 
 	trustedIPs := ip.NewNetSet()
 	for _, ipStr := range opts.TrustedIPs {
@@ -369,7 +378,7 @@ func buildPreAuthChain(opts *options.Options, sessionStore sessionsapi.SessionSt
 	healthCheckPaths := []string{opts.PingPath}
 	healthCheckUserAgents := []string{opts.PingUserAgent}
 	if opts.GCPHealthChecks {
-		logger.Printf("WARNING: GCP HealthChecks are now deprecated: Reconfigure apps to use the ping path for liveness and readiness checks, set the ping user agent to \"GoogleHC/1.0\" to preserve existing behaviour")
+		logger.Warn("GCP HealthChecks are now deprecated: reconfigure apps to use the ping path for liveness and readiness checks, set the ping user agent to GoogleHC/1.0 to preserve existing behaviour")
 		healthCheckPaths = append(healthCheckPaths, "/liveness_check", "/readiness_check")
 		healthCheckUserAgents = append(healthCheckUserAgents, "GoogleHC/1.0")
 	}
@@ -476,7 +485,7 @@ func buildRoutesAllowlist(opts *options.Options) ([]allowedRoute, error) {
 		if err != nil {
 			return nil, err
 		}
-		logger.Printf("Skipping auth - Method: ALL | Path: %s", path)
+		logger.Info("skipping auth", "method", "ALL", "path", path)
 		routes = append(routes, allowedRoute{
 			method:    "",
 			pathRegex: compiledRegex,
@@ -503,7 +512,7 @@ func buildRoutesAllowlist(opts *options.Options) ([]allowedRoute, error) {
 		if err != nil {
 			return nil, err
 		}
-		logger.Printf("Skipping auth - Method: %s | Path: %s", method, path)
+		logger.Info("skipping auth", "method", method, "path", path)
 		routes = append(routes, allowedRoute{
 			method:    method,
 			negate:    negate,
@@ -523,7 +532,7 @@ func buildAPIRoutes(opts *options.Options) ([]apiRoute, error) {
 		if err != nil {
 			return nil, err
 		}
-		logger.Printf("API route - Path: %s", path)
+		logger.Info("API route", "path", path)
 		routes = append(routes, apiRoute{
 			pathRegex: compiledRegex,
 		})
@@ -556,7 +565,7 @@ func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, req *http.Request, code int, appError string, messages ...interface{}) {
 	redirectURL, err := p.appDirector.GetRedirect(req)
 	if err != nil {
-		logger.Errorf("Error obtaining redirect: %v", err)
+		logger.ErrMsgf("error obtaining redirect: %v", err)
 	}
 	if redirectURL == p.SignInPath || redirectURL == "" {
 		redirectURL = "/"
@@ -621,7 +630,7 @@ func (p *OAuthProxy) isTrustedIP(req *http.Request) bool {
 
 	remoteAddr, err := ip.GetClientIP(p.realClientIPParser, req)
 	if err != nil {
-		logger.Errorf("Error obtaining real IP for trusted IP list: %v", err)
+		logger.ErrMsgf("error obtaining real IP for trusted IP list: %v", err)
 		// Possibly spoofed X-Real-IP header
 		return false
 	}
@@ -640,7 +649,7 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 
 	redirectURL, err := p.appDirector.GetRedirect(req)
 	if err != nil {
-		logger.Errorf("Error obtaining redirect: %v", err)
+		logger.ErrMsgf("error obtaining redirect: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -650,7 +659,7 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 	}
 
 	if err := p.ClearSessionCookie(rw, req); err != nil {
-		logger.Printf("Error clearing session cookie: %v", err)
+		logger.ErrMsgf("error clearing session cookie: %v", err)
 	}
 
 	p.pageWriter.WriteSignInPage(rw, req, redirectURL, code)
@@ -668,10 +677,10 @@ func (p *OAuthProxy) ManualSignIn(req *http.Request) (string, bool, int) {
 	}
 	// check auth
 	if p.basicAuthValidator.Validate(user, passwd) {
-		logger.PrintAuthf(user, req, logger.AuthSuccess, "Authenticated via HtpasswdFile")
+		logger.LogAuth(user, req, logger.AuthSuccess, "authenticated via HtpasswdFile")
 		return user, true, http.StatusOK
 	}
-	logger.PrintAuthf(user, req, logger.AuthFailure, "Invalid authentication via HtpasswdFile")
+	logger.LogAuth(user, req, logger.AuthFailure, "invalid authentication via HtpasswdFile")
 	return "", false, http.StatusUnauthorized
 }
 
@@ -679,7 +688,7 @@ func (p *OAuthProxy) ManualSignIn(req *http.Request) (string, bool, int) {
 func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 	redirect, err := p.appDirector.GetRedirect(req)
 	if err != nil {
-		logger.Errorf("Error obtaining redirect: %v", err)
+		logger.ErrMsgf("error obtaining redirect: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -689,7 +698,7 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 		session := &sessionsapi.SessionState{User: user, Groups: p.basicAuthGroups}
 		err = p.SaveSession(rw, req, session)
 		if err != nil {
-			logger.Printf("Error saving session: %v", err)
+			logger.ErrMsgf("error saving session: %v", err)
 			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 			return
 		}
@@ -716,7 +725,7 @@ func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 	rw.WriteHeader(http.StatusOK)
 	if session == nil {
 		if _, err := rw.Write([]byte("{}")); err != nil {
-			logger.Printf("Error encoding empty user info: %v", err)
+			logger.ErrMsgf("error encoding empty user info: %v", err)
 			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		}
 		return
@@ -737,7 +746,7 @@ func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	if err := json.NewEncoder(rw).Encode(userInfo); err != nil {
-		logger.Printf("Error encoding user info: %v", err)
+		logger.ErrMsgf("error encoding user info: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 	}
 }
@@ -746,7 +755,7 @@ func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 	redirect, err := p.appDirector.GetRedirect(req)
 	if err != nil {
-		logger.Errorf("Error obtaining redirect: %v", err)
+		logger.ErrMsgf("error obtaining redirect: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -766,7 +775,7 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 
 	err = p.ClearSessionCookie(rw, req)
 	if err != nil {
-		logger.Errorf("Error clearing session cookie: %v", err)
+		logger.ErrMsgf("error clearing session cookie: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -777,7 +786,7 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 func (p *OAuthProxy) backendLogout(rw http.ResponseWriter, req *http.Request) {
 	session, err := p.getAuthenticatedSession(rw, req)
 	if err != nil {
-		logger.Errorf("error getting authenticated session during backend logout: %v", err)
+		logger.ErrMsgf("error getting authenticated session during backend logout: %v", err)
 		return
 	}
 
@@ -795,13 +804,13 @@ func (p *OAuthProxy) backendLogout(rw http.ResponseWriter, req *http.Request) {
 	// base is not end-user provided but comes from configuration somewhat secure
 	resp, err := http.Get(backendLogoutURL) // #nosec G107
 	if err != nil {
-		logger.Errorf("error while calling backend logout: %v", err)
+		logger.ErrMsgf("error while calling backend logout: %v", err)
 		return
 	}
 
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		logger.Errorf("error while calling backend logout url, returned error code %v", resp.StatusCode)
+		logger.ErrMsgf("error while calling backend logout url, returned error code %v", resp.StatusCode)
 	}
 }
 
@@ -823,14 +832,14 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 		codeChallengeMethod = p.provider.Data().CodeChallengeMethod
 		codeVerifier, err = encryption.GenerateCodeVerifierString(96)
 		if err != nil {
-			logger.Errorf("Unable to build random ASCII string for code verifier: %v", err)
+			logger.ErrMsgf("unable to build random ASCII string for code verifier: %v", err)
 			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 			return
 		}
 
 		codeChallenge, err = encryption.GenerateCodeChallenge(p.provider.Data().CodeChallengeMethod, codeVerifier)
 		if err != nil {
-			logger.Errorf("Error creating code challenge: %v", err)
+			logger.ErrMsgf("error creating code challenge: %v", err)
 			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 			return
 		}
@@ -841,14 +850,14 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 
 	csrf, err := cookies.NewCSRF(p.CookieOptions, codeVerifier)
 	if err != nil {
-		logger.Errorf("Error creating CSRF nonce: %v", err)
+		logger.ErrMsgf("error creating CSRF nonce: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	appRedirect, err := p.appDirector.GetRedirect(req)
 	if err != nil {
-		logger.Errorf("Error obtaining application redirect: %v", err)
+		logger.ErrMsgf("error obtaining application redirect: %v", err)
 		p.ErrorPage(rw, req, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -862,7 +871,7 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 	)
 	cookies.ClearExtraCsrfCookies(p.CookieOptions, rw, req)
 	if _, err := csrf.SetCookie(rw, req); err != nil {
-		logger.Errorf("Error setting CSRF cookie: %v", err)
+		logger.ErrMsgf("error setting CSRF cookie: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -877,13 +886,13 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	// finish the oauth cycle
 	err := req.ParseForm()
 	if err != nil {
-		logger.Errorf("Error while parsing OAuth2 callback: %v", err)
+		logger.ErrMsgf("error while parsing OAuth2 callback: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
 	errorString := req.Form.Get("error")
 	if errorString != "" {
-		logger.Errorf("Error while parsing OAuth2 callback: %s", errorString)
+		logger.ErrMsg("error in OAuth2 callback from upstream identity provider", "error", errorString)
 		message := fmt.Sprintf("Login Failed: The upstream identity provider returned an error: %s", errorString)
 		// Set the debug message and override the non debug message to be the same for this case
 		p.ErrorPage(rw, req, http.StatusForbidden, message, message)
@@ -892,7 +901,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 
 	nonce, appRedirect, err := decodeState(req.Form.Get("state"), p.encodeState)
 	if err != nil {
-		logger.Errorf("Error while parsing OAuth2 state: %v", err)
+		logger.ErrMsgf("error while parsing OAuth2 state: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -905,21 +914,21 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		// There are a lot of issues opened complaining about missing CSRF cookies.
 		// Try to log the INs and OUTs of OAuthProxy, to be easier to analyse these issues.
 		LoggingCSRFCookiesInOAuthCallback(req, cookieName)
-		logger.Println(req, logger.AuthFailure, "Invalid authentication via OAuth2: unable to obtain CSRF cookie: %s (state=%s)", err, nonce)
+		logger.Warn("invalid authentication via OAuth2: unable to obtain CSRF cookie", "error", err, "state", nonce)
 		p.ErrorPage(rw, req, http.StatusForbidden, err.Error(), "Login Failed: Unable to find a valid CSRF token. Please try again.")
 		return
 	}
 
 	session, err := p.redeemCode(req, csrf.GetCodeVerifier())
 	if err != nil {
-		logger.Errorf("Error redeeming code during OAuth2 callback: %v", err)
+		logger.ErrMsgf("error redeeming code during OAuth2 callback: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	err = p.enrichSessionState(req.Context(), session)
 	if err != nil {
-		logger.Errorf("Error creating session during OAuth2 callback: %v", err)
+		logger.ErrMsgf("error creating session during OAuth2 callback: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -927,14 +936,14 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	csrf.ClearCookie(rw, req)
 
 	if !csrf.CheckOAuthState(nonce) {
-		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: CSRF token mismatch, potential attack")
+		logger.LogAuth(session.Email, req, logger.AuthFailure, "invalid authentication via OAuth2: CSRF token mismatch, potential attack")
 		p.ErrorPage(rw, req, http.StatusForbidden, "CSRF token mismatch, potential attack", "Login Failed: Unable to find a valid CSRF token. Please try again.")
 		return
 	}
 
 	csrf.SetSessionNonce(session)
 	if !p.provider.ValidateSession(req.Context(), session) {
-		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Session validation failed: %s", session)
+		logger.LogAuth(session.Email, req, logger.AuthFailure, fmt.Sprintf("session validation failed: %s", session))
 		p.ErrorPage(rw, req, http.StatusForbidden, "Session validation failed")
 		return
 	}
@@ -946,19 +955,19 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	// set cookie, or deny
 	authorized, err := p.provider.Authorize(req.Context(), session)
 	if err != nil {
-		logger.Errorf("Error with authorization: %v", err)
+		logger.ErrMsgf("error with authorization: %v", err)
 	}
 	if p.Validator(session.Email) && authorized {
-		logger.PrintAuthf(session.Email, req, logger.AuthSuccess, "Authenticated via OAuth2: %s", session)
+		logger.LogAuth(session.Email, req, logger.AuthSuccess, fmt.Sprintf("authenticated via OAuth2: %s", session))
 		err := p.SaveSession(rw, req, session)
 		if err != nil {
-			logger.Errorf("Error saving session state for %s: %v", remoteAddr, err)
+			logger.ErrMsg("error saving session state", "remote_addr", remoteAddr, "error", err)
 			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 			return
 		}
 		http.Redirect(rw, req, appRedirect, http.StatusFound)
 	} else {
-		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: unauthorized")
+		logger.LogAuth(session.Email, req, logger.AuthFailure, "invalid authentication via OAuth2: unauthorized")
 		p.ErrorPage(rw, req, http.StatusForbidden, "Invalid session: unauthorized")
 	}
 }
@@ -1042,13 +1051,13 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 	case ErrNeedsLogin:
 		// we need to send the user to a login screen
 		if p.forceJSONErrors || isAjax(req) || p.isAPIPath(req) {
-			logger.Printf("No valid authentication in request. Access Denied.")
+			logger.Warn("no valid authentication in request, access denied")
 			// no point redirecting an AJAX request
 			p.errorJSON(rw, http.StatusUnauthorized)
 			return
 		}
 
-		logger.Printf("No valid authentication in request. Initiating login.")
+		logger.Info("no valid authentication in request, initiating login")
 		if p.SkipProviderButton {
 			// start OAuth flow, but only with the default login URL params - do not
 			// consider this request's query params as potential overrides, since
@@ -1067,7 +1076,7 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 
 	default:
 		// unknown error
-		logger.Errorf("Unexpected internal error: %v", err)
+		logger.ErrMsgf("unexpected internal error: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 	}
 }
@@ -1141,7 +1150,7 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 	invalidEmail := session.Email != "" && !p.Validator(session.Email)
 	authorized, err := p.provider.Authorize(req.Context(), session)
 	if err != nil {
-		logger.Errorf("Error with authorization: %v", err)
+		logger.ErrMsgf("error with authorization: %v", err)
 	}
 
 	if invalidEmail || !authorized {
@@ -1150,11 +1159,11 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 			cause = "invalid email"
 		}
 
-		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authorization via session (%s): removing session %s", cause, session)
+		logger.LogAuth(session.Email, req, logger.AuthFailure, fmt.Sprintf("invalid authorization via session (%s): removing session %s", cause, session))
 		// Invalid session, clear it
 		err := p.ClearSessionCookie(rw, req)
 		if err != nil {
-			logger.Errorf("Error clearing session cookie: %v", err)
+			logger.ErrMsgf("error clearing session cookie: %v", err)
 		}
 		return nil, ErrAccessDenied
 	}
@@ -1336,21 +1345,21 @@ func (p *OAuthProxy) errorJSON(rw http.ResponseWriter, code int) {
 func LoggingCSRFCookiesInOAuthCallback(req *http.Request, cookieName string) {
 	cookies := req.Cookies()
 	if len(cookies) == 0 {
-		logger.Println(req, logger.AuthFailure, "No cookies were found in OAuth callback.")
+		logger.Warn("no cookies were found in OAuth callback")
 		return
 	}
 
 	for _, c := range cookies {
 		if cookieName == c.Name {
-			logger.Println(req, logger.AuthFailure, "CSRF cookie %s was found in OAuth callback.", c.Name)
+			logger.Warn("CSRF cookie found in OAuth callback", "cookie_name", c.Name)
 			return
 		}
 
 		if strings.HasSuffix(c.Name, "_csrf") {
-			logger.Println(req, logger.AuthFailure, "CSRF cookie %s was found in OAuth callback, but it is not the expected one (%s).", c.Name, cookieName)
+			logger.Warn("unexpected CSRF cookie found in OAuth callback", "cookie_name", c.Name, "expected", cookieName)
 			return
 		}
 	}
 
-	logger.Println(req, logger.AuthFailure, "Cookies were found in OAuth callback, but none was a CSRF cookie.")
+	logger.Warn("cookies were found in OAuth callback, but none was a CSRF cookie")
 }

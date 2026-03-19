@@ -154,7 +154,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 	// Set PKCE enabled or disabled based on discovery and force options
 	p.CodeChallengeMethod = parseCodeChallengeMethod(providerConfig)
 	if len(p.SupportedCodeChallengeMethods) != 0 && p.CodeChallengeMethod == "" {
-		logger.Printf("Warning: Your provider supports PKCE methods %+q, but you have not enabled one with --code-challenge-method", p.SupportedCodeChallengeMethods)
+		logger.Warn("provider supports PKCE but no code-challenge-method is enabled", "supported_methods", p.SupportedCodeChallengeMethods)
 	}
 
 	if providerConfig.OIDCConfig.UserIDClaim == "" {

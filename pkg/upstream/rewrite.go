@@ -27,7 +27,7 @@ func rewritePath(rewriteRegExp *regexp.Regexp, rewriteTarget string, writer page
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		reqURL, err := url.ParseRequestURI(req.RequestURI)
 		if err != nil {
-			logger.Errorf("could not parse request URI: %v", err)
+			logger.ErrMsgf("could not parse request URI: %v", err)
 			writer.WriteErrorPage(rw, pagewriter.ErrorPageOpts{
 				Status:    http.StatusInternalServerError,
 				RequestID: middleware.GetRequestScope(req).RequestID,
@@ -40,7 +40,7 @@ func rewritePath(rewriteRegExp *regexp.Regexp, rewriteTarget string, writer page
 		newURI := rewriteRegExp.ReplaceAllString(reqURL.Path, rewriteTarget)
 		reqURL.Path, reqURL.RawQuery, err = splitPathAndQuery(reqURL.Query(), newURI)
 		if err != nil {
-			logger.Errorf("could not parse rewrite URI: %v", err)
+			logger.ErrMsgf("could not parse rewrite URI: %v", err)
 			writer.WriteErrorPage(rw, pagewriter.ErrorPageOpts{
 				Status:    http.StatusInternalServerError,
 				RequestID: middleware.GetRequestScope(req).RequestID,

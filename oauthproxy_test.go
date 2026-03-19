@@ -40,10 +40,6 @@ const (
 	clientSecret       = "gv3498mfc9t23y23974dm2394dm9"
 )
 
-func init() {
-	logger.SetFlags(logger.Lshortfile)
-}
-
 func TestRobotsTxt(t *testing.T) {
 	opts := baseTestOptions()
 	err := validation.Validate(opts)
@@ -178,7 +174,7 @@ func Test_enrichSession(t *testing.T) {
 
 func TestBasicAuthPassword(t *testing.T) {
 	providerServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		logger.Printf("%#v", r)
+		logger.Infof("%#v", r)
 		var payload string
 		switch r.URL.Path {
 		case "/oauth/token":

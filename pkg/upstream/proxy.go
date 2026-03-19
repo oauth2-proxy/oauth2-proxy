@@ -75,19 +75,19 @@ func (m *multiUpstreamProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request
 
 // registerStaticResponseHandler registers a static response handler with at the given path.
 func (m *multiUpstreamProxy) registerStaticResponseHandler(upstream options.Upstream, writer pagewriter.Writer) error {
-	logger.Printf("mapping path %q => static response %d", upstream.Path, ptr.Deref(upstream.StaticCode, options.DefaultUpstreamStaticCode))
+	logger.Infof("mapping path %q => static response %d", upstream.Path, ptr.Deref(upstream.StaticCode, options.DefaultUpstreamStaticCode))
 	return m.registerHandler(upstream, newStaticResponseHandler(upstream.ID, upstream.StaticCode), writer)
 }
 
 // registerFileServer registers a new fileServer based on the configuration given.
 func (m *multiUpstreamProxy) registerFileServer(upstream options.Upstream, u *url.URL, writer pagewriter.Writer) error {
-	logger.Printf("mapping path %q => file system %q", upstream.Path, u.Path)
+	logger.Infof("mapping path %q => file system %q", upstream.Path, u.Path)
 	return m.registerHandler(upstream, newFileServer(upstream, u.Path), writer)
 }
 
 // registerHTTPUpstreamProxy registers a new httpUpstreamProxy based on the configuration given.
 func (m *multiUpstreamProxy) registerHTTPUpstreamProxy(upstream options.Upstream, u *url.URL, sigData *options.SignatureData, writer pagewriter.Writer) error {
-	logger.Printf("mapping path %q => upstream %q", upstream.Path, upstream.URI)
+	logger.Infof("mapping path %q => upstream %q", upstream.Path, upstream.URI)
 	return m.registerHandler(upstream, newHTTPUpstreamProxy(upstream, u, sigData, writer.ProxyErrorHandler), writer)
 }
 

@@ -29,7 +29,7 @@ func requestLogger(next http.Handler) http.Handler {
 		scope := middlewareapi.GetRequestScope(req)
 		// If scope is nil, this will panic.
 		// A scope should always be injected before this handler is called.
-		logger.PrintReq(
+		logger.LogRequest(
 			getUser(scope),
 			scope.Upstream,
 			req,

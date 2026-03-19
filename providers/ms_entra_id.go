@@ -69,7 +69,7 @@ func (p *MicrosoftEntraIDProvider) EnrichSession(ctx context.Context, session *s
 	}
 
 	if hasGroupOverage {
-		logger.Printf("entra overage found, reading groups from Graph API")
+		logger.Info("entra overage found, reading groups from Graph API")
 		if err = p.addGraphGroupsToSession(ctx, session); err != nil {
 			return fmt.Errorf("unable to enrich session: %v", err)
 		}
@@ -82,17 +82,17 @@ func (p *MicrosoftEntraIDProvider) EnrichSession(ctx context.Context, session *s
 func (p *MicrosoftEntraIDProvider) ValidateSession(ctx context.Context, session *sessions.SessionState) bool {
 	tenant, err := p.getTenantFromToken(session)
 	if err != nil {
-		logger.Errorf("unable to retrieve entra tenant from token: %v", err)
+		logger.ErrMsgf("unable to retrieve entra tenant from token: %v", err)
 		return false
 	}
 
 	if len(p.multiTenantAllowedTenants) > 0 {
 		tenantAllowed := p.checkTenantMatchesTenantList(tenant, p.multiTenantAllowedTenants)
 		if !tenantAllowed {
-			logger.Printf("entra: tenant %s is not specified in the list of allowed tenants", tenant)
+			logger.Info("entra: tenant not in allowed list", "tenant", tenant)
 			return false
 		}
-		logger.Printf("entra: tenant %s is allowed", tenant)
+		logger.Info("entra: tenant is allowed", "tenant", tenant)
 	}
 
 	return p.OIDCProvider.ValidateSession(ctx, session)
@@ -244,7 +244,7 @@ func (p *MicrosoftEntraIDProvider) addGraphGroupsToSession(ctx context.Context, 
 			UnmarshalSimpleJSON()
 
 		if err != nil {
-			logger.Errorf("invalid response from microsoft graph, no groups added to session: %v", err)
+			logger.ErrMsgf("invalid response from microsoft graph, no groups added to session: %v", err)
 			return nil
 		}
 		reqGroups := response.Get("value").MustArray()

@@ -189,24 +189,22 @@ Provider specific options can be found on their respective subpages.
 
 ### Logging Options
 
-| Flag / Config Field                                                   | Type   | Description                                                                  | Default                                             |
-| --------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------- | --------------------------------------------------- |
-| flag: `--auth-logging-format`<br/>toml: `auth_logging_format`         | string | Template for authentication log lines                                        | see [Logging Configuration](#logging-configuration) |
-| flag: `--auth-logging`<br/>toml: `auth_logging`                       | bool   | Log authentication attempts                                                  | true                                                |
-| flag: `--errors-to-info-log`<br/>toml: `errors_to_info_log`           | bool   | redirects error-level logging to default log channel instead of stderr       | false                                               |
-| flag: `--exclude-logging-path`<br/>toml: `exclude_logging_paths`      | string | comma separated list of paths to exclude from logging, e.g. `"/ping,/path2"` | `""` (no paths excluded)                            |
-| flag: `--logging-compress`<br/>toml: `logging_compress`               | bool   | Should rotated log files be compressed using gzip                            | false                                               |
-| flag: `--logging-filename`<br/>toml: `logging_filename`               | string | File to log requests to, empty for `stdout`                                  | `""` (stdout)                                       |
-| flag: `--logging-local-time`<br/>toml: `logging_local_time`           | bool   | Use local time in log files and backup filenames instead of UTC              | true (local time)                                   |
-| flag: `--logging-max-age`<br/>toml: `logging_max_age`                 | int    | Maximum number of days to retain old log files                               | 7                                                   |
-| flag: `--logging-max-backups`<br/>toml: `logging_max_backups`         | int    | Maximum number of old log files to retain; 0 to disable                      | 0                                                   |
-| flag: `--logging-max-size`<br/>toml: `logging_max_size`               | int    | Maximum size in megabytes of the log file before rotation                    | 100                                                 |
-| flag: `--request-id-header`<br/>toml: `request_id_header`             | string | Request header to use as the request ID in logging                           | X-Request-Id                                        |
-| flag: `--request-logging-format`<br/>toml: `request_logging_format`   | string | Template for request log lines                                               | see [Logging Configuration](#logging-configuration) |
-| flag: `--request-logging`<br/>toml: `request_logging`                 | bool   | Log requests                                                                 | true                                                |
-| flag: `--silence-ping-logging`<br/>toml: `silence_ping_logging`       | bool   | disable logging of requests to ping & ready endpoints                        | false                                               |
-| flag: `--standard-logging-format`<br/>toml: `standard_logging_format` | string | Template for standard log lines                                              | see [Logging Configuration](#logging-configuration) |
-| flag: `--standard-logging`<br/>toml: `standard_logging`               | bool   | Log standard runtime information                                             | true                                                |
+| Flag / Config Field                                              | Type   | Description                                                                  | Default                  |
+| ---------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------- | ------------------------ |
+| flag: `--logging-level`<br/>toml: `logging_level`                | string | Log level: `debug`, `info`, `warn`, `error`                                  | `"info"`                 |
+| flag: `--logging-format`<br/>toml: `logging_format`              | string | Log format: `json`, `text`                                                   | `"json"`                 |
+| flag: `--auth-logging`<br/>toml: `auth_logging`                  | bool   | Log authentication attempts                                                  | true                     |
+| flag: `--request-logging`<br/>toml: `request_logging`            | bool   | Log HTTP requests                                                            | true                     |
+| flag: `--errors-to-info-log`<br/>toml: `errors_to_info_log`      | bool   | Redirect error-level logging to the standard log channel instead of stderr   | false                    |
+| flag: `--exclude-logging-path`<br/>toml: `exclude_logging_paths` | string | Comma separated list of paths to exclude from logging, e.g. `"/ping,/path2"` | `""` (no paths excluded) |
+| flag: `--silence-ping-logging`<br/>toml: `silence_ping_logging`  | bool   | Disable logging of requests to ping & ready endpoints                        | false                    |
+| flag: `--request-id-header`<br/>toml: `request_id_header`        | string | Request header to use as the request ID in logging                           | `"X-Request-Id"`         |
+| flag: `--logging-filename`<br/>toml: `logging_filename`          | string | File to log requests to, empty for `stdout`                                  | `""` (stdout)            |
+| flag: `--logging-max-size`<br/>toml: `logging_max_size`          | int    | Maximum size in megabytes of the log file before rotation                    | 100                      |
+| flag: `--logging-max-age`<br/>toml: `logging_max_age`            | int    | Maximum number of days to retain old log files                               | 7                        |
+| flag: `--logging-max-backups`<br/>toml: `logging_max_backups`    | int    | Maximum number of old log files to retain; 0 to disable                      | 0                        |
+| flag: `--logging-local-time`<br/>toml: `logging_local_time`      | bool   | Use local time in log files and backup filenames instead of UTC              | true (local time)        |
+| flag: `--logging-compress`<br/>toml: `logging_compress`          | bool   | Should rotated log files be compressed using gzip                            | false                    |
 
 ### Page Template Options
 
@@ -344,103 +342,78 @@ Please check the type for each [config option](#config-options) first.
 
 ## Logging Configuration
 
-By default, OAuth2 Proxy logs all output to stdout. Logging can be configured to output to a rotating log file using the `--logging-filename` command.
+OAuth2 Proxy uses Go's standard `log/slog` package for structured logging. All log output is structured by default, with JSON as the default format.
 
-If logging to a file you can also configure the maximum file size (`--logging-max-size`), age (`--logging-max-age`), max backup logs (`--logging-max-backups`), and if backup logs should be compressed (`--logging-compress`).
+### Log Format
 
-There are three different types of logging: standard, authentication, and HTTP requests. These can each be enabled or disabled with `--standard-logging`, `--auth-logging`, and `--request-logging`.
+Two log formats are supported via `--logging-format`:
 
-Each type of logging has its own configurable format and variables. By default, these formats are similar to the Apache Combined Log.
+- **`json`** (default) — Machine-readable JSON, one object per line. Ideal for log aggregation systems (ELK, Loki, Datadog, etc.).
+- **`text`** — Human-readable key=value format for local development.
 
-Logging of requests to the `/ping` endpoint (or using `--ping-user-agent`) and the `/ready` endpoint can be disabled with `--silence-ping-logging` reducing log volume.
+Example JSON output:
 
-## Auth Log Format
-
-Authentication logs are logs which are guaranteed to contain a username or email address of a user attempting to authenticate. These logs are output by default in the below format:
-
-```
-<REMOTE_ADDRESS> - <REQUEST ID> - <user@domain.com> [2015/03/19 17:20:19] [<STATUS>] <MESSAGE>
+```json
+{"time":"2025-01-15T10:30:00Z","level":"INFO","source":{"function":"main.main","file":"main.go","line":42},"msg":"HTTP: listening on 127.0.0.1:4180"}
 ```
 
-The status block will contain one of the below strings:
-
-- `AuthSuccess` If a user has authenticated successfully by any method
-- `AuthFailure` If the user failed to authenticate explicitly
-- `AuthError` If there was an unexpected error during authentication
-
-If you require a different format than that, you can configure it with the `--auth-logging-format` flag.
-The default format is configured as follows:
+Example text output:
 
 ```
-{{.Client}} - {{.RequestID}} - {{.Username}} [{{.Timestamp}}] [{{.Status}}] {{.Message}}
+time=2025-01-15T10:30:00Z level=INFO source=main.go:42 msg="HTTP: listening on 127.0.0.1:4180"
 ```
 
-Available variables for auth logging:
+### Log Levels
 
-| Variable      | Example                              | Description                                                                                              |
-| ------------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| Client        | 74.125.224.72                        | The client/remote IP address. Will use the X-Real-IP header it if exists & reverse-proxy is set to true. |
-| Host          | domain.com                           | The value of the Host header.                                                                            |
-| Message       | Authenticated via OAuth2             | The details of the auth attempt.                                                                         |
-| Protocol      | HTTP/1.0                             | The request protocol.                                                                                    |
-| RequestID     | 00010203-0405-4607-8809-0a0b0c0d0e0f | The request ID pulled from the `--request-id-header`. Random UUID if empty                               |
-| RequestMethod | GET                                  | The request method.                                                                                      |
-| Timestamp     | 2015/03/19 17:20:19                  | The date and time of the logging event.                                                                  |
-| UserAgent     | -                                    | The full user agent as reported by the requesting client.                                                |
-| Username      | username@email.com                   | The email or username of the auth request.                                                               |
-| Status        | AuthSuccess                          | The status of the auth request. See above for details.                                                   |
+Four levels are supported via `--logging-level`:
 
-## Request Log Format
+| Level   | Description                                                       |
+| ------- | ----------------------------------------------------------------- |
+| `debug` | Verbose output for troubleshooting                                |
+| `info`  | Normal operational messages (default)                             |
+| `warn`  | Warning conditions (e.g. authentication failures)                 |
+| `error` | Error conditions written to stderr (unless `--errors-to-info-log` is set) |
 
-HTTP request logs will output by default in the below format:
+### Structured Log Fields
 
-```
-<REMOTE_ADDRESS> - <REQUEST ID> - <user@domain.com> [2015/03/19 17:20:19] <HOST_HEADER> GET <UPSTREAM_HOST> "/path/" HTTP/1.1 "<USER_AGENT>" <RESPONSE_CODE> <RESPONSE_BYTES> <REQUEST_DURATION>
-```
+Log entries automatically include structured fields relevant to the log type.
 
-If you require a different format than that, you can configure it with the `--request-logging-format` flag.
-The default format is configured as follows:
+**Authentication logs** include:
 
-```
-{{.Client}} - {{.RequestID}} - {{.Username}} [{{.Timestamp}}] {{.Host}} {{.RequestMethod}} {{.Upstream}} {{.RequestURI}} {{.Protocol}} {{.UserAgent}} {{.StatusCode}} {{.ResponseSize}} {{.RequestDuration}}
-```
+| Field        | Description                                                 |
+| ------------ | ----------------------------------------------------------- |
+| `user`       | The email or username of the auth request                   |
+| `status`     | `AuthSuccess`, `AuthFailure`, or `AuthError`                |
+| `client`     | The client/remote IP address                                |
+| `request_id` | The request ID from `--request-id-header` (if available)    |
+| `host`       | The Host header value                                       |
+| `method`     | The HTTP request method                                     |
+| `protocol`   | The request protocol                                        |
+| `user_agent` | The client User-Agent header                                |
 
-Available variables for request logging:
+**Request logs** include:
 
-| Variable        | Example                              | Description                                                                                              |
-| --------------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| Client          | 74.125.224.72                        | The client/remote IP address. Will use the X-Real-IP header it if exists & reverse-proxy is set to true. |
-| Host            | domain.com                           | The value of the Host header.                                                                            |
-| Protocol        | HTTP/1.0                             | The request protocol.                                                                                    |
-| RequestDuration | 0.001                                | The time in seconds that a request took to process.                                                      |
-| RequestID       | 00010203-0405-4607-8809-0a0b0c0d0e0f | The request ID pulled from the `--request-id-header`. Random UUID if empty                               |
-| RequestMethod   | GET                                  | The request method.                                                                                      |
-| RequestURI      | "/oauth2/auth"                       | The URI path of the request.                                                                             |
-| ResponseSize    | 12                                   | The size in bytes of the response.                                                                       |
-| StatusCode      | 200                                  | The HTTP status code of the response.                                                                    |
-| Timestamp       | 2015/03/19 17:20:19                  | The date and time of the logging event.                                                                  |
-| Upstream        | -                                    | The upstream data of the HTTP request.                                                                   |
-| UserAgent       | -                                    | The full user agent as reported by the requesting client.                                                |
-| Username        | username@email.com                   | The email or username of the auth request.                                                               |
+| Field         | Description                                                 |
+| ------------- | ----------------------------------------------------------- |
+| `user`        | The email or username                                       |
+| `upstream`    | The upstream backend that handled the request               |
+| `client`      | The client/remote IP address                                |
+| `request_id`  | The request ID from `--request-id-header` (if available)    |
+| `host`        | The Host header value                                       |
+| `method`      | The HTTP request method                                     |
+| `uri`         | The request URI path                                        |
+| `protocol`    | The request protocol                                        |
+| `user_agent`  | The client User-Agent header                                |
+| `status_code` | The HTTP response status code                               |
+| `size`        | The response size in bytes                                  |
+| `duration_s`  | The request duration in seconds                             |
 
-## Standard Log Format
+### Log Routing
 
-All other logging that is not covered by the above two types of logging will be output in this standard logging format. This includes configuration information at startup and errors that occur outside of a session. The default format is below:
+By default, log messages at `INFO` and below are written to stdout, while `WARN` and `ERROR` messages are written to stderr. Use `--errors-to-info-log` to redirect all log output to stdout.
 
-```
-[2015/03/19 17:20:19] [main.go:40] <MESSAGE>
-```
+When `--logging-filename` is configured, logs are written to the specified file with automatic rotation support via `--logging-max-size`, `--logging-max-age`, `--logging-max-backups`, and `--logging-compress`.
 
-If you require a different format than that, you can configure it with the `--standard-logging-format` flag. The default format is configured as follows:
+### Filtering
 
-```
-[{{.Timestamp}}] [{{.File}}] {{.Message}}
-```
-
-Available variables for standard logging:
-
-| Variable  | Example                           | Description                                        |
-| --------- | --------------------------------- | -------------------------------------------------- |
-| Timestamp | 2015/03/19 17:20:19               | The date and time of the logging event.            |
-| File      | main.go:40                        | The file and line number of the logging statement. |
-| Message   | HTTP: listening on 127.0.0.1:4180 | The details of the log statement.                  |
+Logging of requests to the `/ping` and `/ready` endpoints can be disabled with `--silence-ping-logging` to reduce log volume. Additional paths can be excluded with `--exclude-logging-path`.

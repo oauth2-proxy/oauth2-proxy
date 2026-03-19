@@ -42,7 +42,7 @@ func NewHTPasswdValidator(path string) (Validator, error) {
 	if err := watcher.WatchFileForUpdates(path, nil, func() {
 		err := h.loadHTPasswdFile(path)
 		if err != nil {
-			logger.Errorf("%v: no changes were made to the current htpasswd map", err)
+			logger.ErrMsgf("%v: no changes were made to the current htpasswd map", err)
 		}
 	}); err != nil {
 		return nil, fmt.Errorf("could not watch htpasswd file: %v", err)
@@ -61,7 +61,7 @@ func (h *htpasswdMap) loadHTPasswdFile(filename string) error {
 	defer func(c io.Closer) {
 		cerr := c.Close()
 		if cerr != nil {
-			logger.Fatalf("error closing the htpasswd file: %v", cerr)
+			logger.FatalMsgf("error closing the htpasswd file: %v", cerr)
 		}
 	}(r)
 
