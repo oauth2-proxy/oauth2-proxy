@@ -6,7 +6,41 @@
 
 ## Breaking Changes
 
+## Changes since v7.15.0
+
+# V7.15.0
+
+## Release Highlights
+
+- 🔒 OIDC JWT signing algorithms can now be configured
+- 🍪 CSRF cookie improvements (SameSite option, proper expiration validation)
+- 🧪 Configuration validation flag: --config-test
+- 🔌 Unix socket file mode support
+- 👤 Session state can now be extend with arbitrary claims from ID Token and upstream IDP user profiles endpoint
+    - This opens the door for multiple features like:
+    - Additional arbitrary header values for any claims your IDP provides
+    - Extended OAuth2 Proxy UserInfo endpoint with all additional claims
+    - Read the docs [here](https://oauth2-proxy.github.io/oauth2-proxy/configuration/alpha-config#how-to-utilize-arbitrary-claims-provided-by-your-identity-provider)
+
+## Important Notes
+
+CSRF cookie validation now correctly uses `CSRFExpire` instead of `Expire`. If you relied on the previous behavior, review your session timeout configuration.
+Check the [documentation(https://oauth2-proxy.github.io/oauth2-proxy/configuration/overview#cookie-options) for `cookie-csrf-expire`.
+
+## Breaking Changes
+
 ## Changes since v7.14.3
+
+- [#3352](https://github.com/oauth2-proxy/oauth2-proxy/pull/3352) fix: backend logout URL call on sign out (#3172)(@vsejpal)
+- [#3332](https://github.com/oauth2-proxy/oauth2-proxy/pull/3332) ci: distribute windows binary with .exe extension (@igitur)
+- [#2685](https://github.com/oauth2-proxy/oauth2-proxy/pull/2685) feat: allow arbitrary claims from the IDToken and IdentityProvider UserInfo endpoint to be added to the session state (@vegetablest)
+- [#3278](https://github.com/oauth2-proxy/oauth2-proxy/pull/3278) feat: possibility to inject id_token in redirect url during sign out (@albanf)
+- [#2851](https://github.com/oauth2-proxy/oauth2-proxy/pull/2851) feat: add support for specifying allowed OIDC JWT signing algorithms (#2753) (@andoks / @tuunit)
+- [#3369](https://github.com/oauth2-proxy/oauth2-proxy/pull/3369) fix: use CSRFExpire instead of Expire for CSRF cookie validation (@Br1an67)
+- [#3365](https://github.com/oauth2-proxy/oauth2-proxy/pull/3365) fix: filter empty strings from allowed groups (@Br1an67)
+- [#3338](https://github.com/oauth2-proxy/oauth2-proxy/pull/3338) feat: add --config-test flag for validating configuration (@MayorFaj)
+- [#3347](https://github.com/oauth2-proxy/oauth2-proxy/pull/3347) feat: add same site option for csrf cookies (@jvnoije)
+- [#3376](https://github.com/oauth2-proxy/oauth2-proxy/pull/3376) feat: allow setting unix socket file mode when declaring listener (@Tristan971 / @tuunit)
 
 # V7.14.3
 

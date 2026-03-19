@@ -7,18 +7,21 @@ on:
   pull_request:
     branches:
       - '**'
+  workflow_dispatch:
+
 permissions:
   contents: read
   id-token: write
+  security-events: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      COVER: true
     steps:
     - name: Check out code
       uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
 
     - name: Get Go version
       run: |
@@ -33,11 +36,10 @@ jobs:
         check-latest: true
 
     - name: Install golangci-lint
-      env:
-        # renovate: datasource=github-tags depName=golangci/golangci-lint
-        GOLANGCI_LINT_VERSION: v2.8.0
-      run: |
-        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin ${GOLANGCI_LINT_VERSION}
+      uses: golangci/golangci-lint-action@v9
+      with:
+        install-only: true
+        version: v2.8.0 # renovate: datasource=github-tags depName=golangci/golangci-lint
 
     - name: Verify Code Generation
       run: |
@@ -59,13 +61,15 @@ jobs:
         make release
 
     - name: Test
+      env:
+        COVER: true
       run: |
         make test
 
     - name: Generate Coverage Report
       if: github.event_name == 'push'
       run: |
-        go install github.com/jandelgado/gcov2lcov@latest
+        go install github.com/jandelgado/gcov2lcov@25681830fb515e3d4c117e136b4f049e21efb4d0
         gcov2lcov -infile=c.out -outfile=lcov.info
 
     - name: Upload Coverage Report
@@ -75,11 +79,31 @@ jobs:
         oidc: true
         files: lcov.info
 
+    - name: Run Trivy vulnerability scanner
+      if: (!startsWith(github.head_ref, 'release'))
+      uses: aquasecurity/trivy-action@0.35.0
+      with:
+        scan-type: 'rootfs'
+        scan-ref: './oauth2-proxy'
+        severity: 'CRITICAL,HIGH'
+        hide-progress: true
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        exit-code: '0'
+
+    - name: Upload Trivy scan results
+      if: (!startsWith(github.head_ref, 'release'))
+      uses: github/codeql-action/upload-sarif@v4
+      with:
+        sarif_file: 'trivy-results.sarif'
+
   docker:
     runs-on: ubuntu-latest
     steps:
     - name: Check out code
       uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3

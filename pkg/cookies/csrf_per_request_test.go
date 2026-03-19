@@ -216,13 +216,18 @@ var _ = Describe("CSRF Cookie with non-fixed name Tests", func() {
 				for _, csrf := range []*csrf{privateCSRF1, privateCSRF2, privateCSRF3} {
 					encoded, err := csrf.encodeCookie()
 					Expect(err).ToNot(HaveOccurred())
-					cookie := MakeCookieFromOptions(
-						req,
-						csrf.cookieName(),
-						encoded,
-						csrf.cookieOpts,
-						csrf.cookieOpts.CSRFExpire,
-					)
+					csrfCookieOptions := &CookieOptions{
+						Name:       csrf.cookieName(),
+						Value:      encoded,
+						Domains:    csrf.cookieOpts.Domains,
+						Expiration: csrf.cookieOpts.CSRFExpire,
+						SameSite:   getCSRFSameSite(csrf.cookieOpts),
+						Path:       csrf.cookieOpts.Path,
+						HTTPOnly:   csrf.cookieOpts.HTTPOnly,
+						Secure:     csrf.cookieOpts.Secure,
+					}
+
+					cookie := MakeCookieFromOptions(req, csrfCookieOptions)
 					cookies = append(cookies, fmt.Sprintf("%v=%v", cookie.Name, cookie.Value))
 				}
 

@@ -3,10 +3,19 @@ package options
 // Server represents the configuration for an HTTP(S) server
 type Server struct {
 	// BindAddress is the address on which to serve traffic.
+	// Different types of bind addresses are supported:
+	// * `[http://]<addr>:<port>`
+	// * `fd:<int>` (case insensitive)
+	// * `unix://<path>`
+	// Unix sockets are created with default system umask mode, which can be overridden, e.g.: `unix://my-socket,mode=0777`
+	// Square brackets are required for ipv6 address, e.g. `http://[::1]:4180`
 	// Leave blank or set to "-" to disable.
 	BindAddress string `yaml:"bindAddress,omitempty"`
 
 	// SecureBindAddress is the address on which to serve secure traffic.
+	// Secure bind addresses need to respond with valid SSL and use the following format:
+	// * `[https://]<addr>:<port>`
+	// Square brackets are required for ipv6 address, e.g. `https://[::1]:4180`
 	// Leave blank or set to "-" to disable.
 	SecureBindAddress string `yaml:"secureBindAddress,omitempty"`
 

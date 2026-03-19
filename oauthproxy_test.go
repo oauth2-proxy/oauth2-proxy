@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
+	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/authentication/hmacauth"
@@ -1028,6 +1029,20 @@ func TestUserInfoEndpointAccepted(t *testing.T) {
 			},
 			expectedResponse: "{\"user\":\"john.doe\",\"email\":\"john.doe@example.com\",\"groups\":[\"example\",\"groups\"],\"preferredUsername\":\"john\"}\n",
 		},
+		{
+			name: "With Additional Claim",
+			session: &sessions.SessionState{
+				User:              "john.doe",
+				PreferredUsername: "john",
+				Email:             "john.doe@example.com",
+				Groups:            []string{"example", "groups"},
+				AccessToken:       "my_access_token",
+				AdditionalClaims: map[string]interface{}{
+					"foo": "bar",
+				},
+			},
+			expectedResponse: "{\"user\":\"john.doe\",\"email\":\"john.doe@example.com\",\"groups\":[\"example\",\"groups\"],\"preferredUsername\":\"john\",\"additionalClaims\":{\"foo\":\"bar\"}}\n",
+		},
 	}
 
 	for _, tc := range testCases {
@@ -2022,6 +2037,44 @@ func Test_noCacheHeaders(t *testing.T) {
 		}
 
 	})
+}
+
+func TestSignOutCallsBackendLogoutURL(t *testing.T) {
+	const testIDToken = "test-id-token-12345"
+	var receivedURL string
+	backendLogoutServer := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		receivedURL = req.URL.String()
+		rw.WriteHeader(http.StatusOK)
+	}))
+	defer backendLogoutServer.Close()
+
+	opts := baseTestOptions()
+	opts.Providers[0].BackendLogoutURL = backendLogoutServer.URL + "/logout?id_token_hint={id_token}"
+	err := validation.Validate(opts)
+	require.NoError(t, err)
+
+	proxy, err := NewOAuthProxy(opts, func(string) bool { return true })
+	require.NoError(t, err)
+
+	// Save a session with IDToken so backend logout can use it
+	rw := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	err = proxy.sessionStore.Save(rw, req, &sessions.SessionState{
+		Email:   "user@example.com",
+		IDToken: testIDToken,
+	})
+	require.NoError(t, err)
+	cookie := rw.Header().Values("Set-Cookie")[0]
+
+	// Hit sign_out with the session cookie; backend logout should be called before session is cleared
+	signOutReq := httptest.NewRequest(http.MethodGet, "/oauth2/sign_out", nil)
+	signOutReq.Header.Set("Cookie", cookie)
+	rec := httptest.NewRecorder()
+	proxy.ServeHTTP(rec, signOutReq)
+
+	assert.Equal(t, http.StatusFound, rec.Code, "sign_out should redirect")
+	assert.Contains(t, receivedURL, "id_token_hint="+testIDToken,
+		"backend logout URL should have been called with id_token from session")
 }
 
 func baseTestOptions() *options.Options {
@@ -3526,4 +3579,50 @@ func TestGetOAuthRedirectURI(t *testing.T) {
 			assert.Equalf(t, tt.want, proxy.getOAuthRedirectURI(tt.req), "getOAuthRedirectURI(%v)", tt.req)
 		})
 	}
+}
+
+func TestIdTokenPlaceholderInSignOut(t *testing.T) {
+	opts := baseTestOptions()
+	opts.WhitelistDomains = []string{"my-oidc-provider.example.com"}
+
+	err := validation.Validate(opts)
+	assert.NoError(t, err)
+
+	const emailAddress = "john.doe@example.com"
+	const userName = "9fcab5c9b889a557"
+	created := time.Now()
+
+	session := &sessions.SessionState{
+		User:        userName,
+		Groups:      []string{"a", "b"},
+		Email:       emailAddress,
+		IDToken:     "eYjjjjjj.vvvv.ddd",
+		AccessToken: "oauth_token",
+		CreatedAt:   &created,
+	}
+
+	proxy, err := NewOAuthProxy(opts, func(email string) bool {
+		return true
+	})
+	assert.NoError(t, err)
+
+	// Save the required session
+	rw := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/", nil)
+	err = proxy.sessionStore.Save(rw, req, session)
+	assert.NoError(t, err)
+
+	rw = httptest.NewRecorder()
+
+	rdUrl := url.QueryEscape("https://my-oidc-provider.example.com/sign_out_page?id_token_hint={id_token}&post_logout_redirect_uri=https://my-app.example.com/")
+	req, _ = http.NewRequest("GET", "/oauth2/sign_out?rd="+rdUrl, nil)
+	req = middlewareapi.AddRequestScope(req, &middlewareapi.RequestScope{
+		RequestID: "11111111-2222-4333-8444-555555555555",
+		Session:   session,
+	})
+
+	proxy.SignOut(rw, req)
+	newLocation := rw.Header().Values("Location")[0]
+
+	assert.Equal(t, "https://my-oidc-provider.example.com/sign_out_page?id_token_hint=eYjjjjjj.vvvv.ddd&post_logout_redirect_uri=https://my-app.example.com/", newLocation)
 }

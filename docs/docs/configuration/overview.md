@@ -66,11 +66,48 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 
 ### Command Line Options
 
-| Flag        | Description          |
-| ----------- | -------------------- |
-| `--config`  | path to config file  |
-| `--version` | print version string |
+| Flag             | Description                                             |
+| ---------------- | ------------------------------------------------------- |
+| `--config`       | path to config file                                     |
+| `--config-test`  | test configuration and exit (for CI/CD validation)      |
+| `--version`      | print version string                                    |
 
+## Configuration Validation
+
+The `--config-test` flag validates your configuration file without starting the proxy server. This is useful for:
+- **CI/CD pipelines**: Pre-deployment validation
+- **Configuration management**: Testing before applying changes
+- **Debugging**: Verifying syntax and required fields
+
+### Usage
+
+```bash
+# Test legacy config
+oauth2-proxy --config /etc/oauth2-proxy.cfg --config-test
+
+# Test alpha config
+oauth2-proxy --config /etc/core.cfg --alpha-config /etc/alpha.yaml --config-test
+
+# CI/CD pre-deployment check
+# Returns with exit code 1 if any validation errors occur
+oauth2-proxy --config new-config.cfg --config-test 
+```
+
+### Exit Codes
+
+- **0**: Configuration is valid ✅
+- **1**: Configuration is invalid (errors printed to stderr) ❌
+
+### Validation Coverage
+
+The `--config-test` flag performs the **same comprehensive validation** as normal startup, including:
+- Required fields (client ID, client secret, cookie secret, etc.)
+- Syntax validation (TOML/YAML parsing)
+- Provider configuration
+- Upstream server definitions
+- Session store connectivity (e.g., Redis network checks if configured)
+
+**Note**: Cannot be combined with `--convert-config-to-alpha`.
 
 ### General Provider Options
 
@@ -83,7 +120,7 @@ Provider specific options can be found on their respective subpages.
 | flag: `--approval-prompt`<br/>toml: `approval_prompt`                                               | string         | OAuth approval_prompt                                                                                                                                                                                    | `"force"`             |
 | flag: `--backend-logout-url`<br/>toml: `backend_logout_url`                                         | string         | URL to perform backend logout, if you use `{id_token}` in the url it will be replaced by the actual `id_token` of the user session                                                                       |                       |
 | flag: `--client-id`<br/>toml: `client_id`                                                           | string         | the OAuth Client ID, e.g. `"123456.apps.googleusercontent.com"`                                                                                                                                          |                       |
-| flag: `--client-secret-file`<br/>toml: `client_secret_file`                                         | string         | the file with OAuth Client Secret. The file must contain the secret only, with no trailing newline                                                                                                                                                                        |                       |
+| flag: `--client-secret-file`<br/>toml: `client_secret_file`                                         | string         | the file with OAuth Client Secret. The file must contain the secret only, with no trailing newline                                                                                                       |                       |
 | flag: `--client-secret`<br/>toml: `client_secret`                                                   | string         | the OAuth Client Secret                                                                                                                                                                                  |                       |
 | flag: `--code-challenge-method`<br/>toml: `code_challenge_method`                                   | string         | use PKCE code challenges with the specified method. Either 'plain' or 'S256' (recommended)                                                                                                               |                       |
 | flag: `--insecure-oidc-allow-unverified-email`<br/>toml: `insecure_oidc_allow_unverified_email`     | bool           | don't fail if an email address in an id_token is not verified                                                                                                                                            | false                 |
@@ -99,10 +136,11 @@ Provider specific options can be found on their respective subpages.
 | flag: `--oidc-groups-claim`<br/>toml: `oidc_groups_claim`                                           | string         | which OIDC claim contains the user groups                                                                                                                                                                | `"groups"`            |
 | flag: `--oidc-issuer-url`<br/>toml: `oidc_issuer_url`                                               | string         | the OpenID Connect issuer URL, e.g. `"https://accounts.google.com"`                                                                                                                                      |                       |
 | flag: `--oidc-jwks-url`<br/>toml: `oidc_jwks_url`                                                   | string         | OIDC JWKS URI for token verification; required if OIDC discovery is disabled and public key files are not provided                                                                                       |                       |
-| flag: `--oidc-public-key-file`<br/>toml: `oidc_public_key_files`                                    | string         | Path to public key file in PEM format to use for verifying JWT tokens (may be given multiple times). Required if OIDC discovery is disabled na JWKS URL isn't provided                                   | string \| list        |
+| flag: `--oidc-public-key-file`<br/>toml: `oidc_public_key_files`                                    | string         | Path to public key file in PEM format to use for verifying JWT tokens (may be given multiple times). Required if OIDC discovery is disabled na JWKS URL isn't provided                                   |        |
+| flag: `--oidc-enabled-signing-alg`<br/>toml: `oidc_enabled_signing_algs`                                    | string \| list    | List of allowed JWT signing algorithms. When oidc discovery is enabled, the effective set is the intersection between this list and the provider's discovered supported algorithms. |        |
 | flag: `--profile-url`<br/>toml: `profile_url`                                                       | string         | Profile access endpoint                                                                                                                                                                                  |                       |
 | flag: `--prompt`<br/>toml: `prompt`                                                                 | string         | [OIDC prompt](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest); if present, `approval-prompt` is ignored                                                                               | `""`                  |
-| flag: `--provider-ca-file`<br/>toml: `provider_ca_files`                                            | string \| list | Paths to CA certificates that should be used when connecting to the provider. If not specified, the default Go trust sources are used instead.                                                           |
+| flag: `--provider-ca-file`<br/>toml: `provider_ca_files`                                            | string \| list | Paths to CA certificates that should be used when connecting to the provider. If not specified, the default Go trust sources are used instead.                                                           |                       |
 | flag: `--provider-display-name`<br/>toml: `provider_display_name`                                   | string         | Override the provider's name with the given string; used for the sign-in page                                                                                                                            | (depends on provider) |
 | flag: `--provider`<br/>toml: `provider`                                                             | string         | OAuth provider                                                                                                                                                                                           | google                |
 | flag: `--pubjwk-url`<br/>toml: `pubjwk_url`                                                         | string         | JWK pubkey access endpoint: required by login.gov                                                                                                                                                        |                       |
@@ -120,6 +158,7 @@ Provider specific options can be found on their respective subpages.
 | flag: `--cookie-csrf-expire`<br/>toml: `cookie_csrf_expire`                       | duration       | expire timeframe for CSRF cookie                                                                                                                                                                                                                  | 15m               |
 | flag: `--cookie-csrf-per-request`<br/>toml:`cookie_csrf_per_request`              | bool           | Enable having different CSRF cookies per request, making it possible to have parallel requests.                                                                                                                                                   | false             |
 | flag: `--cookie-csrf-per-request-limit`<br/>toml: `cookie_csrf_per_request_limit` | int            | Sets a limit on the number of CSRF requests cookies that oauth2-proxy will create. The oldest cookie will be removed. Useful if users end up with 431 Request headers too large status codes. Only effective if --cookie-csrf-per-request is true | "infinite"        |
+| flag: `--cookie-csrf-samesite`<br/>toml: `cookie_csrf_samesite`                   | string         | set SameSite CSRF cookie attribute (`"lax"`, `"strict"`, `"none"`, or `""`). When using the default setting, the CSRF cookie samesite value is taken from the session cookie configuration.                                                       | `""`              |
 | flag: `--cookie-domain`<br/>toml: `cookie_domains`                                | string \| list | Optional cookie domains to force cookies to (e.g. `.yourcompany.com`). The longest domain matching the request's host will be used (or the shortest cookie domain if there is no match).                                                          |                   |
 | flag: `--cookie-expire`<br/>toml: `cookie_expire`                                 | duration       | expire timeframe for cookie. If set to 0, cookie becomes a session-cookie which will expire when the browser is closed.                                                                                                                           | 168h0m0s          |
 | flag: `--cookie-httponly`<br/>toml: `cookie_httponly`                             | bool           | set HttpOnly cookie flag                                                                                                                                                                                                                          | true              |
@@ -128,7 +167,7 @@ Provider specific options can be found on their respective subpages.
 | flag: `--cookie-refresh`<br/>toml: `cookie_refresh`                               | duration       | refresh the cookie after this duration; `0` to disable; not supported by all providers&nbsp;[^1]                                                                                                                                                  |                   |
 | flag: `--cookie-samesite`<br/>toml: `cookie_samesite`                             | string         | set SameSite cookie attribute (`"lax"`, `"strict"`, `"none"`, or `""`).                                                                                                                                                                           | `""`              |
 | flag: `--cookie-secret`<br/>toml: `cookie_secret`                                 | string         | the seed string for secure cookies (optionally base64 encoded)                                                                                                                                                                                    |                   |
-| flag: `--cookie-secret-file`<br/>toml: `cookie_secret_file`                       | string         | File containing the cookie secret (must be raw binary, exactly 16, 24, or 32 bytes). Use dd if=/dev/urandom bs=32 count=1 > cookie.secret to generate                                                                                                                                                                        |                   |
+| flag: `--cookie-secret-file`<br/>toml: `cookie_secret_file`                       | string         | File containing the cookie secret (must be raw binary, exactly 16, 24, or 32 bytes). Use dd if=/dev/urandom bs=32 count=1 > cookie.secret to generate                                                                                             |                   |
 | flag: `--cookie-secure`<br/>toml: `cookie_secure`                                 | bool           | set [secure (HTTPS only) cookie flag](https://owasp.org/www-community/controls/SecureFlag)                                                                                                                                                        | true              |
 
 [^1]: The following providers support `--cookie-refresh`: ADFS, Azure, GitLab, Google, Keycloak and all other Identity Providers which support the full [OIDC specification](https://openid.net/specs/openid-connect-core-1_0.html#RefreshTokens)
@@ -172,7 +211,7 @@ Provider specific options can be found on their respective subpages.
 | Flag / Config Field                                               | Type   | Description                                                                                                                 | Default |
 | ----------------------------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------- | ------- |
 | flag: `--banner`<br/>toml: `banner`                               | string | custom (html) banner string. Use `"-"` to disable default banner.                                                           |         |
-| flag: `--custom-sign-in-logo`<br/>toml: `custom_sign_in_logo`     | string | path or a URL to an custom image for the sign_in page logo. Use `"-"` to disable default logo.                              |
+| flag: `--custom-sign-in-logo`<br/>toml: `custom_sign_in_logo`     | string | path or a URL to an custom image for the sign_in page logo. Use `"-"` to disable default logo.                              |         |
 | flag: `--custom-templates-dir`<br/>toml: `custom_templates_dir`   | string | path to custom html templates                                                                                               |         |
 | flag: `--display-htpasswd-form`<br/>toml: `display_htpasswd_form` | bool   | display username / password login form if an htpasswd file is provided                                                      | true    |
 | flag: `--footer`<br/>toml: `footer`                               | string | custom (html) footer string. Use `"-"` to disable default footer. (Can be used to obfuscate the version)                    |         |
@@ -223,7 +262,7 @@ Provider specific options can be found on their respective subpages.
 
 | Flag / Config Field                                                 | Type           | Description                                                                                                                                                                                                                                                                                                   | Default            |
 | ------------------------------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
-| flag: `--http-address`<br/>toml: `http_address`                     | string         | `[http://]<addr>:<port>` or `unix://<path>` or `fd:<int>` (case insensitive) to listen on for HTTP clients. Square brackets are required for ipv6 address, e.g. `http://[::1]:4180`                                                                                                                           | `"127.0.0.1:4180"` |
+| flag: `--http-address`<br/>toml: `http_address`                     | string         | `[http://]<addr>:<port>` or `unix://<path>` or `fd:<int>` (case insensitive) to listen on for HTTP clients. Unix sockets are created with default system umask mode, which can be overridden, e.g. `unix://my-socket,mode=0777`. Square brackets are required for ipv6 address, e.g. `http://[::1]:4180`                                                                                                                           | `"127.0.0.1:4180"` |
 | flag: `--https-address`<br/>toml: `https_address`                   | string         | `[https://]<addr>:<port>` to listen on for HTTPS clients. Square brackets are required for ipv6 address, e.g. `https://[::1]:443`                                                                                                                                                                             | `":443"`           |
 | flag: `--metrics-address`<br/>toml: `metrics_address`               | string         | the address prometheus metrics will be scraped from                                                                                                                                                                                                                                                           | `""`               |
 | flag: `--metrics-secure-address`<br/>toml: `metrics_secure_address` | string         | the address prometheus metrics will be scraped from if using HTTPS                                                                                                                                                                                                                                            | `""`               |
@@ -242,6 +281,7 @@ Provider specific options can be found on their respective subpages.
 | flag: `--session-store-type`<br/>toml: `session_store_type`                         | string         | [Session data storage backend](sessions.md); redis or cookie                                                                                                                                                                                                                                                                                                                                                  | cookie  |
 | flag: `--redis-cluster-connection-urls`<br/>toml: `redis_cluster_connection_urls`   | string \| list | List of Redis cluster connection URLs (e.g. `redis://HOST[:PORT]`). Used in conjunction with `--redis-use-cluster`                                                                                                                                                                                                                                                                                            |         |
 | flag: `--redis-connection-url`<br/>toml: `redis_connection_url`                     | string         | URL of redis server for redis session storage (e.g. `redis://HOST[:PORT]`)                                                                                                                                                                                                                                                                                                                                    |         |
+| flag: `--redis-ca-path`<br/>toml: `redis_ca_path`                                   | string         | Path to a CA certificates file that should be used when connecting to redis. If not specified, the system cert pool is used instead.                                                                                                                                                                                                                                                                          |         |
 | flag: `--redis-insecure-skip-tls-verify`<br/>toml: `redis_insecure_skip_tls_verify` | bool           | skip TLS verification when connecting to Redis                                                                                                                                                                                                                                                                                                                                                                | false   |
 | flag: `--redis-password`<br/>toml: `redis_password`                                 | string         | Redis password. Applicable for all Redis configurations. Will override any password set in `--redis-connection-url`                                                                                                                                                                                                                                                                                           |         |
 | flag: `--redis-sentinel-password`<br/>toml: `redis_sentinel_password`               | string         | Redis sentinel password. Used only for sentinel connection; any redis node passwords need to use `--redis-password`                                                                                                                                                                                                                                                                                           |         |

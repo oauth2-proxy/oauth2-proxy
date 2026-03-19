@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -95,13 +96,60 @@ func (s *server) setupListener(opts Opts) error {
 	networkType := getNetworkScheme(opts.BindAddress)
 	listenAddr := getListenAddress(opts.BindAddress)
 
-	listener, err := net.Listen(networkType, listenAddr)
+	listener, err := func() (net.Listener, error) {
+		if networkType == "unix" {
+			return setupUnixSocketListener(networkType, listenAddr)
+		}
+		return net.Listen(networkType, listenAddr)
+	}()
+
 	if err != nil {
 		return fmt.Errorf("listen (%s, %s) failed: %w", networkType, listenAddr, err)
 	}
-	s.listener = listener
 
+	s.listener = listener
 	return nil
+}
+
+func setupUnixSocketListener(networkType string, address string) (net.Listener, error) {
+	socketOpts := strings.Split(address, ",")
+	if len(socketOpts) < 2 {
+		return net.Listen(networkType, address)
+	}
+
+	socketPath := socketOpts[0]
+	var socketMode os.FileMode
+	hasSocketMode := false
+
+	for _, socketOpt := range socketOpts[1:] {
+		socketOpt := strings.SplitN(socketOpt, "=", 2)
+		if len(socketOpt) != 2 {
+			return nil, fmt.Errorf("unix socket option %s expects a value", socketOpt[0])
+		}
+
+		if socketOpt[0] == "mode" {
+			mode, err := strconv.ParseUint(socketOpt[1], 8, 32)
+			if err != nil {
+				return nil, fmt.Errorf("unix socket file mode has invalid value %s", socketOpt[1])
+			}
+			socketMode = os.FileMode(mode)
+			hasSocketMode = true
+		}
+	}
+
+	listener, err := net.Listen(networkType, socketPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if hasSocketMode {
+		err = os.Chmod(socketPath, socketMode)
+		if err != nil {
+			return nil, fmt.Errorf("cannot set unix socket file mode on %s: %v", socketPath, err)
+		}
+	}
+
+	return listener, nil
 }
 
 func parseCipherSuites(names []string) ([]uint16, error) {

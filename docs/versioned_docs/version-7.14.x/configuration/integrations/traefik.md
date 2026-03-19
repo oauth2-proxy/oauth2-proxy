@@ -79,7 +79,15 @@ http:
           - "401-403"
         service: oauth-backend
         query: "/oauth2/sign_in?rd={url}"
+        statusRewrites:
+          "401": 302
 ```
+
+:::info Troubleshooting: Browser shows "Found." instead of redirecting
+When using the Errors middleware without `statusRewrites`, the redirect response from oauth2-proxy can be served within the original 401/403 status context. This causes some browsers to display a "Found." link instead of automatically following the redirect to the identity provider.
+
+Adding `statusRewrites` to rewrite `401 -> 302` ensures the browser treats the response as a proper redirect and follows it automatically.
+:::
 
 ### ForwardAuth with static upstreams configuration
 

@@ -14,7 +14,7 @@ version: "3.0"
 services:
   oauth2-proxy:
     container_name: oauth2-proxy
-    image: quay.io/oauth2-proxy/oauth2-proxy:v7.14.3
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.0
     command: --config /oauth2-proxy.cfg --alpha-config /oauth2-proxy-alpha-config.yaml
     hostname: oauth2-proxy
     volumes:
@@ -31,7 +31,7 @@ services:
       - httpbin
   dex:
     container_name: dex
-    image: ghcr.io/dexidp/dex:v2.44.0
+    image: ghcr.io/dexidp/dex:v2.45.1
     command: dex serve /dex.yaml
     hostname: dex
     volumes:
@@ -54,7 +54,7 @@ services:
       httpbin: {}
   etcd:
     container_name: etcd
-    image: gcr.io/etcd-development/etcd:v3.6.7
+    image: gcr.io/etcd-development/etcd:v3.6.8
     entrypoint: /usr/local/bin/etcd
     command:
       - --listen-client-urls=http://0.0.0.0:2379

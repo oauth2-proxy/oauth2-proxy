@@ -45,11 +45,26 @@ type ProviderData struct {
 	SupportedCodeChallengeMethods []string `json:"code_challenge_methods_supported,omitempty"`
 
 	// Common OIDC options for any OIDC-based providers to consume
-	AllowUnverifiedEmail     bool
-	UserClaim                string
-	EmailClaim               string
-	GroupsClaim              string
-	Verifier                 internaloidc.IDTokenVerifier
+	AllowUnverifiedEmail bool
+
+	// UserClaim is the claim to use for populating the SessionState.User field.  Defaults to "sub" if not set.
+	UserClaim string
+
+	// EmailClaim is the claim to use for populating the SessionState.Email field.
+	EmailClaim string
+
+	// GroupsClaim is the claim to use for populating the SessionState.Groups field.
+	// If not set, groups will not be extracted from the ID Token or userinfo response.
+	GroupsClaim string
+
+	// Verifier is the OIDC ID Token Verifier to be used by any OIDC-based providers to verify ID Tokens returned by the provider.
+	// It must be set up by the provider implementation and is not expected to be configured directly by users.
+	Verifier internaloidc.IDTokenVerifier
+
+	// Additional claims to be obtained from the upstream IDP, either from the id_token or from the userinfo endpoint if configured.
+	AdditionalClaims []string `json:"additionalClaims,omitempty"`
+
+	// SkipClaimsFromProfileURL indicates that claims should not be fetched from the ProfileURL, even if it is set.
 	SkipClaimsFromProfileURL bool
 
 	// Universal Group authorization data structure
@@ -179,6 +194,10 @@ func regexpForRule(rule options.URLParameterRule) string {
 func (p *ProviderData) setAllowedGroups(groups []string) {
 	p.AllowedGroups = make(map[string]struct{}, len(groups))
 	for _, group := range groups {
+		if len(group) == 0 {
+			continue
+		}
+
 		p.AllowedGroups[group] = struct{}{}
 	}
 }
@@ -268,6 +287,10 @@ func (p *ProviderData) buildSessionFromClaims(rawIDToken, accessToken string) (*
 		}
 	}
 
+	if p.AdditionalClaims != nil {
+		p.extractAdditionalClaims(extractor, ss)
+	}
+
 	// `email_verified` must be present and explicitly set to `false` to be
 	// considered unverified.
 	verifyEmail := (p.EmailClaim == options.OIDCEmailClaim) && !p.AllowUnverifiedEmail
@@ -299,6 +322,22 @@ func (p *ProviderData) getClaimExtractor(rawIDToken, accessToken string) (util.C
 	}
 
 	return extractor, nil
+}
+
+func (p *ProviderData) extractAdditionalClaims(extractor util.ClaimExtractor, ss *sessions.SessionState) {
+	if ss.AdditionalClaims == nil {
+		ss.AdditionalClaims = make(map[string]any)
+	}
+	for _, claim := range p.AdditionalClaims {
+		value, exists, err := extractor.GetClaim(claim)
+		if err != nil {
+			logger.Printf("error extracting additional claim %q: %v", claim, err)
+			continue
+		}
+		if exists {
+			ss.AdditionalClaims[claim] = value
+		}
+	}
 }
 
 // checkNonce compares the session's nonce with the IDToken's nonce claim

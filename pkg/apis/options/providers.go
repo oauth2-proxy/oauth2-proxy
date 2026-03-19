@@ -134,6 +134,9 @@ type Provider struct {
 	// The code challenge method
 	CodeChallengeMethod string `yaml:"code_challenge_method,omitempty"`
 
+	// Additional claims to be obtained from the upstream IDP, either from the id_token or from the userinfo endpoint if configured.
+	AdditionalClaims []string `yaml:"additionalClaims,omitempty"`
+
 	// URL to call to perform backend logout, `{id_token}` would be replaced by the actual `id_token` if available in the session
 	BackendLogoutURL string `yaml:"backendLogoutURL"`
 }
@@ -318,6 +321,11 @@ type OIDCOptions struct {
 	// ExtraAudiences is a list of additional audiences that are allowed
 	// to pass verification in addition to the client id.
 	ExtraAudiences []string `yaml:"extraAudiences,omitempty"`
+	// EnabledSigningAlgs is a list of allowed JWT signing algorithms.
+	// When discovery is enabled, the effective set is the intersection
+	// between this list and the provider's discovered supported algorithms.
+	// By default `RS256` is used if nothing has been discovered or specified.
+	EnabledSigningAlgs []string `yaml:"enabledSigningAlgs,omitempty"`
 }
 
 type LoginGovOptions struct {
