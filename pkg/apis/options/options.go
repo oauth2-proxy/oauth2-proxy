@@ -65,6 +65,8 @@ type Options struct {
 	EncodeState              bool     `flag:"encode-state" cfg:"encode_state"`
 	AllowQuerySemicolons     bool     `flag:"allow-query-semicolons" cfg:"allow_query_semicolons"`
 
+	DPoP DpopOptions `cfg:",squash"`
+
 	SignatureKey    string `flag:"signature-key" cfg:"signature_key"`
 	GCPHealthChecks bool   `flag:"gcp-healthchecks" cfg:"gcp_healthchecks"`
 
@@ -110,6 +112,7 @@ func NewOptions() *Options {
 		Templates:                templatesDefaults(),
 		SkipAuthPreflight:        false,
 		Logging:                  loggingDefaults(),
+		DPoP:                     dpopDefaults(),
 	}
 }
 
@@ -135,6 +138,9 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Bool("encode-state", false, "will encode oauth state with base64")
 	flagSet.Bool("allow-query-semicolons", false, "allow the use of semicolons in query args")
 	flagSet.StringSlice("extra-jwt-issuers", []string{}, "if skip-jwt-bearer-tokens is set, a list of extra JWT issuer=audience pairs (where the issuer URL has a .well-known/openid-configuration or a .well-known/jwks.json)")
+	flagSet.Bool("enable-dpop-support", false, "enable DPoP support for verifying DPoP structured tokens")
+	flagSet.Duration("dpop-time-window", DefaultDpopTimeWindow, "the acceptable time window for DPoP proof's iat claim")
+	flagSet.String("dpop-jti-store-type", "", "the type of JTI store to use for DPoP (memory, redis, session-redis). NOTE: defaults to session-redis if session type is redis")
 
 	flagSet.StringSlice("email-domain", []string{}, "authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email")
 	flagSet.StringSlice("whitelist-domain", []string{}, "allowed domains for redirection after authentication. Prefix domain with a . or a *. to allow subdomains (eg .example.com, *.example.com)")
@@ -159,6 +165,19 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Bool("redis-use-cluster", false, "Connect to redis cluster. Must set --redis-cluster-connection-urls to use this feature")
 	flagSet.StringSlice("redis-cluster-connection-urls", []string{}, "List of Redis cluster connection URLs (eg redis://[USER[:PASSWORD]@]HOST[:PORT]). Used in conjunction with --redis-use-cluster")
 	flagSet.Int("redis-connection-idle-timeout", 0, "Redis connection idle timeout seconds, if Redis timeout option is non-zero, the --redis-connection-idle-timeout must be less then Redis timeout option")
+
+	flagSet.String("dpop-redis-connection-url", "", "URL of redis server for DPoP JTI storage (eg: redis://[USER[:PASSWORD]@]HOST[:PORT])")
+	flagSet.String("dpop-redis-username", "", "Redis username for DPoP JTI storage. Applicable for Redis configurations where ACL has been configured. Will override any username set in `--dpop-redis-connection-url`")
+	flagSet.String("dpop-redis-password", "", "Redis password for DPoP JTI storage. Applicable for all Redis configurations. Will override any password set in `--dpop-redis-connection-url`")
+	flagSet.Bool("dpop-redis-use-sentinel", false, "Connect to redis via sentinels for DPoP JTI storage. Must set --dpop-redis-sentinel-master-name and --dpop-redis-sentinel-connection-urls to use this feature")
+	flagSet.String("dpop-redis-sentinel-password", "", "Redis sentinel password for DPoP JTI storage. Used only for sentinel connection; any redis node passwords need to use `--dpop-redis-password`")
+	flagSet.String("dpop-redis-sentinel-master-name", "", "Redis sentinel master name for DPoP JTI storage. Used in conjunction with --dpop-redis-use-sentinel")
+	flagSet.String("dpop-redis-ca-path", "", "Redis custom CA path for DPoP JTI storage")
+	flagSet.Bool("dpop-redis-insecure-skip-tls-verify", false, "Use insecure TLS connection to redis for DPoP JTI storage")
+	flagSet.StringSlice("dpop-redis-sentinel-connection-urls", []string{}, "List of Redis sentinel connection URLs for DPoP JTI storage (eg redis://[USER[:PASSWORD]@]HOST[:PORT]). Used in conjunction with --dpop-redis-use-sentinel")
+	flagSet.Bool("dpop-redis-use-cluster", false, "Connect to redis cluster for DPoP JTI storage. Must set --dpop-redis-cluster-connection-urls to use this feature")
+	flagSet.StringSlice("dpop-redis-cluster-connection-urls", []string{}, "List of Redis cluster connection URLs for DPoP JTI storage (eg redis://[USER[:PASSWORD]@]HOST[:PORT]). Used in conjunction with --dpop-redis-use-cluster")
+	flagSet.Int("dpop-redis-connection-idle-timeout", 0, "Redis connection idle timeout seconds for DPoP JTI storage, if Redis timeout option is non-zero, the --dpop-redis-connection-idle-timeout must be less then Redis timeout option")
 	flagSet.String("signature-key", "", "GAP-Signature request signature key (algorithm:secretkey)")
 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
 

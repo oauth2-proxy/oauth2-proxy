@@ -2,6 +2,9 @@
 
 ## Release Highlights
 
+- 💪 DPoP support (RFC 9449 aka "Demonstration of Proof-of-Possession")
+  - see [dpop.md](docs/docs/features/dpop.md)
+
 ## Important Notes
 
 ## Breaking Changes

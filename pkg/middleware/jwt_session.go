@@ -9,17 +9,19 @@ import (
 	"github.com/justinas/alice"
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/dpop"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	k8serrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
 const jwtRegexFormat = `^ey[a-zA-Z0-9_-]*\.ey[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]+$`
 
-func NewJwtSessionLoader(sessionLoaders []middlewareapi.TokenToSessionFunc, bearerTokenLoginFallback bool) alice.Constructor {
+func NewJwtSessionLoader(sessionLoaders []middlewareapi.TokenToSessionFunc, bearerTokenLoginFallback bool, dpopValidator dpop.Validator) alice.Constructor {
 	js := &jwtSessionLoader{
 		jwtRegex:        regexp.MustCompile(jwtRegexFormat),
 		sessionLoaders:  sessionLoaders,
 		denyInvalidJWTs: !bearerTokenLoginFallback,
+		dpopValidator:   dpopValidator,
 	}
 	return js.loadSession
 }
@@ -30,6 +32,7 @@ type jwtSessionLoader struct {
 	jwtRegex        *regexp.Regexp
 	sessionLoaders  []middlewareapi.TokenToSessionFunc
 	denyInvalidJWTs bool
+	dpopValidator   dpop.Validator
 }
 
 // loadSession attempts to load a session from a JWT stored in an Authorization
@@ -73,9 +76,27 @@ func (j *jwtSessionLoader) getJwtSession(req *http.Request) (*sessionsapi.Sessio
 		return nil, nil
 	}
 
+<<<<<<< Updated upstream
 	token, err := j.findTokenFromHeader(auth)
+=======
+	tokenType, token, err := j.findTokenFromHeader(auth)
+>>>>>>> Stashed changes
 	if err != nil {
 		return nil, err
+	}
+
+<<<<<<< Updated upstream
+	if err := j.handleDpop(req, auth, token); err != nil {
+		return nil, err
+=======
+	if tokenType == "DPoP" {
+		if j.dpopValidator == nil {
+			return nil, errors.New("DPoP support is not enabled")
+		}
+		if _, err := j.dpopValidator.ValidateDPopToken(req, token); err != nil {
+			return nil, fmt.Errorf("invalid DPoP proof: %v", err)
+		}
+>>>>>>> Stashed changes
 	}
 
 	// This leading error message only occurs if all session loaders fail
@@ -92,24 +113,62 @@ func (j *jwtSessionLoader) getJwtSession(req *http.Request) (*sessionsapi.Sessio
 	return nil, k8serrors.NewAggregate(errs)
 }
 
+<<<<<<< Updated upstream
+func (j *jwtSessionLoader) handleDpop(req *http.Request, auth, token string) error {
+	tokenType, _, err := splitAuthHeader(auth)
+	if err == nil && tokenType == "DPoP" {
+		if j.dpopValidator == nil {
+			logger.Errorf("DPoP validation failed: DPoP support is not enabled")
+			return errors.New("DPoP support is not enabled")
+		}
+		if _, dpopErr := j.dpopValidator.Validate(req, token); dpopErr != nil {
+			logger.Errorf("DPoP validation failed: %v", dpopErr)
+			return fmt.Errorf("invalid DPoP proof: %v", dpopErr)
+		}
+	}
+	return nil
+}
+
 // findTokenFromHeader finds a valid JWT token from the Authorization header of a given request.
 func (j *jwtSessionLoader) findTokenFromHeader(header string) (string, error) {
 	tokenType, token, err := splitAuthHeader(header)
 	if err != nil {
 		return "", err
+=======
+// findTokenFromHeader finds a valid JWT token from the Authorization header of a given request.
+func (j *jwtSessionLoader) findTokenFromHeader(header string) (string, string, error) {
+	tokenType, token, err := splitAuthHeader(header)
+	if err != nil {
+		return "", "", err
+>>>>>>> Stashed changes
 	}
 
-	if tokenType == "Bearer" && j.jwtRegex.MatchString(token) {
-		// Found a JWT as a bearer token
+	if (tokenType == "Bearer" || tokenType == "DPoP") && j.jwtRegex.MatchString(token) {
+		// Found a JWT as a bearer or dpop token
+<<<<<<< Updated upstream
 		return token, nil
+=======
+		return tokenType, token, nil
+>>>>>>> Stashed changes
 	}
 
 	if tokenType == "Basic" {
 		// Check if we have a Bearer token masquerading in Basic
+<<<<<<< Updated upstream
 		return j.getBasicToken(token)
 	}
 
 	return "", fmt.Errorf("no valid bearer token found in authorization header")
+=======
+		t, err := j.getBasicToken(token)
+		if err != nil {
+			return "", "", err
+		}
+		return "Bearer", t, nil
+	}
+
+	return "", "", fmt.Errorf("no valid bearer or DPoP token found in authorization header")
+>>>>>>> Stashed changes
 }
 
 // getBasicToken tries to extract a token from the basic value provided.
