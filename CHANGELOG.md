@@ -2,8 +2,20 @@
 
 ## Release Highlights
 
-- Fixes [CVE-2026-33186](https://nvd.nist.gov/vuln/detail/CVE-2026-33186)
-    - OAuth2 Proxy was not impacted by this vulnerability as it isn't in the path of execution
+## Important Notes
+
+## Breaking Changes
+
+## Changes since v7.15.1
+
+# V7.15.1
+
+## Release Highlights
+
+- 🐛 Squashed some bugs
+-  🕵️‍♀️ Vulnerabilities have been addressed
+    - [CVE-2026-33186](https://nvd.nist.gov/vuln/detail/CVE-2026-33186)
+      OAuth2 Proxy was not impacted by this vulnerability as it isn't in the path of execution
 
 ## Important Notes
 
