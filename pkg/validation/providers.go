@@ -165,7 +165,8 @@ func validateEntraConfig(provider options.Provider) []string {
 			return msgs
 		}
 
-		_, err := os.ReadFile(federatedTokenPath)
+		// #nosec G703 -- AZURE_FEDERATED_TOKEN_FILE is set by the operator, not user input
+		_, err := os.Stat(federatedTokenPath)
 		if err != nil {
 			msgs = append(msgs, "could not read entra federated token file")
 		}

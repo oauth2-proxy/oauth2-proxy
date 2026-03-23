@@ -875,6 +875,8 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	remoteAddr := ip.GetClientString(p.realClientIPParser, req, true)
 
 	// finish the oauth cycle
+	// #nosec G120 -- The default max size in Go is already capped at 10MB so this would be the absolute max and is
+	// unlikely to be hit in practice.
 	err := req.ParseForm()
 	if err != nil {
 		logger.Errorf("Error while parsing OAuth2 callback: %v", err)
