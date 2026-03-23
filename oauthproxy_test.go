@@ -2150,6 +2150,32 @@ func TestTrustedIPs(t *testing.T) {
 			}(),
 			expectTrusted: false,
 		},
+		// Check Unix socket with no trusted IPs configured does not error.
+		{
+			name:               "UnixSocketWithoutTrustedIPs",
+			trustedIPs:         nil,
+			reverseProxy:       false,
+			realClientIPHeader: "X-Real-IP",
+			req: func() *http.Request {
+				req, _ := http.NewRequest("GET", "/", nil)
+				req.RemoteAddr = "@"
+				return req
+			}(),
+			expectTrusted: false,
+		},
+		// Check Unix socket with trusted IPs configured returns false (no IP to match).
+		{
+			name:               "UnixSocketWithTrustedIPs",
+			trustedIPs:         []string{"127.0.0.1"},
+			reverseProxy:       false,
+			realClientIPHeader: "X-Real-IP",
+			req: func() *http.Request {
+				req, _ := http.NewRequest("GET", "/", nil)
+				req.RemoteAddr = "@"
+				return req
+			}(),
+			expectTrusted: false,
+		},
 		// Check using req.RemoteAddr (Options.ReverseProxy == false).
 		{
 			name:               "WithRemoteAddr",

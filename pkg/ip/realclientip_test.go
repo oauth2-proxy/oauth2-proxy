@@ -112,6 +112,8 @@ func TestGetRemoteIP(t *testing.T) {
 		errString  string
 		expectedIP net.IP
 	}{
+		// Unix domain sockets set RemoteAddr to "@"
+		{"@", "", nil},
 		{"", "unable to get ip and port from http.RemoteAddr ()", nil},
 		{"nil", "unable to get ip and port from http.RemoteAddr (nil)", nil},
 		{"235.28.129.186", "unable to get ip and port from http.RemoteAddr (235.28.129.186)", nil},
@@ -155,6 +157,8 @@ func TestGetClientString(t *testing.T) {
 	}{
 		// Should fail quietly, only printing warnings to the log
 		{nil, "", "", "", ""},
+		// Unix domain socket — no IP available
+		{nil, "@", "", "", ""},
 		{p, "127.0.0.1:11950", "", "127.0.0.1", "127.0.0.1"},
 		{p, "[::1]:28660", "99.103.56.12", "99.103.56.12", "::1 (99.103.56.12)"},
 		{nil, "10.254.244.165:62750", "", "10.254.244.165", "10.254.244.165"},
