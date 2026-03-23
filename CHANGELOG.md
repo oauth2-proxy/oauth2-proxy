@@ -16,6 +16,7 @@
 - [#3382](https://github.com/oauth2-proxy/oauth2-proxy/pull/3382) chore(deps): update gomod and golangci/golangci-lint to v2.11.4 (@tuunit)
 - [#3374](https://github.com/oauth2-proxy/oauth2-proxy/pull/3374) fix: handle Unix socket RemoteAddr in IP resolution (@H1net)
 - [#3381](https://github.com/oauth2-proxy/oauth2-proxy/pull/3381) fix: do not log error for backend logout 204 (@artificiosus)
+- [#3327](https://github.com/oauth2-proxy/oauth2-proxy/pull/3327) fix: improve logging when session refresh token is missing (@yosri-brh)
 
 
 ## Release Highlights
