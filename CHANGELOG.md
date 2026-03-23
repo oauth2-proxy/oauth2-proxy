@@ -17,7 +17,7 @@
 - [#3374](https://github.com/oauth2-proxy/oauth2-proxy/pull/3374) fix: handle Unix socket RemoteAddr in IP resolution (@H1net)
 - [#3381](https://github.com/oauth2-proxy/oauth2-proxy/pull/3381) fix: do not log error for backend logout 204 (@artificiosus)
 - [#3327](https://github.com/oauth2-proxy/oauth2-proxy/pull/3327) fix: improve logging when session refresh token is missing (@yosri-brh)
-
+- [#3219](https://github.com/oauth2-proxy/oauth2-proxy/pull/3219) fix: escape OAuth state redirect URLs to preserve query parameters (@CallumWayve)
 
 ## Release Highlights
 
