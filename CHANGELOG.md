@@ -2,6 +2,9 @@
 
 ## Release Highlights
 
+- Fixes [CVE-2026-33186](https://nvd.nist.gov/vuln/detail/CVE-2026-33186)
+    - OAuth2 Proxy was not impacted by this vulnerability as it isn't in the path of execution
+
 ## Important Notes
 
 ## Breaking Changes
@@ -9,6 +12,8 @@
 ## Changes since v7.15.0
 
 # V7.15.0
+
+- [#3382](https://github.com/oauth2-proxy/oauth2-proxy/pull/3382) chore(deps): update gomod and golangci/golangci-lint to v2.11.4 (@tuunit)
 
 ## Release Highlights
 
