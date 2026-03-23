@@ -14,6 +14,8 @@
 # V7.15.0
 
 - [#3382](https://github.com/oauth2-proxy/oauth2-proxy/pull/3382) chore(deps): update gomod and golangci/golangci-lint to v2.11.4 (@tuunit)
+- [#3374](https://github.com/oauth2-proxy/oauth2-proxy/pull/3374) fix: handle Unix socket RemoteAddr in IP resolution (@H1net)
+
 
 ## Release Highlights
 
@@ -35,8 +37,6 @@ Check the [documentation(https://oauth2-proxy.github.io/oauth2-proxy/configurati
 ## Breaking Changes
 
 ## Changes since v7.14.3
-
-- [#3374](https://github.com/oauth2-proxy/oauth2-proxy/pull/3374) fix: handle Unix socket RemoteAddr in IP resolution (@H1net)
 
 - [#3352](https://github.com/oauth2-proxy/oauth2-proxy/pull/3352) fix: backend logout URL call on sign out (#3172)(@vsejpal)
 - [#3332](https://github.com/oauth2-proxy/oauth2-proxy/pull/3332) ci: distribute windows binary with .exe extension (@igitur)
