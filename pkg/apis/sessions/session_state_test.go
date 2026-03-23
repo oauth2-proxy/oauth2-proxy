@@ -58,7 +58,7 @@ func TestString(t *testing.T) {
 				User:              "some.user",
 				PreferredUsername: "preferred.user",
 			},
-			expected: "Session{email:email@email.email user:some.user PreferredUsername:preferred.user}",
+			expected: "Session{email:email@email.email user:some.user PreferredUsername:preferred.user refresh_token:false}",
 		},
 		{
 			name: "Full Session",
@@ -82,7 +82,7 @@ func TestString(t *testing.T) {
 				PreferredUsername: "preferred.user",
 				CreatedAt:         &created,
 			},
-			expected: "Session{email:email@email.email user:some.user PreferredUsername:preferred.user created:2000-01-01 00:00:00 +0000 UTC}",
+			expected: "Session{email:email@email.email user:some.user PreferredUsername:preferred.user created:2000-01-01 00:00:00 +0000 UTC refresh_token:false}",
 		},
 		{
 			name: "With an ExpiresOn",
@@ -92,7 +92,7 @@ func TestString(t *testing.T) {
 				PreferredUsername: "preferred.user",
 				ExpiresOn:         &expires,
 			},
-			expected: "Session{email:email@email.email user:some.user PreferredUsername:preferred.user expires:2000-01-01 01:00:00 +0000 UTC}",
+			expected: "Session{email:email@email.email user:some.user PreferredUsername:preferred.user expires:2000-01-01 01:00:00 +0000 UTC refresh_token:false}",
 		},
 		{
 			name: "With an AccessToken",
@@ -102,7 +102,7 @@ func TestString(t *testing.T) {
 				PreferredUsername: "preferred.user",
 				AccessToken:       "access.token",
 			},
-			expected: "Session{email:email@email.email user:some.user PreferredUsername:preferred.user token:true}",
+			expected: "Session{email:email@email.email user:some.user PreferredUsername:preferred.user token:true refresh_token:false}",
 		},
 		{
 			name: "With an IDToken",
@@ -112,7 +112,7 @@ func TestString(t *testing.T) {
 				PreferredUsername: "preferred.user",
 				IDToken:           "id.token",
 			},
-			expected: "Session{email:email@email.email user:some.user PreferredUsername:preferred.user id_token:true}",
+			expected: "Session{email:email@email.email user:some.user PreferredUsername:preferred.user id_token:true refresh_token:false}",
 		},
 		{
 			name: "With a RefreshToken",
