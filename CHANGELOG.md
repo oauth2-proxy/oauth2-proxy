@@ -23,14 +23,13 @@
 
 ## Changes since v7.15.0
 
-# V7.15.0
-
 - [#3382](https://github.com/oauth2-proxy/oauth2-proxy/pull/3382) chore(deps): update gomod and golangci/golangci-lint to v2.11.4 (@tuunit)
 - [#3374](https://github.com/oauth2-proxy/oauth2-proxy/pull/3374) fix: handle Unix socket RemoteAddr in IP resolution (@H1net)
 - [#3381](https://github.com/oauth2-proxy/oauth2-proxy/pull/3381) fix: do not log error for backend logout 204 (@artificiosus)
 - [#3327](https://github.com/oauth2-proxy/oauth2-proxy/pull/3327) fix: improve logging when session refresh token is missing (@yosri-brh)
 - [#2767](https://github.com/oauth2-proxy/oauth2-proxy/pull/2767) fix: propagate errors during route building (@sybereal)
 
+# V7.15.0
 
 ## Release Highlights
 
