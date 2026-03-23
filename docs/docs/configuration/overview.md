@@ -72,43 +72,6 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--config-test`  | test configuration and exit (for CI/CD validation)      |
 | `--version`      | print version string                                    |
 
-## Configuration Validation
-
-The `--config-test` flag validates your configuration file without starting the proxy server. This is useful for:
-- **CI/CD pipelines**: Pre-deployment validation
-- **Configuration management**: Testing before applying changes
-- **Debugging**: Verifying syntax and required fields
-
-### Usage
-
-```bash
-# Test legacy config
-oauth2-proxy --config /etc/oauth2-proxy.cfg --config-test
-
-# Test alpha config
-oauth2-proxy --config /etc/core.cfg --alpha-config /etc/alpha.yaml --config-test
-
-# CI/CD pre-deployment check
-# Returns with exit code 1 if any validation errors occur
-oauth2-proxy --config new-config.cfg --config-test 
-```
-
-### Exit Codes
-
-- **0**: Configuration is valid ✅
-- **1**: Configuration is invalid (errors printed to stderr) ❌
-
-### Validation Coverage
-
-The `--config-test` flag performs the **same comprehensive validation** as normal startup, including:
-- Required fields (client ID, client secret, cookie secret, etc.)
-- Syntax validation (TOML/YAML parsing)
-- Provider configuration
-- Upstream server definitions
-- Session store connectivity (e.g., Redis network checks if configured)
-
-**Note**: Cannot be combined with `--convert-config-to-alpha`.
-
 ### General Provider Options
 
 Provider specific options can be found on their respective subpages.
@@ -304,6 +267,43 @@ Provider specific options can be found on their respective subpages.
 | flag: `--disable-keep-alives`<br/>toml: `disable_keep_alives`                             | bool           | disable HTTP keep-alive connections to the upstream server                                                                                             | false   |
 | flag: `--upstream-timeout`<br/>toml: `upstream_timeout`                                   | duration       | maximum amount of time the server will wait for a response from the upstream                                                                           | 30s     |
 | flag: `--upstream`<br/>toml: `upstreams`                                                  | string \| list | the http url(s) of the upstream endpoint, file:// paths for static files or `static://<status_code>` for static response. Routing is based on the path |         |
+
+## Configuration Validation
+
+The `--config-test` flag validates your configuration file without starting the proxy server. This is useful for:
+- **CI/CD pipelines**: Pre-deployment validation
+- **Configuration management**: Testing before applying changes
+- **Debugging**: Verifying syntax and required fields
+
+### Usage
+
+```bash
+# Test legacy config
+oauth2-proxy --config /etc/oauth2-proxy.cfg --config-test
+
+# Test alpha config
+oauth2-proxy --config /etc/core.cfg --alpha-config /etc/alpha.yaml --config-test
+
+# CI/CD pre-deployment check
+# Returns with exit code 1 if any validation errors occur
+oauth2-proxy --config new-config.cfg --config-test 
+```
+
+### Exit Codes
+
+- **0**: Configuration is valid ✅
+- **1**: Configuration is invalid (errors printed to stderr) ❌
+
+### Validation Coverage
+
+The `--config-test` flag performs the **same comprehensive validation** as normal startup, including:
+- Required fields (client ID, client secret, cookie secret, etc.)
+- Syntax validation (TOML/YAML parsing)
+- Provider configuration
+- Upstream server definitions
+- Session store connectivity (e.g., Redis network checks if configured)
+
+**Note**: Cannot be combined with `--convert-config-to-alpha`.
 
 ## Upstreams Configuration
 
