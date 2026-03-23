@@ -798,7 +798,7 @@ func (p *OAuthProxy) backendLogout(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	defer resp.Body.Close()
-	if resp.StatusCode != 200 && resp.StatusCode != 204 {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 		logger.Errorf("error while calling backend logout url, returned error code %v", resp.StatusCode)
 	}
 }
