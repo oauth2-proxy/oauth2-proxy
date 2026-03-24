@@ -20,7 +20,8 @@
 <!--- Go over all the following points, and put an `x` in all the boxes that apply. -->
 <!--- If you're unsure about any of these, don't hesitate to ask. We're here to help! -->
 
-- [ ] My change requires a change to the documentation or CHANGELOG.
-- [ ] I have updated the documentation/CHANGELOG accordingly.
+- [ ] I have added an entry for my changes to the [CHANGELOG.md](https://github.com/oauth2-proxy/oauth2-proxy/blob/master/CHANGELOG.md).
+- [ ] I have [signed off](https://github.com/apps/dco) all my commits.
 - [ ] I have created a feature (non-master) branch for my PR.
+- [ ] I have used [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/#examples) for the PR title.
 - [ ] I have written tests for my code changes.

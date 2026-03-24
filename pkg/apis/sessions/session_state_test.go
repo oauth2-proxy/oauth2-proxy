@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"io"
+	"strings"
 	"testing"
 	"time"
 
@@ -57,7 +58,7 @@ func TestString(t *testing.T) {
 				User:              "some.user",
 				PreferredUsername: "preferred.user",
 			},
-			expected: "Session{email:email@email.email user:some.user PreferredUsername:preferred.user}",
+			expected: "Session{email:email@email.email user:some.user PreferredUsername:preferred.user refresh_token:false}",
 		},
 		{
 			name: "Full Session",
@@ -81,7 +82,7 @@ func TestString(t *testing.T) {
 				PreferredUsername: "preferred.user",
 				CreatedAt:         &created,
 			},
-			expected: "Session{email:email@email.email user:some.user PreferredUsername:preferred.user created:2000-01-01 00:00:00 +0000 UTC}",
+			expected: "Session{email:email@email.email user:some.user PreferredUsername:preferred.user created:2000-01-01 00:00:00 +0000 UTC refresh_token:false}",
 		},
 		{
 			name: "With an ExpiresOn",
@@ -91,7 +92,7 @@ func TestString(t *testing.T) {
 				PreferredUsername: "preferred.user",
 				ExpiresOn:         &expires,
 			},
-			expected: "Session{email:email@email.email user:some.user PreferredUsername:preferred.user expires:2000-01-01 01:00:00 +0000 UTC}",
+			expected: "Session{email:email@email.email user:some.user PreferredUsername:preferred.user expires:2000-01-01 01:00:00 +0000 UTC refresh_token:false}",
 		},
 		{
 			name: "With an AccessToken",
@@ -101,7 +102,7 @@ func TestString(t *testing.T) {
 				PreferredUsername: "preferred.user",
 				AccessToken:       "access.token",
 			},
-			expected: "Session{email:email@email.email user:some.user PreferredUsername:preferred.user token:true}",
+			expected: "Session{email:email@email.email user:some.user PreferredUsername:preferred.user token:true refresh_token:false}",
 		},
 		{
 			name: "With an IDToken",
@@ -111,7 +112,7 @@ func TestString(t *testing.T) {
 				PreferredUsername: "preferred.user",
 				IDToken:           "id.token",
 			},
-			expected: "Session{email:email@email.email user:some.user PreferredUsername:preferred.user id_token:true}",
+			expected: "Session{email:email@email.email user:some.user PreferredUsername:preferred.user id_token:true refresh_token:false}",
 		},
 		{
 			name: "With a RefreshToken",
@@ -351,5 +352,33 @@ func TestGetClaim(t *testing.T) {
 			gs := NewWithT(t)
 			gs.Expect(ss.GetClaim(tt.claim)).To(Equal(tt.want))
 		})
+	}
+}
+
+func TestSessionState_String_RefreshTokenFalse(t *testing.T) {
+	session := &SessionState{
+		Email: "test@example.com",
+		User:  "testuser",
+		// No RefreshToken set
+	}
+
+	result := session.String()
+
+	if !strings.Contains(result, "refresh_token:false") {
+		t.Errorf("Expected 'refresh_token:false' in output, got: %s", result)
+	}
+}
+
+func TestSessionState_String_RefreshTokenTrue(t *testing.T) {
+	session := &SessionState{
+		Email:        "test@example.com",
+		User:         "testuser",
+		RefreshToken: "some-token",
+	}
+
+	result := session.String()
+
+	if !strings.Contains(result, "refresh_token:true") {
+		t.Errorf("Expected 'refresh_token:true' in output, got: %s", result)
 	}
 }

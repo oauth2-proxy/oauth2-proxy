@@ -615,9 +615,7 @@ func (p *OAuthProxy) isAPIPath(req *http.Request) bool {
 
 // isTrustedIP is used to check if a request comes from a trusted client IP address.
 func (p *OAuthProxy) isTrustedIP(req *http.Request) bool {
-	// RemoteAddr @ means unix socket
-	// https://github.com/golang/go/blob/0fa53e41f122b1661d0678a6d36d71b7b5ad031d/src/syscall/syscall_linux.go#L506-L511
-	if p.trustedIPs == nil && req.RemoteAddr != "@" {
+	if p.trustedIPs == nil {
 		return false
 	}
 
@@ -802,7 +800,7 @@ func (p *OAuthProxy) backendLogout(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 		logger.Errorf("error while calling backend logout url, returned error code %v", resp.StatusCode)
 	}
 }
@@ -877,6 +875,8 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	remoteAddr := ip.GetClientString(p.realClientIPParser, req, true)
 
 	// finish the oauth cycle
+	// #nosec G120 -- The default max size in Go is already capped at 10MB so this would be the absolute max and is
+	// unlikely to be hit in practice.
 	err := req.ParseForm()
 	if err != nil {
 		logger.Errorf("Error while parsing OAuth2 callback: %v", err)

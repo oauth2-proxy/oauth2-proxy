@@ -40,4 +40,12 @@ the listener it created onto the process, starting with file descriptor 3.
     --client-secret=...
 ```
 
+## Trusted IPs
+
+When listening on a Unix socket, Go sets `http.Request.RemoteAddr` to `"@"` instead of the usual `"host:port"` format. This means there is no client IP available from the connection itself.
+
+As a result, `--trusted-ip` entries cannot match against the direct connection address for Unix socket listeners. Requests arriving over a Unix socket will never be considered "trusted" based on their `RemoteAddr`. IP-based trust decisions will still work if a trusted reverse proxy sets `X-Forwarded-For` or `X-Real-IP` headers and `--reverse-proxy=true` is configured.
+
+## TLS
+
 Currently TLS is not supported (but it's doable).

@@ -697,7 +697,7 @@ func (l LegacyServer) convert() (Server, Server) {
 }
 
 func (l *LegacyProvider) convert() (Providers, error) {
-	providers := Providers{}
+	providers := make(Providers, 0, 1)
 
 	provider := Provider{
 		ClientID:                 l.ClientID,

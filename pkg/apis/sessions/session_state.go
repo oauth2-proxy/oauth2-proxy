@@ -127,6 +127,8 @@ func (s *SessionState) String() string {
 	}
 	if s.RefreshToken != "" {
 		o += " refresh_token:true"
+	} else {
+		o += " refresh_token:false"
 	}
 	if len(s.Groups) > 0 {
 		o += fmt.Sprintf(" groups:%v", s.Groups)
