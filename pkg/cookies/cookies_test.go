@@ -115,7 +115,7 @@ var _ = Describe("Cookie Tests", func() {
 					Secret:       validSecret,
 					Domains:      domains,
 					Path:         "",
-					Expire:       time.Hour,
+					Expire:       15 * time.Minute,
 					Insecure:     ptr.To(false),
 					ScriptAccess: options.ScriptAccessAllowed,
 					SameSite:     "",

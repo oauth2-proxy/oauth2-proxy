@@ -76,7 +76,8 @@ func ParseSameSite(v options.SameSiteMode) http.SameSite {
 	case options.SameSiteNone:
 		return http.SameSiteNoneMode
 	case options.SameSiteDefault:
-		return 0
+		// Default to Lax if not specified, as per https://web.dev/samesite-cookies-explained/#samesite-by-default
+		return http.SameSiteLaxMode
 	default:
 		panic(fmt.Sprintf("Invalid value for SameSite: %s", v))
 	}

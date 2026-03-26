@@ -163,7 +163,7 @@ var _ = Describe("CSRF Cookie with non-fixed name Tests", func() {
 				))
 				Expect(rw.Header().Get("Set-Cookie")).To(ContainSubstring(
 					fmt.Sprintf(
-						"; Path=%s; Domain=%s; Max-Age=%d; HttpOnly; Secure",
+						"; Path=%s; Domain=%s; Max-Age=%d; HttpOnly; Secure; SameSite=Lax",
 						cookiePath,
 						cookieDomain,
 						int(cookieOpts.CSRFExpire.Seconds()),
@@ -180,7 +180,7 @@ var _ = Describe("CSRF Cookie with non-fixed name Tests", func() {
 
 				Expect(rw.Header().Get("Set-Cookie")).To(Equal(
 					fmt.Sprintf(
-						"%s=; Path=%s; Domain=%s; Max-Age=0; HttpOnly; Secure",
+						"%s=; Path=%s; Domain=%s; Max-Age=0; HttpOnly; Secure; SameSite=Lax",
 						privateCSRF.cookieName(),
 						cookiePath,
 						cookieDomain,
@@ -257,7 +257,7 @@ var _ = Describe("CSRF Cookie with non-fixed name Tests", func() {
 				Expect(clearedCookies).To(HaveLen(2))
 				Expect(clearedCookies[0]).To(Equal(
 					fmt.Sprintf(
-						"%s=; Path=%s; Domain=%s; Max-Age=0; HttpOnly; Secure",
+						"%s=; Path=%s; Domain=%s; Max-Age=0; HttpOnly; Secure; SameSite=Lax",
 						privateCSRF1.cookieName(),
 						cookiePath,
 						cookieDomain,
@@ -265,7 +265,7 @@ var _ = Describe("CSRF Cookie with non-fixed name Tests", func() {
 				))
 				Expect(clearedCookies[1]).To(Equal(
 					fmt.Sprintf(
-						"%s=; Path=%s; Domain=%s; Max-Age=0; HttpOnly; Secure",
+						"%s=; Path=%s; Domain=%s; Max-Age=0; HttpOnly; Secure; SameSite=Lax",
 						privateCSRF2.cookieName(),
 						cookiePath,
 						cookieDomain,

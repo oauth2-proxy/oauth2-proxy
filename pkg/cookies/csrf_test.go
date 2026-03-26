@@ -188,7 +188,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 				))
 				Expect(rw.Header().Get("Set-Cookie")).To(ContainSubstring(
 					fmt.Sprintf(
-						"; Path=%s; Domain=%s; Max-Age=%d; HttpOnly; Secure",
+						"; Path=%s; Domain=%s; Max-Age=%d; HttpOnly; Secure; SameSite=Lax",
 						cookiePath,
 						cookieDomain,
 						int(cookieOpts.CSRFExpire.Seconds()),
@@ -266,7 +266,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 
 				Expect(rw.Header().Get("Set-Cookie")).To(Equal(
 					fmt.Sprintf(
-						"%s=; Path=%s; Domain=%s; Max-Age=0; HttpOnly; Secure",
+						"%s=; Path=%s; Domain=%s; Max-Age=0; HttpOnly; Secure; SameSite=Lax",
 						privateCSRF.cookieName(),
 						cookiePath,
 						cookieDomain,
@@ -306,12 +306,12 @@ var _ = Describe("CSRF Cookie Tests", func() {
 
 			cookieOpts = &options.Cookie{
 				Name:           cookieName,
-				Secret:         options.SecretSource{Value: cookieSecret},
+				Secret:         &options.SecretSource{Value: cookieSecret},
 				Domains:        []string{cookieDomain},
 				Path:           cookiePath,
 				Expire:         time.Hour,
 				Insecure:       ptr.To(false),
-				NotHttpOnly:    ptr.To(false),
+				ScriptAccess:   options.ScriptAccessDenied,
 				CSRFPerRequest: ptr.To(false),
 				CSRFExpire:     time.Hour,
 			}
@@ -319,7 +319,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 
 		It("Call SetCookie when CSRF SameSite is not defined. Expected result: CSRF cookie SameSite is the same as session cookie.", func() {
 			// prepare
-			cookieOpts.SameSite = sameSiteLax
+			cookieOpts.CSRFSameSite = options.SameSiteLax
 			CSRF, _ := NewCSRF(cookieOpts, "verifier")
 			rw := httptest.NewRecorder()
 			CSRF.(*csrf).clock = func() time.Time { return testNow }
@@ -341,7 +341,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 
 		It("Call SetCookie when CSRF SameSite is an empty string. Expected result: CSRF cookie SameSite is the same as session cookie.", func() {
 			// prepare
-			cookieOpts.SameSite = sameSiteLax
+			cookieOpts.SameSite = options.SameSiteLax
 			cookieOpts.CSRFSameSite = ""
 			CSRF, _ := NewCSRF(cookieOpts, "verifier")
 			rw := httptest.NewRecorder()
@@ -364,8 +364,8 @@ var _ = Describe("CSRF Cookie Tests", func() {
 
 		It("Call SetCookie when CSRF SameSite is 'none'. Expected result: CSRF cookie SameSite is None.", func() {
 			// prepare
-			cookieOpts.SameSite = sameSiteLax
-			cookieOpts.CSRFSameSite = sameSiteNone
+			cookieOpts.SameSite = options.SameSiteLax
+			cookieOpts.CSRFSameSite = options.SameSiteNone
 			CSRF, _ := NewCSRF(cookieOpts, "verifier")
 			rw := httptest.NewRecorder()
 			CSRF.(*csrf).clock = func() time.Time { return testNow }
@@ -387,8 +387,8 @@ var _ = Describe("CSRF Cookie Tests", func() {
 
 		It("Call SetCookie when CSRF SameSite is 'strict'. Expected result: CSRF cookie SameSite is Strict.", func() {
 			// prepare
-			cookieOpts.SameSite = sameSiteLax
-			cookieOpts.CSRFSameSite = sameSiteStrict
+			cookieOpts.SameSite = options.SameSiteLax
+			cookieOpts.CSRFSameSite = options.SameSiteStrict
 			CSRF, _ := NewCSRF(cookieOpts, "verifier")
 			rw := httptest.NewRecorder()
 			CSRF.(*csrf).clock = func() time.Time { return testNow }
@@ -410,8 +410,8 @@ var _ = Describe("CSRF Cookie Tests", func() {
 
 		It("Call SetCookie when CSRF SameSite is 'lax'. Expected result: CSRF cookie SameSite is Lax.", func() {
 			// prepare
-			cookieOpts.SameSite = sameSiteStrict
-			cookieOpts.CSRFSameSite = sameSiteLax
+			cookieOpts.SameSite = options.SameSiteStrict
+			cookieOpts.CSRFSameSite = options.SameSiteLax
 			CSRF, _ := NewCSRF(cookieOpts, "verifier")
 			rw := httptest.NewRecorder()
 			CSRF.(*csrf).clock = func() time.Time { return testNow }
@@ -433,7 +433,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 
 		It("Call ClearCookie when CSRF SameSite is not defined. Expected result: CSRF cookie SameSite is the same as session cookie.", func() {
 			// prepare
-			cookieOpts.SameSite = sameSiteLax
+			cookieOpts.SameSite = options.SameSiteLax
 			CSRF, _ := NewCSRF(cookieOpts, "verifier")
 			rw := httptest.NewRecorder()
 			CSRF.(*csrf).clock = func() time.Time { return testNow }
@@ -454,7 +454,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 
 		It("Call ClearCookie when CSRF SameSite is an empty string. Expected result: CSRF cookie SameSite is the same as session cookie.", func() {
 			// prepare
-			cookieOpts.SameSite = sameSiteLax
+			cookieOpts.SameSite = options.SameSiteLax
 			cookieOpts.CSRFSameSite = ""
 			CSRF, _ := NewCSRF(cookieOpts, "verifier")
 			rw := httptest.NewRecorder()
@@ -476,8 +476,8 @@ var _ = Describe("CSRF Cookie Tests", func() {
 
 		It("Call ClearCookie when CSRF SameSite is 'none'. Expected result: CSRF cookie SameSite is None.", func() {
 			// prepare
-			cookieOpts.SameSite = sameSiteLax
-			cookieOpts.CSRFSameSite = sameSiteNone
+			cookieOpts.SameSite = options.SameSiteLax
+			cookieOpts.CSRFSameSite = options.SameSiteNone
 			CSRF, _ := NewCSRF(cookieOpts, "verifier")
 			rw := httptest.NewRecorder()
 			CSRF.(*csrf).clock = func() time.Time { return testNow }
@@ -498,8 +498,8 @@ var _ = Describe("CSRF Cookie Tests", func() {
 
 		It("Call ClearCookie when CSRF SameSite is 'strict'. Expected result: CSRF cookie SameSite is Strict.", func() {
 			// prepare
-			cookieOpts.SameSite = sameSiteLax
-			cookieOpts.CSRFSameSite = sameSiteStrict
+			cookieOpts.SameSite = options.SameSiteLax
+			cookieOpts.CSRFSameSite = options.SameSiteStrict
 			CSRF, _ := NewCSRF(cookieOpts, "verifier")
 			rw := httptest.NewRecorder()
 			CSRF.(*csrf).clock = func() time.Time { return testNow }
@@ -520,8 +520,8 @@ var _ = Describe("CSRF Cookie Tests", func() {
 
 		It("Call ClearCookie when CSRF SameSite is 'lax'. Expected result: CSRF cookie SameSite is Lax.", func() {
 			// prepare
-			cookieOpts.SameSite = sameSiteStrict
-			cookieOpts.CSRFSameSite = sameSiteLax
+			cookieOpts.SameSite = options.SameSiteStrict
+			cookieOpts.CSRFSameSite = options.SameSiteLax
 			CSRF, _ := NewCSRF(cookieOpts, "verifier")
 			rw := httptest.NewRecorder()
 			CSRF.(*csrf).clock = func() time.Time { return testNow }
