@@ -9,6 +9,9 @@ package options
 // They may change between releases without notice.
 // :::
 type AlphaOptions struct {
+	// ProxyOptions
+	ProxyOptions ProxyOptions `yaml:"proxyOptions,omitempty"`
+
 	// UpstreamConfig is used to configure upstream servers.
 	// Once a user is authenticated, requests to the server will be proxied to
 	// these upstream servers based on the path mappings defined in this list.
@@ -65,6 +68,7 @@ func NewAlphaOptions(opts *Options) *AlphaOptions {
 // ExtractFrom populates the fields in the AlphaOptions with the values from
 // the Options
 func (a *AlphaOptions) ExtractFrom(opts *Options) {
+	a.ProxyOptions = opts.ProxyOptions
 	a.UpstreamConfig = opts.UpstreamServers
 	a.InjectRequestHeaders = opts.InjectRequestHeaders
 	a.InjectResponseHeaders = opts.InjectResponseHeaders
@@ -78,6 +82,7 @@ func (a *AlphaOptions) ExtractFrom(opts *Options) {
 // MergeOptionsWithDefaults replaces alpha options in the Options struct
 // with the values from the AlphaOptions and ensures the defaults
 func (a *AlphaOptions) MergeOptionsWithDefaults(opts *Options) {
+	opts.ProxyOptions = a.ProxyOptions
 	opts.UpstreamServers = a.UpstreamConfig
 	opts.InjectRequestHeaders = a.InjectRequestHeaders
 	opts.InjectResponseHeaders = a.InjectResponseHeaders
