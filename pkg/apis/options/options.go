@@ -159,6 +159,11 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Bool("redis-use-cluster", false, "Connect to redis cluster. Must set --redis-cluster-connection-urls to use this feature")
 	flagSet.StringSlice("redis-cluster-connection-urls", []string{}, "List of Redis cluster connection URLs (eg redis://[USER[:PASSWORD]@]HOST[:PORT]). Used in conjunction with --redis-use-cluster")
 	flagSet.Int("redis-connection-idle-timeout", 0, "Redis connection idle timeout seconds, if Redis timeout option is non-zero, the --redis-connection-idle-timeout must be less then Redis timeout option")
+	flagSet.Bool("redis-use-iam-auth", false, "Use AWS IAM authentication for Redis/ElastiCache. Requires TLS and IRSA or other AWS credential source")
+	flagSet.String("redis-iam-user-id", "", "ElastiCache IAM-enabled user ID for AWS IAM authentication")
+	flagSet.String("redis-iam-replication-group-id", "", "ElastiCache replication group ID (cluster name) for AWS IAM authentication")
+	flagSet.String("redis-iam-region", "", "AWS region for ElastiCache IAM authentication. If empty, uses AWS_REGION or AWS_DEFAULT_REGION")
+	flagSet.Bool("redis-iam-serverless", false, "Set when using ElastiCache Serverless (adds ResourceType=ServerlessCache to the IAM auth token)")
 	flagSet.String("signature-key", "", "GAP-Signature request signature key (algorithm:secretkey)")
 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
 

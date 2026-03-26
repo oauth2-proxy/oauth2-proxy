@@ -34,6 +34,11 @@ type RedisStoreOptions struct {
 	CAPath                 string   `flag:"redis-ca-path" cfg:"redis_ca_path"`
 	InsecureSkipTLSVerify  bool     `flag:"redis-insecure-skip-tls-verify" cfg:"redis_insecure_skip_tls_verify"`
 	IdleTimeout            int      `flag:"redis-connection-idle-timeout" cfg:"redis_connection_idle_timeout"`
+	UseIAMAuth             bool     `flag:"redis-use-iam-auth" cfg:"redis_use_iam_auth"`
+	IAMUserID              string   `flag:"redis-iam-user-id" cfg:"redis_iam_user_id"`
+	IAMReplicationGroupID  string   `flag:"redis-iam-replication-group-id" cfg:"redis_iam_replication_group_id"`
+	IAMRegion              string   `flag:"redis-iam-region" cfg:"redis_iam_region"`
+	IAMServerless          bool     `flag:"redis-iam-serverless" cfg:"redis_iam_serverless"`
 }
 
 func sessionOptionsDefaults() SessionOptions {

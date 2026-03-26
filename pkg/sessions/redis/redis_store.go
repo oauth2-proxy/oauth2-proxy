@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
@@ -117,7 +118,7 @@ func buildSentinelClient(opts options.RedisStoreOptions) (Client, error) {
 		return nil, err
 	}
 
-	client := redis.NewFailoverClient(&redis.FailoverOptions{
+	failoverOpts := &redis.FailoverOptions{
 		MasterName:       opts.SentinelMasterName,
 		SentinelAddrs:    addrs,
 		SentinelPassword: opts.SentinelPassword,
@@ -125,7 +126,19 @@ func buildSentinelClient(opts options.RedisStoreOptions) (Client, error) {
 		Password:         opt.Password,
 		TLSConfig:        opt.TLSConfig,
 		ConnMaxIdleTime:  opt.ConnMaxIdleTime,
-	})
+	}
+
+	if opts.UseIAMAuth {
+		credsFn, err := newIAMCredentialsProvider(opts)
+		if err != nil {
+			return nil, err
+		}
+		failoverOpts.Username = ""
+		failoverOpts.Password = ""
+		failoverOpts.CredentialsProviderContext = credsFn
+	}
+
+	client := redis.NewFailoverClient(failoverOpts)
 	return newClient(client), nil
 }
 
@@ -150,13 +163,25 @@ func buildClusterClient(opts options.RedisStoreOptions) (Client, error) {
 		return nil, err
 	}
 
-	client := redis.NewClusterClient(&redis.ClusterOptions{
+	clusterOpts := &redis.ClusterOptions{
 		Addrs:           addrs,
 		Username:        opt.Username,
 		Password:        opt.Password,
 		TLSConfig:       opt.TLSConfig,
 		ConnMaxIdleTime: opt.ConnMaxIdleTime,
-	})
+	}
+
+	if opts.UseIAMAuth {
+		credsFn, err := newIAMCredentialsProvider(opts)
+		if err != nil {
+			return nil, err
+		}
+		clusterOpts.Username = ""
+		clusterOpts.Password = ""
+		clusterOpts.CredentialsProviderContext = credsFn
+	}
+
+	client := redis.NewClusterClient(clusterOpts)
 	return newClusterClient(client), nil
 }
 
@@ -180,6 +205,16 @@ func buildStandaloneClient(opts options.RedisStoreOptions) (Client, error) {
 
 	if err := setupTLSConfig(opts, opt); err != nil {
 		return nil, err
+	}
+
+	if opts.UseIAMAuth {
+		credsFn, err := newIAMCredentialsProvider(opts)
+		if err != nil {
+			return nil, err
+		}
+		opt.Username = ""
+		opt.Password = ""
+		opt.CredentialsProviderContext = credsFn
 	}
 
 	client := redis.NewClient(opt)
@@ -243,6 +278,36 @@ func parseRedisURLs(urls []string) ([]string, *redis.Options, error) {
 		redisOptions = parsedURL
 	}
 	return addrs, redisOptions, nil
+}
+
+// newIAMCredentialsProvider creates a go-redis CredentialsProviderContext
+// that generates fresh IAM auth tokens on each new Redis connection.
+func newIAMCredentialsProvider(opts options.RedisStoreOptions) (func(ctx context.Context) (string, string, error), error) {
+	var cfgOpts []func(*awsconfig.LoadOptions) error
+	if opts.IAMRegion != "" {
+		cfgOpts = append(cfgOpts, awsconfig.WithRegion(opts.IAMRegion))
+	}
+
+	cfg, err := awsconfig.LoadDefaultConfig(context.Background(), cfgOpts...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load AWS config for IAM Redis auth: %w", err)
+	}
+
+	gen := &iamTokenGenerator{
+		userID:             opts.IAMUserID,
+		replicationGroupID: opts.IAMReplicationGroupID,
+		region:             cfg.Region,
+		serverless:         opts.IAMServerless,
+		credentials:        cfg.Credentials,
+	}
+
+	return func(ctx context.Context) (string, string, error) {
+		token, err := gen.Generate(ctx)
+		if err != nil {
+			return "", "", err
+		}
+		return opts.IAMUserID, token, nil
+	}, nil
 }
 
 var _ persistence.Store = (*SessionStore)(nil)

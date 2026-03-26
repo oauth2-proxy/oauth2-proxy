@@ -209,6 +209,91 @@ var _ = Describe("Sessions", func() {
 		errStrings []string
 	}
 
+	type iamAuthTableInput struct {
+		opts       *options.Options
+		errStrings []string
+	}
+
+	DescribeTable("validateRedisIAMAuth",
+		func(o *iamAuthTableInput) {
+			Expect(validateRedisIAMAuth(o.opts)).To(ConsistOf(o.errStrings))
+		},
+		Entry("IAM auth disabled is valid", &iamAuthTableInput{
+			opts: &options.Options{
+				Session: options.SessionOptions{
+					Type: options.RedisSessionStoreType,
+				},
+			},
+			errStrings: []string{},
+		}),
+		Entry("IAM auth missing user ID", &iamAuthTableInput{
+			opts: &options.Options{
+				Session: options.SessionOptions{
+					Type: options.RedisSessionStoreType,
+					Redis: options.RedisStoreOptions{
+						UseIAMAuth:            true,
+						IAMReplicationGroupID: "my-cluster",
+					},
+				},
+			},
+			errStrings: []string{"--redis-iam-user-id must be set when using --redis-use-iam-auth"},
+		}),
+		Entry("IAM auth missing replication group ID", &iamAuthTableInput{
+			opts: &options.Options{
+				Session: options.SessionOptions{
+					Type: options.RedisSessionStoreType,
+					Redis: options.RedisStoreOptions{
+						UseIAMAuth: true,
+						IAMUserID:  "my-user",
+					},
+				},
+			},
+			errStrings: []string{"--redis-iam-replication-group-id must be set when using --redis-use-iam-auth"},
+		}),
+		Entry("IAM auth conflicts with username", &iamAuthTableInput{
+			opts: &options.Options{
+				Session: options.SessionOptions{
+					Type: options.RedisSessionStoreType,
+					Redis: options.RedisStoreOptions{
+						UseIAMAuth:            true,
+						IAMUserID:             "my-user",
+						IAMReplicationGroupID: "my-cluster",
+						Username:              "some-user",
+					},
+				},
+			},
+			errStrings: []string{"--redis-username and --redis-use-iam-auth are mutually exclusive; IAM auth provides its own username"},
+		}),
+		Entry("IAM auth conflicts with password", &iamAuthTableInput{
+			opts: &options.Options{
+				Session: options.SessionOptions{
+					Type: options.RedisSessionStoreType,
+					Redis: options.RedisStoreOptions{
+						UseIAMAuth:            true,
+						IAMUserID:             "my-user",
+						IAMReplicationGroupID: "my-cluster",
+						Password:              "secret",
+					},
+				},
+			},
+			errStrings: []string{"--redis-password and --redis-use-iam-auth are mutually exclusive"},
+		}),
+		Entry("IAM auth valid config", &iamAuthTableInput{
+			opts: &options.Options{
+				Session: options.SessionOptions{
+					Type: options.RedisSessionStoreType,
+					Redis: options.RedisStoreOptions{
+						UseIAMAuth:            true,
+						IAMUserID:             "my-user",
+						IAMReplicationGroupID: "my-cluster",
+						IAMRegion:             "us-east-1",
+					},
+				},
+			},
+			errStrings: []string{},
+		}),
+	)
+
 	DescribeTable("validateRedisSessionStore",
 		func(o *redisStoreTableInput) {
 			mr, err := miniredis.Run()

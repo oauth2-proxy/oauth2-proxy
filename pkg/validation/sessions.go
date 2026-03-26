@@ -39,11 +39,38 @@ func validateSessionCookieMinimal(o *options.Options) []string {
 	return msgs
 }
 
+// validateRedisIAMAuth checks that IAM auth options are consistent
+func validateRedisIAMAuth(o *options.Options) []string {
+	r := o.Session.Redis
+	if !r.UseIAMAuth {
+		return []string{}
+	}
+
+	var msgs []string
+	if r.IAMUserID == "" {
+		msgs = append(msgs, "--redis-iam-user-id must be set when using --redis-use-iam-auth")
+	}
+	if r.IAMReplicationGroupID == "" {
+		msgs = append(msgs, "--redis-iam-replication-group-id must be set when using --redis-use-iam-auth")
+	}
+	if r.Password != "" {
+		msgs = append(msgs, "--redis-password and --redis-use-iam-auth are mutually exclusive")
+	}
+	if r.Username != "" {
+		msgs = append(msgs, "--redis-username and --redis-use-iam-auth are mutually exclusive; IAM auth provides its own username")
+	}
+	return msgs
+}
+
 // validateRedisSessionStore builds a Redis Client from the options and
 // attempts to connect, Set, Get and Del a random health check key
 func validateRedisSessionStore(o *options.Options) []string {
 	if o.Session.Type != options.RedisSessionStoreType {
 		return []string{}
+	}
+
+	if msgs := validateRedisIAMAuth(o); len(msgs) > 0 {
+		return msgs
 	}
 
 	client, err := redis.NewRedisClient(o.Session.Redis)
