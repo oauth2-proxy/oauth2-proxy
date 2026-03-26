@@ -591,7 +591,7 @@ func NewSignInPageTest(skipProvider bool) (*SignInPageTest, error) {
 	var sipTest SignInPageTest
 
 	sipTest.opts = baseTestOptions()
-	sipTest.opts.SkipProviderButton = skipProvider
+	sipTest.opts.ProxyOptions.SkipProviderButton = skipProvider
 	err := validation.Validate(sipTest.opts)
 	if err != nil {
 		return nil, err
@@ -627,7 +627,7 @@ func TestManualSignInStoresUserGroupsInTheSession(t *testing.T) {
 	userGroups := []string{"somegroup", "someothergroup"}
 
 	opts := baseTestOptions()
-	opts.HtpasswdUserGroups = userGroups
+	opts.ProxyOptions.HtpasswdUserGroups = userGroups
 	err := validation.Validate(opts)
 	if err != nil {
 		t.Fatal(err)
@@ -987,7 +987,7 @@ func NewUserInfoEndpointTest() (*ProcessCookieTest, error) {
 		return nil, err
 	}
 	pcTest.req, _ = http.NewRequest("GET",
-		pcTest.opts.ProxyPrefix+"/userinfo", nil)
+		pcTest.opts.ProxyOptions.ProxyPrefix+"/userinfo", nil)
 	return pcTest, nil
 }
 
@@ -1095,7 +1095,7 @@ func NewAuthOnlyEndpointTest(querystring string, modifiers ...OptionsModifier) (
 	}
 	pcTest.req, _ = http.NewRequest(
 		"GET",
-		fmt.Sprintf("%s/auth%s", pcTest.opts.ProxyPrefix, querystring),
+		fmt.Sprintf("%s/auth%s", pcTest.opts.ProxyOptions.ProxyPrefix, querystring),
 		nil)
 	return pcTest, nil
 }
@@ -1234,7 +1234,7 @@ func TestAuthOnlyEndpointSetXAuthRequestHeaders(t *testing.T) {
 
 	pcTest.rw = httptest.NewRecorder()
 	pcTest.req, _ = http.NewRequest("GET",
-		pcTest.opts.ProxyPrefix+authOnlyPath, nil)
+		pcTest.opts.ProxyOptions.ProxyPrefix+authOnlyPath, nil)
 
 	created := time.Now()
 	startSession := &sessions.SessionState{
@@ -1327,7 +1327,7 @@ func TestAuthOnlyEndpointSetBasicAuthTrueRequestHeaders(t *testing.T) {
 
 	pcTest.rw = httptest.NewRecorder()
 	pcTest.req, _ = http.NewRequest("GET",
-		pcTest.opts.ProxyPrefix+authOnlyPath, nil)
+		pcTest.opts.ProxyOptions.ProxyPrefix+authOnlyPath, nil)
 
 	created := time.Now()
 	startSession := &sessions.SessionState{
@@ -1407,7 +1407,7 @@ func TestAuthOnlyEndpointSetBasicAuthFalseRequestHeaders(t *testing.T) {
 
 	pcTest.rw = httptest.NewRecorder()
 	pcTest.req, _ = http.NewRequest("GET",
-		pcTest.opts.ProxyPrefix+authOnlyPath, nil)
+		pcTest.opts.ProxyOptions.ProxyPrefix+authOnlyPath, nil)
 
 	created := time.Now()
 	startSession := &sessions.SessionState{
@@ -1442,7 +1442,7 @@ func TestAuthSkippedForPreflightRequests(t *testing.T) {
 			},
 		},
 	}
-	opts.SkipAuthPreflight = true
+	opts.ProxyOptions.SkipAuthPreflight = true
 	err := validation.Validate(opts)
 	assert.NoError(t, err)
 
@@ -1502,7 +1502,7 @@ type SignatureTest struct {
 
 func NewSignatureTest() (*SignatureTest, error) {
 	opts := baseTestOptions()
-	opts.EmailDomains = []string{"acm.org"}
+	opts.ProxyOptions.EmailDomains = []string{"acm.org"}
 
 	authenticator := &SignatureAuthenticator{}
 	upstreamServer := httptest.NewServer(
@@ -1637,7 +1637,7 @@ func TestRequestSignature(t *testing.T) {
 			}
 			t.Cleanup(st.Close)
 			if tc.key != "" {
-				st.opts.SignatureKey = fmt.Sprintf("sha1:%s", tc.key)
+				st.opts.ProxyOptions.LegacySignatureKey = fmt.Sprintf("sha1:%s", tc.key)
 			}
 			err = st.MakeRequestWithExpectedKey(tc.method, tc.body, tc.key)
 			assert.NoError(t, err)
@@ -1655,7 +1655,7 @@ type ajaxRequestTest struct {
 func newAjaxRequestTest(forceJSONErrors bool) (*ajaxRequestTest, error) {
 	test := &ajaxRequestTest{}
 	test.opts = baseTestOptions()
-	test.opts.ForceJSONErrors = forceJSONErrors
+	test.opts.ProxyOptions.ForceJSONErrors = forceJSONErrors
 	err := validation.Validate(test.opts)
 	if err != nil {
 		return nil, err
@@ -1907,7 +1907,7 @@ func TestGetJwtSession(t *testing.T) {
 				},
 			},
 		}
-		opts.SkipJwtBearerTokens = true
+		opts.ProxyOptions.SkipJwtBearerTokens = true
 		opts.SetJWTBearerVerifiers(append(opts.GetJWTBearerVerifiers(), internalVerifier))
 	})
 	if err != nil {
@@ -1974,7 +1974,7 @@ func Test_noCacheHeaders(t *testing.T) {
 			},
 		},
 	}
-	opts.SkipAuthRegex = []string{".*"}
+	opts.ProxyOptions.SkipAuthRegex = []string{".*"}
 	err := validation.Validate(opts)
 	assert.NoError(t, err)
 	proxy, err := NewOAuthProxy(opts, func(_ string) bool { return true })
@@ -2090,7 +2090,7 @@ func baseTestOptions() *options.Options {
 	opts.Providers[0].ID = "providerID"
 	opts.Providers[0].ClientID = clientID
 	opts.Providers[0].ClientSecret = clientSecret
-	opts.EmailDomains = []string{"*"}
+	opts.ProxyOptions.EmailDomains = []string{"*"}
 
 	// Default injected headers for legacy configuration
 	opts.InjectRequestHeaders = []options.Header{
@@ -2312,9 +2312,9 @@ func TestTrustedIPs(t *testing.T) {
 					},
 				},
 			}
-			opts.TrustedIPs = tt.trustedIPs
-			opts.ReverseProxy = tt.reverseProxy
-			opts.RealClientIPHeader = tt.realClientIPHeader
+			opts.ProxyOptions.TrustedIPs = tt.trustedIPs
+			opts.ProxyOptions.ReverseProxy = tt.reverseProxy
+			opts.ProxyOptions.RealClientIPHeader = tt.realClientIPHeader
 			err := validation.Validate(opts)
 			assert.NoError(t, err)
 
@@ -2488,8 +2488,10 @@ func Test_buildRoutesAllowlist(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			opts := &options.Options{
-				SkipAuthRegex:  tc.skipAuthRegex,
-				SkipAuthRoutes: tc.skipAuthRoutes,
+				ProxyOptions: options.ProxyOptions{
+					SkipAuthRegex:  tc.skipAuthRegex,
+					SkipAuthRoutes: tc.skipAuthRoutes,
+				},
 			}
 			routes, err := buildRoutesAllowlist(opts)
 			if tc.shouldError {
@@ -2557,10 +2559,10 @@ func TestApiRoutes(t *testing.T) {
 			},
 		},
 	}
-	opts.APIRoutes = []string{
+	opts.ProxyOptions.APIRoutes = []string{
 		"^/api",
 	}
-	opts.SkipProviderButton = true
+	opts.ProxyOptions.SkipProviderButton = true
 	err := validation.Validate(opts)
 	assert.NoError(t, err)
 	proxy, err := NewOAuthProxy(opts, func(_ string) bool { return true })
@@ -2638,10 +2640,10 @@ func TestAllowedRequest(t *testing.T) {
 			},
 		},
 	}
-	opts.SkipAuthRegex = []string{
+	opts.ProxyOptions.SkipAuthRegex = []string{
 		"^/skip/auth/regex$",
 	}
-	opts.SkipAuthRoutes = []string{
+	opts.ProxyOptions.SkipAuthRoutes = []string{
 		"GET=^/skip/auth/routes/get",
 	}
 	err := validation.Validate(opts)
@@ -2727,7 +2729,7 @@ func TestAllowedRequestWithForwardedUriHeader(t *testing.T) {
 	t.Cleanup(upstreamServer.Close)
 
 	opts := baseTestOptions()
-	opts.ReverseProxy = true
+	opts.ProxyOptions.ReverseProxy = true
 	opts.UpstreamServers = options.UpstreamConfig{
 		Upstreams: []options.Upstream{
 			{
@@ -2737,10 +2739,10 @@ func TestAllowedRequestWithForwardedUriHeader(t *testing.T) {
 			},
 		},
 	}
-	opts.SkipAuthRegex = []string{
+	opts.ProxyOptions.SkipAuthRegex = []string{
 		"^/skip/auth/regex$",
 	}
-	opts.SkipAuthRoutes = []string{
+	opts.ProxyOptions.SkipAuthRoutes = []string{
 		"GET=^/skip/auth/routes/get",
 	}
 	err := validation.Validate(opts)
@@ -2802,7 +2804,7 @@ func TestAllowedRequestWithForwardedUriHeader(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			req, err := http.NewRequest(tc.method, opts.ProxyPrefix+authOnlyPath, nil)
+			req, err := http.NewRequest(tc.method, opts.ProxyOptions.ProxyPrefix+authOnlyPath, nil)
 			req.Header.Set("X-Forwarded-Uri", tc.url)
 			assert.NoError(t, err)
 
@@ -2838,7 +2840,7 @@ func TestAllowedRequestNegateWithoutMethod(t *testing.T) {
 			},
 		},
 	}
-	opts.SkipAuthRoutes = []string{
+	opts.ProxyOptions.SkipAuthRoutes = []string{
 		"!=^/api", // any non-api routes
 		"POST=^/api/public-entity/?$",
 	}
@@ -2938,7 +2940,7 @@ func TestAllowedRequestNegateWithMethod(t *testing.T) {
 			},
 		},
 	}
-	opts.SkipAuthRoutes = []string{
+	opts.ProxyOptions.SkipAuthRoutes = []string{
 		"GET!=^/api", // any non-api routes
 		"POST=^/api/public-entity/?$",
 	}
@@ -3319,8 +3321,8 @@ func TestAuthOnlyAllowedGroupsWithSkipMethods(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			test, err := NewAuthOnlyEndpointTest("?allowed_groups=a,b", func(opts *options.Options) {
-				opts.SkipAuthPreflight = true
-				opts.TrustedIPs = []string{"1.2.3.4"}
+				opts.ProxyOptions.SkipAuthPreflight = true
+				opts.ProxyOptions.TrustedIPs = []string{"1.2.3.4"}
 			})
 			if err != nil {
 				t.Fatal(err)
@@ -3566,7 +3568,7 @@ func TestGetOAuthRedirectURI(t *testing.T) {
 		{
 			name: "relative redirect url",
 			setupOpts: func(baseOpts *options.Options) *options.Options {
-				baseOpts.RelativeRedirectURL = true
+				baseOpts.ProxyOptions.RelativeRedirectURL = true
 				return baseOpts
 			},
 			req:  &http.Request{},
@@ -3575,7 +3577,7 @@ func TestGetOAuthRedirectURI(t *testing.T) {
 		{
 			name: "proxy prefix",
 			setupOpts: func(baseOpts *options.Options) *options.Options {
-				baseOpts.ProxyPrefix = "/prefix"
+				baseOpts.ProxyOptions.ProxyPrefix = "/prefix"
 				return baseOpts
 			},
 			req: &http.Request{
@@ -3589,8 +3591,8 @@ func TestGetOAuthRedirectURI(t *testing.T) {
 		{
 			name: "proxy prefix with relative redirect",
 			setupOpts: func(baseOpts *options.Options) *options.Options {
-				baseOpts.ProxyPrefix = "/prefix"
-				baseOpts.RelativeRedirectURL = true
+				baseOpts.ProxyOptions.ProxyPrefix = "/prefix"
+				baseOpts.ProxyOptions.RelativeRedirectURL = true
 				return baseOpts
 			},
 			req: &http.Request{
@@ -3618,7 +3620,7 @@ func TestGetOAuthRedirectURI(t *testing.T) {
 
 func TestIdTokenPlaceholderInSignOut(t *testing.T) {
 	opts := baseTestOptions()
-	opts.WhitelistDomains = []string{"my-oidc-provider.example.com"}
+	opts.ProxyOptions.WhitelistDomains = []string{"my-oidc-provider.example.com"}
 
 	err := validation.Validate(opts)
 	assert.NoError(t, err)
