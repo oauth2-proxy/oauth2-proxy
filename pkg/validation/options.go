@@ -47,8 +47,8 @@ func Validate(o *options.Options) error {
 		}
 	}
 
-	if o.AuthenticatedEmailsFile == "" && len(o.EmailDomains) == 0 && o.HtpasswdFile == "" {
-		msgs = append(msgs, "missing setting for email validation: email-domain or authenticated-emails-file required."+
+	if o.AuthenticatedEmailsFile == "" && len(o.EmailDomains) == 0 && len(o.AuthenticatedEmails) == 0 && o.HtpasswdFile == "" {
+		msgs = append(msgs, "missing setting for email validation: email-domain, authenticated-emails-file, or authenticated-emails required."+
 			"\n      use email-domain=* to authorize all email addresses")
 	}
 

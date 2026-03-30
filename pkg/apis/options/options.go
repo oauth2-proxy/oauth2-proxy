@@ -30,6 +30,7 @@ type Options struct {
 	RelativeRedirectURL bool     `flag:"relative-redirect-url" cfg:"relative_redirect_url"`
 
 	AuthenticatedEmailsFile string   `flag:"authenticated-emails-file" cfg:"authenticated_emails_file"`
+	AuthenticatedEmails     []string `flag:"authenticated-email" cfg:"authenticated_emails"`
 	EmailDomains            []string `flag:"email-domain" cfg:"email_domains"`
 	WhitelistDomains        []string `flag:"whitelist-domain" cfg:"whitelist_domains"`
 	HtpasswdFile            string   `flag:"htpasswd-file" cfg:"htpasswd_file"`
@@ -139,6 +140,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.StringSlice("email-domain", []string{}, "authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email")
 	flagSet.StringSlice("whitelist-domain", []string{}, "allowed domains for redirection after authentication. Prefix domain with a . or a *. to allow subdomains (eg .example.com, *.example.com)")
 	flagSet.String("authenticated-emails-file", "", "authenticate against emails via file (one per line)")
+	flagSet.StringSlice("authenticated-email", []string{}, "authenticate users with these email addresses (may be given multiple times)")
 	flagSet.String("htpasswd-file", "", "additionally authenticate against a htpasswd file. Entries must be created with \"htpasswd -B\" for bcrypt encryption")
 	flagSet.StringSlice("htpasswd-user-group", []string{}, "the groups to be set on sessions for htpasswd users (may be given multiple times)")
 	flagSet.String("proxy-prefix", "/oauth2", "the url root path that this proxy should be nested under (e.g. /<oauth2>/sign_in)")
