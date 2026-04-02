@@ -37,7 +37,7 @@ var _ = Describe("Provider", func() {
 			Expect(m.Shutdown()).To(Succeed())
 		}()
 
-		provider, err := NewProvider(context.Background(), m.Issuer(), in.skipIssuerVerification)
+		provider, err := NewProvider(context.Background(), m.Issuer(), in.skipIssuerVerification, make(map[string]string))
 		if in.expectedError != "" {
 			Expect(err).To(MatchError(HavePrefix(in.expectedError)))
 			return
@@ -97,7 +97,7 @@ var _ = Describe("Provider", func() {
 			Expect(m.Shutdown()).To(Succeed())
 		}()
 
-		provider, err := NewProvider(context.Background(), m.Issuer(), false)
+		provider, err := NewProvider(context.Background(), m.Issuer(), false, make(map[string]string))
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(provider.PKCE().CodeChallengeAlgs).To(ConsistOf("S256", "plain"))
@@ -116,7 +116,7 @@ var _ = Describe("Provider", func() {
 			Expect(m.Shutdown()).To(Succeed())
 		}()
 
-		provider, err := NewProvider(context.Background(), m.Issuer(), false)
+		provider, err := NewProvider(context.Background(), m.Issuer(), false, make(map[string]string))
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(provider.SupportedSigningAlgs()).To(ConsistOf("RS256", "HS256"))

@@ -47,7 +47,13 @@ type DiscoveryProvider interface {
 // We implement this here as opposed to using oidc.Provider so that we can override the Issuer verification check.
 // As we have our own verifier and fetch the userinfo separately, the rest of the oidc.Provider implementation is not
 // useful to us.
-func NewProvider(ctx context.Context, issuerURL string, skipIssuerVerification bool) (DiscoveryProvider, error) {
+//
+// Parameters:
+// ctx: The context for the function execution.
+// issuerURL: The URL of the OIDC issuer to perform discovery against.
+// skipIssuerVerification: A boolean flag indicating whether to skip issuer verification.
+// IssuerCustomHeaders: A map of custom headers to be used when calling the issuer for discovery.
+func NewProvider(ctx context.Context, issuerURL string, skipIssuerVerification bool, issuerCustomHeaders map[string]string) (DiscoveryProvider, error) {
 	// go-oidc doesn't let us pass bypass the issuer check this in the oidc.NewProvider call
 	// (which uses discovery to get the URLs), so we'll do a quick check ourselves and if
 	// we get the URLs, we'll just use the non-discovery path.
@@ -56,10 +62,17 @@ func NewProvider(ctx context.Context, issuerURL string, skipIssuerVerification b
 
 	var p providerJSON
 	requestURL := strings.TrimSuffix(issuerURL, "/") + "/.well-known/openid-configuration"
-	if err := requests.New(requestURL).WithContext(ctx).Do().UnmarshalInto(&p); err != nil {
-		return nil, fmt.Errorf("failed to discover OIDC configuration: %v", err)
+
+	request := requests.New(requestURL).
+		WithContext(ctx)
+
+	for key, value := range issuerCustomHeaders {
+		request = request.SetHeader(key, value)
 	}
 
+	if err := request.Do().UnmarshalInto(&p); err != nil {
+		return nil, fmt.Errorf("failed to discover OIDC configuration: %v", err)
+	}
 	if !skipIssuerVerification && p.Issuer != issuerURL {
 		return nil, fmt.Errorf("oidc: issuer did not match the issuer returned by provider, expected %q got %q", issuerURL, p.Issuer)
 	}

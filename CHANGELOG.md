@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.1
 
+- [#3396](https://github.com/oauth2-proxy/oauth2-proxy/pull/3396) feat: add support for specifying custom OIDC JWT Issuer Headers (@xnox)
+
 # V7.15.1
 
 ## Release Highlights
