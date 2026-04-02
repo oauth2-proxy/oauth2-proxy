@@ -15,6 +15,7 @@ var _ = Describe("Provider", func() {
 	type newProviderTableInput struct {
 		skipIssuerVerification bool
 		expectedError          string
+		customHeaders          map[string]string
 		middlewares            func(*mockoidc.MockOIDC) []func(http.Handler) http.Handler
 	}
 
@@ -37,7 +38,11 @@ var _ = Describe("Provider", func() {
 			Expect(m.Shutdown()).To(Succeed())
 		}()
 
-		provider, err := NewProvider(context.Background(), m.Issuer(), in.skipIssuerVerification, make(map[string]string))
+		customHeaders := in.customHeaders
+		if customHeaders == nil {
+			customHeaders = make(map[string]string)
+		}
+		provider, err := NewProvider(context.Background(), m.Issuer(), in.skipIssuerVerification, customHeaders)
 		if in.expectedError != "" {
 			Expect(err).To(MatchError(HavePrefix(in.expectedError)))
 			return
@@ -81,6 +86,15 @@ var _ = Describe("Provider", func() {
 				}
 			},
 			expectedError: "failed to discover OIDC configuration: unexpected status \"400\"",
+		}),
+		Entry("with custom headers, sends them in the discovery request", &newProviderTableInput{
+			skipIssuerVerification: false,
+			customHeaders:          map[string]string{"X-Custom-Header": "custom-value"},
+			middlewares: func(m *mockoidc.MockOIDC) []func(http.Handler) http.Handler {
+				return []func(http.Handler) http.Handler{
+					newRequiredHeaderMiddleware("X-Custom-Header", "custom-value"),
+				}
+			},
 		}),
 	)
 
@@ -186,6 +200,18 @@ func newBadRequestMiddleware() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			rw.WriteHeader(400)
+		})
+	}
+}
+
+func newRequiredHeaderMiddleware(key, value string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+			if req.Header.Get(key) != value {
+				rw.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+			next.ServeHTTP(rw, req)
 		})
 	}
 }
