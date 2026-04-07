@@ -48,6 +48,9 @@ type StoredSessionLoaderOptions struct {
 	// If the sesssion is older than `RefreshPeriod` but the provider doesn't
 	// refresh it, we must re-validate using this validation.
 	ValidateSession func(context.Context, *sessionsapi.SessionState) bool
+
+	// Provider based session enriching after a token refresh.
+	EnrichSession func(context.Context, *sessionsapi.SessionState) error
 }
 
 // NewStoredSessionLoader creates a new storedSessionLoader which loads
@@ -60,6 +63,7 @@ func NewStoredSessionLoader(opts *StoredSessionLoaderOptions) alice.Constructor 
 		refreshPeriod:    opts.RefreshPeriod,
 		sessionRefresher: opts.RefreshSession,
 		sessionValidator: opts.ValidateSession,
+		sessionEnricher:  opts.EnrichSession,
 	}
 	return ss.loadSession
 }
@@ -71,6 +75,7 @@ type storedSessionLoader struct {
 	refreshPeriod    time.Duration
 	sessionRefresher func(context.Context, *sessionsapi.SessionState) (bool, error)
 	sessionValidator func(context.Context, *sessionsapi.SessionState) bool
+	sessionEnricher  func(context.Context, *sessionsapi.SessionState) error
 }
 
 // loadSession attempts to load a session as identified by the request cookies.
@@ -229,6 +234,14 @@ func (s *storedSessionLoader) refreshSession(rw http.ResponseWriter, req *http.R
 	// If we refreshed, update the `CreatedAt` time to reset the refresh timer
 	// (In case underlying provider implementations forget)
 	session.CreatedAtNow()
+
+	// Re-enrich the session after a real token refresh so that providers
+	// which fetch extra data (e.g. groups via Graph API) can repopulate it.
+	if !errors.Is(err, providers.ErrNotImplemented) && s.sessionEnricher != nil {
+		if enrichErr := s.sessionEnricher(req.Context(), session); enrichErr != nil {
+			return fmt.Errorf("error enriching session after refresh: %v", enrichErr)
+		}
+	}
 
 	// Because the session was refreshed, make sure to save it
 	err = s.store.Save(rw, req, session)
