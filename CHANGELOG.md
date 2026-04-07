@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.1
 
+- [#3399](https://github.com/oauth2-proxy/oauth2-proxy/pull/3399) feat: add Redis client certificate and key paths for mutual TLS to the Redis session store (@karatkep)
+
 # V7.15.1
 
 ## Release Highlights
