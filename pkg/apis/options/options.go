@@ -154,6 +154,8 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.String("redis-sentinel-password", "", "Redis sentinel password. Used only for sentinel connection; any redis node passwords need to use `--redis-password`")
 	flagSet.String("redis-sentinel-master-name", "", "Redis sentinel master name. Used in conjunction with --redis-use-sentinel")
 	flagSet.String("redis-ca-path", "", "Redis custom CA path")
+	flagSet.String("redis-client-cert-path", "", "Path to PEM-encoded client certificate for mutual TLS when connecting to Redis")
+	flagSet.String("redis-client-key-path", "", "Path to PEM-encoded client private key for mutual TLS when connecting to Redis")
 	flagSet.Bool("redis-insecure-skip-tls-verify", false, "Use insecure TLS connection to redis")
 	flagSet.StringSlice("redis-sentinel-connection-urls", []string{}, "List of Redis sentinel connection URLs (eg redis://[USER[:PASSWORD]@]HOST[:PORT]). Used in conjunction with --redis-use-sentinel")
 	flagSet.Bool("redis-use-cluster", false, "Connect to redis cluster. Must set --redis-cluster-connection-urls to use this feature")
