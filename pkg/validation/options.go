@@ -57,11 +57,20 @@ func Validate(o *options.Options) error {
 		if len(o.ExtraJwtIssuers) > 0 {
 			var jwtIssuers []jwtIssuer
 			jwtIssuers, msgs = parseJwtIssuers(o.ExtraJwtIssuers, msgs)
+
+			var jwtIssuersHeaders map[string]string
+			if len(o.ExtraJwtIssuersHeaders) > 0 {
+				jwtIssuersHeaders, msgs = parseJwtIssuerHeader(o.ExtraJwtIssuersHeaders, msgs)
+			} else {
+				jwtIssuersHeaders = make(map[string]string) // Initialize an empty map if headers are not provided
+			}
+
 			for _, jwtIssuer := range jwtIssuers {
 				verifier, err := newVerifierFromJwtIssuer(
 					o.Providers[0].OIDCConfig.AudienceClaims,
 					o.Providers[0].OIDCConfig.ExtraAudiences,
 					jwtIssuer,
+					jwtIssuersHeaders,
 				)
 				if err != nil {
 					msgs = append(msgs, fmt.Sprintf("error building verifiers: %s", err))
@@ -141,14 +150,61 @@ func parseJwtIssuers(issuers []string, msgs []string) ([]jwtIssuer, []string) {
 	return parsedIssuers, msgs
 }
 
+// parseJwtIssuerHeader takes in an array of header strings in the form of "headerKey=headerValue"
+// and parses them to return a map of key-value pairs and any error messages.
+//
+// Parameters:
+//
+//	headers: A slice of strings representing headerKey=headerValue entries.
+//	msgs: A slice of strings to collect error messages, if any.
+//
+// Returns:
+//
+//	map[string]string: A map of key-value pairs extracted from the headers.
+//	[]string: A slice of strings containing any error messages encountered during parsing.
+//
+// Description:
+// This function parses the input headers and extracts key-value pairs from them.
+// Each entry in the "headers" slice should be in the format "headerKey=headerValue".
+// The function checks if each entry contains both a non-empty key and a non-empty value.
+// If so, it adds the key-value pair to the resulting map. If any errors are encountered
+// during parsing, they are appended to the "msgs" slice.
+// The function returns the map of key-value pairs and the error messages.
+func parseJwtIssuerHeader(headers []string, msgs []string) (map[string]string, []string) {
+	result := make(map[string]string)
+
+	if len(headers) == 0 {
+		msgs = append(msgs, "empty header array")
+		return result, msgs
+	}
+
+	for _, headerItem := range headers {
+		components := strings.SplitN(strings.TrimSpace(headerItem), "=", 2)
+		if len(components) != 2 {
+			msgs = append(msgs, fmt.Sprintf("invalid jwt issuer header format, expected header_name=header_value: %s", headerItem))
+			continue
+		}
+
+		key := strings.TrimSpace(components[0])
+		value := strings.TrimSpace(components[1])
+		if key != "" && value != "" {
+			// Add the non-empty key and value to the result map
+			result[key] = value
+		}
+	}
+
+	return result, msgs
+}
+
 // newVerifierFromJwtIssuer takes in issuer information in jwtIssuer info and returns
 // a verifier for that issuer.
-func newVerifierFromJwtIssuer(audienceClaims []string, extraAudiences []string, jwtIssuer jwtIssuer) (internaloidc.IDTokenVerifier, error) {
+func newVerifierFromJwtIssuer(audienceClaims []string, extraAudiences []string, jwtIssuer jwtIssuer, jwtIssuersHeaders map[string]string) (internaloidc.IDTokenVerifier, error) {
 	pvOpts := internaloidc.ProviderVerifierOptions{
-		AudienceClaims: audienceClaims,
-		ClientID:       jwtIssuer.audience,
-		ExtraAudiences: extraAudiences,
-		IssuerURL:      jwtIssuer.issuerURI,
+		AudienceClaims:      audienceClaims,
+		ClientID:            jwtIssuer.audience,
+		ExtraAudiences:      extraAudiences,
+		IssuerURL:           jwtIssuer.issuerURI,
+		IssuerCustomHeaders: jwtIssuersHeaders,
 	}
 
 	pv, err := internaloidc.NewProviderVerifier(context.TODO(), pvOpts)

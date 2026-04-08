@@ -38,6 +38,9 @@ type ProviderVerifierOptions struct {
 	// eg: https://accounts.google.com
 	IssuerURL string
 
+	// IssuerCustomHeaders defines optional header values to be set when calling the given provider.
+	IssuerCustomHeaders map[string]string
+
 	// JWKsURL is the OpenID Connect JWKS URL
 	// eg: https://www.googleapis.com/oauth2/v3/certs
 	JWKsURL string
@@ -150,7 +153,7 @@ func getVerifierBuilder(ctx context.Context, opts ProviderVerifierOptions) (veri
 		), nil, nil
 	}
 
-	provider, err := NewProvider(ctx, opts.IssuerURL, opts.SkipIssuerVerification)
+	provider, err := NewProvider(ctx, opts.IssuerURL, opts.SkipIssuerVerification, opts.IssuerCustomHeaders)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error while discovery OIDC configuration: %w", err)
 	}
