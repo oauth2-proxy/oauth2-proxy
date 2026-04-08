@@ -34,9 +34,9 @@ func (vt *ValidatorTest) TearDown() {
 	os.Remove(vt.authEmailFileName)
 }
 
-func (vt *ValidatorTest) NewValidator(domains []string,
+func (vt *ValidatorTest) NewValidator(domains []string, inlineEmails []string,
 	updated chan<- bool) func(string) bool {
-	return newValidatorImpl(domains, vt.authEmailFileName,
+	return newValidatorImpl(domains, vt.authEmailFileName, inlineEmails,
 		vt.done, func() {
 			if vt.updateSeen == false {
 				updated <- true
@@ -112,7 +112,7 @@ func TestValidatorOverwriteEmailListDirectly(t *testing.T) {
 		"plugh@example.com",
 	})
 	updated := make(chan bool)
-	validator := vt.NewValidator([]string(nil), updated)
+	validator := vt.NewValidator([]string(nil), []string(nil), updated)
 
 	for _, tc := range testCasesPreUpdate {
 		t.Run(tc.name, func(t *testing.T) {
@@ -141,6 +141,7 @@ func TestValidatorCases(t *testing.T) {
 	testCases := []struct {
 		name           string
 		allowedEmails  []string
+		inlineEmails   []string
 		allowedDomains []string
 		email          string
 		expectedAuthZ  bool
@@ -148,6 +149,7 @@ func TestValidatorCases(t *testing.T) {
 		{
 			name:           "EmailNotInCorrect1stSubDomainsNotInEmails",
 			allowedEmails:  []string{"xyzzy@example.com", "plugh@example.com"},
+			inlineEmails:   []string{},
 			allowedDomains: []string{".example0.com", ".example1.com"},
 			email:          "foo.bar@example0.com",
 			expectedAuthZ:  false,
@@ -155,6 +157,7 @@ func TestValidatorCases(t *testing.T) {
 		{
 			name:           "EmailNotInCorrect1stSubDomainsNotInEmailsWildcard",
 			allowedEmails:  []string{"xyzzy@example.com", "plugh@example.com"},
+			inlineEmails:   []string{},
 			allowedDomains: []string{"*.example0.com", "*.example1.com"},
 			email:          "foo.bar@example0.com",
 			expectedAuthZ:  false,
@@ -162,6 +165,7 @@ func TestValidatorCases(t *testing.T) {
 		{
 			name:           "EmailInFirstDomain",
 			allowedEmails:  []string{"xyzzy@example.com", "plugh@example.com"},
+			inlineEmails:   []string{},
 			allowedDomains: []string{".example0.com", ".example1.com"},
 			email:          "foo@bar.example0.com",
 			expectedAuthZ:  true,
@@ -169,6 +173,7 @@ func TestValidatorCases(t *testing.T) {
 		{
 			name:           "EmailInFirstDomainWildcard",
 			allowedEmails:  []string{"xyzzy@example.com", "plugh@example.com"},
+			inlineEmails:   []string{},
 			allowedDomains: []string{"*.example0.com", "*.example1.com"},
 			email:          "foo@bar.example0.com",
 			expectedAuthZ:  true,
@@ -176,6 +181,7 @@ func TestValidatorCases(t *testing.T) {
 		{
 			name:           "EmailNotInCorrect2ndSubDomainsNotInEmails",
 			allowedEmails:  []string{"xyzzy@example.com", "plugh@example.com"},
+			inlineEmails:   []string{},
 			allowedDomains: []string{".example0.com", ".example1.com"},
 			email:          "baz.quux@example1.com",
 			expectedAuthZ:  false,
@@ -183,6 +189,7 @@ func TestValidatorCases(t *testing.T) {
 		{
 			name:           "EmailInSecondDomain",
 			allowedEmails:  []string{"xyzzy@example.com", "plugh@example.com"},
+			inlineEmails:   []string{},
 			allowedDomains: []string{".example0.com", ".example1.com"},
 			email:          "baz@quux.example1.com",
 			expectedAuthZ:  true,
@@ -190,6 +197,7 @@ func TestValidatorCases(t *testing.T) {
 		{
 			name:           "EmailInSecondDomainWildcard",
 			allowedEmails:  []string{"xyzzy@example.com", "plugh@example.com"},
+			inlineEmails:   []string{},
 			allowedDomains: []string{"*.example0.com", "*.example1.com"},
 			email:          "baz@quux.example1.com",
 			expectedAuthZ:  true,
@@ -197,6 +205,7 @@ func TestValidatorCases(t *testing.T) {
 		{
 			name:           "EmailInFirstEmailList",
 			allowedEmails:  []string{"xyzzy@example.com", "plugh@example.com"},
+			inlineEmails:   []string{},
 			allowedDomains: []string{".example0.com", ".example1.com"},
 			email:          "xyzzy@example.com",
 			expectedAuthZ:  true,
@@ -204,6 +213,7 @@ func TestValidatorCases(t *testing.T) {
 		{
 			name:           "EmailInFirstEmailListWildcard",
 			allowedEmails:  []string{"xyzzy@example.com", "plugh@example.com"},
+			inlineEmails:   []string{},
 			allowedDomains: []string{"*.example0.com", "*.example1.com"},
 			email:          "xyzzy@example.com",
 			expectedAuthZ:  true,
@@ -211,6 +221,7 @@ func TestValidatorCases(t *testing.T) {
 		{
 			name:           "EmailNotInDomainsNotInEmails",
 			allowedEmails:  []string{"xyzzy@example.com", "plugh@example.com"},
+			inlineEmails:   []string{},
 			allowedDomains: []string{".example0.com", ".example1.com"},
 			email:          "xyzzy.plugh@example.com",
 			expectedAuthZ:  false,
@@ -218,6 +229,7 @@ func TestValidatorCases(t *testing.T) {
 		{
 			name:           "EmailInLastEmailList",
 			allowedEmails:  []string{"xyzzy@example.com", "plugh@example.com"},
+			inlineEmails:   []string{},
 			allowedDomains: []string{".example0.com", ".example1.com"},
 			email:          "plugh@example.com",
 			expectedAuthZ:  true,
@@ -225,6 +237,7 @@ func TestValidatorCases(t *testing.T) {
 		{
 			name:           "EmailIn1stSubdomain",
 			allowedEmails:  nil,
+			inlineEmails:   []string{},
 			allowedDomains: []string{"us.example.com", "de.example.com", "example.com"},
 			email:          "xyzzy@us.example.com",
 			expectedAuthZ:  true,
@@ -232,6 +245,7 @@ func TestValidatorCases(t *testing.T) {
 		{
 			name:           "EmailIn2ndSubdomain",
 			allowedEmails:  nil,
+			inlineEmails:   []string{},
 			allowedDomains: []string{"us.example.com", "de.example.com", "example.com"},
 			email:          "xyzzy@de.example.com",
 			expectedAuthZ:  true,
@@ -239,6 +253,7 @@ func TestValidatorCases(t *testing.T) {
 		{
 			name:           "EmailNotInAnySubdomain",
 			allowedEmails:  nil,
+			inlineEmails:   []string{},
 			allowedDomains: []string{"us.example.com", "de.example.com", "example.com"},
 			email:          "global@au.example.com",
 			expectedAuthZ:  false,
@@ -246,6 +261,7 @@ func TestValidatorCases(t *testing.T) {
 		{
 			name:           "EmailInLastSubdomain",
 			allowedEmails:  nil,
+			inlineEmails:   []string{},
 			allowedDomains: []string{"us.example.com", "de.example.com", "example.com"},
 			email:          "xyzzy@example.com",
 			expectedAuthZ:  true,
@@ -253,6 +269,7 @@ func TestValidatorCases(t *testing.T) {
 		{
 			name:           "EmailDomainNotCompletelyMatch",
 			allowedEmails:  nil,
+			inlineEmails:   []string{},
 			allowedDomains: []string{".example.com", ".example1.com"},
 			email:          "something@fooexample.com",
 			expectedAuthZ:  false,
@@ -260,6 +277,7 @@ func TestValidatorCases(t *testing.T) {
 		{
 			name:           "HackerExtraDomainPrefix1",
 			allowedEmails:  nil,
+			inlineEmails:   []string{},
 			allowedDomains: []string{".mycompany.com"},
 			email:          "something@evilhackmycompany.com",
 			expectedAuthZ:  false,
@@ -267,6 +285,7 @@ func TestValidatorCases(t *testing.T) {
 		{
 			name:           "HackerExtraDomainPrefix2",
 			allowedEmails:  nil,
+			inlineEmails:   []string{},
 			allowedDomains: []string{".mycompany.com"},
 			email:          "something@ext.evilhackmycompany.com",
 			expectedAuthZ:  false,
@@ -274,6 +293,7 @@ func TestValidatorCases(t *testing.T) {
 		{
 			name:           "EmptyDomainAndEmailList",
 			allowedEmails:  []string(nil),
+			inlineEmails:   []string{},
 			allowedDomains: []string(nil),
 			email:          "foo.bar@example.com",
 			expectedAuthZ:  false,
@@ -282,6 +302,7 @@ func TestValidatorCases(t *testing.T) {
 			name:           "EmailMatchWithAllowedEmails",
 			email:          "foo.bar@example.com",
 			allowedEmails:  []string{"foo.bar@example.com"},
+			inlineEmails:   []string{},
 			allowedDomains: []string{"example.com"},
 			expectedAuthZ:  true,
 		},
@@ -289,6 +310,7 @@ func TestValidatorCases(t *testing.T) {
 			name:           "EmailFromSameDomainButNotInList",
 			email:          "baz.quux@example.com",
 			allowedEmails:  []string{"foo.bar@example.com"},
+			inlineEmails:   []string{},
 			allowedDomains: []string(nil),
 			expectedAuthZ:  false,
 		},
@@ -296,6 +318,7 @@ func TestValidatorCases(t *testing.T) {
 			name:           "EmailMatchOnDomain",
 			email:          "foo.bar@example.com",
 			allowedEmails:  []string(nil),
+			inlineEmails:   []string{},
 			allowedDomains: []string{"example.com"},
 			expectedAuthZ:  true,
 		},
@@ -303,6 +326,7 @@ func TestValidatorCases(t *testing.T) {
 			name:           "EmailMatchOnDomain2",
 			email:          "baz.quux@example.com",
 			allowedEmails:  []string(nil),
+			inlineEmails:   []string{},
 			allowedDomains: []string{"example.com"},
 			expectedAuthZ:  true,
 		},
@@ -310,6 +334,7 @@ func TestValidatorCases(t *testing.T) {
 			name:           "EmailFromFirstDomainShouldValidate",
 			email:          "foo.bar@example0.com",
 			allowedEmails:  []string{"Foo.Bar@Example.Com"},
+			inlineEmails:   []string{},
 			allowedDomains: []string{"example0.com", "example1.com"},
 			expectedAuthZ:  true,
 		},
@@ -317,6 +342,7 @@ func TestValidatorCases(t *testing.T) {
 			name:           "EmailFromSecondDomainShouldValidate",
 			email:          "baz.quux@example1.com",
 			allowedEmails:  []string{"Foo.Bar@Example.Com"},
+			inlineEmails:   []string{},
 			allowedDomains: []string{"example0.com", "example1.com"},
 			expectedAuthZ:  true,
 		},
@@ -324,6 +350,7 @@ func TestValidatorCases(t *testing.T) {
 			name:           "FirstEmailInListShouldValidate",
 			email:          "xyzzy@example.com",
 			allowedEmails:  []string{"xyzzy@example.com", "plugh@example.com"},
+			inlineEmails:   []string{},
 			allowedDomains: []string{"example0.com", "example1.com"},
 			expectedAuthZ:  true,
 		},
@@ -331,6 +358,7 @@ func TestValidatorCases(t *testing.T) {
 			name:           "SecondEmailInListShouldValidate",
 			email:          "plugh@example.com",
 			allowedEmails:  []string{"xyzzy@example.com", "plugh@example.com"},
+			inlineEmails:   []string{},
 			allowedDomains: []string{"example0.com", "example1.com"},
 			expectedAuthZ:  true,
 		},
@@ -338,6 +366,7 @@ func TestValidatorCases(t *testing.T) {
 			name:           "EmailNotInListThatMatchesNoDomains ",
 			email:          "xyzzy.plugh@example.com",
 			allowedEmails:  []string{"xyzzy@example.com", "plugh@example.com"},
+			inlineEmails:   []string{},
 			allowedDomains: []string{"example0.com", "example1.com"},
 			expectedAuthZ:  false,
 		},
@@ -345,6 +374,7 @@ func TestValidatorCases(t *testing.T) {
 			name:           "LoadedEmailAddressesAreNotLowerCased",
 			email:          "foo.bar@example.com",
 			allowedEmails:  []string{"Foo.Bar@Example.Com"},
+			inlineEmails:   []string{},
 			allowedDomains: []string{"Frobozz.Com"},
 			expectedAuthZ:  true,
 		},
@@ -352,6 +382,7 @@ func TestValidatorCases(t *testing.T) {
 			name:           "ValidatedEmailAddressesAreNotLowerCased",
 			email:          "Foo.Bar@Example.Com",
 			allowedEmails:  []string{"Foo.Bar@Example.Com"},
+			inlineEmails:   []string{},
 			allowedDomains: []string{"Frobozz.Com"},
 			expectedAuthZ:  true,
 		},
@@ -359,6 +390,7 @@ func TestValidatorCases(t *testing.T) {
 			name:           "LoadedDomainsAreNotLowerCased",
 			email:          "foo.bar@frobozz.com",
 			allowedEmails:  []string{"Foo.Bar@Example.Com"},
+			inlineEmails:   []string{},
 			allowedDomains: []string{"Frobozz.Com"},
 			expectedAuthZ:  true,
 		},
@@ -366,6 +398,7 @@ func TestValidatorCases(t *testing.T) {
 			name:           "ValidatedDomainsAreNotLowerCased",
 			email:          "foo.bar@Frobozz.Com",
 			allowedEmails:  []string{"Foo.Bar@Example.Com"},
+			inlineEmails:   []string{},
 			allowedDomains: []string{"Frobozz.Com"},
 			expectedAuthZ:  true,
 		},
@@ -373,6 +406,7 @@ func TestValidatorCases(t *testing.T) {
 			name:           "IgnoreSpacesInAuthEmails",
 			email:          "foo.bar@example.com",
 			allowedEmails:  []string{"   foo.bar@example.com   "},
+			inlineEmails:   []string{},
 			allowedDomains: []string(nil),
 			expectedAuthZ:  true,
 		},
@@ -380,6 +414,7 @@ func TestValidatorCases(t *testing.T) {
 			name:           "IgnorePrefixSpacesInAuthEmails",
 			email:          "foo.bar@example.com",
 			allowedEmails:  []string{"   foo.bar@example.com"},
+			inlineEmails:   []string{},
 			allowedDomains: []string(nil),
 			expectedAuthZ:  true,
 		},
@@ -387,6 +422,7 @@ func TestValidatorCases(t *testing.T) {
 			name:           "CheckForEqualityNotSuffix",
 			email:          "foo@evilcompany.com",
 			allowedEmails:  []string(nil),
+			inlineEmails:   []string{},
 			allowedDomains: []string{".company.com"},
 			expectedAuthZ:  false,
 		},
@@ -394,6 +430,7 @@ func TestValidatorCases(t *testing.T) {
 			name:           "CheckForEqualityNotSuffix2",
 			email:          "foo@evilcompany.com",
 			allowedEmails:  []string(nil),
+			inlineEmails:   []string{},
 			allowedDomains: []string{"company.com"},
 			expectedAuthZ:  false,
 		},
@@ -401,8 +438,91 @@ func TestValidatorCases(t *testing.T) {
 			name:           "CheckForEqualityNotSuffixWildcard",
 			email:          "foo@evilcompany.com",
 			allowedEmails:  []string(nil),
+			inlineEmails:   []string{},
 			allowedDomains: []string{"*.company.com"},
 			expectedAuthZ:  false,
+		},
+
+		// Inline email test cases
+		{
+			name:           "InlineEmailOnly",
+			allowedEmails:  []string{},
+			inlineEmails:   []string{"user1@example.com", "user2@example.com"},
+			allowedDomains: []string{},
+			email:          "user1@example.com",
+			expectedAuthZ:  true,
+		},
+		{
+			name:           "InlineEmailNotFound",
+			allowedEmails:  []string{},
+			inlineEmails:   []string{"user1@example.com", "user2@example.com"},
+			allowedDomains: []string{},
+			email:          "user3@example.com",
+			expectedAuthZ:  false,
+		},
+		{
+			name:           "CombinedFileAndInlineEmails",
+			allowedEmails:  []string{"fileuser@example.com"},
+			inlineEmails:   []string{"inlineuser@example.com"},
+			allowedDomains: []string{},
+			email:          "inlineuser@example.com",
+			expectedAuthZ:  true,
+		},
+		{
+			name:           "CombinedFileAndInlineEmailsFileMatch",
+			allowedEmails:  []string{"fileuser@example.com"},
+			inlineEmails:   []string{"inlineuser@example.com"},
+			allowedDomains: []string{},
+			email:          "fileuser@example.com",
+			expectedAuthZ:  true,
+		},
+		{
+			name:           "CombinedFileAndInlineEmailsNoMatch",
+			allowedEmails:  []string{"fileuser@example.com"},
+			inlineEmails:   []string{"inlineuser@example.com"},
+			allowedDomains: []string{},
+			email:          "other@example.com",
+			expectedAuthZ:  false,
+		},
+		{
+			name:           "InlineEmailsWithDomains",
+			allowedEmails:  []string{},
+			inlineEmails:   []string{"specific@example.com"},
+			allowedDomains: []string{"domain.com"},
+			email:          "any@domain.com",
+			expectedAuthZ:  true,
+		},
+		{
+			name:           "InlineEmailsWithDomainsSpecificMatch",
+			allowedEmails:  []string{},
+			inlineEmails:   []string{"specific@example.com"},
+			allowedDomains: []string{"domain.com"},
+			email:          "specific@example.com",
+			expectedAuthZ:  true,
+		},
+		{
+			name:           "InlineEmailsCaseInsensitive",
+			allowedEmails:  []string{},
+			inlineEmails:   []string{"User1@Example.Com"},
+			allowedDomains: []string{},
+			email:          "user1@example.com",
+			expectedAuthZ:  true,
+		},
+		{
+			name:           "InlineEmailsWithWhitespace",
+			allowedEmails:  []string{},
+			inlineEmails:   []string{"  user1@example.com  ", "user2@example.com"},
+			allowedDomains: []string{},
+			email:          "user1@example.com",
+			expectedAuthZ:  true,
+		},
+		{
+			name:           "EmptyInlineEmail",
+			allowedEmails:  []string{},
+			inlineEmails:   []string{"user1@example.com", "", "user2@example.com"},
+			allowedDomains: []string{},
+			email:          "user2@example.com",
+			expectedAuthZ:  true,
 		},
 	}
 
@@ -413,7 +533,7 @@ func TestValidatorCases(t *testing.T) {
 
 			g := NewWithT(t)
 			vt.WriteEmails(t, tc.allowedEmails)
-			validator := vt.NewValidator(tc.allowedDomains, nil)
+			validator := vt.NewValidator(tc.allowedDomains, tc.inlineEmails, nil)
 			authorized := validator(tc.email)
 			g.Expect(authorized).To(Equal(tc.expectedAuthZ))
 		})

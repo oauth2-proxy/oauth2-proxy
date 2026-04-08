@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.1
 
+- [#3394](https://github.com/oauth2-proxy/oauth2-proxy/pull/3394) feat: add support for --authenticated-email option (@dimw)
+
 # V7.15.1
 
 ## Release Highlights
