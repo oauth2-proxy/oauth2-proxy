@@ -421,7 +421,6 @@ func buildSessionChain(opts *options.Options, provider providers.Provider, sessi
 		RefreshPeriod:   opts.Cookie.Refresh,
 		RefreshSession:  provider.RefreshSession,
 		ValidateSession: provider.ValidateSession,
-		EnrichSession:   provider.EnrichSession,
 	}))
 
 	return chain
