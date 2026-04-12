@@ -44,7 +44,6 @@ func isFatalRefreshError(err error) bool {
 		return false
 	}
 
-	errStr := err.Error()
 	// Only check standard OAuth2 error codes (RFC 6749 Section 5.2)
 	// Do NOT check error_description strings as they are optional and provider-specific
 	fatalErrors := []string{
@@ -53,7 +52,7 @@ func isFatalRefreshError(err error) bool {
 	}
 
 	for _, fe := range fatalErrors {
-		if strings.Contains(errStr, fe) {
+		if strings.Contains(err.Error(), fe) {
 			return true
 		}
 	}
@@ -225,9 +224,8 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
 			logger.Printf("Fatal refresh error detected (session revoked or invalid), clearing session for user: %s", session.User)
 
 			// Clear the session from storage (Redis) and remove the cookie
-			clearErr := s.store.Clear(rw, req)
-			if clearErr != nil {
-				logger.Errorf("Error clearing session: %v", clearErr)
+			if err := s.store.Clear(rw, req); err != nil {
+				logger.Errorf("failed clearing session: %v", err)
 			}
 
 			// Return error immediately to force re-authentication
