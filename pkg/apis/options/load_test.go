@@ -329,7 +329,7 @@ var _ = Describe("Load", func() {
 			Entry("with an unknown option in the config file", &testOptionsTableInput{
 				configFile:  []byte(`unknown_option="foo"`),
 				flagSet:     func() *pflag.FlagSet { return testOptionsFlagSet },
-				expectedErr: fmt.Errorf("error unmarshalling config: decoding failed due to the following error(s):\n\n'' has invalid keys: unknown_option"),
+				expectedErr: fmt.Errorf("error unmarshalling config: decoding failed due to the following error(s):\n\n'options.TestOptions' has invalid keys: unknown_option"),
 				// Viper will unmarshal before returning the error, so this is the default output
 				expectedOutput: &TestOptions{
 					StringOption: "default",
