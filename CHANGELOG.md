@@ -10,6 +10,8 @@
 
 # V7.15.1
 
+- [#3411](https://github.com/oauth2-proxy/oauth2-proxy/pull/3411) chore(deps): update gomod dependencies (@tuunit)
+
 ## Release Highlights
 
 - 🐛 Squashed some bugs
