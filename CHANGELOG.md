@@ -8,9 +8,10 @@
 
 ## Changes since v7.15.1
 
-# V7.15.1
-
 - [#3411](https://github.com/oauth2-proxy/oauth2-proxy/pull/3411) chore(deps): update gomod dependencies (@tuunit)
+- [#3333](https://github.com/oauth2-proxy/oauth2-proxy/pull/3333) fix: invalidate session on fatal OAuth2 refresh errors (@frhack)
+
+# V7.15.1
 
 ## Release Highlights
 
