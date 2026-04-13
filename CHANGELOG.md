@@ -10,6 +10,7 @@
 
 - [#3411](https://github.com/oauth2-proxy/oauth2-proxy/pull/3411) chore(deps): update gomod dependencies (@tuunit)
 - [#3333](https://github.com/oauth2-proxy/oauth2-proxy/pull/3333) fix: invalidate session on fatal OAuth2 refresh errors (@frhack)
+- [GHSA-f24x-5g9q-753f](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-f24x-5g9q-753f) fix: clear session cookie at beginning of signinpage handler (@fnoehWM / @bella-WI / @tuunit)
 
 # V7.15.1
 

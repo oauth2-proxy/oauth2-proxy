@@ -713,6 +713,50 @@ func TestManualSignInCorrectCredentials(t *testing.T) {
 	assert.Equal(t, http.StatusFound, statusCode)
 }
 
+func TestSignInPageClearsExistingSessionCookie(t *testing.T) {
+	opts := baseTestOptions()
+	err := validation.Validate(opts)
+	require.NoError(t, err)
+
+	proxy, err := NewOAuthProxy(opts, func(string) bool {
+		return true
+	})
+	require.NoError(t, err)
+
+	// Create a real session cookie using the actual session store.
+	saveRW := httptest.NewRecorder()
+	saveReq := httptest.NewRequest(http.MethodGet, "/", nil)
+	err = proxy.sessionStore.Save(saveRW, saveReq, &sessions.SessionState{
+		Email: "john.doe@example.com",
+	})
+	require.NoError(t, err)
+
+	cookies := saveRW.Result().Cookies()
+	require.NotEmpty(t, cookies)
+
+	// Send that cookie to the sign-in page.
+	req := httptest.NewRequest(http.MethodGet, "/oauth2/sign_in", nil)
+	for _, c := range cookies {
+		req.AddCookie(c)
+	}
+
+	rw := httptest.NewRecorder()
+	proxy.ServeHTTP(rw, req)
+
+	assert.Equal(t, http.StatusOK, rw.Code)
+
+	cleared := false
+	for _, c := range rw.Result().Cookies() {
+		if c.Name == proxy.CookieOptions.Name {
+			cleared = true
+			assert.Equal(t, "", c.Value)
+			assert.Less(t, c.MaxAge, 0)
+		}
+	}
+
+	assert.True(t, cleared, "expected sign-in page to clear existing session cookie")
+}
+
 func TestSignInPageIncludesTargetRedirect(t *testing.T) {
 	sipTest, err := NewSignInPageTest(false)
 	if err != nil {
