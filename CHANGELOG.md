@@ -12,7 +12,39 @@
 
 ## Release Highlights
 
+- 🔵 Golang version upgrade to v1.25.9
+    - Upgrade of all dependencies to their latest versions
+    - [CVE-2026-34986](https://nvd.nist.gov/vuln/detail/CVE-2026-34986)
+    - [CVE-2026-32281](https://nvd.nist.gov/vuln/detail/CVE-2026-32281)
+    - [CVE-2026-32289](https://nvd.nist.gov/vuln/detail/CVE-2026-32289)
+    - [CVE-2026-32288](https://nvd.nist.gov/vuln/detail/CVE-2026-32288)
+    - [CVE-2026-32280](https://nvd.nist.gov/vuln/detail/CVE-2026-32280)
+    - [CVE-2026-32282](https://nvd.nist.gov/vuln/detail/CVE-2026-32282)
+    - [CVE-2026-32283](https://nvd.nist.gov/vuln/detail/CVE-2026-32283)
+-  🕵️‍♀️ Vulnerabilities have been addressed
+
 ## Important Notes
+
+We have had security audits performed on OAuth2 Proxy in the past couple of weeks and as a result we have fixed
+several CRITICAL vulnerabilities.
+
+The security vulnerabilities include multiple authentication bypasses and a potential session fixation attack.
+For more details and to identify if you are effects, we urge all users of OAuth2 Proxy to read the security 
+disclosures.
+
+- (Critical) [GHSA-5hvv-m4w4-gf6v](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-5hvv-m4w4-gf6v) fix: health check user-agent authentication bypass 
+- (Critical) [GHSA-7x63-xv5r-3p2x](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-7x63-xv5r-3p2x) fix: authentication bypass via X-Forwarded-Uri header spoofing
+- (High) [GHSA-pxq7-h93f-9jrg](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-pxq7-h93f-9jrg) fix: fragment evaluation as part of the allowed routes
+- (Moderate) [GHSA-c5c4-8r6x-56w3](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-c5c4-8r6x-56w3) fix: email validation bypass via malformed multi-@ email claims
+
+Furthermore, for improving the security of OAuth2 Proxy we introduced a new flag `--trusted-proxy-ip` that allows users
+to explicitly specify trusted reverse proxy IPs for the `X-Forwarded-*` headers. This is an important step to prevent 
+potential header spoofing attacks and to ensure that OAuth2 Proxy only trusts headers from known and trusted sources.
+We highly recommend users to review their deployment architecture and consider using this flag to enhance the security 
+of their OAuth2 Proxy instances. Check the docs for more details: https://oauth2-proxy.github.io/oauth2-proxy/configuration/overview#proxy-options
+
+Furthermore, we want to thank everyone who contributed to the audits and reported potential issues to make open source 
+software like OAuth2 Proxy more secure for everyone. 
 
 ## Breaking Changes
 
@@ -23,8 +55,8 @@
 - [GHSA-f24x-5g9q-753f](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-f24x-5g9q-753f) fix: clear session cookie at beginning of signinpage handler (@fnoehWM / @bella-WI / @tuunit)
 - [GHSA-5hvv-m4w4-gf6v](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-5hvv-m4w4-gf6v) fix: health check user-agent authentication bypass (@tuunit)
 - [GHSA-7x63-xv5r-3p2x](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-7x63-xv5r-3p2x) fix: authentication bypass via X-Forwarded-Uri header spoofing (@tuunit)
-- [GHSA-c5c4-8r6x-56w3](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-c5c4-8r6x-56w3) fix: email validation bypass via malformed multi-@ email claims (@tuunit)
 - [GHSA-pxq7-h93f-9jrg](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-pxq7-h93f-9jrg) fix: fragment evaluation as part of the allowed routes (@tuunit)
+- [GHSA-c5c4-8r6x-56w3](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-c5c4-8r6x-56w3) fix: email validation bypass via malformed multi-@ email claims (@tuunit)
 
 # V7.15.1
 
