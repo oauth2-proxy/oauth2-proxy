@@ -3486,6 +3486,24 @@ func TestAuthOnlyAllowedEmailDomains(t *testing.T) {
 			querystring:        "?allowed_email_domains=a.b.c.example.com,*.c.example.com",
 			expectedStatusCode: http.StatusAccepted,
 		},
+		{
+			name:               "UserWithMultipleAtSignsExactDomain",
+			email:              "attacker@evil.com@example.com",
+			querystring:        "?allowed_email_domains=example.com",
+			expectedStatusCode: http.StatusForbidden,
+		},
+		{
+			name:               "UserWithMultipleAtSignsWildcardDomain",
+			email:              "attacker@evil.com@foo.example.com",
+			querystring:        "?allowed_email_domains=*.example.com",
+			expectedStatusCode: http.StatusForbidden,
+		},
+		{
+			name:               "UserWithMultipleAtSignsDotPrefixedDomain",
+			email:              "attacker@evil.com@foo.example.com",
+			querystring:        "?allowed_email_domains=.example.com",
+			expectedStatusCode: http.StatusForbidden,
+		},
 	}
 
 	for _, tc := range testCases {

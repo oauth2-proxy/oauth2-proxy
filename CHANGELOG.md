@@ -13,6 +13,7 @@
 - [GHSA-f24x-5g9q-753f](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-f24x-5g9q-753f) fix: clear session cookie at beginning of signinpage handler (@fnoehWM / @bella-WI / @tuunit)
 - [GHSA-5hvv-m4w4-gf6v](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-5hvv-m4w4-gf6v) fix: health check user-agent authentication bypass (@tuunit)
 - [GHSA-7x63-xv5r-3p2x](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-7x63-xv5r-3p2x) fix: authentication bypass via X-Forwarded-Uri header spoofing (@tuunit)
+- [GHSA-c5c4-8r6x-56w3](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-c5c4-8r6x-56w3) fix: email validation bypass via malformed multi-@ email claims (@tuunit)
 
 # V7.15.1
 
