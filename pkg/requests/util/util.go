@@ -47,16 +47,28 @@ func GetRequestURI(req *http.Request) string {
 
 // GetRequestPath returns the request URI or X-Forwarded-Uri if present and the
 // request came from a trusted reverse proxy but always strips the query
-// parameters and only returns the pure path.
+// parameters and fragment suffixes and only returns the pure path.
 func GetRequestPath(req *http.Request) string {
-	uri := GetRequestURI(req)
+	uri := stripRequestFragment(GetRequestURI(req))
 
 	// Parse URI and return only the path component
 	if parsedURL, err := url.Parse(uri); err == nil {
-		return parsedURL.Path
+		return stripRequestFragment(parsedURL.Path)
 	}
 
 	// Fallback: strip query parameters manually
+	return stripRequestQuery(uri)
+}
+
+func stripRequestFragment(uri string) string {
+	if idx := strings.Index(uri, "#"); idx != -1 {
+		return uri[:idx]
+	}
+
+	return uri
+}
+
+func stripRequestQuery(uri string) string {
 	if idx := strings.Index(uri, "?"); idx != -1 {
 		return uri[:idx]
 	}

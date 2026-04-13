@@ -2679,9 +2679,11 @@ func TestAllowedRequest(t *testing.T) {
 	}
 	opts.SkipAuthRegex = []string{
 		"^/skip/auth/regex$",
+		"^/public/.*/endpoint$",
 	}
 	opts.SkipAuthRoutes = []string{
 		"GET=^/skip/auth/routes/get",
+		"^/foo/.*/bar$",
 	}
 	err := validation.Validate(opts)
 	assert.NoError(t, err)
@@ -2715,6 +2717,18 @@ func TestAllowedRequest(t *testing.T) {
 			allowed: false,
 		},
 		{
+			name:    "Regex allowed with fragment-free path",
+			method:  "GET",
+			url:     "/public/legit/endpoint",
+			allowed: true,
+		},
+		{
+			name:    "Regex denied when path contains encoded fragment suffix",
+			method:  "GET",
+			url:     "/public/secret%23/endpoint",
+			allowed: false,
+		},
+		{
 			name:    "Route allowed",
 			method:  "GET",
 			url:     "/skip/auth/routes/get",
@@ -2736,6 +2750,18 @@ func TestAllowedRequest(t *testing.T) {
 			name:    "Route denied with wrong path and method",
 			method:  "POST",
 			url:     "/skip/auth/routes/wrong/path",
+			allowed: false,
+		},
+		{
+			name:    "Route allowed with fragment-free path",
+			method:  "GET",
+			url:     "/foo/public/bar",
+			allowed: true,
+		},
+		{
+			name:    "Route denied when path contains encoded fragment suffix",
+			method:  "GET",
+			url:     "/foo/secret%23/bar",
 			allowed: false,
 		},
 	}
@@ -2778,9 +2804,11 @@ func TestAllowedRequestWithForwardedUriHeader(t *testing.T) {
 	}
 	opts.SkipAuthRegex = []string{
 		"^/skip/auth/regex$",
+		"^/public/.*/endpoint$",
 	}
 	opts.SkipAuthRoutes = []string{
 		"GET=^/skip/auth/routes/get",
+		"^/foo/.*/bar$",
 	}
 	err := validation.Validate(opts)
 	assert.NoError(t, err)
@@ -2814,6 +2842,18 @@ func TestAllowedRequestWithForwardedUriHeader(t *testing.T) {
 			allowed: false,
 		},
 		{
+			name:    "Regex allowed with fragment-free path",
+			method:  "GET",
+			url:     "/public/legit/endpoint",
+			allowed: true,
+		},
+		{
+			name:    "Regex denied when X-Forwarded-Uri contains an encoded fragment suffix",
+			method:  "GET",
+			url:     "/public/secret%23/endpoint",
+			allowed: false,
+		},
+		{
 			name:    "Route allowed",
 			method:  "GET",
 			url:     "/skip/auth/routes/get",
@@ -2835,6 +2875,18 @@ func TestAllowedRequestWithForwardedUriHeader(t *testing.T) {
 			name:    "Route denied with wrong path and method",
 			method:  "POST",
 			url:     "/skip/auth/routes/wrong/path",
+			allowed: false,
+		},
+		{
+			name:    "Route allowed with fragment-free path",
+			method:  "GET",
+			url:     "/foo/public/bar",
+			allowed: true,
+		},
+		{
+			name:    "Route denied when X-Forwarded-Uri contains an encoded fragment suffix",
+			method:  "GET",
+			url:     "/foo/secret%23/bar",
 			allowed: false,
 		},
 	}

@@ -152,6 +152,23 @@ var _ = Describe("Util Suite", func() {
 				Expect(util.GetRequestPath(req)).To(Equal(uriNoQueryParams))
 			})
 
+			It("drops fragment content from a parsed request path", func() {
+				// Simulate net/http ParseRequestURI preserving '#' in URL.Path.
+				req.URL.Path = "/foo/secret#/bar"
+				req.URL.RawPath = "/foo/secret%23/bar"
+				Expect(util.GetRequestPath(req)).To(Equal("/foo/secret"))
+			})
+
+			It("drops fragment-like suffixes from encoded number signs", func() {
+				req = httptest.NewRequest(
+					http.MethodGet,
+					fmt.Sprintf("%s://%s/foo/secret%%23/bar?query=param", proto, host),
+					nil,
+				)
+				req = middleware.AddRequestScope(req, &middleware.RequestScope{})
+				Expect(util.GetRequestPath(req)).To(Equal("/foo/secret"))
+			})
+
 			It("ignores X-Forwarded-Uri and returns the URI (without query params)", func() {
 				req.Header.Add("X-Forwarded-Uri", "/some/other/path?query=param")
 				Expect(util.GetRequestPath(req)).To(Equal(uriNoQueryParams))
@@ -174,6 +191,11 @@ var _ = Describe("Util Suite", func() {
 			It("returns the X-Forwarded-Uri when present (without query params)", func() {
 				req.Header.Add("X-Forwarded-Uri", "/some/other/path?query=param")
 				Expect(util.GetRequestPath(req)).To(Equal("/some/other/path"))
+			})
+
+			It("drops fragment-like suffixes from the X-Forwarded-Uri", func() {
+				req.Header.Add("X-Forwarded-Uri", "/foo/secret%23/bar?query=param")
+				Expect(util.GetRequestPath(req)).To(Equal("/foo/secret"))
 			})
 		})
 	})
