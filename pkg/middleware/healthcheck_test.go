@@ -45,6 +45,16 @@ var _ = Describe("HealthCheck suite", func() {
 			healthCheckPaths:      []string{"/ping"},
 			healthCheckUserAgents: []string{"hc/1.0"},
 			requestString:         "http://example.com/ping",
+			headers: map[string]string{
+				"User-Agent": "hc/1.0",
+			},
+			expectedStatus: 200,
+			expectedBody:   "OK",
+		}),
+		Entry("when requesting the healthcheck path with no health check user agents configured", &requestTableInput{
+			healthCheckPaths:      []string{"/ping"},
+			healthCheckUserAgents: []string{},
+			requestString:         "http://example.com/ping",
 			headers:               map[string]string{},
 			expectedStatus:        200,
 			expectedBody:          "OK",
@@ -85,15 +95,25 @@ var _ = Describe("HealthCheck suite", func() {
 			expectedStatus: 404,
 			expectedBody:   "404 page not found\n",
 		}),
-		Entry("with a request from the health check user agent", &requestTableInput{
+		Entry("with a request from the health check user agent on a non-healthcheck path", &requestTableInput{
 			healthCheckPaths:      []string{"/ping"},
 			healthCheckUserAgents: []string{"hc/1.0"},
 			requestString:         "http://example.com/abc",
 			headers: map[string]string{
 				"User-Agent": "hc/1.0",
 			},
-			expectedStatus: 200,
-			expectedBody:   "OK",
+			expectedStatus: 404,
+			expectedBody:   "404 page not found\n",
+		}),
+		Entry("when an auth_request endpoint receives the configured health check user agent", &requestTableInput{
+			healthCheckPaths:      []string{"/ping"},
+			healthCheckUserAgents: []string{"GoogleHC/1.0"},
+			requestString:         "http://example.com/oauth2/auth",
+			headers: map[string]string{
+				"User-Agent": "GoogleHC/1.0",
+			},
+			expectedStatus: 404,
+			expectedBody:   "404 page not found\n",
 		}),
 		Entry("when a blank string is configured as a health check agent and a request has no user agent", &requestTableInput{
 			healthCheckPaths:      []string{"/ping"},
@@ -107,9 +127,11 @@ var _ = Describe("HealthCheck suite", func() {
 			healthCheckPaths:      []string{"/ping", "/liveness_check", "/readiness_check"},
 			healthCheckUserAgents: []string{"hc/1.0"},
 			requestString:         "http://example.com/readiness_check",
-			headers:               map[string]string{},
-			expectedStatus:        200,
-			expectedBody:          "OK",
+			headers: map[string]string{
+				"User-Agent": "hc/1.0",
+			},
+			expectedStatus: 200,
+			expectedBody:   "OK",
 		}),
 		Entry("with multiple paths, request none of the healthcheck paths", &requestTableInput{
 			healthCheckPaths:      []string{"/ping", "/liveness_check", "/readiness_check"},
@@ -121,15 +143,15 @@ var _ = Describe("HealthCheck suite", func() {
 			expectedStatus: 404,
 			expectedBody:   "404 page not found\n",
 		}),
-		Entry("with multiple user agents, request from a health check user agent", &requestTableInput{
+		Entry("with multiple user agents, request from a health check user agent on a non-healthcheck path", &requestTableInput{
 			healthCheckPaths:      []string{"/ping"},
 			healthCheckUserAgents: []string{"hc/1.0", "GoogleHC/1.0"},
 			requestString:         "http://example.com/abc",
 			headers: map[string]string{
 				"User-Agent": "GoogleHC/1.0",
 			},
-			expectedStatus: 200,
-			expectedBody:   "OK",
+			expectedStatus: 404,
+			expectedBody:   "404 page not found\n",
 		}),
 		Entry("with multiple user agents, request from none of the health check user agents", &requestTableInput{
 			healthCheckPaths:      []string{"/ping"},

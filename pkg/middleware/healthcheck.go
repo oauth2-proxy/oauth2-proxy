@@ -43,10 +43,13 @@ func healthCheck(paths, userAgents []string, next http.Handler) http.Handler {
 
 func isHealthCheckRequest(paths, userAgents map[string]struct{}, req *http.Request) bool {
 	if _, ok := paths[req.URL.EscapedPath()]; ok {
-		return true
-	}
-	if _, ok := userAgents[req.Header.Get("User-Agent")]; ok {
-		return true
+		if len(userAgents) == 0 {
+			return true
+		}
+
+		if _, ok := userAgents[req.Header.Get("User-Agent")]; ok {
+			return true
+		}
 	}
 	return false
 }
