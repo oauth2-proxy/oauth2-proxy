@@ -24,6 +24,7 @@ type Options struct {
 	ReadyPath           string   `flag:"ready-path" cfg:"ready_path"`
 	ReverseProxy        bool     `flag:"reverse-proxy" cfg:"reverse_proxy"`
 	RealClientIPHeader  string   `flag:"real-client-ip-header" cfg:"real_client_ip_header"`
+	TrustedProxyIPs     []string `flag:"trusted-proxy-ip" cfg:"trusted_proxy_ips"`
 	TrustedIPs          []string `flag:"trusted-ip" cfg:"trusted_ips"`
 	ForceHTTPS          bool     `flag:"force-https" cfg:"force_https"`
 	RawRedirectURL      string   `flag:"redirect-url" cfg:"redirect_url"`
@@ -119,6 +120,7 @@ func NewFlagSet() *pflag.FlagSet {
 
 	flagSet.Bool("reverse-proxy", false, "are we running behind a reverse proxy, controls whether headers like X-Real-Ip are accepted")
 	flagSet.String("real-client-ip-header", "X-Real-IP", "Header used to determine the real IP of the client (one of: X-Forwarded-For, X-Real-IP, X-ProxyUser-IP, X-Envoy-External-Address, or CF-Connecting-IP)")
+	flagSet.StringSlice("trusted-proxy-ip", []string{}, "list of IPs or CIDR ranges that are allowed to set X-Forwarded-* headers when --reverse-proxy is enabled. Defaults to trusting all IPs for backwards compatibility; configure this to your reverse proxy addresses to prevent header spoofing.")
 	flagSet.StringSlice("trusted-ip", []string{}, "list of IPs or CIDR ranges to allow to bypass authentication. WARNING: trusting by IP has inherent security flaws, read the configuration documentation for more information.")
 	flagSet.Bool("force-https", false, "force HTTPS redirect for HTTP requests")
 	flagSet.String("redirect-url", "", "the OAuth Redirect URL. ie: \"https://internalapp.yourcompany.com/oauth2/callback\"")

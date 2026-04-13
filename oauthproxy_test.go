@@ -2843,6 +2843,7 @@ func TestAllowedRequestWithForwardedUriHeader(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			req, err := http.NewRequest(tc.method, opts.ProxyPrefix+authOnlyPath, nil)
 			req.Header.Set("X-Forwarded-Uri", tc.url)
+			req.RemoteAddr = "127.0.0.1:4180"
 			assert.NoError(t, err)
 
 			rw := httptest.NewRecorder()
@@ -2855,6 +2856,43 @@ func TestAllowedRequestWithForwardedUriHeader(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestAllowedRequestWithForwardedUriHeaderRequiresTrustedProxy(t *testing.T) {
+	upstreamServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+	}))
+	t.Cleanup(upstreamServer.Close)
+
+	opts := baseTestOptions()
+	opts.ReverseProxy = true
+	opts.TrustedProxyIPs = []string{"127.0.0.1/32"}
+	opts.UpstreamServers = options.UpstreamConfig{
+		Upstreams: []options.Upstream{
+			{
+				ID:   upstreamServer.URL,
+				Path: "/",
+				URI:  upstreamServer.URL,
+			},
+		},
+	}
+	opts.SkipAuthRegex = []string{"^/skip/auth/regex$"}
+
+	err := validation.Validate(opts)
+	assert.NoError(t, err)
+
+	proxy, err := NewOAuthProxy(opts, func(_ string) bool { return true })
+	assert.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodGet, opts.ProxyPrefix+authOnlyPath, nil)
+	assert.NoError(t, err)
+	req.RemoteAddr = "192.0.2.10:4180"
+	req.Header.Set("X-Forwarded-Uri", "/skip/auth/regex")
+
+	rw := httptest.NewRecorder()
+	proxy.ServeHTTP(rw, req)
+
+	assert.Equal(t, 401, rw.Code)
 }
 
 func TestAllowedRequestNegateWithoutMethod(t *testing.T) {
