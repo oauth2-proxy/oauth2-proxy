@@ -10,11 +10,11 @@
 #
 # Access http://oauth2-proxy.localtest.me:4180 to initiate a login cycle using user=admin@example.com, password=password
 # Access http://keycloak.localtest.me:9080 with the same credentials to check out the settings
-version: '3.0'
+version: "3.0"
 services:
   oauth2-proxy:
     container_name: oauth2-proxy
-    image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.1
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.2
     command: --config /oauth2-proxy.cfg
     hostname: oauth2-proxy
     volumes:
@@ -43,9 +43,9 @@ services:
     image: keycloak/keycloak:25.0
     hostname: keycloak
     command:
-      - 'start-dev'
-      - '--http-port=9080'
-      - '--import-realm'
+      - "start-dev"
+      - "--http-port=9080"
+      - "--import-realm"
     volumes:
       - ./keycloak:/opt/keycloak/data/import
     environment:
