@@ -30,6 +30,12 @@ func GetRequestHost(req *http.Request) string {
 	host := req.Header.Get(XForwardedHost)
 	if !CanTrustForwardedHeaders(req) || host == "" {
 		host = req.Host
+	} else {
+		// Handle multiple hosts in X-Forwarded-Host (comma-separated)
+		// Take only the first host as common implementation convention
+		if hosts := strings.Split(host, ","); len(hosts) > 0 {
+			host = strings.TrimSpace(hosts[0])
+		}
 	}
 	return host
 }
