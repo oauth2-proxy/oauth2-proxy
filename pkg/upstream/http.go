@@ -141,6 +141,16 @@ func newReverseProxy(target *url.URL, upstream options.Upstream, errorHandler Pr
 		transport.ResponseHeaderTimeout = *upstream.Timeout
 	}
 
+	// Configure transport buffer sizes for large request/response bodies.
+	// The default 4KB write buffer causes excessive syscalls for large uploads (e.g., 60MB = ~15,000 writes),
+	// which can trigger upstream proxy timeouts. See: https://github.com/oauth2-proxy/oauth2-proxy/issues/3389
+	if upstream.WriteBufferSize != nil {
+		transport.WriteBufferSize = *upstream.WriteBufferSize
+	}
+	if upstream.ReadBufferSize != nil {
+		transport.ReadBufferSize = *upstream.ReadBufferSize
+	}
+
 	// Configure options on the SingleHostReverseProxy
 	if upstream.FlushInterval != nil {
 		proxy.FlushInterval = *upstream.FlushInterval
