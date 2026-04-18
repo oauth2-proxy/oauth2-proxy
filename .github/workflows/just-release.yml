@@ -1,22 +1,16 @@
-name: Nightly builds
+name: Just Release
 
 on:
-  schedule: # Run every day at 03:00 UTC
-    - cron: '0 3 * * *'
-  workflow_dispatch:
+  push:
+    tags:
+      - '*'        # any tag
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    # only run this build in the main repository, not in forks
-    if: github.repository == 'oauth2-proxy/oauth2-proxy'
     steps:
     - name: Check out code
       uses: actions/checkout@v6
-      with:
-        ref: master
-        fetch-depth: 0
-        fetch-tags: true
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
@@ -29,13 +23,13 @@ jobs:
       uses: docker/login-action@v3
       with:
         registry: ${{ vars.REGISTRY }}
-        username: ${{ secrets.REGISTRY_USERNAME_NIGHTLY }}
-        password: ${{ secrets.REGISTRY_PASSWORD_NIGHTLY }}
+        username: ${{ secrets.REGISTRY_USERNAME }}
+        password: ${{ secrets.REGISTRY_PASSWORD }}
 
     - name: Build images
       run: |
-        make nightly-build
+        make build-docker-all
 
     - name: Push images
       run: |
-        make nightly-push
+        make push-docker-all
