@@ -59,6 +59,8 @@ const (
 )
 
 var (
+	defaultTrustedProxyIPs = []string{"0.0.0.0/0", "::/0"}
+
 	// ErrNeedsLogin means the user should be redirected to the login page
 	ErrNeedsLogin = errors.New("redirect to login page")
 
@@ -183,13 +185,14 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 
 	logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s", opts.Cookie.Name, opts.Cookie.Secure, opts.Cookie.HTTPOnly, opts.Cookie.Expire, strings.Join(opts.Cookie.Domains, ","), opts.Cookie.Path, opts.Cookie.SameSite, refresh)
 
-	trustedIPs := ip.NewNetSet()
-	for _, ipStr := range opts.TrustedIPs {
-		if ipNet := ip.ParseIPNet(ipStr); ipNet != nil {
-			trustedIPs.AddIPNet(*ipNet)
-		} else {
-			return nil, fmt.Errorf("could not parse IP network (%s)", ipStr)
-		}
+	trustedIPs, err := ip.ParseNetSet(opts.TrustedIPs)
+	if err != nil {
+		return nil, err
+	}
+
+	trustedProxies, err := buildTrustedProxyNetSet(opts)
+	if err != nil {
+		return nil, err
 	}
 
 	allowedRoutes, err := buildRoutesAllowlist(opts)
@@ -202,7 +205,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		return nil, err
 	}
 
-	preAuthChain, err := buildPreAuthChain(opts, sessionStore)
+	preAuthChain, err := buildPreAuthChain(opts, sessionStore, trustedProxies)
 	if err != nil {
 		return nil, fmt.Errorf("could not build pre-auth chain: %v", err)
 	}
@@ -355,8 +358,8 @@ func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
 // buildPreAuthChain constructs a chain that should process every request before
 // the OAuth2 Proxy authentication logic kicks in.
 // For example forcing HTTPS or health checks.
-func buildPreAuthChain(opts *options.Options, sessionStore sessionsapi.SessionStore) (alice.Chain, error) {
-	chain := alice.New(middleware.NewScope(opts.ReverseProxy, opts.Logging.RequestIDHeader))
+func buildPreAuthChain(opts *options.Options, sessionStore sessionsapi.SessionStore, trustedProxies *ip.NetSet) (alice.Chain, error) {
+	chain := alice.New(middleware.NewScope(opts.ReverseProxy, opts.Logging.RequestIDHeader, trustedProxies))
 
 	if opts.ForceHTTPS {
 		_, httpsPort, err := net.SplitHostPort(opts.Server.SecureBindAddress)
@@ -393,6 +396,16 @@ func buildPreAuthChain(opts *options.Options, sessionStore sessionsapi.SessionSt
 	chain = chain.Append(middleware.NewRequestMetricsWithDefaultRegistry())
 
 	return chain, nil
+}
+
+func buildTrustedProxyNetSet(opts *options.Options) (*ip.NetSet, error) {
+	trustedProxyIPs := opts.TrustedProxyIPs
+	if opts.ReverseProxy && len(trustedProxyIPs) == 0 {
+		logger.Print("WARNING: --reverse-proxy is enabled but no --trusted-proxy-ip CIDRs were configured. All connecting IPs are trusted to supply X-Forwarded-* headers by default (0.0.0.0/0, ::/0). This preserves backwards compatibility but is a potential security risk; configure --trusted-proxy-ip to match your reverse proxy addresses.")
+		trustedProxyIPs = defaultTrustedProxyIPs
+	}
+
+	return ip.ParseNetSet(trustedProxyIPs)
 }
 
 func buildSessionChain(opts *options.Options, provider providers.Provider, sessionStore sessionsapi.SessionStore, validator basic.Validator) alice.Chain {
@@ -634,6 +647,10 @@ func (p *OAuthProxy) isTrustedIP(req *http.Request) bool {
 // SignInPage writes the sign in template to the response
 func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code int) {
 	prepareNoCache(rw)
+
+	if err := p.ClearSessionCookie(rw, req); err != nil {
+		logger.Printf("Error clearing session cookie: %v", err)
+	}
 	rw.WriteHeader(code)
 
 	redirectURL, err := p.appDirector.GetRedirect(req)
@@ -645,10 +662,6 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 
 	if redirectURL == p.SignInPath {
 		redirectURL = "/"
-	}
-
-	if err := p.ClearSessionCookie(rw, req); err != nil {
-		logger.Printf("Error clearing session cookie: %v", err)
 	}
 
 	p.pageWriter.WriteSignInPage(rw, req, redirectURL, code)

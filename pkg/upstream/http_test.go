@@ -498,7 +498,7 @@ var _ = Describe("HTTP Upstream Suite", func() {
 
 			handler := newHTTPUpstreamProxy(upstream, u, nil, nil)
 
-			proxyServer = httptest.NewServer(middleware.NewScope(false, "X-Request-Id")(handler))
+			proxyServer = httptest.NewServer(middleware.NewScope(false, "X-Request-Id", nil)(handler))
 		})
 
 		AfterEach(func() {
@@ -549,7 +549,7 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			handler := newHTTPUpstreamProxy(upstream, u, nil, nil)
-			noPassHostServer := httptest.NewServer(middleware.NewScope(false, "X-Request-Id")(handler))
+			noPassHostServer := httptest.NewServer(middleware.NewScope(false, "X-Request-Id", nil)(handler))
 			defer noPassHostServer.Close()
 
 			origin := "http://example.localhost"

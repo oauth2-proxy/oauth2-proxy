@@ -16,6 +16,7 @@ func validateAllowlists(o *options.Options) []string {
 
 	msgs = append(msgs, validateAuthRoutes(o)...)
 	msgs = append(msgs, validateAuthRegexes(o)...)
+	msgs = append(msgs, validateTrustedProxyIPs(o)...)
 	msgs = append(msgs, validateTrustedIPs(o)...)
 
 	if len(o.TrustedIPs) > 0 && o.ReverseProxy {
@@ -25,6 +26,17 @@ func validateAllowlists(o *options.Options) []string {
 		}
 	}
 
+	return msgs
+}
+
+// validateTrustedProxyIPs validates IP/CIDRs for trusted reverse proxies.
+func validateTrustedProxyIPs(o *options.Options) []string {
+	msgs := []string{}
+	for i, ipStr := range o.TrustedProxyIPs {
+		if ip.ParseIPNet(ipStr) == nil {
+			msgs = append(msgs, fmt.Sprintf("trusted_proxy_ips[%d] (%s) could not be recognized", i, ipStr))
+		}
+	}
 	return msgs
 }
 

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/justinas/alice"
@@ -30,6 +31,33 @@ const (
 	// TODO: This should probably be configurable by the end user.
 	sessionRefreshRetryPeriod = 10 * time.Millisecond
 )
+
+// isFatalRefreshError checks if a refresh error indicates a revoked or
+// non-existent session that should be immediately invalidated.
+// Fatal errors indicate the session is no longer valid at the provider level.
+// Non-fatal errors (network issues, timeouts) should not invalidate the session.
+//
+// Only checks standard OAuth2 error codes (RFC 6749 Section 5.2).
+// Does NOT check error_description strings as they are optional and provider-specific.
+func isFatalRefreshError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	// Only check standard OAuth2 error codes (RFC 6749 Section 5.2)
+	// Do NOT check error_description strings as they are optional and provider-specific
+	fatalErrors := []string{
+		"invalid_grant",  // refresh token revoked, expired, or session terminated
+		"invalid_client", // client credentials no longer valid
+	}
+
+	for _, fe := range fatalErrors {
+		if strings.Contains(err.Error(), fe) {
+			return true
+		}
+	}
+	return false
+}
 
 // StoredSessionLoaderOptions contains all of the requirements to construct
 // a stored session loader.
@@ -188,9 +216,24 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
 	// We are holding the lock and the session needs a refresh
 	logger.Printf("Refreshing session - User: %s; SessionAge: %s", session.User, session.Age())
 	if err := s.refreshSession(rw, req, session); err != nil {
-		// If a preemptive refresh fails, we still keep the session
-		// if validateSession succeeds.
 		logger.Errorf("Unable to refresh session: %v", err)
+
+		// Check if this is a fatal error that indicates the session is revoked
+		// or no longer valid at the provider level
+		if isFatalRefreshError(err) {
+			logger.Printf("Fatal refresh error detected (session revoked or invalid), clearing session for user: %s", session.User)
+
+			// Clear the session from storage (Redis) and remove the cookie
+			if err := s.store.Clear(rw, req); err != nil {
+				logger.Errorf("failed clearing session: %v", err)
+			}
+
+			// Return error immediately to force re-authentication
+			return fmt.Errorf("session invalidated due to fatal refresh error: %w", err)
+		}
+
+		// For non-fatal errors (network issues, timeouts), keep the session
+		// and let validateSession determine if it's still usable
 	}
 
 	// Validate all sessions after any Redeem/Refresh operation (fail or success)

@@ -713,6 +713,50 @@ func TestManualSignInCorrectCredentials(t *testing.T) {
 	assert.Equal(t, http.StatusFound, statusCode)
 }
 
+func TestSignInPageClearsExistingSessionCookie(t *testing.T) {
+	opts := baseTestOptions()
+	err := validation.Validate(opts)
+	require.NoError(t, err)
+
+	proxy, err := NewOAuthProxy(opts, func(string) bool {
+		return true
+	})
+	require.NoError(t, err)
+
+	// Create a real session cookie using the actual session store.
+	saveRW := httptest.NewRecorder()
+	saveReq := httptest.NewRequest(http.MethodGet, "/", nil)
+	err = proxy.sessionStore.Save(saveRW, saveReq, &sessions.SessionState{
+		Email: "john.doe@example.com",
+	})
+	require.NoError(t, err)
+
+	cookies := saveRW.Result().Cookies()
+	require.NotEmpty(t, cookies)
+
+	// Send that cookie to the sign-in page.
+	req := httptest.NewRequest(http.MethodGet, "/oauth2/sign_in", nil)
+	for _, c := range cookies {
+		req.AddCookie(c)
+	}
+
+	rw := httptest.NewRecorder()
+	proxy.ServeHTTP(rw, req)
+
+	assert.Equal(t, http.StatusOK, rw.Code)
+
+	cleared := false
+	for _, c := range rw.Result().Cookies() {
+		if c.Name == proxy.CookieOptions.Name {
+			cleared = true
+			assert.Equal(t, "", c.Value)
+			assert.Less(t, c.MaxAge, 0)
+		}
+	}
+
+	assert.True(t, cleared, "expected sign-in page to clear existing session cookie")
+}
+
 func TestSignInPageIncludesTargetRedirect(t *testing.T) {
 	sipTest, err := NewSignInPageTest(false)
 	if err != nil {
@@ -2635,9 +2679,11 @@ func TestAllowedRequest(t *testing.T) {
 	}
 	opts.SkipAuthRegex = []string{
 		"^/skip/auth/regex$",
+		"^/public/.*/endpoint$",
 	}
 	opts.SkipAuthRoutes = []string{
 		"GET=^/skip/auth/routes/get",
+		"^/foo/.*/bar$",
 	}
 	err := validation.Validate(opts)
 	assert.NoError(t, err)
@@ -2671,6 +2717,18 @@ func TestAllowedRequest(t *testing.T) {
 			allowed: false,
 		},
 		{
+			name:    "Regex allowed with fragment-free path",
+			method:  "GET",
+			url:     "/public/legit/endpoint",
+			allowed: true,
+		},
+		{
+			name:    "Regex denied when path contains encoded fragment suffix",
+			method:  "GET",
+			url:     "/public/secret%23/endpoint",
+			allowed: false,
+		},
+		{
 			name:    "Route allowed",
 			method:  "GET",
 			url:     "/skip/auth/routes/get",
@@ -2692,6 +2750,18 @@ func TestAllowedRequest(t *testing.T) {
 			name:    "Route denied with wrong path and method",
 			method:  "POST",
 			url:     "/skip/auth/routes/wrong/path",
+			allowed: false,
+		},
+		{
+			name:    "Route allowed with fragment-free path",
+			method:  "GET",
+			url:     "/foo/public/bar",
+			allowed: true,
+		},
+		{
+			name:    "Route denied when path contains encoded fragment suffix",
+			method:  "GET",
+			url:     "/foo/secret%23/bar",
 			allowed: false,
 		},
 	}
@@ -2734,9 +2804,11 @@ func TestAllowedRequestWithForwardedUriHeader(t *testing.T) {
 	}
 	opts.SkipAuthRegex = []string{
 		"^/skip/auth/regex$",
+		"^/public/.*/endpoint$",
 	}
 	opts.SkipAuthRoutes = []string{
 		"GET=^/skip/auth/routes/get",
+		"^/foo/.*/bar$",
 	}
 	err := validation.Validate(opts)
 	assert.NoError(t, err)
@@ -2770,6 +2842,18 @@ func TestAllowedRequestWithForwardedUriHeader(t *testing.T) {
 			allowed: false,
 		},
 		{
+			name:    "Regex allowed with fragment-free path",
+			method:  "GET",
+			url:     "/public/legit/endpoint",
+			allowed: true,
+		},
+		{
+			name:    "Regex denied when X-Forwarded-Uri contains an encoded fragment suffix",
+			method:  "GET",
+			url:     "/public/secret%23/endpoint",
+			allowed: false,
+		},
+		{
 			name:    "Route allowed",
 			method:  "GET",
 			url:     "/skip/auth/routes/get",
@@ -2793,12 +2877,25 @@ func TestAllowedRequestWithForwardedUriHeader(t *testing.T) {
 			url:     "/skip/auth/routes/wrong/path",
 			allowed: false,
 		},
+		{
+			name:    "Route allowed with fragment-free path",
+			method:  "GET",
+			url:     "/foo/public/bar",
+			allowed: true,
+		},
+		{
+			name:    "Route denied when X-Forwarded-Uri contains an encoded fragment suffix",
+			method:  "GET",
+			url:     "/foo/secret%23/bar",
+			allowed: false,
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			req, err := http.NewRequest(tc.method, opts.ProxyPrefix+authOnlyPath, nil)
 			req.Header.Set("X-Forwarded-Uri", tc.url)
+			req.RemoteAddr = "127.0.0.1:4180"
 			assert.NoError(t, err)
 
 			rw := httptest.NewRecorder()
@@ -2811,6 +2908,43 @@ func TestAllowedRequestWithForwardedUriHeader(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestAllowedRequestWithForwardedUriHeaderRequiresTrustedProxy(t *testing.T) {
+	upstreamServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+	}))
+	t.Cleanup(upstreamServer.Close)
+
+	opts := baseTestOptions()
+	opts.ReverseProxy = true
+	opts.TrustedProxyIPs = []string{"127.0.0.1/32"}
+	opts.UpstreamServers = options.UpstreamConfig{
+		Upstreams: []options.Upstream{
+			{
+				ID:   upstreamServer.URL,
+				Path: "/",
+				URI:  upstreamServer.URL,
+			},
+		},
+	}
+	opts.SkipAuthRegex = []string{"^/skip/auth/regex$"}
+
+	err := validation.Validate(opts)
+	assert.NoError(t, err)
+
+	proxy, err := NewOAuthProxy(opts, func(_ string) bool { return true })
+	assert.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodGet, opts.ProxyPrefix+authOnlyPath, nil)
+	assert.NoError(t, err)
+	req.RemoteAddr = "192.0.2.10:4180"
+	req.Header.Set("X-Forwarded-Uri", "/skip/auth/regex")
+
+	rw := httptest.NewRecorder()
+	proxy.ServeHTTP(rw, req)
+
+	assert.Equal(t, 401, rw.Code)
 }
 
 func TestAllowedRequestNegateWithoutMethod(t *testing.T) {
@@ -3403,6 +3537,24 @@ func TestAuthOnlyAllowedEmailDomains(t *testing.T) {
 			email:              "toto@c.example.com",
 			querystring:        "?allowed_email_domains=a.b.c.example.com,*.c.example.com",
 			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:               "UserWithMultipleAtSignsExactDomain",
+			email:              "attacker@evil.com@example.com",
+			querystring:        "?allowed_email_domains=example.com",
+			expectedStatusCode: http.StatusForbidden,
+		},
+		{
+			name:               "UserWithMultipleAtSignsWildcardDomain",
+			email:              "attacker@evil.com@foo.example.com",
+			querystring:        "?allowed_email_domains=*.example.com",
+			expectedStatusCode: http.StatusForbidden,
+		},
+		{
+			name:               "UserWithMultipleAtSignsDotPrefixedDomain",
+			email:              "attacker@evil.com@foo.example.com",
+			querystring:        "?allowed_email_domains=.example.com",
+			expectedStatusCode: http.StatusForbidden,
 		},
 	}
 

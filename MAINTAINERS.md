@@ -6,7 +6,7 @@ by our [project governance](GOVERNANCE.md).
 | Name             | GitHub Handle                                          | Domains of reponsibility | Email Alias                | Affiliation |
 | ---------------- | ------------------------------------------------------ | ------------------------ | -------------------------- | ----------- |
 | Joel Speed       | [@JoelSpeed](https://github.com/joelspeed)             | Governance, Core         | joel@oauth2-proxy.dev      | Red Hat     |
-| Jan Larwig       | [@tuunit](https://github.com/tuunit)                   | Governance, Core         | jan@oauth2-proxy.dev       | IONOS Cloud |
+| Jan Larwig       | [@tuunit](https://github.com/tuunit)                   | Governance, Core         | jan@oauth2-proxy.dev       | STACKIT     |
 | JJ Łakis         | [@jjlakis](https://github.com/jjlakis)                 | Provider                 | jj@oauth2-proxy.dev        | -           |
 | Koen van Zuijlen | [@kvanzuijlen](https://github.com/kvanzuijlen)         | CI                       | koen@oauth2-proxy.dev      | -           |
 | Pierluigi Lenoci | [@pierluigilenoci](https://github.com/pierluigilenoci) | Helm                     | pierluigi@oauth2-proxy.dev | SAP         |
