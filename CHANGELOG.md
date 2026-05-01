@@ -8,6 +8,10 @@
 
 ## Changes since v7.15.2
 
+- 🐛 Bug Fixes
+    - Fixed middleware to seamlessly redirect to login on fatal refresh errors
+      (e.g., Keycloak "Session not active") instead of showing an error page.
+
 # V7.15.2
 
 ## Release Highlights
