@@ -4,7 +4,7 @@ title: Gitea / Forgejo
 ---
 
 :::note
-This is not actually a fully serparate provider. For more details and options please refer to the [GitHub Provider Options](github.md)
+This is not actually a fully separate provider. For more details and options please refer to the [GitHub Provider Options](github.md)
 :::
 
 1. Create a new application: `https://< your gitea host >/user/settings/applications`
