@@ -15,6 +15,13 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
 )
 
+var (
+	// errSessionCleared indicates the session was cleared due to a fatal
+	// refresh error (e.g., session revoked at the provider). The caller
+	// should treat this as "no session" and trigger re-authentication.
+	errSessionCleared = errors.New("session cleared due to fatal refresh error")
+)
+
 const (
 	// When attempting to obtain the lock, if it's not done before this timeout
 	// then exit and fail the refresh attempt.
@@ -143,6 +150,12 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
 
 	err = s.refreshSessionIfNeeded(rw, req, session)
 	if err != nil {
+		if errors.Is(err, errSessionCleared) {
+			// Session was cleared due to a fatal refresh error (e.g., revoked).
+			// Return nil session and nil error so the normal auth flow
+			// redirects to login instead of showing an error page.
+			return nil, nil
+		}
 		return nil, fmt.Errorf("error refreshing access token for session (%s): %v", session, err)
 	}
 
@@ -228,8 +241,10 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
 				logger.Errorf("failed clearing session: %v", err)
 			}
 
-			// Return error immediately to force re-authentication
-			return fmt.Errorf("session invalidated due to fatal refresh error: %w", err)
+			// Return errSessionCleared so the caller returns nil session
+			// and nil error, triggering seamless re-authentication instead
+			// of showing an error page.
+			return errSessionCleared
 		}
 
 		// For non-fatal errors (network issues, timeouts), keep the session
