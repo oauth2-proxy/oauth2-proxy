@@ -42,7 +42,7 @@ services:
     depends_on:
       - oauth2-proxy
     container_name: nginx
-    image: nginx:1.29
+    image: nginx:1.30
     restart: unless-stopped
     ports:
       - 8080:8080/tcp
@@ -79,7 +79,7 @@ services:
       httpbin: {}
   etcd:
     container_name: etcd
-    image: gcr.io/etcd-development/etcd:v3.6.8
+    image: gcr.io/etcd-development/etcd:v3.6.11
     entrypoint: /usr/local/bin/etcd
     command:
       - --listen-client-urls=http://0.0.0.0:2379
