@@ -81,7 +81,7 @@ jobs:
 
     - name: Run Trivy vulnerability scanner
       if: (!startsWith(github.head_ref, 'release'))
-      uses: aquasecurity/trivy-action@0.35.0
+      uses: aquasecurity/trivy-action@v0.36.0
       with:
         scan-type: 'rootfs'
         scan-ref: './oauth2-proxy'
