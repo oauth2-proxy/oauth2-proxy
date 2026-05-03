@@ -39,7 +39,7 @@ jobs:
       uses: golangci/golangci-lint-action@v9
       with:
         install-only: true
-        version: v2.11.4 # renovate: datasource=github-tags depName=golangci/golangci-lint
+        version: v2.12.1 # renovate: datasource=github-tags depName=golangci/golangci-lint
 
     - name: Verify Code Generation
       run: |
