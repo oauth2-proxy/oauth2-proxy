@@ -1,14 +1,17 @@
 package providers
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -137,6 +140,29 @@ func TestValidateSessionValidateURLWithQueryParams(t *testing.T) {
 	defer vtTest.Close()
 	vtTest.provider.Data().ValidateURL, _ = url.Parse(vtTest.provider.Data().ValidateURL.String() + "?query_param1=true&query_param2=test")
 	assert.Equal(t, true, validateToken(context.Background(), vtTest.provider, "foobar", nil))
+}
+
+func TestValidateSessionDoesNotLogResponseBody(t *testing.T) {
+	vtTest := NewValidateSessionTest()
+	defer vtTest.Close()
+
+	var buf bytes.Buffer
+	logger.SetOutput(&buf)
+	logger.SetErrOutput(&buf)
+	t.Cleanup(func() {
+		logger.SetOutput(io.Discard)
+		logger.SetErrOutput(io.Discard)
+	})
+
+	// Successful validation must not log the response body.
+	assert.Equal(t, true, validateToken(context.Background(), vtTest.provider, "foobar", nil))
+	assert.NotContains(t, buf.String(), "only code matters; contents disregarded")
+
+	// Error path (non-200) must not log the response body either.
+	buf.Reset()
+	vtTest.responseCode = 401
+	assert.Equal(t, false, validateToken(context.Background(), vtTest.provider, "foobar", nil))
+	assert.NotContains(t, buf.String(), "only code matters; contents disregarded")
 }
 
 func TestStripTokenNotPresent(t *testing.T) {

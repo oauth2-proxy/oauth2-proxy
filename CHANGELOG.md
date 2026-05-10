@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.2
 
+- [#3431](https://github.com/oauth2-proxy/oauth2-proxy/issues/3431) fix: stop logging provider userinfo response body in token validation (@sschmidt)
+
 # V7.15.2
 
 ## Release Highlights
