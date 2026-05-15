@@ -1,14 +1,17 @@
 package providers
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"testing"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -137,6 +140,25 @@ func TestValidateSessionValidateURLWithQueryParams(t *testing.T) {
 	defer vtTest.Close()
 	vtTest.provider.Data().ValidateURL, _ = url.Parse(vtTest.provider.Data().ValidateURL.String() + "?query_param1=true&query_param2=test")
 	assert.Equal(t, true, validateToken(context.Background(), vtTest.provider, "foobar", nil))
+}
+
+func TestValidateTokenDoesNotLogResponseBody(t *testing.T) {
+	vtTest := NewValidateSessionTest()
+	defer vtTest.Close()
+	vtTest.responseCode = 401
+
+	var buf bytes.Buffer
+	logger.SetOutput(&buf)
+	defer logger.SetOutput(os.Stdout)
+
+	validateToken(context.Background(), vtTest.provider, "foobar", nil)
+
+	output := buf.String()
+	// Response body from the test server is "only code matters; contents disregarded"
+	assert.NotContains(t, output, "only code matters")
+	assert.NotContains(t, output, "contents disregarded")
+	// But we should still see the status code logged
+	assert.Contains(t, output, "401")
 }
 
 func TestStripTokenNotPresent(t *testing.T) {
