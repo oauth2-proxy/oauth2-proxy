@@ -484,12 +484,12 @@ func messageWithAttrs(msg string, args ...any) string {
 	for i := 0; i < len(args); i += 2 {
 		buf.WriteByte(' ')
 		if i+1 >= len(args) {
-			buf.WriteString(fmt.Sprint(args[i]))
+			fmt.Fprint(&buf, args[i])
 			continue
 		}
-		buf.WriteString(fmt.Sprint(args[i]))
+		fmt.Fprint(&buf, args[i])
 		buf.WriteByte('=')
-		buf.WriteString(fmt.Sprint(args[i+1]))
+		fmt.Fprint(&buf, args[i+1])
 	}
 	return buf.String()
 }
