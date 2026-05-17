@@ -2,6 +2,7 @@ package cookie
 
 import (
 	"fmt"
+	"log/slog"
 	mathrand "math/rand"
 	"net/http"
 	"strings"
@@ -18,8 +19,7 @@ import (
 )
 
 func TestSessionStore(t *testing.T) {
-	logger.SetOutput(GinkgoWriter)
-	logger.SetErrOutput(GinkgoWriter)
+	logger.Setup(slog.LevelDebug, "text", GinkgoWriter, GinkgoWriter)
 
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Cookie SessionStore")
