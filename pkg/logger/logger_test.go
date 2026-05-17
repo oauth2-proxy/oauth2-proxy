@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"text/template"
 	"time"
 
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
@@ -17,6 +18,13 @@ import (
 func resetLogger(t *testing.T) {
 	t.Helper()
 	logLevel.Set(slog.LevelInfo)
+	logFormat = "text"
+	standardEnabled = true
+	localTime = true
+	flags = LstdFlags
+	stdLogTemplate = template.Must(template.New("std-log").Parse(DefaultStandardLoggingFormat))
+	authTemplate = template.Must(template.New("auth-log").Parse(DefaultAuthLoggingFormat))
+	reqTemplate = template.Must(template.New("req-log").Parse(DefaultRequestLoggingFormat))
 	authEnabled = true
 	reqEnabled = true
 	excludePaths = nil
@@ -74,14 +82,77 @@ func TestSetup_TextFormat(t *testing.T) {
 	Info("hello", "key", "val")
 
 	out := buf.String()
-	if !strings.Contains(out, "level=INFO") {
-		t.Errorf("expected level=INFO in text output, got: %s", out)
+	if strings.Contains(out, "level=INFO") {
+		t.Errorf("did not expect slog key=value text output, got: %s", out)
 	}
-	if !strings.Contains(out, "msg=hello") {
-		t.Errorf("expected msg=hello in text output, got: %s", out)
+	if !strings.Contains(out, "hello key=val") {
+		t.Errorf("expected message and attrs in template output, got: %s", out)
 	}
-	if !strings.Contains(out, "key=val") {
-		t.Errorf("expected key=val in text output, got: %s", out)
+	if !strings.HasSuffix(out, "\n") {
+		t.Errorf("expected text output to end with newline, got: %s", out)
+	}
+}
+
+func TestTextFormat_StandardTemplate(t *testing.T) {
+	resetLogger(t)
+	buf := &bytes.Buffer{}
+	errBuf := &bytes.Buffer{}
+	Setup(slog.LevelInfo, "text", buf, errBuf)
+	SetStandardTemplate("{{.Message}}")
+
+	Info("hello", "key", "val")
+
+	if got, want := buf.String(), "hello key=val\n"; got != want {
+		t.Errorf("expected custom standard template output %q, got %q", want, got)
+	}
+}
+
+func TestTextFormat_StandardTemplateFileUsesCaller(t *testing.T) {
+	resetLogger(t)
+	buf := &bytes.Buffer{}
+	errBuf := &bytes.Buffer{}
+	Setup(slog.LevelInfo, "text", buf, errBuf)
+	SetStandardTemplate("{{.File}}|{{.Message}}")
+
+	Info("hello")
+
+	out := buf.String()
+	if !strings.Contains(out, "logger_test.go:") {
+		t.Errorf("expected caller file in text output, got: %s", out)
+	}
+	if strings.Contains(out, "logger.go:") {
+		t.Errorf("expected external caller file, got logger wrapper file: %s", out)
+	}
+}
+
+func TestSetFlags_ControlsStandardTemplateFile(t *testing.T) {
+	resetLogger(t)
+	buf := &bytes.Buffer{}
+	errBuf := &bytes.Buffer{}
+	Setup(slog.LevelInfo, "text", buf, errBuf)
+	SetStandardTemplate("{{.File}}")
+	SetFlags(0)
+
+	Info("hello")
+
+	out := buf.String()
+	if !strings.Contains(out, "/pkg/logger/logger_test.go:") {
+		t.Errorf("expected full caller file when Lshortfile is disabled, got: %s", out)
+	}
+}
+
+func TestTextFormat_StandardLoggingDisabled(t *testing.T) {
+	resetLogger(t)
+	buf := &bytes.Buffer{}
+	errBuf := &bytes.Buffer{}
+	Setup(slog.LevelInfo, "text", buf, errBuf)
+	SetStandardEnabled(false)
+
+	Info("hidden")
+	Warn("also hidden")
+
+	if buf.Len() > 0 || errBuf.Len() > 0 {
+		t.Errorf("expected standard logs to be disabled, stdout=%q stderr=%q", buf.String(), errBuf.String())
 	}
 }
 
@@ -273,6 +344,28 @@ func TestLogAuth_Disabled(t *testing.T) {
 	}
 }
 
+func TestLogAuth_TextTemplate(t *testing.T) {
+	resetLogger(t)
+	buf := &bytes.Buffer{}
+	errBuf := &bytes.Buffer{}
+	Setup(slog.LevelDebug, "text", buf, errBuf)
+	SetAuthTemplate("{{.Client}}|{{.RequestID}}|{{.Username}}|{{.Status}}|{{.Message}}")
+
+	req := httptest.NewRequest("GET", "/test", nil)
+	req.RemoteAddr = "192.168.1.1:1234"
+	scope := &middlewareapi.RequestScope{RequestID: "req-id"}
+	req = middlewareapi.AddRequestScope(req, scope)
+
+	LogAuth("user@test.com", req, AuthSuccess, "authenticated", "provider", "oidc")
+
+	if got, want := buf.String(), "192.168.1.1:1234|req-id|user@test.com|AuthSuccess|authenticated provider=oidc\n"; got != want {
+		t.Errorf("expected custom auth template output %q, got %q", want, got)
+	}
+	if errBuf.Len() > 0 {
+		t.Errorf("expected text auth log to use standard writer, got stderr %q", errBuf.String())
+	}
+}
+
 func TestLogRequest(t *testing.T) {
 	resetLogger(t)
 	buf := &bytes.Buffer{}
@@ -355,6 +448,26 @@ func TestLogRequest_Disabled(t *testing.T) {
 
 	if buf.Len() > 0 {
 		t.Error("LogRequest should produce no output when request logging is disabled")
+	}
+}
+
+func TestLogRequest_TextTemplate(t *testing.T) {
+	resetLogger(t)
+	buf := &bytes.Buffer{}
+	errBuf := &bytes.Buffer{}
+	Setup(slog.LevelDebug, "text", buf, errBuf)
+	SetReqTemplate("{{.Username}}|{{.Upstream}}|{{.RequestMethod}}|{{.RequestURI}}|{{.StatusCode}}|{{.ResponseSize}}|{{.RequestID}}")
+
+	req := httptest.NewRequest("GET", "/foo/bar?x=1", nil)
+	req.RemoteAddr = "127.0.0.1:5678"
+	scope := &middlewareapi.RequestScope{RequestID: "req-123"}
+	req = middlewareapi.AddRequestScope(req, scope)
+
+	reqURL := *req.URL
+	LogRequest("testuser", "backend", req, reqURL, time.Now(), 204, 42)
+
+	if got, want := buf.String(), "testuser|backend|GET|\"/foo/bar?x=1\"|204|42|req-123\n"; got != want {
+		t.Errorf("expected custom request template output %q, got %q", want, got)
 	}
 }
 

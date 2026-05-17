@@ -23,14 +23,18 @@
 
 ## Logging configuration
 #logging_level = "info"
-#logging_format = "json"
+#logging_format = "text"
 #logging_filename = ""
 #logging_max_size = 100
 #logging_max_age = 7
 #logging_local_time = true
 #logging_compress = false
+#standard_logging = true
+#standard_logging_format = "[{{.Timestamp}}] [{{.File}}] {{.Message}}"
 #auth_logging = true
+#auth_logging_format = "{{.Client}} - {{.RequestID}} - {{.Username}} [{{.Timestamp}}] [{{.Status}}] {{.Message}}"
 #request_logging = true
+#request_logging_format = "{{.Client}} - {{.RequestID}} - {{.Username}} [{{.Timestamp}}] {{.Host}} {{.RequestMethod}} {{.Upstream}} {{.RequestURI}} {{.Protocol}} {{.UserAgent}} {{.StatusCode}} {{.ResponseSize}} {{.RequestDuration}}"
 
 ## pass HTTP Basic Auth, X-Forwarded-User and X-Forwarded-Email information to upstream
 # pass_basic_auth = true

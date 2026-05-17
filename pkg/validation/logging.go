@@ -91,10 +91,19 @@ func configureLogger(o options.Logging, msgs []string) []string {
 		}
 	}
 
+	logger.SetLocalTime(o.LocalTime)
+	logger.SetStandardTemplate(o.StandardFormat)
+	logger.SetAuthTemplate(o.AuthFormat)
+	logger.SetReqTemplate(o.RequestFormat)
+	logger.SetErrToInfo(o.ErrToInfo)
+	logger.SetStandardEnabled(true)
+
 	// Supply a sanity warning to the logger if all logging is disabled
-	if !o.AuthEnabled && !o.RequestEnabled {
-		logger.Warn("all categorical logging disabled: auth and request logging are both off")
+	if !o.StandardEnabled && !o.AuthEnabled && !o.RequestEnabled {
+		logger.Warn("logging disabled: standard, auth, and request logging are all off")
 	}
+
+	logger.SetStandardEnabled(o.StandardEnabled)
 
 	// Configure categorical logging
 	logger.SetAuthEnabled(o.AuthEnabled)
