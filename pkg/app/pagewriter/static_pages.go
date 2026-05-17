@@ -34,7 +34,7 @@ func (s *staticPageWriter) WriteRobotsTxt(rw http.ResponseWriter, req *http.Requ
 func (s *staticPageWriter) writePage(rw http.ResponseWriter, req *http.Request, pageName string) {
 	_, err := rw.Write(s.pageGetter.getPage(pageName))
 	if err != nil {
-		logger.Printf("Error writing %q: %v", pageName, err)
+		logger.ErrMsgf("error writing %q: %v", pageName, err)
 		scope := middlewareapi.GetRequestScope(req)
 		s.errorPageWriter.WriteErrorPage(rw, ErrorPageOpts{
 			Status:    http.StatusInternalServerError,

@@ -165,13 +165,13 @@ func (p *GitHubProvider) hasOrg(s *sessions.SessionState) error {
 	presentOrgs := make([]string, 0, len(orgs))
 	for _, org := range orgs {
 		if p.Org == org {
-			logger.Printf("Found Github Organization:%q", org)
+			logger.Info("found Github organization", "org", org)
 			return nil
 		}
 		presentOrgs = append(presentOrgs, org)
 	}
 
-	logger.Printf("Missing Organization:%q in %v", p.Org, presentOrgs)
+	logger.Info("missing organization", "required_org", p.Org, "present_orgs", presentOrgs)
 	return errors.New("user is missing required organization")
 }
 
@@ -204,7 +204,7 @@ func (p *GitHubProvider) hasOrgAndTeam(s *sessions.SessionState) error {
 			teams := strings.Split(p.Team, ",")
 			for _, team := range teams {
 				if strings.EqualFold(strings.TrimSpace(team), ot.Team) {
-					logger.Printf("Found Github Organization/Team:%q/%q", ot.Org, ot.Team)
+					logger.Info("found Github organization/team", "org", ot.Org, "team", ot.Team)
 					return nil
 				}
 			}
@@ -213,11 +213,11 @@ func (p *GitHubProvider) hasOrgAndTeam(s *sessions.SessionState) error {
 	}
 
 	if hasOrg {
-		logger.Printf("Missing Team:%q from Org:%q in teams: %v", p.Team, p.Org, presentTeams)
+		logger.Info("missing team from org", "team", p.Team, "org", p.Org, "present_teams", presentTeams)
 		return errors.New("user is missing required team")
 	}
 
-	logger.Printf("Missing Organization:%q in %#v", p.Org, maps.Keys(presentOrgs))
+	logger.Info("missing organization", "org", p.Org, "present_orgs", maps.Keys(presentOrgs))
 	return errors.New("user is missing required organization")
 }
 
@@ -236,19 +236,19 @@ func (p *GitHubProvider) hasTeam(s *sessions.SessionState) error {
 		allowedTeams := strings.Split(p.Team, ",")
 		for _, team := range allowedTeams {
 			if !strings.Contains(team, orgTeamSeparator) {
-				logger.Printf("Please use fully qualified team names (org:team-slug) if you omit the organisation. Current Team name: %s", team)
+				logger.Warn("please use fully qualified team names (org:team-slug) if you omit the organisation", "team", team)
 				return errors.New("team name is invalid")
 			}
 
 			if strings.EqualFold(strings.TrimSpace(team), ot) {
-				logger.Printf("Found Github Organization/Team:%s", ot)
+				logger.Info("found Github organization/team", "team", ot)
 				return nil
 			}
 		}
 		presentTeams = append(presentTeams, ot)
 	}
 
-	logger.Printf("Missing Team:%q in teams: %v", p.Team, presentTeams)
+	logger.Info("missing team", "team", p.Team, "present_teams", presentTeams)
 	return errors.New("user is missing required team")
 }
 
@@ -329,7 +329,7 @@ func (p *GitHubProvider) isCollaborator(ctx context.Context, username, accessTok
 			result.StatusCode(), endpoint.String(), result.Body())
 	}
 
-	logger.Printf("got %d from %q %s", result.StatusCode(), endpoint.String(), result.Body())
+	logger.Infof("got %d from %q %s", result.StatusCode(), endpoint.String(), result.Body())
 
 	return true, nil
 }
@@ -497,10 +497,10 @@ func (p *GitHubProvider) getOrgs(ctx context.Context, s *sessions.SessionState) 
 			var orgName string
 			if len(org.Login) > 0 {
 				orgName = org.Login
-				logger.Printf("Member of Github Organization: %q", orgName)
+				logger.Info("member of Github organization", "org", orgName)
 			} else {
 				orgName = org.Name
-				logger.Printf("Member of Gitea Organization: %q", orgName)
+				logger.Info("member of Gitea organization", "org", orgName)
 			}
 
 			s.Groups = append(s.Groups, orgName)
@@ -551,11 +551,11 @@ func (p *GitHubProvider) getTeams(ctx context.Context, s *sessions.SessionState)
 			if len(team.Org.Login) > 0 {
 				orgName = team.Org.Login
 				teamName = team.Slug
-				logger.Printf("Member of Github Organization/Team: %q/%q", orgName, teamName)
+				logger.Info("member of Github organization/team", "org", orgName, "team", teamName)
 			} else {
 				orgName = team.Org.Name
 				teamName = team.Name
-				logger.Printf("Member of Gitea Organization/Team: %q/%q", orgName, teamName)
+				logger.Info("member of Gitea organization/team", "org", orgName, "team", teamName)
 			}
 
 			s.Groups = append(s.Groups, fmt.Sprintf("%s%s%s", orgName, orgTeamSeparator, teamName))
