@@ -29,8 +29,14 @@ const (
 	// DefaultUpstreamPassHostHeader determines if upstreams will pass the host header by default.
 	DefaultUpstreamPassHostHeader bool = true
 
+	// Static upstreams cannot pass the host header.
+	DefaultStaticPassHostHeader bool = false
+
 	// DefaultUpstreamProxyWebSockets determines if upstreams will proxy websockets by default.
 	DefaultUpstreamProxyWebSockets bool = true
+
+	// Static upstreams cannot proxy websockets.
+	DefaultStaticProxyWebSockets bool = false
 
 	// DefaultUpstreamDisableKeepAlives determines if upstreams will disable keep-alives by default.
 	DefaultUpstreamDisableKeepAlives bool = false
@@ -143,19 +149,31 @@ func (u *Upstream) EnsureDefaults() {
 	if u.Static == nil {
 		u.Static = ptr.To(DefaultUpstreamStatic)
 	}
-	if u.FlushInterval == nil {
-		u.FlushInterval = ptr.To(DefaultUpstreamFlushInterval)
-	}
 	if u.PassHostHeader == nil {
 		u.PassHostHeader = ptr.To(DefaultUpstreamPassHostHeader)
 	}
 	if u.ProxyWebSockets == nil {
 		u.ProxyWebSockets = ptr.To(DefaultUpstreamProxyWebSockets)
 	}
+	if u.FlushInterval == nil {
+		u.FlushInterval = ptr.To(DefaultUpstreamFlushInterval)
+	}
 	if u.Timeout == nil {
 		u.Timeout = ptr.To(DefaultUpstreamTimeout)
 	}
 	if u.DisableKeepAlives == nil {
 		u.DisableKeepAlives = ptr.To(DefaultUpstreamDisableKeepAlives)
+	}
+
+	// Force defaults compatible with static upstreams.
+	// This overrides any user provided values to ensure static upstreams behave correctly.
+	if ptr.Deref(u.Static, DefaultUpstreamStatic) {
+		u.URI = ""
+		u.InsecureSkipTLSVerify = ptr.To(DefaultUpsteamInsecureSkipTLSVerify)
+		u.DisableKeepAlives = ptr.To(DefaultUpstreamDisableKeepAlives)
+		u.PassHostHeader = ptr.To(DefaultStaticPassHostHeader)
+		u.ProxyWebSockets = ptr.To(DefaultStaticProxyWebSockets)
+		u.FlushInterval = ptr.To(DefaultUpstreamFlushInterval)
+		u.Timeout = ptr.To(DefaultUpstreamTimeout)
 	}
 }

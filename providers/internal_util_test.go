@@ -149,3 +149,9 @@ func TestStripToken(t *testing.T) {
 	expected := "http://local.test/api/test?access_token=dead...&b=1&c=2"
 	assert.Equal(t, expected, stripToken(test))
 }
+
+func TestStripLongToken(t *testing.T) {
+	test := "http://local.test/api/test?access_token=deadbeefwithsupersecret&b=1&c=2"
+	expected := "http://local.test/api/test?access_token=deadb...&b=1&c=2"
+	assert.Equal(t, expected, stripToken(test))
+}

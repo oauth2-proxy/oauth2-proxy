@@ -11,6 +11,7 @@ Valid providers are :
 - [ADFS](adfs.md)
 - [Bitbucket](bitbucket.md)
 - [Cidaas](cidaas.md)
+- [CiscoDuo](cisco_duo.md)
 - [DigitalOcean](digitalocean.md)
 - [Facebook](facebook.md)
 - [Gitea](gitea.md)

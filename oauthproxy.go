@@ -54,9 +54,13 @@ const (
 	authOnlyPath      = "/auth"
 	userInfoPath      = "/userinfo"
 	staticPathPrefix  = "/static/"
+
+	idTokenPlaceholder = "{id_token}"
 )
 
 var (
+	defaultTrustedProxyIPs = []string{"0.0.0.0/0", "::/0"}
+
 	// ErrNeedsLogin means the user should be redirected to the login page
 	ErrNeedsLogin = errors.New("redirect to login page")
 
@@ -181,13 +185,14 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 
 	logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s", opts.Cookie.Name, opts.Cookie.Secure, opts.Cookie.HTTPOnly, opts.Cookie.Expire, strings.Join(opts.Cookie.Domains, ","), opts.Cookie.Path, opts.Cookie.SameSite, refresh)
 
-	trustedIPs := ip.NewNetSet()
-	for _, ipStr := range opts.TrustedIPs {
-		if ipNet := ip.ParseIPNet(ipStr); ipNet != nil {
-			trustedIPs.AddIPNet(*ipNet)
-		} else {
-			return nil, fmt.Errorf("could not parse IP network (%s)", ipStr)
-		}
+	trustedIPs, err := ip.ParseNetSet(opts.TrustedIPs)
+	if err != nil {
+		return nil, err
+	}
+
+	trustedProxies, err := buildTrustedProxyNetSet(opts)
+	if err != nil {
+		return nil, err
 	}
 
 	allowedRoutes, err := buildRoutesAllowlist(opts)
@@ -200,7 +205,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		return nil, err
 	}
 
-	preAuthChain, err := buildPreAuthChain(opts, sessionStore)
+	preAuthChain, err := buildPreAuthChain(opts, sessionStore, trustedProxies)
 	if err != nil {
 		return nil, fmt.Errorf("could not build pre-auth chain: %v", err)
 	}
@@ -353,8 +358,8 @@ func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
 // buildPreAuthChain constructs a chain that should process every request before
 // the OAuth2 Proxy authentication logic kicks in.
 // For example forcing HTTPS or health checks.
-func buildPreAuthChain(opts *options.Options, sessionStore sessionsapi.SessionStore) (alice.Chain, error) {
-	chain := alice.New(middleware.NewScope(opts.ReverseProxy, opts.Logging.RequestIDHeader))
+func buildPreAuthChain(opts *options.Options, sessionStore sessionsapi.SessionStore, trustedProxies *ip.NetSet) (alice.Chain, error) {
+	chain := alice.New(middleware.NewScope(opts.ReverseProxy, opts.Logging.RequestIDHeader, trustedProxies))
 
 	if opts.ForceHTTPS {
 		_, httpsPort, err := net.SplitHostPort(opts.Server.SecureBindAddress)
@@ -393,13 +398,24 @@ func buildPreAuthChain(opts *options.Options, sessionStore sessionsapi.SessionSt
 	return chain, nil
 }
 
+func buildTrustedProxyNetSet(opts *options.Options) (*ip.NetSet, error) {
+	trustedProxyIPs := opts.TrustedProxyIPs
+	if opts.ReverseProxy && len(trustedProxyIPs) == 0 {
+		logger.Print("WARNING: --reverse-proxy is enabled but no --trusted-proxy-ip CIDRs were configured. All connecting IPs are trusted to supply X-Forwarded-* headers by default (0.0.0.0/0, ::/0). This preserves backwards compatibility but is a potential security risk; configure --trusted-proxy-ip to match your reverse proxy addresses.")
+		trustedProxyIPs = defaultTrustedProxyIPs
+	}
+
+	return ip.ParseNetSet(trustedProxyIPs)
+}
+
 func buildSessionChain(opts *options.Options, provider providers.Provider, sessionStore sessionsapi.SessionStore, validator basic.Validator) alice.Chain {
 	chain := alice.New()
 
 	if opts.SkipJwtBearerTokens {
-		sessionLoaders := []middlewareapi.TokenToSessionFunc{
-			provider.CreateSessionFromToken,
-		}
+		verifiers := opts.GetJWTBearerVerifiers()
+
+		sessionLoaders := make([]middlewareapi.TokenToSessionFunc, 0, len(verifiers)+1)
+		sessionLoaders = append(sessionLoaders, provider.CreateSessionFromToken)
 
 		for _, verifier := range opts.GetJWTBearerVerifiers() {
 			sessionLoaders = append(sessionLoaders,
@@ -610,9 +626,7 @@ func (p *OAuthProxy) isAPIPath(req *http.Request) bool {
 
 // isTrustedIP is used to check if a request comes from a trusted client IP address.
 func (p *OAuthProxy) isTrustedIP(req *http.Request) bool {
-	// RemoteAddr @ means unix socket
-	// https://github.com/golang/go/blob/0fa53e41f122b1661d0678a6d36d71b7b5ad031d/src/syscall/syscall_linux.go#L506-L511
-	if p.trustedIPs == nil && req.RemoteAddr != "@" {
+	if p.trustedIPs == nil {
 		return false
 	}
 
@@ -633,6 +647,10 @@ func (p *OAuthProxy) isTrustedIP(req *http.Request) bool {
 // SignInPage writes the sign in template to the response
 func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code int) {
 	prepareNoCache(rw)
+
+	if err := p.ClearSessionCookie(rw, req); err != nil {
+		logger.Printf("Error clearing session cookie: %v", err)
+	}
 	rw.WriteHeader(code)
 
 	redirectURL, err := p.appDirector.GetRedirect(req)
@@ -644,10 +662,6 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 
 	if redirectURL == p.SignInPath {
 		redirectURL = "/"
-	}
-
-	if err := p.ClearSessionCookie(rw, req); err != nil {
-		logger.Printf("Error clearing session cookie: %v", err)
 	}
 
 	p.pageWriter.WriteSignInPage(rw, req, redirectURL, code)
@@ -720,15 +734,17 @@ func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	userInfo := struct {
-		User              string   `json:"user"`
-		Email             string   `json:"email"`
-		Groups            []string `json:"groups,omitempty"`
-		PreferredUsername string   `json:"preferredUsername,omitempty"`
+		User              string                 `json:"user"`
+		Email             string                 `json:"email"`
+		Groups            []string               `json:"groups,omitempty"`
+		PreferredUsername string                 `json:"preferredUsername,omitempty"`
+		AdditionalClaims  map[string]interface{} `json:"additionalClaims,omitempty"`
 	}{
 		User:              session.User,
 		Email:             session.Email,
 		Groups:            session.Groups,
 		PreferredUsername: session.PreferredUsername,
+		AdditionalClaims:  session.AdditionalClaims,
 	}
 
 	if err := json.NewEncoder(rw).Encode(userInfo); err != nil {
@@ -745,14 +761,26 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	if strings.Contains(redirect, idTokenPlaceholder) {
+		session, err := p.getAuthenticatedSession(rw, req)
+		if err != nil {
+			logger.Errorf("error getting authenticated session during SignOut, won't replace id_token placeholder in redirect URL: %v", err)
+		} else {
+			redirect = strings.ReplaceAll(redirect, idTokenPlaceholder, session.IDToken)
+		}
+	}
+
+	// Call backend logout before clearing the session so we still have the session
+	// (and id_token) available to invoke the provider's logout endpoint
+	p.backendLogout(rw, req)
+
 	err = p.ClearSessionCookie(rw, req)
 	if err != nil {
 		logger.Errorf("Error clearing session cookie: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
-
-	p.backendLogout(rw, req)
 
 	http.Redirect(rw, req, redirect, http.StatusFound)
 }
@@ -773,7 +801,7 @@ func (p *OAuthProxy) backendLogout(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	backendLogoutURL := strings.ReplaceAll(providerData.BackendLogoutURL, "{id_token}", session.IDToken)
+	backendLogoutURL := strings.ReplaceAll(providerData.BackendLogoutURL, idTokenPlaceholder, session.IDToken)
 	// security exception because URL is dynamic ({id_token} replacement) but
 	// base is not end-user provided but comes from configuration somewhat secure
 	resp, err := http.Get(backendLogoutURL) // #nosec G107
@@ -783,7 +811,7 @@ func (p *OAuthProxy) backendLogout(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 		logger.Errorf("error while calling backend logout url, returned error code %v", resp.StatusCode)
 	}
 }
@@ -858,6 +886,8 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	remoteAddr := ip.GetClientString(p.realClientIPParser, req, true)
 
 	// finish the oauth cycle
+	// #nosec G120 -- The default max size in Go is already capped at 10MB so this would be the absolute max and is
+	// unlikely to be hit in practice.
 	err := req.ParseForm()
 	if err != nil {
 		logger.Errorf("Error while parsing OAuth2 callback: %v", err)

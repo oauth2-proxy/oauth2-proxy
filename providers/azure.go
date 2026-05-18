@@ -399,6 +399,7 @@ func (p *AzureProvider) getGroupsFromProfileAPI(ctx context.Context, s *sessions
 }
 
 func getGroupsFromJSON(json *simplejson.Json, graphGroupField string) []string {
+	//nolint:prealloc
 	groups := []string{}
 
 	for i := range json.Get("value").MustArray() {

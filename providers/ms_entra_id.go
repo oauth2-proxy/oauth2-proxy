@@ -110,6 +110,7 @@ func (p *MicrosoftEntraIDProvider) Redeem(ctx context.Context, redirectURL, code
 // redeemWithFederatedToken performs custom token exchange with federated token instead of client secret
 func (p *MicrosoftEntraIDProvider) redeemWithFederatedToken(ctx context.Context, redirectURL, code, codeVerifier string) (*sessions.SessionState, error) {
 	federatedTokenPath := os.Getenv("AZURE_FEDERATED_TOKEN_FILE")
+	// #nosec G703 -- AZURE_FEDERATED_TOKEN_FILE is set by the operator, not user input
 	federatedToken, err := os.ReadFile(federatedTokenPath)
 	if err != nil {
 		return nil, fmt.Errorf("error reading federated token file %s: %s", federatedTokenPath, err)
@@ -162,6 +163,7 @@ func (p *MicrosoftEntraIDProvider) RefreshSession(ctx context.Context, s *sessio
 // Refresh Token, Access Token and ID Token
 func (p *MicrosoftEntraIDProvider) redeemRefreshTokenWithFederatedToken(ctx context.Context, s *sessions.SessionState) error {
 	federatedTokenPath := os.Getenv("AZURE_FEDERATED_TOKEN_FILE")
+	// #nosec G703 -- AZURE_FEDERATED_TOKEN_FILE is set by the operator, not user input
 	federatedToken, err := os.ReadFile(federatedTokenPath)
 	if err != nil {
 		return fmt.Errorf("error reading federated token file %s: %s", federatedTokenPath, err)

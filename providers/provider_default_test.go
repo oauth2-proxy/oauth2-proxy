@@ -102,6 +102,18 @@ func TestProviderDataAuthorize(t *testing.T) {
 			groups:        []string{"baz", "foo"},
 			expectedAuthZ: false,
 		},
+		{
+			name:          "AllowedGroupsWithEmptyString",
+			allowedGroups: []string{"group2", ""},
+			groups:        []string{"group1", "group2"},
+			expectedAuthZ: true,
+		},
+		{
+			name:          "AllowedGroupsOnlyEmptyString",
+			allowedGroups: []string{""},
+			groups:        []string{"group1", "group2"},
+			expectedAuthZ: true,
+		},
 	}
 
 	for _, tc := range testCases {

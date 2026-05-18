@@ -1,6 +1,7 @@
 package ip
 
 import (
+	"fmt"
 	"net"
 	"strings"
 )
@@ -36,4 +37,19 @@ func ParseIPNet(s string) *net.IPNet {
 	default:
 		return ipNet
 	}
+}
+
+func ParseNetSet(ipStrs []string) (*NetSet, error) {
+	netSet := NewNetSet()
+
+	for _, ipStr := range ipStrs {
+		ipNet := ParseIPNet(ipStr)
+		if ipNet == nil {
+			return nil, fmt.Errorf("could not parse IP network (%s)", ipStr)
+		}
+
+		netSet.AddIPNet(*ipNet)
+	}
+
+	return netSet, nil
 }

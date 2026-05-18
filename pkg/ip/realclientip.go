@@ -73,6 +73,12 @@ func GetClientIP(p ipapi.RealClientIPParser, req *http.Request) (net.IP, error) 
 
 // getRemoteIP obtains the IP of the low-level connected network host
 func getRemoteIP(req *http.Request) (net.IP, error) {
+	// Unix domain sockets set RemoteAddr to "@" which has no meaningful IP.
+	// https://github.com/golang/go/blob/0fa53e41f122b1661d0678a6d36d71b7b5ad031d/src/syscall/syscall_linux.go#L506-L511
+	if req.RemoteAddr == "@" {
+		return nil, nil
+	}
+
 	//revive:disable:indent-error-flow
 	if ipStr, _, err := net.SplitHostPort(req.RemoteAddr); err != nil {
 		return nil, fmt.Errorf("unable to get ip and port from http.RemoteAddr (%s)", req.RemoteAddr)
@@ -94,7 +100,7 @@ func GetClientString(p ipapi.RealClientIPParser, req *http.Request, full bool) (
 	}
 
 	var remoteIPStr string
-	if remoteIP, err := getRemoteIP(req); err == nil {
+	if remoteIP, err := getRemoteIP(req); err == nil && remoteIP != nil {
 		remoteIPStr = remoteIP.String()
 	}
 

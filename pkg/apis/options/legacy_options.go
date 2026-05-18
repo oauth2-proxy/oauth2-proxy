@@ -52,15 +52,16 @@ func NewLegacyOptions() *LegacyOptions {
 		},
 
 		LegacyProvider: LegacyProvider{
-			ProviderType:          "google",
-			AzureTenant:           "common",
-			ApprovalPrompt:        "force",
-			UserIDClaim:           "email",
-			OIDCEmailClaim:        "email",
-			OIDCGroupsClaim:       "groups",
-			OIDCAudienceClaims:    []string{"aud"},
-			OIDCExtraAudiences:    []string{},
-			InsecureOIDCSkipNonce: true,
+			ProviderType:           "google",
+			AzureTenant:            "common",
+			ApprovalPrompt:         "force",
+			UserIDClaim:            "email",
+			OIDCEmailClaim:         "email",
+			OIDCGroupsClaim:        "groups",
+			OIDCAudienceClaims:     []string{"aud"},
+			OIDCExtraAudiences:     []string{},
+			OIDCEnabledSigningAlgs: []string{},
+			InsecureOIDCSkipNonce:  true,
 		},
 
 		Options: *NewOptions(),
@@ -182,10 +183,10 @@ func (l *LegacyUpstreams) convert() (UpstreamConfig, error) {
 			upstream.URI = ""
 			upstream.InsecureSkipTLSVerify = ptr.To(false)
 			upstream.DisableKeepAlives = ptr.To(false)
-			upstream.PassHostHeader = nil
-			upstream.ProxyWebSockets = nil
-			upstream.FlushInterval = nil
-			upstream.Timeout = nil
+			upstream.PassHostHeader = ptr.To(false)
+			upstream.ProxyWebSockets = ptr.To(false)
+			upstream.FlushInterval = ptr.To(DefaultUpstreamFlushInterval)
+			upstream.Timeout = ptr.To(DefaultUpstreamTimeout)
 		case "unix":
 			upstream.Path = "/"
 		}
@@ -558,6 +559,7 @@ type LegacyProvider struct {
 	OIDCAudienceClaims                 []string `flag:"oidc-audience-claim" cfg:"oidc_audience_claims"`
 	OIDCExtraAudiences                 []string `flag:"oidc-extra-audience" cfg:"oidc_extra_audiences"`
 	OIDCPublicKeyFiles                 []string `flag:"oidc-public-key-file" cfg:"oidc_public_key_files"`
+	OIDCEnabledSigningAlgs             []string `flag:"oidc-enabled-signing-alg" cfg:"oidc_enabled_signing_algs"`
 	LoginURL                           string   `flag:"login-url" cfg:"login_url"`
 	AuthRequestResponseMode            string   `flag:"auth-request-response-mode" cfg:"auth_request_response_mode"`
 	RedeemURL                          string   `flag:"redeem-url" cfg:"redeem_url"`
@@ -619,6 +621,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.StringSlice("oidc-audience-claim", OIDCAudienceClaims, "which OIDC claims are used as audience to verify against client id")
 	flagSet.StringSlice("oidc-extra-audience", []string{}, "additional audiences allowed to pass audience verification")
 	flagSet.StringSlice("oidc-public-key-file", []string{}, "path to public key file in PEM format to use for verifying JWT tokens (may be given multiple times)")
+	flagSet.StringSlice("oidc-enabled-signing-alg", []string{}, "accepted signing algorithms for provider to use")
 	flagSet.String("login-url", "", "Authentication endpoint")
 	flagSet.String("redeem-url", "", "Token redemption endpoint")
 	flagSet.String("profile-url", "", "Profile access endpoint")
@@ -704,7 +707,7 @@ func (l LegacyServer) convert() (Server, Server) {
 }
 
 func (l *LegacyProvider) convert() (Providers, error) {
-	providers := Providers{}
+	providers := make(Providers, 0, 1)
 
 	provider := Provider{
 		ClientID:                 l.ClientID,
@@ -740,6 +743,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		AudienceClaims:                 l.OIDCAudienceClaims,
 		ExtraAudiences:                 l.OIDCExtraAudiences,
 		PublicKeyFiles:                 l.OIDCPublicKeyFiles,
+		EnabledSigningAlgs:             l.OIDCEnabledSigningAlgs,
 	}
 
 	// Support for legacy configuration option

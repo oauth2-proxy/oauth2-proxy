@@ -138,7 +138,7 @@ var _ = Describe("Upstreams", func() {
 			},
 			errStrings: []string{invalidURISchemeMsg},
 		}),
-		Entry("with a static upstream and invalid optons", &validateUpstreamTableInput{
+		Entry("with a static upstream and invalid options", &validateUpstreamTableInput{
 			upstreams: options.UpstreamConfig{
 				Upstreams: []options.Upstream{
 					{
@@ -159,6 +159,24 @@ var _ = Describe("Upstreams", func() {
 				staticWithFlushIntervalMsg,
 				staticWithPassHostHeaderMsg,
 				staticWithProxyWebSocketsMsg,
+			},
+		}),
+		Entry("with a static upstream and sane default options", &validateUpstreamTableInput{
+			upstreams: options.UpstreamConfig{
+				Upstreams: []options.Upstream{
+					{
+						ID:                    "foo",
+						Path:                  "/foo",
+						URI:                   "ftp://foo",
+						Static:                ptr.To(true),
+						PassHostHeader:        ptr.To(false),
+						ProxyWebSockets:       ptr.To(false),
+						InsecureSkipTLSVerify: ptr.To(false),
+					},
+				},
+			},
+			errStrings: []string{
+				staticWithURIMsg,
 			},
 		}),
 		Entry("with duplicate IDs", &validateUpstreamTableInput{

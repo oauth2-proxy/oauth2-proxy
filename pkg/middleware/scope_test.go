@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -32,7 +33,7 @@ var _ = Describe("Scope Suite", func() {
 
 		Context("ReverseProxy is false", func() {
 			BeforeEach(func() {
-				handler := NewScope(false, testRequestHeader)(
+				handler := NewScope(false, testRequestHeader, nil)(
 					http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 						nextRequest = r
 						w.WriteHeader(200)
@@ -60,8 +61,15 @@ var _ = Describe("Scope Suite", func() {
 		})
 
 		Context("ReverseProxy is true", func() {
+			var trustedProxies *ip.NetSet
+
 			BeforeEach(func() {
-				handler := NewScope(true, testRequestHeader)(
+				var err error
+
+				trustedProxies, err = ip.ParseNetSet([]string{"127.0.0.1"})
+				Expect(err).ToNot(HaveOccurred())
+
+				handler := NewScope(true, testRequestHeader, trustedProxies)(
 					http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 						nextRequest = r
 						w.WriteHeader(200)
@@ -74,12 +82,18 @@ var _ = Describe("Scope Suite", func() {
 				Expect(scope).ToNot(BeNil())
 				Expect(scope.ReverseProxy).To(BeTrue())
 			})
+
+			It("stores the trusted proxies on the scope", func() {
+				scope := middlewareapi.GetRequestScope(nextRequest)
+				Expect(scope).ToNot(BeNil())
+				Expect(scope.TrustedProxies).To(BeIdenticalTo(trustedProxies))
+			})
 		})
 
 		Context("Request ID header is present", func() {
 			BeforeEach(func() {
 				request.Header.Add(testRequestHeader, testRequestID)
-				handler := NewScope(false, testRequestHeader)(
+				handler := NewScope(false, testRequestHeader, nil)(
 					http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 						nextRequest = r
 						w.WriteHeader(200)
@@ -97,7 +111,7 @@ var _ = Describe("Scope Suite", func() {
 			BeforeEach(func() {
 				uuid.SetRand(mockRand{})
 
-				handler := NewScope(true, testRequestHeader)(
+				handler := NewScope(true, testRequestHeader, nil)(
 					http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 						nextRequest = r
 						w.WriteHeader(200)
