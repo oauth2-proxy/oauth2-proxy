@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 )
@@ -148,7 +147,7 @@ func (p *ProviderData) RefreshSession(_ context.Context, _ *sessions.SessionStat
 // CreateSessionFromToken converts Bearer IDTokens into sessions
 func (p *ProviderData) CreateSessionFromToken(ctx context.Context, token string) (*sessions.SessionState, error) {
 	if p.Verifier != nil {
-		return middleware.CreateTokenToSessionFunc(p.Verifier.Verify)(ctx, token)
+		return p.CreateTokenToSessionFunc(p.Verifier.Verify)(ctx, token)
 	}
 	return nil, ErrNotImplemented
 }

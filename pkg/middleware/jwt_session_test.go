@@ -17,6 +17,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	k8serrors "k8s.io/apimachinery/pkg/util/errors"
@@ -29,6 +30,36 @@ func (noOpKeySet) VerifySignature(_ context.Context, jwt string) (payload []byte
 	splitStrings := strings.Split(jwt, ".")
 	payloadString := splitStrings[1]
 	return base64.RawURLEncoding.DecodeString(payloadString)
+}
+
+// testTokenToSession returns a TokenToSessionFunc that exercises the real
+// production claim-extraction pipeline. It builds a minimally-configured
+// ProviderData and delegates to ProviderData.CreateTokenToSessionFunc, so
+// these middleware tests run through the same code path used at runtime
+// by both the main provider and the `--extra-jwt-issuers` chain.
+//
+// No ProfileURL is configured because the bearer flow passes an empty
+// access token, which makes the ClaimExtractor short-circuit any profile
+// lookup (see ProviderData.getAuthorizationHeader and
+// claimExtractor.loadProfileClaims).
+//
+// The CreatedAt timestamp set by buildSessionFromClaims is cleared so that
+// the resulting session can be compared with deterministic fixtures.
+func testTokenToSession(verify middlewareapi.VerifyFunc) middlewareapi.TokenToSessionFunc {
+	pd := &providers.ProviderData{
+		UserClaim:   "sub",
+		EmailClaim:  "email",
+		GroupsClaim: "groups",
+	}
+	loader := pd.CreateTokenToSessionFunc(verify)
+	return func(ctx context.Context, token string) (*sessionsapi.SessionState, error) {
+		ss, err := loader(ctx, token)
+		if err != nil {
+			return nil, err
+		}
+		ss.CreatedAt = nil
+		return ss, nil
+	}
 }
 
 var _ = Describe("JWT Session Suite", func() {
@@ -109,7 +140,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				rw := httptest.NewRecorder()
 
 				sessionLoaders := []middlewareapi.TokenToSessionFunc{
-					middlewareapi.CreateTokenToSessionFunc(verifier),
+					testTokenToSession(verifier),
 				}
 
 				// Create the handler with a next handler that will capture the session
@@ -179,7 +210,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				rw := httptest.NewRecorder()
 
 				sessionLoaders := []middlewareapi.TokenToSessionFunc{
-					middlewareapi.CreateTokenToSessionFunc(verifier),
+					testTokenToSession(verifier),
 				}
 
 				// Create the handler with a next handler that will capture the session
@@ -261,7 +292,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 			j = &jwtSessionLoader{
 				jwtRegex: regexp.MustCompile(jwtRegexFormat),
 				sessionLoaders: []middlewareapi.TokenToSessionFunc{
-					middlewareapi.CreateTokenToSessionFunc(verifier),
+					testTokenToSession(verifier),
 				},
 			}
 		})
@@ -477,6 +508,11 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 	})
 
 	Context("CreateTokenToSessionFunc", func() {
+		// These tests exercise the bearer-token -> SessionState pipeline
+		// through testTokenToSession, which builds a real
+		// providers.ProviderData and delegates to
+		// ProviderData.CreateTokenToSessionFunc (the same code path used
+		// at runtime by the main provider and `--extra-jwt-issuers`).
 		ctx := context.Background()
 		expiresFuture := time.Now().Add(time.Duration(5) * time.Minute)
 		verified := true
@@ -517,7 +553,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				rawIDToken, err := jwt.NewWithClaims(jwt.SigningMethodRS256, in.idToken).SignedString(key)
 				Expect(err).ToNot(HaveOccurred())
 
-				session, err := middlewareapi.CreateTokenToSessionFunc(verifier)(ctx, rawIDToken)
+				session, err := testTokenToSession(verifier)(ctx, rawIDToken)
 				if in.expectedErr != nil {
 					Expect(err).To(MatchError(in.expectedErr))
 					Expect(session).To(BeNil())
@@ -583,5 +619,124 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				expectedErr: errors.New("email in id_token (foo@example.com) isn't verified"),
 			}),
 		)
+	})
+
+	// Regression coverage for issues #1243 / #3019: bearer tokens (in
+	// particular those validated through `--extra-jwt-issuers`) must honor
+	// the provider's custom `--oidc-groups-claim` and `--oidc-email-claim`
+	// configuration when building the session, otherwise allowed-group
+	// checks fail for any token that does not happen to carry the
+	// hard-coded `groups` / `email` claim names.
+	Context("CreateTokenToSessionFunc with custom claim mappings", func() {
+		ctx := context.Background()
+		expiresFuture := time.Now().Add(5 * time.Minute)
+
+		// Token claims that intentionally use non-default claim names
+		// ("upn" for the email-like identifier, "roles" for groups), as
+		// emitted by e.g. Microsoft Entra ID / ADFS tokens.
+		type customClaims struct {
+			UPN   string   `json:"upn,omitempty"`
+			Roles []string `json:"roles,omitempty"`
+			jwt.RegisteredClaims
+		}
+
+		verifier := func(ctx context.Context, token string) (*oidc.IDToken, error) {
+			oidcVerifier := oidc.NewVerifier(
+				"https://issuer.example.com",
+				noOpKeySet{},
+				&oidc.Config{ClientID: "asdf1234"},
+			)
+			return oidcVerifier.Verify(ctx, token)
+		}
+
+		// Builds a TokenToSessionFunc on top of a ProviderData with the
+		// requested custom claim mappings, mirroring how oauthproxy.go
+		// configures it at runtime for `--extra-jwt-issuers`.
+		buildLoader := func(emailClaim, groupsClaim string) middlewareapi.TokenToSessionFunc {
+			pd := &providers.ProviderData{
+				UserClaim:   "sub",
+				EmailClaim:  emailClaim,
+				GroupsClaim: groupsClaim,
+			}
+			loader := pd.CreateTokenToSessionFunc(verifier)
+			return func(ctx context.Context, token string) (*sessionsapi.SessionState, error) {
+				ss, err := loader(ctx, token)
+				if err != nil {
+					return nil, err
+				}
+				ss.CreatedAt = nil
+				return ss, nil
+			}
+		}
+
+		signedToken := func(c customClaims) string {
+			key, err := rsa.GenerateKey(rand.Reader, 2048)
+			Expect(err).ToNot(HaveOccurred())
+			raw, err := jwt.NewWithClaims(jwt.SigningMethodRS256, c).SignedString(key)
+			Expect(err).ToNot(HaveOccurred())
+			return raw
+		}
+
+		baseClaims := func() customClaims {
+			return customClaims{
+				RegisteredClaims: jwt.RegisteredClaims{
+					Audience:  jwt.ClaimStrings{"asdf1234"},
+					ExpiresAt: jwt.NewNumericDate(expiresFuture),
+					IssuedAt:  jwt.NewNumericDate(time.Now()),
+					Issuer:    "https://issuer.example.com",
+					NotBefore: jwt.NewNumericDate(time.Time{}),
+					Subject:   "1234567890",
+				},
+			}
+		}
+
+		It("populates Groups from the configured GroupsClaim (e.g. \"roles\")", func() {
+			claims := baseClaims()
+			claims.Roles = []string{"app-viewer", "app-admin"}
+			rawToken := signedToken(claims)
+
+			session, err := buildLoader("email", "roles")(ctx, rawToken)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(session).ToNot(BeNil())
+			Expect(session.Groups).To(Equal([]string{"app-viewer", "app-admin"}))
+			Expect(session.User).To(Equal("1234567890"))
+		})
+
+		It("populates Email from the configured EmailClaim (e.g. \"upn\")", func() {
+			claims := baseClaims()
+			claims.UPN = "alice@corp.example.com"
+			rawToken := signedToken(claims)
+
+			session, err := buildLoader("upn", "groups")(ctx, rawToken)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(session).ToNot(BeNil())
+			Expect(session.Email).To(Equal("alice@corp.example.com"))
+			Expect(session.User).To(Equal("1234567890"))
+		})
+
+		It("honors both EmailClaim and GroupsClaim simultaneously", func() {
+			claims := baseClaims()
+			claims.UPN = "alice@corp.example.com"
+			claims.Roles = []string{"app-viewer"}
+			rawToken := signedToken(claims)
+
+			session, err := buildLoader("upn", "roles")(ctx, rawToken)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(session).ToNot(BeNil())
+			Expect(session.Email).To(Equal("alice@corp.example.com"))
+			Expect(session.Groups).To(Equal([]string{"app-viewer"}))
+		})
+
+		It("leaves Groups empty when the GroupsClaim is absent from the token", func() {
+			claims := baseClaims()
+			claims.UPN = "alice@corp.example.com"
+			// no Roles set
+			rawToken := signedToken(claims)
+
+			session, err := buildLoader("upn", "roles")(ctx, rawToken)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(session).ToNot(BeNil())
+			Expect(session.Groups).To(BeEmpty())
+		})
 	})
 })
