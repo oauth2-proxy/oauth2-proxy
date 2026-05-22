@@ -69,6 +69,21 @@ func Validate(o *options.Options) error {
 				o.SetJWTBearerVerifiers(append(o.GetJWTBearerVerifiers(), verifier))
 			}
 		}
+
+		// Configure trusted issuer prefixes (dynamic verifiers)
+		if len(o.TrustedIssuerPrefixes) > 0 {
+			var prefixIssuers []jwtIssuer
+			prefixIssuers, msgs = parseJwtIssuers(o.TrustedIssuerPrefixes, msgs)
+			for _, pi := range prefixIssuers {
+				pv := internaloidc.NewPrefixVerifier(internaloidc.PrefixVerifierOptions{
+					Prefix:         pi.issuerURI,
+					Audience:       pi.audience,
+					AudienceClaims: o.Providers[0].OIDCConfig.AudienceClaims,
+					ExtraAudiences: o.Providers[0].OIDCConfig.ExtraAudiences,
+				})
+				o.SetJWTBearerVerifiers(append(o.GetJWTBearerVerifiers(), pv))
+			}
+		}
 	}
 
 	var redirectURL *url.URL
