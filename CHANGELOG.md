@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.2
 
+- [#xxxx](https://github.com/oauth2-proxy/oauth2-proxy/pull/xxxx) feat: add `--trusted-issuer-prefix` flag for dynamic JWT verification via issuer URL prefixes
+
 # V7.15.2
 
 ## Release Highlights
