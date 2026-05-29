@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.2
 
+- [#3436](https://github.com/oauth2-proxy/oauth2-proxy/pull/3436) fix(#3019): support combining extra_jwt_issuers with custom claims (@celian-garcia)
+
 # V7.15.2
 
 ## Release Highlights

@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/coreos/go-oidc/v3/oidc"
+	middleware "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
@@ -308,6 +309,55 @@ func (p *ProviderData) buildSessionFromClaims(rawIDToken, accessToken string) (*
 	}
 
 	return ss, nil
+}
+
+// finalizeBearerSession turns the claims of a verified bearer id_token into a
+// fully populated SessionState by delegating claim extraction to
+// buildSessionFromClaims and then setting the bearer-token specific fields.
+//
+// This is the single place that bridges "I have a verified id_token" to "I
+// have a SessionState"; it is shared by every flow that turns a verified
+// bearer JWT into a session (main OIDC provider, default provider, and the
+// `--extra-jwt-issuers` chain), so the same configured claim mappings
+// (UserClaim, EmailClaim, GroupsClaim, AdditionalClaims, email_verified...)
+// are honored consistently.
+func (p *ProviderData) finalizeBearerSession(idToken *oidc.IDToken, rawToken string) (*sessions.SessionState, error) {
+	ss, err := p.buildSessionFromClaims(rawToken, "")
+	if err != nil {
+		return nil, err
+	}
+
+	// Allow empty Email in Bearer case since we can't hit the ProfileURL
+	if ss.Email == "" {
+		ss.Email = ss.User
+	}
+
+	ss.AccessToken = rawToken
+	ss.IDToken = rawToken
+	ss.RefreshToken = ""
+
+	ss.CreatedAtNow()
+	ss.SetExpiresOn(idToken.Expiry)
+
+	return ss, nil
+}
+
+// CreateTokenToSessionFunc returns a middleware.TokenToSessionFunc that
+// verifies bearer JWTs with the given verifier and builds a SessionState
+// using this provider's claim configuration.
+//
+// Callers (e.g. `--extra-jwt-issuers` in oauthproxy.go) use this to plug
+// additional trusted issuers into the bearer-token chain without
+// duplicating any claim-extraction logic: every issuer ends up going
+// through buildSessionFromClaims, just like the main OIDC provider.
+func (p *ProviderData) CreateTokenToSessionFunc(verify middleware.VerifyFunc) middleware.TokenToSessionFunc {
+	return func(ctx context.Context, token string) (*sessions.SessionState, error) {
+		idToken, err := verify(ctx, token)
+		if err != nil {
+			return nil, err
+		}
+		return p.finalizeBearerSession(idToken, token)
+	}
 }
 
 func (p *ProviderData) getClaimExtractor(rawIDToken, accessToken string) (util.ClaimExtractor, error) {

@@ -417,9 +417,15 @@ func buildSessionChain(opts *options.Options, provider providers.Provider, sessi
 		sessionLoaders := make([]middlewareapi.TokenToSessionFunc, 0, len(verifiers)+1)
 		sessionLoaders = append(sessionLoaders, provider.CreateSessionFromToken)
 
-		for _, verifier := range opts.GetJWTBearerVerifiers() {
-			sessionLoaders = append(sessionLoaders,
-				middlewareapi.CreateTokenToSessionFunc(verifier.Verify))
+		// Reuse the main provider's bearer-session pipeline
+		// (`ProviderData.CreateTokenToSessionFunc` -> `buildSessionFromClaims`)
+		// for every `--extra-jwt-issuers` verifier so that the configured
+		// claim mappings (UserClaim, EmailClaim, GroupsClaim,
+		// AdditionalClaims, email_verified...) are honored consistently
+		// for tokens from any trusted issuer (see issues #1243 / #3019).
+		pd := provider.Data()
+		for _, verifier := range verifiers {
+			sessionLoaders = append(sessionLoaders, pd.CreateTokenToSessionFunc(verifier.Verify))
 		}
 
 		chain = chain.Append(middleware.NewJwtSessionLoader(sessionLoaders, opts.BearerTokenLoginFallback))
