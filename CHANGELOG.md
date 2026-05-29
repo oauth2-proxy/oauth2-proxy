@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.2
 
+- [#3442](https://github.com/oauth2-proxy/oauth2-proxy/pull/3442) fix: skip the invalid fd IPv6 bind test in DevContainer environments (@mateenali66)
+
 # V7.15.2
 
 ## Release Highlights
