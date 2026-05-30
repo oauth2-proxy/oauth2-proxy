@@ -73,7 +73,7 @@ func (um *UserMap) LoadAuthenticatedEmailsFile() {
 	atomic.StorePointer(&um.m, unsafe.Pointer(&updated)) // #nosec G103
 }
 
-func newValidatorImpl(domains []string, usersFile string,
+func newValidatorImpl(domains []string, usersFile string, inlineEmails []string,
 	done <-chan bool, onUpdate func()) func(string) bool {
 	validUsers := NewUserMap(usersFile, done, onUpdate)
 
@@ -86,6 +86,16 @@ func newValidatorImpl(domains []string, usersFile string,
 		domains[i] = strings.ToLower(domain)
 	}
 
+	// Create a map for inline emails for fast lookup
+	inlineEmailsMap := make(map[string]bool)
+	for _, email := range inlineEmails {
+		if email != "" {
+			// Actually, the local part of the email (before @) is case-sensitive,
+			// but we stick to the pattern already used for files.
+			inlineEmailsMap[strings.ToLower(strings.TrimSpace(email))] = true
+		}
+	}
+
 	validator := func(email string) (valid bool) {
 		if email == "" {
 			return
@@ -94,6 +104,9 @@ func newValidatorImpl(domains []string, usersFile string,
 		valid = isEmailValidWithDomains(email, domains)
 		if !valid {
 			valid = validUsers.IsValid(email)
+		}
+		if !valid {
+			valid = inlineEmailsMap[email]
 		}
 		if allowAll {
 			valid = true
@@ -104,8 +117,8 @@ func newValidatorImpl(domains []string, usersFile string,
 }
 
 // NewValidator constructs a function to validate email addresses
-func NewValidator(domains []string, usersFile string) func(string) bool {
-	return newValidatorImpl(domains, usersFile, nil, func() {})
+func NewValidator(domains []string, usersFile string, inlineEmails []string) func(string) bool {
+	return newValidatorImpl(domains, usersFile, inlineEmails, nil, func() {})
 }
 
 // isEmailValidWithDomains checks if the authenticated email is validated against the provided domain
