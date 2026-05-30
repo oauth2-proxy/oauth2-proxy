@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -33,9 +34,16 @@ var _ = Describe("Director Suite", func() {
 					req.Header.Add(header, value)
 				}
 			}
-			req = middleware.AddRequestScope(req, &middleware.RequestScope{
+			scope := &middleware.RequestScope{
 				ReverseProxy: in.reverseProxy,
-			})
+			}
+			if in.reverseProxy {
+				req.RemoteAddr = "127.0.0.1:4180"
+				trustedProxies, err := ip.ParseNetSet([]string{"127.0.0.1"})
+				Expect(err).ToNot(HaveOccurred())
+				scope.TrustedProxies = trustedProxies
+			}
+			req = middleware.AddRequestScope(req, scope)
 
 			redirect, err := appDirector.GetRedirect(req)
 			Expect(err).ToNot(HaveOccurred())
@@ -174,4 +182,27 @@ var _ = Describe("Director Suite", func() {
 			expectedRedirect: "https://a-service.example.com/foo/bar",
 		}),
 	)
+
+	It("ignores forwarded headers from an untrusted remote address", func() {
+		appDirector := NewAppDirector(AppDirectorOpts{
+			ProxyPrefix: testProxyPrefix,
+			Validator:   testValidator(true),
+		})
+
+		req, _ := http.NewRequest("GET", "https://oauth.example.com/foo?bar", nil)
+		req.RemoteAddr = "192.0.2.10:4180"
+		req.Header.Add("X-Forwarded-Proto", "https")
+		req.Header.Add("X-Forwarded-Host", "a-service.example.com")
+		req.Header.Add("X-Forwarded-Uri", fooBar)
+		trustedProxies, err := ip.ParseNetSet([]string{"127.0.0.1"})
+		Expect(err).ToNot(HaveOccurred())
+		req = middleware.AddRequestScope(req, &middleware.RequestScope{
+			ReverseProxy:   true,
+			TrustedProxies: trustedProxies,
+		})
+
+		redirect, err := appDirector.GetRedirect(req)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(redirect).To(Equal("/foo?bar"))
+	})
 })

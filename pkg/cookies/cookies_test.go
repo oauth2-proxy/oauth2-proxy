@@ -6,6 +6,7 @@ import (
 	"time"
 
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -30,8 +31,13 @@ var _ = Describe("Cookie Tests", func() {
 
 				if in.xForwardedHost != "" {
 					req.Header.Add("X-Forwarded-Host", in.xForwardedHost)
+					req.RemoteAddr = "127.0.0.1:4180"
+					trustedProxies, err := ip.ParseNetSet([]string{"127.0.0.1"})
+					Expect(err).ToNot(HaveOccurred())
+
 					req = middlewareapi.AddRequestScope(req, &middlewareapi.RequestScope{
-						ReverseProxy: true,
+						ReverseProxy:   true,
+						TrustedProxies: trustedProxies,
 					})
 				}
 

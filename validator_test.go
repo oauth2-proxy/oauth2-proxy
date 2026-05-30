@@ -442,6 +442,30 @@ func TestValidatorCases(t *testing.T) {
 			allowedDomains: []string{"*.company.com"},
 			expectedAuthZ:  false,
 		},
+		{
+			name:           "CheckThatTwoAtSignsIsInvalid",
+			email:          "attacker@evil.com@company.com",
+			allowedEmails:  []string(nil),
+			inlineEmails:   []string{},
+			allowedDomains: []string{"company.com"},
+			expectedAuthZ:  false,
+		},
+		{
+			name:           "CheckThatTwoAtSignsIsInvalidEvenWithDotPrefix",
+			email:          "attacker@evil.com@company.com",
+			allowedEmails:  []string(nil),
+			inlineEmails:   []string{},
+			allowedDomains: []string{".company.com"},
+			expectedAuthZ:  false,
+		},
+		{
+			name:           "CheckThatTwoAtSignsIsInvalidEvenWithWildcardPrefix",
+			email:          "attacker@evil.com@foo.company.com",
+			allowedEmails:  []string(nil),
+			inlineEmails:   []string{},
+			allowedDomains: []string{"*.company.com"},
+			expectedAuthZ:  false,
+		},
 
 		// Inline email test cases
 		{
