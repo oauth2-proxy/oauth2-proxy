@@ -564,6 +564,7 @@ character.
 | `audienceClaims` | _[]string_ | AudienceClaim allows to define any claim that is verified against the client id<br/>By default `aud` claim is used for verification. |
 | `extraAudiences` | _[]string_ | ExtraAudiences is a list of additional audiences that are allowed<br/>to pass verification in addition to the client id. |
 | `enabledSigningAlgs` | _[]string_ | EnabledSigningAlgs is a list of allowed JWT signing algorithms.<br/>When discovery is enabled, the effective set is the intersection<br/>between this list and the provider's discovered supported algorithms.<br/>By default `RS256` is used if nothing has been discovered or specified. |
+| `backChannelLogoutEnabled` | _bool_ | BackChannelLogoutEnabled enables the OIDC back-channel logout endpoint<br/>(POST /oauth2/backchannel-logout). When enabled, the identity provider can<br/>POST a signed logout_token to instantly revoke sessions server-side without<br/>a browser redirect. Requires --session-store-type=redis.<br/>default set to 'false' |
 
 ### Provider
 
