@@ -15,6 +15,16 @@ type SessionStore interface {
 	VerifyConnection(ctx context.Context) error
 }
 
+// BackChannelSessionStore extends SessionStore with support for
+// OIDC back-channel logout (https://openid.net/specs/openid-connect-backchannel-1_0.html).
+// Persistent stores (e.g. Redis) implement this to enable instant logout
+// when the provider sends a back-channel logout request.
+type BackChannelSessionStore interface {
+	SessionStore
+	// ClearBySID removes the session associated with the given OIDC session ID (sid claim).
+	ClearBySID(ctx context.Context, sessionID string) error
+}
+
 var ErrLockNotObtained = errors.New("lock: not obtained")
 var ErrNotLocked = errors.New("tried to release not existing lock")
 
