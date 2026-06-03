@@ -145,7 +145,39 @@ Keycloak also has the option of attaching roles to groups, please refer to the K
 
 **Tip**
 
-To check if roles or groups are added to JWT tokens, you can preview a users token in the Keycloak console by following 
-these steps: **Clients** -> `<your client's id>` -> **Client scopes** -> **Evaluate**.  
-Select a _realm user_ and optional _scope parameters_ such as groups, and generate the JSON representation of an access 
+To check if roles or groups are added to JWT tokens, you can preview a users token in the Keycloak console by following
+these steps: **Clients** -> `<your client's id>` -> **Client scopes** -> **Evaluate**.
+Select a _realm user_ and optional _scope parameters_ such as groups, and generate the JSON representation of an access
 or id token to examine its contents.
+
+**Back-Channel Logout**
+
+oauth2-proxy supports [OIDC Back-Channel Logout](https://openid.net/specs/openid-connect-backchannel-1_0.html), which
+allows Keycloak to instantly revoke sessions server-side — no browser redirect required. This is useful when an admin
+terminates a session from the Keycloak console or when a user logs out of another application sharing the same SSO
+session.
+
+Requirements:
+- `--session-store-type=redis` (cookie sessions cannot be revoked server-side)
+- `--oidc-backchannel-logout` flag (or `oidcConfig.backChannelLogoutEnabled: true` in YAML config)
+- Keycloak must include the `sid` claim in ID tokens (enabled by default in recent versions)
+
+**Keycloak configuration:**
+
+1. Navigate to **Clients** -> `<your client's id>` -> **Settings** -> **Logout settings**
+2. Enable **Backchannel logout**
+3. Set the **Backchannel logout URL** to:
+   ```
+   https://<your-domain>/oauth2/backchannel-logout
+   ```
+4. Ensure **Backchannel logout session required** is enabled so Keycloak includes the `sid` claim
+
+**oauth2-proxy configuration:**
+
+```
+--provider=keycloak-oidc
+--oidc-issuer-url=https://<keycloak-host>/realms/<realm>
+--session-store-type=redis
+--redis-connection-url=redis://localhost:6379
+--oidc-backchannel-logout
+```

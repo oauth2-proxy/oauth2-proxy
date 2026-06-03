@@ -51,9 +51,10 @@ const (
 	signOutPath       = "/sign_out"
 	oauthStartPath    = "/start"
 	oauthCallbackPath = "/callback"
-	authOnlyPath      = "/auth"
-	userInfoPath      = "/userinfo"
-	staticPathPrefix  = "/static/"
+	authOnlyPath          = "/auth"
+	userInfoPath          = "/userinfo"
+	backChannelLogoutPath = "/backchannel-logout"
+	staticPathPrefix      = "/static/"
 
 	idTokenPlaceholder = "{id_token}"
 )
@@ -353,6 +354,12 @@ func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
 	// The userinfo and logout endpoints needs to load sessions before handling the request
 	s.Path(userInfoPath).Handler(p.sessionChain.ThenFunc(p.UserInfo))
 	s.Path(signOutPath).Handler(p.sessionChain.ThenFunc(p.SignOut))
+
+	// Back-channel logout: called directly by the OIDC provider, no browser session needed.
+	// Only registered when --oidc-backchannel-logout is enabled.
+	if p.provider.Data().BackChannelLogoutSupported {
+		s.Path(backChannelLogoutPath).HandlerFunc(p.BackChannelLogout)
+	}
 }
 
 // buildPreAuthChain constructs a chain that should process every request before
@@ -783,6 +790,91 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	http.Redirect(rw, req, redirect, http.StatusFound)
+}
+
+// BackChannelLogout handles OIDC back-channel logout requests from the Identity Provider.
+// https://openid.net/specs/openid-connect-backchannel-1_0.html
+//
+// Keycloak posts to POST /oauth2/backchannel-logout with a signed logout_token JWT.
+// The handler validates the token, extracts the sid claim, and immediately deletes
+// the associated Redis session — instant global logout without waiting for cookie-refresh.
+//
+// Only works when --session-store-type=redis is configured.
+func (p *OAuthProxy) BackChannelLogout(rw http.ResponseWriter, req *http.Request) {
+	backChannelStore, ok := p.sessionStore.(sessionsapi.BackChannelSessionStore)
+	if !ok {
+		logger.Errorf("back-channel logout: session store does not support ClearBySID; use --session-store-type=redis")
+		http.Error(rw, "back-channel logout not supported by session store", http.StatusNotImplemented)
+		return
+	}
+
+	if req.Method != http.MethodPost {
+		http.Error(rw, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if err := req.ParseForm(); err != nil {
+		http.Error(rw, "bad request", http.StatusBadRequest)
+		return
+	}
+
+	rawToken := req.FormValue("logout_token")
+	if rawToken == "" {
+		http.Error(rw, "missing logout_token", http.StatusBadRequest)
+		return
+	}
+
+	verifier := p.provider.Data().Verifier
+	if verifier == nil {
+		logger.Errorf("back-channel logout: OIDC verifier not configured; provider must support OIDC")
+		http.Error(rw, "back-channel logout not supported: OIDC verifier not configured", http.StatusNotImplemented)
+		return
+	}
+	token, err := verifier.Verify(req.Context(), rawToken)
+	if err != nil {
+		logger.Errorf("back-channel logout: invalid logout_token: %v", err)
+		http.Error(rw, "invalid logout_token", http.StatusBadRequest)
+		return
+	}
+
+	var claims struct {
+		SID    string                     `json:"sid"`
+		Nonce  string                     `json:"nonce"`
+		Events map[string]json.RawMessage `json:"events"`
+	}
+	if err := token.Claims(&claims); err != nil {
+		logger.Errorf("back-channel logout: failed to parse claims: %v", err)
+		http.Error(rw, "malformed logout_token", http.StatusBadRequest)
+		return
+	}
+
+	// Per spec §2.4: MUST NOT contain nonce
+	if claims.Nonce != "" {
+		http.Error(rw, "invalid logout_token: must not contain nonce", http.StatusBadRequest)
+		return
+	}
+
+	// Per spec §2.4: MUST contain the backchannel-logout event
+	const backChannelLogoutEvent = "http://schemas.openid.net/event/backchannel-logout"
+	if _, ok := claims.Events[backChannelLogoutEvent]; !ok {
+		http.Error(rw, "invalid logout_token: missing backchannel-logout event", http.StatusBadRequest)
+		return
+	}
+
+	if claims.SID == "" {
+		http.Error(rw, "invalid logout_token: missing sid claim", http.StatusBadRequest)
+		return
+	}
+
+	if err := backChannelStore.ClearBySID(req.Context(), claims.SID); err != nil {
+		// 200 per spec — session not found is not an error
+		logger.Printf("back-channel logout: session not found for sid %q (already expired?): %v", claims.SID, err)
+		rw.WriteHeader(http.StatusOK)
+		return
+	}
+
+	logger.Printf("back-channel logout: session cleared for sid %q", claims.SID)
+	rw.WriteHeader(http.StatusOK)
 }
 
 func (p *OAuthProxy) backendLogout(rw http.ResponseWriter, req *http.Request) {

@@ -144,3 +144,26 @@ Then you can start the oauth2-proxy with `./oauth2-proxy --config /etc/example.c
     # http_address = "0.0.0.0:4180"
     ```
 7. Then you can start the oauth2-proxy with `./oauth2-proxy --config /etc/localhost.cfg`
+
+## Back-Channel Logout
+
+oauth2-proxy supports [OIDC Back-Channel Logout 1.0](https://openid.net/specs/openid-connect-backchannel-1_0.html).
+When enabled, the identity provider can POST a signed `logout_token` to `POST /oauth2/backchannel-logout` to
+instantly revoke a session server-side — no browser redirect needed.
+
+**Requirements:**
+- `--session-store-type=redis`
+- `--oidc-backchannel-logout` (or `oidcConfig.backChannelLogoutEnabled: true` in YAML)
+- The provider must include the `sid` claim in ID tokens
+
+**How it works:**
+
+1. On login, the `sid` claim from the OIDC ID token is stored alongside the session in Redis.
+2. When the provider sends a back-channel logout request, oauth2-proxy validates the signed `logout_token`,
+   extracts the `sid` claim, and immediately deletes the associated Redis session.
+3. The next request from the user will find no session and redirect to login.
+
+If the session store does not support server-side revocation (e.g. cookie sessions), the endpoint returns
+`501 Not Implemented`.
+
+For provider-specific setup instructions see the [Keycloak OIDC](keycloak_oidc) provider documentation.

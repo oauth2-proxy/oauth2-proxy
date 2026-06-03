@@ -28,6 +28,8 @@ type SessionState struct {
 	User              string   `msgpack:"u,omitempty"`
 	Groups            []string `msgpack:"g,omitempty"`
 	PreferredUsername string   `msgpack:"pu,omitempty"`
+	// SessionID is the OIDC session ID (sid claim) used for back-channel logout.
+	SessionID string `msgpack:"si,omitempty"`
 
 	// Additional claims
 	AdditionalClaims map[string]interface{} `msgpack:"ac,omitempty"`

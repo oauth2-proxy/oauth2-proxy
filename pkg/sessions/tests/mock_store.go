@@ -69,6 +69,11 @@ func (s *MockStore) VerifyConnection(_ context.Context) error {
 	return nil
 }
 
+// CacheSize returns the number of entries currently in the cache
+func (s *MockStore) CacheSize() int {
+	return len(s.cache)
+}
+
 // FastForward simulates the flow of time to test expirations
 func (s *MockStore) FastForward(duration time.Duration) {
 	for _, mockLock := range s.lockCache {
