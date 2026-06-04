@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.2
 
+- [#XXXX](https://github.com/oauth2-proxy/oauth2-proxy/pull/XXXX) fix: preserve percent-encoded characters in upstream rewrite targets (#2105) (@mladjan-gadzic)
+
 # V7.15.2
 
 ## Release Highlights
