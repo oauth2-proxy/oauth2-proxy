@@ -79,7 +79,7 @@ var _ = Describe("Proxy Suite", func() {
 						{
 							ID:   "bad-http-backend",
 							Path: "/bad-http/",
-							URI:  "http://::1",
+							URI:  invalidServer,
 						},
 						{
 							ID:         "single-path-backend",
