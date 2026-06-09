@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.3
 
+- [#3452](https://github.com/oauth2-proxy/oauth2-proxy/pull/3452) fix: resolve version from build info when not set via ldflags (so `go install`-ed binaries report a real version instead of `undefined`) (@Lrifton92)
+
 # V7.15.3
 
 ## Release Highlights
