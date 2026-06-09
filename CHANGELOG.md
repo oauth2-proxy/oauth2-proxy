@@ -12,6 +12,21 @@
 
 ## Release Highlights
 
+- 🔵 Golang version upgrade to v1.26.4
+    - Upgrade of all dependencies to their latest versions
+-  🕵️‍♀️ Vulnerabilities have ben addressed
+    - [CVE-2026-33811](https://nvd.nist.gov/vuln/detail/)
+    - [CVE-2026-33814](https://nvd.nist.gov/vuln/detail/)
+    - [CVE-2026-39820](https://nvd.nist.gov/vuln/detail/)
+    - [CVE-2026-39836](https://nvd.nist.gov/vuln/detail/)
+    - [CVE-2026-42499](https://nvd.nist.gov/vuln/detail/)
+    - [CVE-2026-42504](https://nvd.nist.gov/vuln/detail/)
+    - [CVE-2026-39823](https://nvd.nist.gov/vuln/detail/)
+    - [CVE-2026-39826](https://nvd.nist.gov/vuln/detail/)
+    - [CVE-2026-39825](https://nvd.nist.gov/vuln/detail/)
+    - [CVE-2026-27145](https://nvd.nist.gov/vuln/detail/)
+    - [CVE-2026-42507](https://nvd.nist.gov/vuln/detail/)
+
 ## Important Notes
 
 ## Breaking Changes
