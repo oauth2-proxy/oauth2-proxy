@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
@@ -71,7 +72,7 @@ func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code, codeVerifi
 
 	result := requests.New(p.RedeemURL.String()).
 		WithContext(ctx).
-		WithMethod("POST").
+		WithMethod(http.MethodPost).
 		WithBody(bytes.NewBufferString(params.Encode())).
 		SetHeader("Content-Type", "application/x-www-form-urlencoded").
 		Do()
