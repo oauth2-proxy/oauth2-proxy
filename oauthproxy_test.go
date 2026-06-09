@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -23,6 +24,8 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
 	sessionscookie "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/cookie"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/persistence"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/tests"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/upstream"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
@@ -3807,4 +3810,241 @@ func TestIdTokenPlaceholderInSignOut(t *testing.T) {
 	newLocation := rw.Header().Values("Location")[0]
 
 	assert.Equal(t, "https://my-oidc-provider.example.com/sign_out_page?id_token_hint=eYjjjjjj.vvvv.ddd&post_logout_redirect_uri=https://my-app.example.com/", newLocation)
+}
+
+// makeLogoutToken builds a minimal JWT for back-channel logout tests.
+// It uses the same NoOpKeySet approach so no real signing is needed.
+func makeLogoutToken(t *testing.T, claims map[string]interface{}) string {
+	t.Helper()
+	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"RS256","typ":"JWT"}`))
+	b, err := json.Marshal(claims)
+	require.NoError(t, err)
+	payload := base64.RawURLEncoding.EncodeToString(b)
+	return header + "." + payload + ".fakesig"
+}
+
+// newBackChannelLogoutProxy creates a proxy wired for back-channel logout tests:
+//   - OIDC verifier backed by NoOpKeySet (no real signature checks)
+//   - persistence.Manager over a MockStore as the session store
+//
+// Returns the proxy and the underlying MockStore for cache-size assertions.
+func newBackChannelLogoutProxy(t *testing.T) (*OAuthProxy, *tests.MockStore) {
+	t.Helper()
+
+	opts := baseTestOptions()
+	err := validation.Validate(opts)
+	require.NoError(t, err)
+
+	proxy, err := NewOAuthProxy(opts, func(string) bool { return true })
+	require.NoError(t, err)
+
+	// Build a verifier that skips signature verification (same as other JWT tests).
+	keyset := NoOpKeySet{}
+	verifier := oidc.NewVerifier("https://issuer.example.com", keyset, &oidc.Config{
+		SkipExpiryCheck:   true,
+		SkipClientIDCheck: true,
+	})
+	internalVerifier := internaloidc.NewVerifier(verifier, internaloidc.IDTokenVerificationOptions{
+		AudienceClaims: []string{"aud"},
+		ClientID:       clientID,
+		ExtraAudiences: []string{},
+	})
+
+	// Replace the provider with one that carries the verifier.
+	proxy.provider = &TestProvider{
+		ProviderData: &providers.ProviderData{
+			Verifier: internalVerifier,
+		},
+		ValidToken: true,
+	}
+
+	// Replace the session store with a persistence.Manager backed by MockStore
+	// so that ClearBySID is available (implements BackChannelSessionStore).
+	ms := tests.NewMockStore()
+	proxy.sessionStore = persistence.NewManager(ms, &opts.Cookie)
+
+	return proxy, ms
+}
+
+const backChannelLogoutEvent = "http://schemas.openid.net/event/backchannel-logout"
+
+func validLogoutClaims(sid string) map[string]interface{} {
+	return map[string]interface{}{
+		"iss": "https://issuer.example.com",
+		"sub": "user123",
+		"sid": sid,
+		"events": map[string]interface{}{
+			backChannelLogoutEvent: map[string]interface{}{},
+		},
+	}
+}
+
+func TestBackChannelLogout_MethodNotAllowed(t *testing.T) {
+	proxy, _ := newBackChannelLogoutProxy(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/oauth2/backchannel-logout", nil)
+	rw := httptest.NewRecorder()
+	proxy.BackChannelLogout(rw, req)
+
+	assert.Equal(t, http.StatusMethodNotAllowed, rw.Code)
+}
+
+func TestBackChannelLogout_MissingToken(t *testing.T) {
+	proxy, _ := newBackChannelLogoutProxy(t)
+
+	req := httptest.NewRequest(http.MethodPost, "/oauth2/backchannel-logout", strings.NewReader(""))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rw := httptest.NewRecorder()
+	proxy.BackChannelLogout(rw, req)
+
+	assert.Equal(t, http.StatusBadRequest, rw.Code)
+	assert.Contains(t, rw.Body.String(), "missing logout_token")
+}
+
+func TestBackChannelLogout_InvalidToken(t *testing.T) {
+	proxy, _ := newBackChannelLogoutProxy(t)
+
+	body := strings.NewReader("logout_token=not.a.valid.jwt")
+	req := httptest.NewRequest(http.MethodPost, "/oauth2/backchannel-logout", body)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rw := httptest.NewRecorder()
+	proxy.BackChannelLogout(rw, req)
+
+	assert.Equal(t, http.StatusBadRequest, rw.Code)
+	assert.Contains(t, rw.Body.String(), "invalid logout_token")
+}
+
+func TestBackChannelLogout_TokenWithNonce(t *testing.T) {
+	proxy, _ := newBackChannelLogoutProxy(t)
+
+	claims := validLogoutClaims("sid-abc")
+	claims["nonce"] = "should-not-be-here"
+	token := makeLogoutToken(t, claims)
+
+	body := strings.NewReader("logout_token=" + token)
+	req := httptest.NewRequest(http.MethodPost, "/oauth2/backchannel-logout", body)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rw := httptest.NewRecorder()
+	proxy.BackChannelLogout(rw, req)
+
+	assert.Equal(t, http.StatusBadRequest, rw.Code)
+	assert.Contains(t, rw.Body.String(), "must not contain nonce")
+}
+
+func TestBackChannelLogout_MissingEvent(t *testing.T) {
+	proxy, _ := newBackChannelLogoutProxy(t)
+
+	claims := map[string]interface{}{
+		"iss": "https://issuer.example.com",
+		"sub": "user123",
+		"sid": "sid-abc",
+		// events claim intentionally absent
+	}
+	token := makeLogoutToken(t, claims)
+
+	body := strings.NewReader("logout_token=" + token)
+	req := httptest.NewRequest(http.MethodPost, "/oauth2/backchannel-logout", body)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rw := httptest.NewRecorder()
+	proxy.BackChannelLogout(rw, req)
+
+	assert.Equal(t, http.StatusBadRequest, rw.Code)
+	assert.Contains(t, rw.Body.String(), "missing backchannel-logout event")
+}
+
+func TestBackChannelLogout_MissingSID(t *testing.T) {
+	proxy, _ := newBackChannelLogoutProxy(t)
+
+	claims := map[string]interface{}{
+		"iss": "https://issuer.example.com",
+		"sub": "user123",
+		// sid intentionally absent
+		"events": map[string]interface{}{
+			backChannelLogoutEvent: map[string]interface{}{},
+		},
+	}
+	token := makeLogoutToken(t, claims)
+
+	body := strings.NewReader("logout_token=" + token)
+	req := httptest.NewRequest(http.MethodPost, "/oauth2/backchannel-logout", body)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rw := httptest.NewRecorder()
+	proxy.BackChannelLogout(rw, req)
+
+	assert.Equal(t, http.StatusBadRequest, rw.Code)
+	assert.Contains(t, rw.Body.String(), "missing sid claim")
+}
+
+func TestBackChannelLogout_StoreDoesNotSupportClearBySID(t *testing.T) {
+	// Use the default cookie session store (does not implement BackChannelSessionStore).
+	opts := baseTestOptions()
+	err := validation.Validate(opts)
+	require.NoError(t, err)
+	proxy, err := NewOAuthProxy(opts, func(string) bool { return true })
+	require.NoError(t, err)
+
+	keyset := NoOpKeySet{}
+	verifier := oidc.NewVerifier("https://issuer.example.com", keyset, &oidc.Config{
+		SkipExpiryCheck:   true,
+		SkipClientIDCheck: true,
+	})
+	internalVerifier := internaloidc.NewVerifier(verifier, internaloidc.IDTokenVerificationOptions{
+		AudienceClaims: []string{"aud"},
+		ClientID:       clientID,
+		ExtraAudiences: []string{},
+	})
+	proxy.provider = &TestProvider{
+		ProviderData: &providers.ProviderData{Verifier: internalVerifier},
+		ValidToken:   true,
+	}
+	// sessionStore is the default cookie store — does NOT implement BackChannelSessionStore.
+
+	token := makeLogoutToken(t, validLogoutClaims("sid-abc"))
+	body := strings.NewReader("logout_token=" + token)
+	req := httptest.NewRequest(http.MethodPost, "/oauth2/backchannel-logout", body)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rw := httptest.NewRecorder()
+	proxy.BackChannelLogout(rw, req)
+
+	assert.Equal(t, http.StatusNotImplemented, rw.Code)
+}
+
+func TestBackChannelLogout_SessionCleared(t *testing.T) {
+	proxy, ms := newBackChannelLogoutProxy(t)
+
+	// Save a session with a known SID so back-channel logout can find it.
+	saveRW := httptest.NewRecorder()
+	saveReq := httptest.NewRequest(http.MethodGet, "/", nil)
+	err := proxy.sessionStore.Save(saveRW, saveReq, &sessions.SessionState{
+		Email:     "user@example.com",
+		SessionID: "test-sid-9999",
+	})
+	require.NoError(t, err)
+
+	// Confirm both session data and SID index were stored.
+	require.Equal(t, 2, ms.CacheSize())
+
+	token := makeLogoutToken(t, validLogoutClaims("test-sid-9999"))
+	body := strings.NewReader("logout_token=" + token)
+	req := httptest.NewRequest(http.MethodPost, "/oauth2/backchannel-logout", body)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rw := httptest.NewRecorder()
+	proxy.BackChannelLogout(rw, req)
+
+	assert.Equal(t, http.StatusOK, rw.Code)
+	assert.Equal(t, 0, ms.CacheSize(), "session and SID index should both be cleared")
+}
+
+func TestBackChannelLogout_UnknownSIDReturns200(t *testing.T) {
+	// Per spec §2.8, the provider must receive a 200 even if the session is not found.
+	proxy, _ := newBackChannelLogoutProxy(t)
+
+	token := makeLogoutToken(t, validLogoutClaims("unknown-sid"))
+	body := strings.NewReader("logout_token=" + token)
+	req := httptest.NewRequest(http.MethodPost, "/oauth2/backchannel-logout", body)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rw := httptest.NewRecorder()
+	proxy.BackChannelLogout(rw, req)
+
+	assert.Equal(t, http.StatusOK, rw.Code)
 }
