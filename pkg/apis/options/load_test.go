@@ -25,9 +25,10 @@ var _ = Describe("Load", func() {
 		},
 
 		LegacyHeaders: LegacyHeaders{
-			PassBasicAuth:        true,
-			PassUserHeaders:      true,
-			SkipAuthStripHeaders: true,
+			PassBasicAuth:           true,
+			PassUserHeaders:         true,
+			AuthorizationHeaderName: "Authorization",
+			SkipAuthStripHeaders:    true,
 		},
 
 		LegacyServer: LegacyServer{
@@ -48,6 +49,7 @@ var _ = Describe("Load", func() {
 
 		Options: Options{
 			BearerTokenLoginFallback: true,
+			AuthorizationHeaderName:  "Authorization",
 			ProxyPrefix:              "/oauth2",
 			PingPath:                 "/ping",
 			ReadyPath:                "/ready",

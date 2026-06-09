@@ -15,11 +15,12 @@ import (
 
 const jwtRegexFormat = `^ey[a-zA-Z0-9_-]*\.ey[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]+$`
 
-func NewJwtSessionLoader(sessionLoaders []middlewareapi.TokenToSessionFunc, bearerTokenLoginFallback bool) alice.Constructor {
+func NewJwtSessionLoader(sessionLoaders []middlewareapi.TokenToSessionFunc, bearerTokenLoginFallback bool, authorizationHeaderName string) alice.Constructor {
 	js := &jwtSessionLoader{
-		jwtRegex:        regexp.MustCompile(jwtRegexFormat),
-		sessionLoaders:  sessionLoaders,
-		denyInvalidJWTs: !bearerTokenLoginFallback,
+		jwtRegex:                regexp.MustCompile(jwtRegexFormat),
+		sessionLoaders:          sessionLoaders,
+		denyInvalidJWTs:         !bearerTokenLoginFallback,
+		authorizationHeaderName: authorizationHeaderName,
 	}
 	return js.loadSession
 }
@@ -27,9 +28,10 @@ func NewJwtSessionLoader(sessionLoaders []middlewareapi.TokenToSessionFunc, bear
 // jwtSessionLoader is responsible for loading sessions from JWTs in
 // Authorization headers.
 type jwtSessionLoader struct {
-	jwtRegex        *regexp.Regexp
-	sessionLoaders  []middlewareapi.TokenToSessionFunc
-	denyInvalidJWTs bool
+	jwtRegex                *regexp.Regexp
+	sessionLoaders          []middlewareapi.TokenToSessionFunc
+	denyInvalidJWTs         bool
+	authorizationHeaderName string
 }
 
 // loadSession attempts to load a session from a JWT stored in an Authorization
@@ -67,7 +69,8 @@ func (j *jwtSessionLoader) loadSession(next http.Handler) http.Handler {
 // getJwtSession loads a session based on a JWT token in the authorization header.
 // (see the config options skip-jwt-bearer-tokens, extra-jwt-issuers, and bearer-token-login-fallback)
 func (j *jwtSessionLoader) getJwtSession(req *http.Request) (*sessionsapi.SessionState, error) {
-	auth := req.Header.Get("Authorization")
+	auth := req.Header.Get(j.authorizationHeaderName)
+
 	if auth == "" {
 		// No auth header provided, so don't attempt to load a session
 		return nil, nil
