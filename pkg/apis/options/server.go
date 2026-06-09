@@ -22,6 +22,12 @@ type Server struct {
 	// TLS contains the information for loading the certificate and key for the
 	// secure traffic and further configuration for the TLS server.
 	TLS *TLS `yaml:"tls,omitempty"`
+
+	// HTTP2 enables HTTP/2 support on the server.
+	// For the insecure (HTTP) server, this enables h2c (HTTP/2 Cleartext) support,
+	// which is required for gRPC proxying without TLS.
+	// For the secure (HTTPS) server, this adds "h2" to the TLS ALPN negotiation.
+	HTTP2 bool `yaml:"http2,omitempty"`
 }
 
 // TLS contains the information for loading a TLS certificate and key
