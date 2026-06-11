@@ -31,7 +31,7 @@ var _ = Describe("Builder suite", func() {
 
 	Context("with a basic request", func() {
 		assertSuccessfulRequest(getBuilder, testHTTPRequest{
-			Method:     "GET",
+			Method:     http.MethodGet,
 			Header:     baseHeaders,
 			Body:       []byte{},
 			RequestURI: "/json/path",
@@ -52,7 +52,7 @@ var _ = Describe("Builder suite", func() {
 		})
 
 		assertSuccessfulRequest(getBuilder, testHTTPRequest{
-			Method:     "GET",
+			Method:     http.MethodGet,
 			Header:     baseHeaders,
 			Body:       []byte{},
 			RequestURI: "/json/path",
@@ -78,7 +78,7 @@ var _ = Describe("Builder suite", func() {
 		})
 
 		assertSuccessfulRequest(getBuilder, testHTTPRequest{
-			Method:     "GET",
+			Method:     http.MethodGet,
 			Header:     header,
 			Body:       []byte(body),
 			RequestURI: "/json/path",
@@ -93,11 +93,11 @@ var _ = Describe("Builder suite", func() {
 
 			BeforeEach(func() {
 				buf := bytes.NewBuffer([]byte(body))
-				b = b.WithMethod("POST").WithBody(buf)
+				b = b.WithMethod(http.MethodPost).WithBody(buf)
 			})
 
 			assertSuccessfulRequest(getBuilder, testHTTPRequest{
-				Method:     "POST",
+				Method:     http.MethodPost,
 				Header:     header,
 				Body:       []byte(body),
 				RequestURI: "/json/path",
@@ -109,11 +109,11 @@ var _ = Describe("Builder suite", func() {
 			header.Set("Content-Length", "0")
 
 			BeforeEach(func() {
-				b = b.WithMethod("POST")
+				b = b.WithMethod(http.MethodPost)
 			})
 
 			assertSuccessfulRequest(getBuilder, testHTTPRequest{
-				Method:     "POST",
+				Method:     http.MethodPost,
 				Header:     header,
 				Body:       []byte{},
 				RequestURI: "/json/path",
@@ -122,11 +122,11 @@ var _ = Describe("Builder suite", func() {
 
 		Context("OPTIONS", func() {
 			BeforeEach(func() {
-				b = b.WithMethod("OPTIONS")
+				b = b.WithMethod(http.MethodOptions)
 			})
 
 			assertSuccessfulRequest(getBuilder, testHTTPRequest{
-				Method:     "OPTIONS",
+				Method:     http.MethodOptions,
 				Header:     baseHeaders,
 				Body:       []byte{},
 				RequestURI: "/json/path",
@@ -152,7 +152,7 @@ var _ = Describe("Builder suite", func() {
 			})
 
 			assertSuccessfulRequest(getBuilder, testHTTPRequest{
-				Method:     "GET",
+				Method:     http.MethodGet,
 				Header:     header,
 				Body:       []byte{},
 				RequestURI: "/json/path",
@@ -170,7 +170,7 @@ var _ = Describe("Builder suite", func() {
 				})
 
 				assertSuccessfulRequest(getBuilder, testHTTPRequest{
-					Method:     "GET",
+					Method:     http.MethodGet,
 					Header:     replacementHeaders,
 					Body:       []byte{},
 					RequestURI: "/json/path",
@@ -190,7 +190,7 @@ var _ = Describe("Builder suite", func() {
 			})
 
 			assertSuccessfulRequest(getBuilder, testHTTPRequest{
-				Method:     "GET",
+				Method:     http.MethodGet,
 				Header:     replacementHeaders,
 				Body:       []byte{},
 				RequestURI: "/json/path",
@@ -205,7 +205,7 @@ var _ = Describe("Builder suite", func() {
 				})
 
 				assertSuccessfulRequest(getBuilder, testHTTPRequest{
-					Method:     "GET",
+					Method:     http.MethodGet,
 					Header:     header,
 					Body:       []byte{},
 					RequestURI: "/json/path",
@@ -219,12 +219,12 @@ var _ = Describe("Builder suite", func() {
 			result := b.Do()
 			Expect(result.Error()).ToNot(HaveOccurred())
 
-			b.WithMethod("POST")
+			b.WithMethod(http.MethodPost)
 		})
 
 		Context("should not redo the request", func() {
 			assertSuccessfulRequest(getBuilder, testHTTPRequest{
-				Method:     "GET",
+				Method:     http.MethodGet,
 				Header:     baseHeaders,
 				Body:       []byte{},
 				RequestURI: "/json/path",

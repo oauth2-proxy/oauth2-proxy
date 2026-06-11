@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
@@ -75,7 +76,7 @@ func NewSourceHutProvider(p *ProviderData) *SourceHutProvider {
 func (p *SourceHutProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
 	json, err := requests.New(p.ProfileURL.String()).
 		WithContext(ctx).
-		WithMethod("POST").
+		WithMethod(http.MethodPost).
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Authorization", "Bearer "+s.AccessToken).
 		WithBody(bytes.NewBufferString(`{"query": "{ me { username, email } }"}`)).
