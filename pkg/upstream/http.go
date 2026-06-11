@@ -123,7 +123,7 @@ func (t *unixRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 // The proxy should render an error page if there are failures connecting to the
 // upstream server.
 func newReverseProxy(target *url.URL, upstream options.Upstream, errorHandler ProxyErrorHandler) http.Handler {
-	proxy := httputil.NewSingleHostReverseProxy(target)
+	proxy := newSingleHostReverseProxy(target)
 
 	// Inherit default transport options from Go's stdlib
 	transport := http.DefaultTransport.(*http.Transport).Clone()
@@ -155,7 +155,7 @@ func newReverseProxy(target *url.URL, upstream options.Upstream, errorHandler Pr
 	}
 
 	// Ensure we always pass the original request path
-	setProxyDirector(proxy)
+	setProxyRewrite(proxy)
 
 	// TODO (@tuunit) - this should be inverted or get a better name in the future to set the upstream host header
 	// only if PassHostHeader is explicitly set to true. Currently this would be a breaking change.
@@ -179,32 +179,71 @@ func newReverseProxy(target *url.URL, upstream options.Upstream, errorHandler Pr
 	return proxy
 }
 
-// setProxyUpstreamHostHeader sets the proxy.Director so that upstream requests
-// receive a host header matching the target URL.
-func setProxyUpstreamHostHeader(proxy *httputil.ReverseProxy, target *url.URL) {
-	director := proxy.Director
-	proxy.Director = func(req *http.Request) {
-		director(req)
-		req.Host = target.Host
+func newSingleHostReverseProxy(target *url.URL) *httputil.ReverseProxy {
+	return &httputil.ReverseProxy{
+		Rewrite: func(proxyReq *httputil.ProxyRequest) {
+			proxyReq.SetURL(target)
+			proxyReq.Out.Host = proxyReq.In.Host
+			setProxyForwardingHeaders(proxyReq)
+		},
 	}
 }
 
-// setProxyDirector sets the proxy.Director so that request URIs are escaped
+// setProxyUpstreamHostHeader sets the proxy.Rewrite so that upstream requests
+// receive a host header matching the target URL.
+func setProxyUpstreamHostHeader(proxy *httputil.ReverseProxy, target *url.URL) {
+	rewrite := proxy.Rewrite
+	proxy.Rewrite = func(proxyReq *httputil.ProxyRequest) {
+		rewrite(proxyReq)
+		proxyReq.Out.Host = target.Host
+	}
+}
+
+// setProxyRewrite sets the proxy.Rewrite so that request URIs are escaped
 // when proxying to usptream servers.
-func setProxyDirector(proxy *httputil.ReverseProxy) {
-	director := proxy.Director
-	proxy.Director = func(req *http.Request) {
-		director(req)
+func setProxyRewrite(proxy *httputil.ReverseProxy) {
+	rewrite := proxy.Rewrite
+	proxy.Rewrite = func(proxyReq *httputil.ProxyRequest) {
+		rewrite(proxyReq)
 		// use RequestURI so that we aren't unescaping encoded slashes in the request path
-		req.URL.Opaque = req.RequestURI
-		req.URL.RawQuery = ""
-		req.URL.ForceQuery = false
+		proxyReq.Out.URL.Opaque = proxyReq.In.RequestURI
+		proxyReq.Out.URL.RawQuery = ""
+		proxyReq.Out.URL.ForceQuery = false
+	}
+}
+
+func setProxyForwardingHeaders(proxyReq *httputil.ProxyRequest) {
+	// TODO (@tuunit): Preserve the legacy Director-based forwarding header behavior
+	// for backwards compatibility. Harden this with saner defaults and/or
+	// explicit flags in the future.
+	for _, header := range []string{"Forwarded", "X-Forwarded-Host", "X-Forwarded-Proto"} {
+		if values, ok := proxyReq.In.Header[header]; ok {
+			proxyReq.Out.Header[header] = append([]string(nil), values...)
+		}
+	}
+
+	prior, ok := proxyReq.In.Header["X-Forwarded-For"]
+	if ok {
+		proxyReq.Out.Header["X-Forwarded-For"] = append([]string(nil), prior...)
+	}
+
+	clientIP, _, err := net.SplitHostPort(proxyReq.In.RemoteAddr)
+	if err != nil {
+		return
+	}
+
+	omit := ok && prior == nil
+	if len(prior) > 0 {
+		clientIP = strings.Join(prior, ", ") + ", " + clientIP
+	}
+	if !omit {
+		proxyReq.Out.Header.Set("X-Forwarded-For", clientIP)
 	}
 }
 
 // newWebSocketReverseProxy creates a new reverse proxy for proxying websocket connections.
 func newWebSocketReverseProxy(u *url.URL, skipTLSVerify *bool, passHostHeader *bool) http.Handler {
-	wsProxy := httputil.NewSingleHostReverseProxy(u)
+	wsProxy := newSingleHostReverseProxy(u)
 
 	// Inherit default transport options from Go's stdlib
 	transport := http.DefaultTransport.(*http.Transport).Clone()

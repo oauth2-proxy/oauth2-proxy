@@ -6,7 +6,34 @@
 
 ## Breaking Changes
 
+## Changes since v7.15.3
+
+# V7.15.3
+
+## Release Highlights
+
+- 🔵 Golang version upgrade to v1.26.4
+    - Upgrade of all dependencies to their latest versions
+-  🕵️‍♀️ Vulnerabilities have ben addressed
+    - [CVE-2026-33811](https://nvd.nist.gov/vuln/detail/)
+    - [CVE-2026-33814](https://nvd.nist.gov/vuln/detail/)
+    - [CVE-2026-39820](https://nvd.nist.gov/vuln/detail/)
+    - [CVE-2026-39836](https://nvd.nist.gov/vuln/detail/)
+    - [CVE-2026-42499](https://nvd.nist.gov/vuln/detail/)
+    - [CVE-2026-42504](https://nvd.nist.gov/vuln/detail/)
+    - [CVE-2026-39823](https://nvd.nist.gov/vuln/detail/)
+    - [CVE-2026-39826](https://nvd.nist.gov/vuln/detail/)
+    - [CVE-2026-39825](https://nvd.nist.gov/vuln/detail/)
+    - [CVE-2026-27145](https://nvd.nist.gov/vuln/detail/)
+    - [CVE-2026-42507](https://nvd.nist.gov/vuln/detail/)
+
+## Important Notes
+
+## Breaking Changes
+
 ## Changes since v7.15.2
+
+- [#3477](https://github.com/oauth2-proxy/oauth2-proxy/pull/3477) chore(dep): bump go to 1.26 and migrate of reverse proxy handling
 
 # V7.15.2
 

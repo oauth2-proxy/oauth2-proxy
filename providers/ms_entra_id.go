@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 	"regexp"
@@ -304,7 +305,7 @@ func (p *MicrosoftEntraIDProvider) checkTenantMatchesTenantList(tenant string, a
 func (p *MicrosoftEntraIDProvider) fetchToken(ctx context.Context, params url.Values) (*oauth2.Token, error) {
 	resp := requests.New(p.RedeemURL.String()).
 		WithContext(ctx).
-		WithMethod("POST").
+		WithMethod(http.MethodPost).
 		WithBody(bytes.NewBufferString(params.Encode())).
 		SetHeader("Content-Type", "application/x-www-form-urlencoded").
 		Do()

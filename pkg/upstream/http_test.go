@@ -361,13 +361,66 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			return http.HandlerFunc(func(_ http.ResponseWriter, req *http.Request) {
 				proxy, ok := h.(*httputil.ReverseProxy)
 				Expect(ok).To(BeTrue())
-				proxy.Director(req)
+				outReq := req.Clone(req.Context())
+				proxy.Rewrite(&httputil.ProxyRequest{
+					In:  req,
+					Out: outReq,
+				})
+				req.Host = outReq.Host
 			})
 		}
 		httpUpstream.handler = requestInterceptor(httpUpstream.handler)
 
 		httpUpstream.ServeHTTP(rw, req)
 		Expect(req.Host).To(Equal(strings.TrimPrefix(serverAddr, "http://")))
+	})
+
+	It("ServeHTTP preserves forwarding headers when using Rewrite", func() {
+		req := httptest.NewRequest("", "http://example.localhost/foo", nil)
+		req.RemoteAddr = "192.0.2.10:1234"
+		req.Header.Set("Forwarded", "for=192.0.2.1;proto=https;host=example.localhost")
+		req.Header.Set("X-Forwarded-Host", "forwarded.example.localhost")
+		req.Header.Set("X-Forwarded-Proto", "https")
+		req.Header.Set("X-Forwarded-For", "192.0.2.1")
+		req = middlewareapi.AddRequestScope(req, &middlewareapi.RequestScope{})
+		rw := httptest.NewRecorder()
+
+		upstream := options.Upstream{
+			ID:                    "preserveForwardedHeaders",
+			PassHostHeader:        ptr.To(true),
+			ProxyWebSockets:       ptr.To(false),
+			InsecureSkipTLSVerify: ptr.To(false),
+			FlushInterval:         &defaultFlushInterval,
+			Timeout:               &defaultTimeout,
+		}
+
+		u, err := url.Parse(serverAddr)
+		Expect(err).ToNot(HaveOccurred())
+
+		handler := newHTTPUpstreamProxy(upstream, u, nil, nil)
+		httpUpstream, ok := handler.(*httpUpstreamProxy)
+		Expect(ok).To(BeTrue())
+
+		requestInterceptor := func(h http.Handler) http.Handler {
+			return http.HandlerFunc(func(_ http.ResponseWriter, req *http.Request) {
+				proxy, ok := h.(*httputil.ReverseProxy)
+				Expect(ok).To(BeTrue())
+
+				outReq := req.Clone(req.Context())
+				proxy.Rewrite(&httputil.ProxyRequest{
+					In:  req,
+					Out: outReq,
+				})
+
+				Expect(outReq.Header.Values("Forwarded")).To(Equal([]string{"for=192.0.2.1;proto=https;host=example.localhost"}))
+				Expect(outReq.Header.Values("X-Forwarded-Host")).To(Equal([]string{"forwarded.example.localhost"}))
+				Expect(outReq.Header.Values("X-Forwarded-Proto")).To(Equal([]string{"https"}))
+				Expect(outReq.Header.Values("X-Forwarded-For")).To(Equal([]string{"192.0.2.1, 192.0.2.10"}))
+			})
+		}
+		httpUpstream.handler = requestInterceptor(httpUpstream.handler)
+
+		httpUpstream.ServeHTTP(rw, req)
 	})
 
 	type newUpstreamTableInput struct {
@@ -405,6 +458,7 @@ var _ = Describe("HTTP Upstream Suite", func() {
 
 			proxy, ok := upstreamProxy.handler.(*httputil.ReverseProxy)
 			Expect(ok).To(BeTrue())
+			Expect(proxy.Rewrite).ToNot(BeNil())
 			Expect(proxy.FlushInterval).To(Equal(in.flushInterval))
 			transport, ok := proxy.Transport.(*http.Transport)
 			Expect(ok).To(BeTrue())

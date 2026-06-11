@@ -587,7 +587,7 @@ func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, req *http.Request, code i
 
 // IsAllowedRequest is used to check if auth should be skipped for this request
 func (p *OAuthProxy) IsAllowedRequest(req *http.Request) bool {
-	isPreflightRequestAllowed := p.skipAuthPreflight && req.Method == "OPTIONS"
+	isPreflightRequestAllowed := p.skipAuthPreflight && req.Method == http.MethodOptions
 	return isPreflightRequestAllowed || p.isAllowedRoute(req) || p.isTrustedIP(req)
 }
 
@@ -669,7 +669,7 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 
 // ManualSignIn handles basic auth logins to the proxy
 func (p *OAuthProxy) ManualSignIn(req *http.Request) (string, bool, int) {
-	if req.Method != "POST" || p.basicAuthValidator == nil {
+	if req.Method != http.MethodPost || p.basicAuthValidator == nil {
 		return "", false, http.StatusOK
 	}
 	user := req.FormValue("username")
