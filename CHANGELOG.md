@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.3
 
+- [#3453](https://github.com/oauth2-proxy/oauth2-proxy/pull/3453) fix: return 403 instead of 500 for malformed OAuth2 state on the callback (@Elaine-cls)
+
 # V7.15.3
 
 ## Release Highlights

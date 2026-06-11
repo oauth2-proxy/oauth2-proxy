@@ -905,8 +905,15 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 
 	nonce, appRedirect, err := decodeState(req.Form.Get("state"), p.encodeState)
 	if err != nil {
+		// A malformed or missing state parameter is a client/auth failure, not a
+		// server error: the request did not originate from a valid /oauth2/start
+		// flow (e.g. crawlers and scanners hitting the callback directly). Return
+		// 403 instead of 500 so these do not surface as server errors / trigger
+		// 5xx alerting, leaking minimal information to the caller. This restores
+		// the pre-v7.7.1 behaviour and is consistent with the other auth-failure
+		// paths below (CSRF cookie missing, CSRF mismatch), which also return 403.
 		logger.Errorf("Error while parsing OAuth2 state: %v", err)
-		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+		p.ErrorPage(rw, req, http.StatusForbidden, err.Error())
 		return
 	}
 

@@ -2087,6 +2087,43 @@ func Test_noCacheHeaders(t *testing.T) {
 	})
 }
 
+func TestOAuthCallbackMalformedStateIsClientError(t *testing.T) {
+	// A crawler/scanner that hits /oauth2/callback directly sends a missing or
+	// malformed state parameter (no "nonce:redirect" form). This must be
+	// reported as a 4xx auth failure (403), not a 5xx server error, otherwise it
+	// pollutes 5xx-based alerting even though the proxy is healthy.
+	opts := baseTestOptions()
+	err := validation.Validate(opts)
+	require.NoError(t, err)
+
+	proxy, err := NewOAuthProxy(opts, func(string) bool { return true })
+	require.NoError(t, err)
+
+	testCases := []struct {
+		name  string
+		state string
+	}{
+		{name: "EmptyState", state: ""},
+		{name: "NoColonSeparator", state: "garbage"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			req := httptest.NewRequest(
+				http.MethodGet,
+				fmt.Sprintf("/oauth2/callback?code=abc&state=%s", url.QueryEscape(tc.state)),
+				nil,
+			)
+			proxy.ServeHTTP(rec, req)
+
+			assert.Equal(t, http.StatusForbidden, rec.Code)
+			assert.Less(t, rec.Code, http.StatusInternalServerError,
+				"malformed state must not be reported as a 5xx server error")
+		})
+	}
+}
+
 func TestSignOutCallsBackendLogoutURL(t *testing.T) {
 	const testIDToken = "test-id-token-12345"
 	var receivedURL string
