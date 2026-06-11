@@ -126,6 +126,15 @@ type Upstream struct {
 	// Defaults to 30 seconds.
 	Timeout *time.Duration `yaml:"timeout,omitempty"`
 
+	// WriteBufferSize specifies the size of the write buffer used when writing to the upstream transport.
+	// A larger buffer reduces the number of syscalls for large request bodies (e.g., file uploads).
+	// If zero or not set, Go's default (currently 4KB) is used. Recommended: 65536 (64KB) for large upload scenarios.
+	WriteBufferSize *int `yaml:"writeBufferSize,omitempty"`
+
+	// ReadBufferSize specifies the size of the read buffer used when reading from the upstream transport.
+	// If zero or not set, Go's default (currently 4KB) is used.
+	ReadBufferSize *int `yaml:"readBufferSize,omitempty"`
+
 	// DisableKeepAlives disables HTTP keep-alive connections to the upstream server.
 	// Defaults to false.
 	DisableKeepAlives *bool `yaml:"disableKeepAlives,omitempty"`
