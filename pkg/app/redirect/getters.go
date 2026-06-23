@@ -13,7 +13,7 @@ type redirectGetter func(req *http.Request) string
 
 // getRdQuerystringRedirect handles this getAppRedirect strategy:
 // - `rd` querysting parameter
-func (a *appDirector) getRdQuerystringRedirect(req *http.Request) string {
+func (a *AppDirector) getRdQuerystringRedirect(req *http.Request) string {
 	return a.validateRedirect(
 		req.Form.Get("rd"),
 		"Invalid redirect provided in rd querystring parameter: %s",
@@ -22,7 +22,7 @@ func (a *appDirector) getRdQuerystringRedirect(req *http.Request) string {
 
 // getXAuthRequestRedirect handles this getAppRedirect strategy:
 // - `X-Auth-Request-Redirect` Header
-func (a *appDirector) getXAuthRequestRedirect(req *http.Request) string {
+func (a *AppDirector) getXAuthRequestRedirect(req *http.Request) string {
 	return a.validateRedirect(
 		req.Header.Get("X-Auth-Request-Redirect"),
 		"Invalid redirect provided in X-Auth-Request-Redirect header: %s",
@@ -32,7 +32,7 @@ func (a *appDirector) getXAuthRequestRedirect(req *http.Request) string {
 // getXForwardedHeadersRedirect handles these getAppRedirect strategies:
 // - `X-Forwarded-(Proto|Host|Uri)` headers (when ReverseProxy mode is enabled)
 // - `X-Forwarded-(Proto|Host)` if `Uri` has the ProxyPath (i.e. /oauth2/*)
-func (a *appDirector) getXForwardedHeadersRedirect(req *http.Request) string {
+func (a *AppDirector) getXForwardedHeadersRedirect(req *http.Request) string {
 	if !requestutil.IsForwardedRequest(req) {
 		return ""
 	}
@@ -57,7 +57,7 @@ func (a *appDirector) getXForwardedHeadersRedirect(req *http.Request) string {
 // - `X-Forwarded-Uri` direct URI path (when ReverseProxy mode is enabled)
 // - `req.URL.RequestURI` if not under the ProxyPath (i.e. /oauth2/*)
 // - `/`
-func (a *appDirector) getURIRedirect(req *http.Request) string {
+func (a *AppDirector) getURIRedirect(req *http.Request) string {
 	redirect := a.validateRedirect(
 		requestutil.GetRequestURI(req),
 		"Invalid redirect generated from X-Forwarded-Uri header: %s",
