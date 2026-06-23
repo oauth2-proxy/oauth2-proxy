@@ -59,9 +59,15 @@ func (a *AppDirector) getXForwardedHeadersRedirect(req *http.Request) string {
 // - `/`
 func (a *AppDirector) getURIRedirect(req *http.Request) string {
 	redirect := a.validateRedirect(
-		requestutil.GetRequestURI(req),
-		"Invalid redirect generated from X-Forwarded-Uri header: %s",
+		"//"+requestutil.GetRequestHost(req)+requestutil.GetRequestURI(req),
+		"Invalid FQDN redirect generated from X-Forwarded-Uri header: %s",
 	)
+	if redirect == "" {
+		redirect = a.validateRedirect(
+			requestutil.GetRequestURI(req),
+			"Invalid redirect generated from X-Forwarded-Uri header: %s",
+		)
+	}
 	if redirect == "" {
 		redirect = req.URL.RequestURI()
 	}

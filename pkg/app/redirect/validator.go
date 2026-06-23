@@ -39,7 +39,7 @@ func (v *validator) isValidRedirect(redirect string) bool {
 		return false
 	case strings.HasPrefix(redirect, "/") && !strings.HasPrefix(redirect, "//") && !invalidRedirectRegex.MatchString(redirect):
 		return true
-	case strings.HasPrefix(redirect, "http://") || strings.HasPrefix(redirect, "https://"):
+	case strings.HasPrefix(redirect, "http://") || strings.HasPrefix(redirect, "https://") || strings.HasPrefix(redirect, "//"):
 		redirectURL, err := url.Parse(redirect)
 		if err != nil {
 			logger.Printf("Rejecting invalid redirect %q: scheme unsupported or missing", redirect)

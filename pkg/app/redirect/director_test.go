@@ -56,6 +56,27 @@ var _ = Describe("Director Suite", func() {
 			allowedDomains:   nil,
 			expectedRedirect: fooBar,
 		}),
+		Entry("Request outside of the proxy prefix, redirects to original request, dropping non-allowed host", getRedirectTableInput{
+			requestURL:       "https://a-service.example.com" + fooBar,
+			headers:          nil,
+			reverseProxy:     false,
+			allowedDomains:   nil,
+			expectedRedirect: fooBar,
+		}),
+		Entry("Request outside of the proxy prefix, redirects to original request including host", getRedirectTableInput{
+			requestURL:       "https://a-service.example.com" + fooBar,
+			headers:          nil,
+			reverseProxy:     false,
+			allowedDomains:   []string{"a-service.example.com"},
+			expectedRedirect: "//a-service.example.com" + fooBar,
+		}),
+		Entry("Request outside of the proxy prefix, redirects to original request including host/port", getRedirectTableInput{
+			requestURL:       "https://a-service.example.com:8080" + fooBar,
+			headers:          nil,
+			reverseProxy:     false,
+			allowedDomains:   []string{"a-service.example.com:8080"},
+			expectedRedirect: "//a-service.example.com:8080" + fooBar,
+		}),
 		Entry("Request with query, preserves the query", getRedirectTableInput{
 			requestURL:       "/foo?bar",
 			headers:          nil,
