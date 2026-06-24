@@ -22,6 +22,14 @@ func resolveVersion(ldflagsVersion string, readBuildInfo func() (*debug.BuildInf
 		return ldflagsVersion
 	}
 	if info, ok := readBuildInfo(); ok && info != nil {
+		// info.Main.Version is populated by the Go toolchain only for
+		// module-aware builds: it is the clean tag for an exact
+		// `@vX.Y.Z` install, or a synthesized pseudo-version
+		// (e.g. v7.15.4-0.20240115123456-abcdef123456) carrying the
+		// base version, commit timestamp and hash when built from
+		// commits on top of a release. A plain `go build` from a source
+		// checkout reports "(devel)", which we skip so release builds
+		// keep deferring to the ldflags value below.
 		if v := info.Main.Version; v != "" && v != "(devel)" {
 			return v
 		}
