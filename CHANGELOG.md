@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.3
 
+- [#3459](https://github.com/oauth2-proxy/oauth2-proxy/pull/3459) fix: include the provider's error_description on the OAuth2 callback error page (#3458) (@Molaire)
+
 # V7.15.3
 
 ## Release Highlights
