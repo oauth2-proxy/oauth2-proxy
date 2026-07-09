@@ -7,6 +7,7 @@
 ## Breaking Changes
 
 ## Changes since v7.15.3
+- [#3469](https://github.com/oauth2-proxy/oauth2-proxy/pull/3469) docs: fix invalid `error_page 401 =401` in the nginx API route example and note that the shared `auth_request` config must be replicated
 
 # V7.15.3
 

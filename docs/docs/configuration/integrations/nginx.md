@@ -119,6 +119,10 @@ The named location pattern above ensures the browser receives a standard **302 r
 Redirecting authentication failures (302 to `/oauth2/sign_in`) should **only be used for browser-facing routes**. API or machine clients should receive a plain 401/403 response without redirect.
 :::
 
+:::note
+The two snippets below show only the routing difference (redirect vs. no redirect). Replicate the rest of the `auth_request` configuration from the [main `location /` example](#configuring-for-use-with-the-nginx-auth_request-directive) above (the `auth_request_set`/`proxy_set_header` lines that pass `X-User`, `X-Email`, the access token and cookies to the backend); copying only the lines shown here omits those headers.
+:::
+
 #### Browser-facing routes (HTML, UI)
 
 For interactive browser routes where users should be redirected to sign in:
@@ -142,7 +146,8 @@ For API endpoints where clients expect a 401/403 status code (not a redirect):
 ```nginx
 location /api/ {
   auth_request /oauth2/auth;
-  error_page 401 =401;  # Pass through the 401 status
+  # No `error_page 401` directive: nginx returns the 401 from auth_request
+  # to the client unchanged, which is what API/machine clients expect.
   proxy_pass http://backend/;
 }
 ```
