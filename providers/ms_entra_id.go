@@ -348,6 +348,14 @@ func (p *MicrosoftEntraIDProvider) fetchToken(ctx context.Context, params url.Va
 		SetHeader("Content-Type", "application/x-www-form-urlencoded").
 		Do()
 
+	if err := resp.Error(); err != nil {
+		return nil, fmt.Errorf("token request failed: %v", err)
+	}
+
+	if resp.StatusCode() < 200 || resp.StatusCode() >= 300 {
+		return nil, fmt.Errorf("token request returned %d: %s", resp.StatusCode(), string(resp.Body()))
+	}
+
 	var token *oauth2.Token
 	var rawResponse interface{}
 
