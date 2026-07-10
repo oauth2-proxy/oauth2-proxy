@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.3
 
+- [#2751](https://github.com/oauth2-proxy/oauth2-proxy/issues/2751) feat: add `--entra-id-redeem-scope` option to send a distinct (narrowed) scope when redeeming the authorization code for tokens, enabling single-audience access tokens with Microsoft Entra ID (@mane-tv2)
+
 # V7.15.3
 
 ## Release Highlights

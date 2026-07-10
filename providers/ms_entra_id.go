@@ -27,6 +27,7 @@ type MicrosoftEntraIDProvider struct {
 	*OIDCProvider
 	multiTenantAllowedTenants []string
 	federatedTokenAuth        bool
+	redeemScope               string
 
 	microsoftGraphURL *url.URL
 }
@@ -54,6 +55,7 @@ func NewMicrosoftEntraIDProvider(p *ProviderData, opts options.Provider) *Micros
 
 		multiTenantAllowedTenants: opts.MicrosoftEntraIDConfig.AllowedTenants,
 		federatedTokenAuth:        ptr.Deref(opts.MicrosoftEntraIDConfig.FederatedTokenAuth, options.DefaultMicrosoftEntraIDUseFederatedToken),
+		redeemScope:               opts.MicrosoftEntraIDConfig.RedeemScope,
 		microsoftGraphURL:         microsoftGraphURL,
 	}
 }
@@ -105,7 +107,40 @@ func (p *MicrosoftEntraIDProvider) Redeem(ctx context.Context, redirectURL, code
 		return p.redeemWithFederatedToken(ctx, redirectURL, code, codeVerifier)
 	}
 
+	if p.redeemScope != "" {
+		return p.redeemWithScope(ctx, redirectURL, code, codeVerifier)
+	}
+
 	return p.OIDCProvider.Redeem(ctx, redirectURL, code, codeVerifier)
+}
+
+// redeemWithScope performs the token exchange sending an explicit scope
+// parameter. Entra ID cannot issue an access token for multiple audiences,
+// so a narrowed, single-audience scope can be requested at redemption while
+// a broader scope list is used at authorization time.
+func (p *MicrosoftEntraIDProvider) redeemWithScope(ctx context.Context, redirectURL, code, codeVerifier string) (*sessions.SessionState, error) {
+	clientSecret, err := p.GetClientSecret()
+	if err != nil {
+		return nil, err
+	}
+
+	params := url.Values{}
+	if codeVerifier != "" {
+		params.Add("code_verifier", codeVerifier)
+	}
+	params.Add("redirect_uri", redirectURL)
+	params.Add("client_id", p.ClientID)
+	params.Add("client_secret", clientSecret)
+	params.Add("code", code)
+	params.Add("grant_type", "authorization_code")
+	params.Add("scope", p.redeemScope)
+
+	token, err := p.fetchToken(ctx, params)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching token: %w", err)
+	}
+
+	return p.OIDCProvider.createSession(ctx, token, false)
 }
 
 // redeemWithFederatedToken performs custom token exchange with federated token instead of client secret
@@ -130,6 +165,9 @@ func (p *MicrosoftEntraIDProvider) redeemWithFederatedToken(ctx context.Context,
 	params.Add("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
 	params.Add("code", code)
 	params.Add("grant_type", "authorization_code")
+	if p.redeemScope != "" {
+		params.Add("scope", p.redeemScope)
+	}
 
 	token, err := p.fetchToken(ctx, params)
 	if err != nil {

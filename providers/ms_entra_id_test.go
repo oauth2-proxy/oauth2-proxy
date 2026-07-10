@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -127,6 +128,46 @@ func TestAzureEntraOIDCProviderValidateSessionAllowedTenants(t *testing.T) {
 
 	valid = provider.ValidateSession(context.Background(), session)
 	assert.True(t, valid)
+}
+
+func TestAzureEntraOIDCProviderRedeemScope(t *testing.T) {
+	idToken, _ := newSignedTestIDToken(defaultIDToken)
+	body, _ := json.Marshal(redeemTokenResponse{
+		AccessToken:  accessToken,
+		ExpiresIn:    10,
+		TokenType:    "Bearer",
+		RefreshToken: refreshToken,
+		IDToken:      idToken,
+	})
+
+	var redeemScopes []string
+	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		_ = r.ParseForm()
+		redeemScopes = append(redeemScopes, r.Form.Get("scope"))
+		rw.Header().Add("content-type", "application/json")
+		_, _ = rw.Write(body)
+	}))
+	defer server.Close()
+	serverURL, _ := url.Parse(server.URL)
+
+	provider := &MicrosoftEntraIDProvider{
+		OIDCProvider:      newOIDCProvider(serverURL, false),
+		microsoftGraphURL: microsoftGraphURL,
+	}
+
+	// Without redeemScope, no scope parameter is sent
+	session, err := provider.Redeem(context.Background(), provider.RedeemURL.String(), "code1234", "")
+	assert.NoError(t, err)
+	assert.Equal(t, accessToken, session.AccessToken)
+	assert.Equal(t, "", redeemScopes[0])
+
+	// With redeemScope, the scope parameter is sent with the token request
+	provider.redeemScope = "api://my-api/.default"
+	session, err = provider.Redeem(context.Background(), provider.RedeemURL.String(), "code1234", "")
+	assert.NoError(t, err)
+	assert.Equal(t, accessToken, session.AccessToken)
+	assert.Equal(t, idToken, session.IDToken)
+	assert.Equal(t, "api://my-api/.default", redeemScopes[1])
 }
 
 func mockGraphAPI(noGroupMemberPermissions bool) *httptest.Server {
