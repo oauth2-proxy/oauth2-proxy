@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.3
 
+- [#3472](https://github.com/oauth2-proxy/oauth2-proxy/pull/3472) fix: apply configured signing algorithms to extra JWT issuers (#3471) (@Bortlesboat)
+
 # V7.15.3
 
 ## Release Highlights
