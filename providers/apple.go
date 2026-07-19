@@ -1,7 +1,6 @@
 package providers
 
 import (
-	"context"
 	"crypto/ecdsa"
 	"crypto/x509"
 	"encoding/pem"
@@ -11,11 +10,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 	"golang.org/x/oauth2"
 )
 
@@ -63,16 +59,20 @@ func NewAppleProvider(p *ProviderData, appleOpts options.AppleOptions, oidcOpts 
 		validateURL: nil,
 		scope:       appleDefaultScope,
 	})
-	p.getAuthorizationHeaderFunc = makeOIDCHeader
+	// Apple returns the authorization code via form POST rather than query
+	// parameters, so default the response mode accordingly
+	if p.AuthRequestResponseMode == "" {
+		p.AuthRequestResponseMode = "form_post"
+	}
+
+	oidcProvider := NewOIDCProvider(p, oidcOpts)
+	// Apple requires the client credentials in the POST body
+	oidcProvider.AuthStyle = oauth2.AuthStyleInParams
 
 	provider := &AppleProvider{
-		OIDCProvider: &OIDCProvider{
-			ProviderData: p,
-			SkipNonce:    true, // Apple doesn't use nonce in the standard way
-			AuthStyle:    oauth2.AuthStyleInParams, // Apple requires credentials in POST body
-		},
-		TeamID: appleOpts.TeamID,
-		KeyID:  appleOpts.KeyID,
+		OIDCProvider: oidcProvider,
+		TeamID:       appleOpts.TeamID,
+		KeyID:        appleOpts.KeyID,
 	}
 
 	if err := provider.initialize(appleOpts); err != nil {
@@ -166,35 +166,4 @@ func (p *AppleProvider) generateClientSecret() (string, error) {
 	token.Header["kid"] = p.KeyID
 
 	return token.SignedString(p.PrivateKey)
-}
-
-// GetLoginURL returns the Apple authorization URL with required parameters
-func (p *AppleProvider) GetLoginURL(redirectURI, state, nonce string, extraParams url.Values) string {
-	// Apple requires response_mode=form_post for web clients
-	if extraParams.Get("response_mode") == "" {
-		extraParams.Set("response_mode", "form_post")
-	}
-	return p.OIDCProvider.GetLoginURL(redirectURI, state, nonce, extraParams)
-}
-
-// ValidateSession validates the session's ID token
-func (p *AppleProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
-	ctx = oidc.ClientContext(ctx, requests.DefaultHTTPClient)
-
-	// Validate ID token if present
-	if s.IDToken != "" && p.Verifier != nil {
-		if _, err := p.Verifier.Verify(ctx, s.IDToken); err != nil {
-			return false
-		}
-		// ID token is valid - Apple doesn't provide a token validation endpoint
-		return true
-	}
-
-	// Fallback to access token validation if ValidateURL is set
-	if p.ValidateURL != nil && p.ValidateURL.String() != "" {
-		return validateToken(ctx, p, s.AccessToken, makeOIDCHeader(s.AccessToken))
-	}
-
-	// No validation possible, but session exists with valid data
-	return s.AccessToken != ""
 }

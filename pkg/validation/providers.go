@@ -107,7 +107,7 @@ func providerRequiresClientSecret(provider options.Provider) bool {
 	}
 
 	// Apple uses a private key to dynamically generate client_secret JWTs
-	if provider.Type == "apple" {
+	if provider.Type == options.AppleProvider {
 		return false
 	}
 
