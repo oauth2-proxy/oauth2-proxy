@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.3
 
+- security: harden `X-Forwarded-For` (and other `--real-client-ip-header` values) parsing so that, once `--trusted-proxy-ip` is configured, the client IP is resolved by walking the hop chain from the newest (rightmost) entry and skipping known trusted proxies, instead of trusting the client-supplied leftmost value. This closes a spoofing gap where a client could set the header to an IP on the `--trusted-ip` allowlist and have it trusted even though a legitimate reverse proxy only appended (rather than replaced) the header.
+
 # V7.15.3
 
 ## Release Highlights
