@@ -91,6 +91,11 @@ func (p *BitbucketProvider) setRepository(repository string) {
 	}
 }
 
+// ValidateSession validates the AccessToken using a Bearer token header
+func (p *BitbucketProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
+	return validateToken(ctx, p, s.AccessToken, makeOIDCHeader(s.AccessToken))
+}
+
 // GetEmailAddress returns the email of the authenticated user
 func (p *BitbucketProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
 
@@ -111,9 +116,10 @@ func (p *BitbucketProvider) GetEmailAddress(ctx context.Context, s *sessions.Ses
 		}
 	}
 
-	requestURL := p.ValidateURL.String() + "?access_token=" + s.AccessToken
+	requestURL := p.ValidateURL.String()
 	err := requests.New(requestURL).
 		WithContext(ctx).
+		WithHeaders(makeOIDCHeader(s.AccessToken)).
 		Do().
 		UnmarshalInto(&emails)
 	if err != nil {
@@ -126,10 +132,11 @@ func (p *BitbucketProvider) GetEmailAddress(ctx context.Context, s *sessions.Ses
 		*teamURL = *p.ValidateURL
 		teamURL.Path = "/2.0/teams"
 
-		requestURL := teamURL.String() + "?role=member&access_token=" + s.AccessToken
+		requestURL := teamURL.String() + "?role=member"
 
 		err := requests.New(requestURL).
 			WithContext(ctx).
+			WithHeaders(makeOIDCHeader(s.AccessToken)).
 			Do().
 			UnmarshalInto(&teams)
 		if err != nil {
@@ -155,11 +162,11 @@ func (p *BitbucketProvider) GetEmailAddress(ctx context.Context, s *sessions.Ses
 		repositoriesURL.Path = "/2.0/repositories/" + strings.Split(p.Repository, "/")[0]
 
 		requestURL := repositoriesURL.String() + "?role=contributor" +
-			"&q=full_name=" + url.QueryEscape("\""+p.Repository+"\"") +
-			"&access_token=" + s.AccessToken
+			"&q=full_name=" + url.QueryEscape("\""+p.Repository+"\"")
 
 		err := requests.New(requestURL).
 			WithContext(ctx).
+			WithHeaders(makeOIDCHeader(s.AccessToken)).
 			Do().
 			UnmarshalInto(&repositories)
 		if err != nil {
