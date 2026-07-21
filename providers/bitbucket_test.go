@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -25,6 +26,7 @@ func testBitbucketProvider(hostname, team string, repository string) *BitbucketP
 			Scope:        ""},
 		options.BitbucketOptions{
 			Team:       team,
+			Workspace:  team,
 			Repository: repository,
 		},
 	)
@@ -41,7 +43,6 @@ func testBitbucketProvider(hostname, team string, repository string) *BitbucketP
 func testBitbucketBackend(payload string) *httptest.Server {
 	paths := map[string]bool{
 		"/2.0/user/emails": true,
-		"/2.0/teams":       true,
 	}
 
 	return httptest.NewServer(http.HandlerFunc(
@@ -55,6 +56,34 @@ func testBitbucketBackend(payload string) *httptest.Server {
 			} else {
 				w.WriteHeader(200)
 				w.Write([]byte(payload))
+			}
+		}))
+}
+
+func testBitbucketBackendWithWorkspace(emailPayload, workspacePayload string) *httptest.Server {
+	return testBitbucketBackendFull(emailPayload, workspacePayload, "")
+}
+
+func testBitbucketBackendFull(emailPayload, workspacePayload, repoPayload string) *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			if !IsAuthorizedInHeader(r.Header) {
+				w.WriteHeader(403)
+				return
+			}
+			switch {
+			case r.URL.Path == "/2.0/user/emails":
+				w.WriteHeader(200)
+				w.Write([]byte(emailPayload))
+			case r.URL.Path == "/2.0/user/workspaces":
+				w.WriteHeader(200)
+				w.Write([]byte(workspacePayload))
+			case strings.HasPrefix(r.URL.Path, "/2.0/repositories/"):
+				w.WriteHeader(200)
+				w.Write([]byte(repoPayload))
+			default:
+				log.Printf("%s not handled\n", r.URL.Path)
+				w.WriteHeader(404)
 			}
 		}))
 }
@@ -75,7 +104,7 @@ func TestNewBitbucketProvider(t *testing.T) {
 func TestBitbucketProviderScopeAdjustForTeam(t *testing.T) {
 	p := testBitbucketProvider("", "test-team", "")
 	assert.NotEqual(t, nil, p)
-	assert.Equal(t, "email team", p.Data().Scope)
+	assert.Equal(t, "email account", p.Data().Scope)
 }
 
 func TestBitbucketProviderScopeAdjustForRepository(t *testing.T) {
@@ -126,7 +155,9 @@ func TestBitbucketProviderGetEmailAddress(t *testing.T) {
 }
 
 func TestBitbucketProviderGetEmailAddressAndGroup(t *testing.T) {
-	b := testBitbucketBackend("{\"values\": [ { \"email\": \"michael.bland@gsa.gov\", \"is_primary\": true, \"username\": \"bioinformatics\" } ] }")
+	emailPayload := `{"values": [ { "email": "michael.bland@gsa.gov", "is_primary": true } ] }`
+	workspacePayload := `{"values": [ { "type": "workspace_access", "workspace": { "slug": "bioinformatics" } } ] }`
+	b := testBitbucketBackendWithWorkspace(emailPayload, workspacePayload)
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
@@ -136,6 +167,97 @@ func TestBitbucketProviderGetEmailAddressAndGroup(t *testing.T) {
 	email, err := p.GetEmailAddress(context.Background(), session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "michael.bland@gsa.gov", email)
+}
+
+func TestBitbucketProviderGetEmailAddressMultipleWorkspaces(t *testing.T) {
+	emailPayload := `{"values": [ { "email": "michael.bland@gsa.gov", "is_primary": true } ] }`
+	// target workspace is the last entry to exercise the full loop
+	workspacePayload := `{"values": [
+		{ "type": "workspace_access", "workspace": { "slug": "other-team-1" } },
+		{ "type": "workspace_access", "workspace": { "slug": "other-team-2" } },
+		{ "type": "workspace_access", "workspace": { "slug": "bioinformatics" } }
+	]}`
+	b := testBitbucketBackendWithWorkspace(emailPayload, workspacePayload)
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testBitbucketProvider(bURL.Host, "bioinformatics", "")
+
+	session := CreateAuthorizedSession()
+	email, err := p.GetEmailAddress(context.Background(), session)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "michael.bland@gsa.gov", email)
+}
+
+func TestBitbucketProviderWorkspaceNotInList(t *testing.T) {
+	emailPayload := `{"values": [ { "email": "michael.bland@gsa.gov", "is_primary": true } ] }`
+	workspacePayload := `{"values": [
+		{ "type": "workspace_access", "workspace": { "slug": "other-team-1" } },
+		{ "type": "workspace_access", "workspace": { "slug": "other-team-2" } }
+	]}`
+	b := testBitbucketBackendWithWorkspace(emailPayload, workspacePayload)
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testBitbucketProvider(bURL.Host, "bioinformatics", "")
+
+	session := CreateAuthorizedSession()
+	email, err := p.GetEmailAddress(context.Background(), session)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "", email)
+}
+
+func TestBitbucketProviderGetEmailAddressAndRepository(t *testing.T) {
+	emailPayload := `{"values": [ { "email": "michael.bland@gsa.gov", "is_primary": true } ] }`
+	repoPayload := `{"values": [ { "full_name": "bioinformatics/myrepo" } ] }`
+	b := testBitbucketBackendFull(emailPayload, "", repoPayload)
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testBitbucketProvider(bURL.Host, "", "bioinformatics/myrepo")
+
+	session := CreateAuthorizedSession()
+	email, err := p.GetEmailAddress(context.Background(), session)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "michael.bland@gsa.gov", email)
+}
+
+func TestBitbucketProviderGetEmailAddressMultipleRepositories(t *testing.T) {
+	emailPayload := `{"values": [ { "email": "michael.bland@gsa.gov", "is_primary": true } ] }`
+	// target repo is the last entry to exercise the full loop
+	repoPayload := `{"values": [
+		{ "full_name": "bioinformatics/other-repo-1" },
+		{ "full_name": "bioinformatics/other-repo-2" },
+		{ "full_name": "bioinformatics/myrepo" }
+	]}`
+	b := testBitbucketBackendFull(emailPayload, "", repoPayload)
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testBitbucketProvider(bURL.Host, "", "bioinformatics/myrepo")
+
+	session := CreateAuthorizedSession()
+	email, err := p.GetEmailAddress(context.Background(), session)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "michael.bland@gsa.gov", email)
+}
+
+func TestBitbucketProviderRepositoryNotInList(t *testing.T) {
+	emailPayload := `{"values": [ { "email": "michael.bland@gsa.gov", "is_primary": true } ] }`
+	repoPayload := `{"values": [
+		{ "full_name": "bioinformatics/other-repo-1" },
+		{ "full_name": "bioinformatics/other-repo-2" }
+	]}`
+	b := testBitbucketBackendFull(emailPayload, "", repoPayload)
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testBitbucketProvider(bURL.Host, "", "bioinformatics/myrepo")
+
+	session := CreateAuthorizedSession()
+	email, err := p.GetEmailAddress(context.Background(), session)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "", email)
 }
 
 // Note that trying to trigger the "failed building request" case is not
