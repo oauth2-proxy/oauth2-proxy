@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.3
 
+  - [#3477](https://github.com/oauth2-proxy/oauth2-proxy/pull/3477) Fix [Bitbucket Provider]: bitbucket auth failure due to Bitbucket OAuth 2.0 [changes on May 4th](https://developer.atlassian.com/cloud/bitbucket/changelog/#CHANGE-3052), 2026 
+
 # V7.15.3
 
 ## Release Highlights
