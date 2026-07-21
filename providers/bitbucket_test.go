@@ -50,7 +50,7 @@ func testBitbucketBackend(payload string) *httptest.Server {
 			if !paths[url.Path] {
 				log.Printf("%s not in %+v\n", url.Path, paths)
 				w.WriteHeader(404)
-			} else if !IsAuthorizedInURL(r.URL) {
+			} else if !IsAuthorizedInHeader(r.Header) {
 				w.WriteHeader(403)
 			} else {
 				w.WriteHeader(200)
