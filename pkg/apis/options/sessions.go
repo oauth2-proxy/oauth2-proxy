@@ -5,6 +5,7 @@ type SessionOptions struct {
 	Type   string             `flag:"session-store-type" cfg:"session_store_type"`
 	Cookie CookieStoreOptions `cfg:",squash"`
 	Redis  RedisStoreOptions  `cfg:",squash"`
+	HTTP   HTTPStoreOptions   `cfg:",squash"`
 }
 
 // CookieSessionStoreType is used to indicate the CookieSessionStore should be
@@ -14,6 +15,10 @@ var CookieSessionStoreType = "cookie"
 // RedisSessionStoreType is used to indicate the RedisSessionStore should be
 // used for storing sessions.
 var RedisSessionStoreType = "redis"
+
+// HTTPSessionStoreType is used to indicate the HTTPSessionStore should be
+// used for storing sessions.
+var HTTPSessionStoreType = "http"
 
 // CookieStoreOptions contains configuration options for the CookieSessionStore.
 type CookieStoreOptions struct {
@@ -34,6 +39,12 @@ type RedisStoreOptions struct {
 	CAPath                 string   `flag:"redis-ca-path" cfg:"redis_ca_path"`
 	InsecureSkipTLSVerify  bool     `flag:"redis-insecure-skip-tls-verify" cfg:"redis_insecure_skip_tls_verify"`
 	IdleTimeout            int      `flag:"redis-connection-idle-timeout" cfg:"redis_connection_idle_timeout"`
+}
+
+// HTTPStoreOptions contains configuration options for the HTTPSessionStore.
+type HTTPStoreOptions struct {
+	BaseURL string `flag:"http-store-base-url" cfg:"http_store_base_url"`
+	APIKey  string `flag:"http-store-api-key" cfg:"http_store_api_key"`
 }
 
 func sessionOptionsDefaults() SessionOptions {
