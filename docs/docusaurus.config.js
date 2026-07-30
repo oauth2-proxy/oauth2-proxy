@@ -105,7 +105,7 @@ const config = {
             dropdownActiveClassDisabled: true,
           },
           {
-            href: 'https://gophers.slack.com/messages/CM2RSS25N',
+            href: 'https://cloud-native.slack.com/archives/C098Y5URZ2N',
             label: 'Slack',
             position: 'right',
           },

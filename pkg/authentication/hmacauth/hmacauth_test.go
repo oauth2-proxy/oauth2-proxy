@@ -286,7 +286,7 @@ func TestSendAuthenticatedPostRequestToServer(t *testing.T) {
 	upstream := httptest.NewServer(
 		http.HandlerFunc(authenticator.Authenticate))
 
-	req, err := http.NewRequest("POST", upstream.URL+"/foo/bar",
+	req, err := http.NewRequest(http.MethodPost, upstream.URL+"/foo/bar",
 		io.NopCloser(&fakeNetConn{reqBody: payload}))
 	if err != nil {
 		panic(err)

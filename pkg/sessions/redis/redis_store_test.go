@@ -1,6 +1,7 @@
 package redis
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/Bose/minisentinel"
@@ -246,6 +247,55 @@ var _ = Describe("Redis SessionStore Tests", func() {
 	})
 
 	Describe("Redis URL Parsing", func() {
+		It("should prefer configured username password and timeout over URL parameters", func() {
+			configuredUsername := "configured-user"
+			configuredPassword := "configured-password"
+			configuredIdleTimeout := 90
+
+			urlUsername := "url-user"
+			urlPassword := "url-password"
+			urlIdleTimeout := 30
+
+			redisClient, err := buildStandaloneClient(options.RedisStoreOptions{
+				ConnectionURL: fmt.Sprintf("redis://%s:%s@localhost:6379?conn_max_idle_time=%d", urlUsername, urlPassword, urlIdleTimeout),
+				Username:      configuredUsername,
+				Password:      configuredPassword,
+				IdleTimeout:   configuredIdleTimeout,
+			})
+			Expect(err).ToNot(HaveOccurred())
+
+			rc, ok := redisClient.(*client)
+			Expect(ok).To(BeTrue())
+			Expect(rc.Close()).To(Succeed())
+
+			redisOptions := rc.Options()
+			Expect(redisOptions.Username).To(Equal(configuredUsername))
+			Expect(redisOptions.Password).To(Equal(configuredPassword))
+			Expect(redisOptions.ConnMaxIdleTime).To(Equal(time.Duration(configuredIdleTimeout) * time.Second))
+		})
+		It("should prefer URL username password and timeout when configured values are empty", func() {
+			urlUsername := "url-user"
+			urlPassword := "url-password"
+			urlIdleTimeout := 30
+
+			redisClient, err := buildStandaloneClient(options.RedisStoreOptions{
+				ConnectionURL: fmt.Sprintf("redis://%s:%s@localhost:6379?conn_max_idle_time=%d", urlUsername, urlPassword, urlIdleTimeout),
+				Username:      "",
+				Password:      "",
+				IdleTimeout:   0,
+			})
+			Expect(err).ToNot(HaveOccurred())
+
+			rc, ok := redisClient.(*client)
+			Expect(ok).To(BeTrue())
+			Expect(rc.Close()).To(Succeed())
+
+			redisOptions := rc.Options()
+			Expect(redisOptions.Username).To(Equal(urlUsername))
+			Expect(redisOptions.Password).To(Equal(urlPassword))
+			Expect(redisOptions.ConnMaxIdleTime).To(Equal(time.Duration(urlIdleTimeout) * time.Second))
+		})
+
 		It("should parse valid redis URL", func() {
 			addrs, opts, err := parseRedisURLs([]string{"redis://localhost:6379"})
 			Expect(err).ToNot(HaveOccurred())

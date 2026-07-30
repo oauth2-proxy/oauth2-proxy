@@ -5,9 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
-
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -32,8 +31,13 @@ var _ = Describe("Cookie Tests", func() {
 
 				if in.xForwardedHost != "" {
 					req.Header.Add("X-Forwarded-Host", in.xForwardedHost)
+					req.RemoteAddr = "127.0.0.1:4180"
+					trustedProxies, err := ip.ParseNetSet([]string{"127.0.0.1"})
+					Expect(err).ToNot(HaveOccurred())
+
 					req = middlewareapi.AddRequestScope(req, &middlewareapi.RequestScope{
-						ReverseProxy: true,
+						ReverseProxy:   true,
+						TrustedProxies: trustedProxies,
 					})
 				}
 
@@ -82,16 +86,12 @@ var _ = Describe("Cookie Tests", func() {
 	Context("MakeCookieFromOptions", func() {
 		type makeCookieFromOptionsTableInput struct {
 			host           string
-			name           string
-			value          string
-			opts           options.Cookie
-			expiration     time.Duration
+			opts           CookieOptions
 			now            time.Time
 			expectedOutput int
 		}
 
 		validName := "_oauth2_proxy"
-		validSecret := "secretthirtytwobytes+abcdefghijk"
 		domains := []string{"www.cookies.test"}
 
 		now := time.Now()
@@ -106,62 +106,50 @@ var _ = Describe("Cookie Tests", func() {
 				)
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(MakeCookieFromOptions(req, in.name, in.value, &in.opts, in.expiration).MaxAge).To(Equal(in.expectedOutput))
+				Expect(MakeCookieFromOptions(req, &in.opts).MaxAge).To(Equal(in.expectedOutput))
 			},
 			Entry("persistent cookie", makeCookieFromOptionsTableInput{
-				host:  "www.cookies.test",
-				name:  validName,
-				value: "1",
-				opts: options.Cookie{
-					Name:     validName,
-					Secret:   validSecret,
-					Domains:  domains,
-					Path:     "",
-					Expire:   time.Hour,
-					Refresh:  15 * time.Minute,
-					Secure:   true,
-					HTTPOnly: false,
-					SameSite: "",
+				host: "www.cookies.test",
+				opts: CookieOptions{
+					Name:       validName,
+					Value:      "1",
+					Domains:    domains,
+					Expiration: 15 * time.Minute,
+					SameSite:   "",
+					Path:       "",
+					HTTPOnly:   false,
+					Secure:     true,
 				},
-				expiration:     15 * time.Minute,
 				now:            now,
 				expectedOutput: int((15 * time.Minute).Seconds()),
 			}),
 			Entry("persistent cookie to be cleared", makeCookieFromOptionsTableInput{
-				host:  "www.cookies.test",
-				name:  validName,
-				value: "1",
-				opts: options.Cookie{
-					Name:     validName,
-					Secret:   validSecret,
-					Domains:  domains,
-					Path:     "",
-					Expire:   time.Hour * -1,
-					Refresh:  15 * time.Minute,
-					Secure:   true,
-					HTTPOnly: false,
-					SameSite: "",
+				host: "www.cookies.test",
+				opts: CookieOptions{
+					Name:       validName,
+					Value:      "1",
+					Domains:    domains,
+					Expiration: time.Hour * -1,
+					SameSite:   "",
+					Path:       "",
+					HTTPOnly:   false,
+					Secure:     true,
 				},
-				expiration:     time.Hour * -1,
 				now:            now,
 				expectedOutput: -1,
 			}),
 			Entry("session cookie", makeCookieFromOptionsTableInput{
-				host:  "www.cookies.test",
-				name:  validName,
-				value: "1",
-				opts: options.Cookie{
-					Name:     validName,
-					Secret:   validSecret,
-					Domains:  domains,
-					Path:     "",
-					Expire:   0,
-					Refresh:  15 * time.Minute,
-					Secure:   true,
-					HTTPOnly: false,
-					SameSite: "",
+				host: "www.cookies.test",
+				opts: CookieOptions{
+					Name:       validName,
+					Value:      "1",
+					Domains:    domains,
+					Expiration: 0,
+					SameSite:   "",
+					Path:       "",
+					HTTPOnly:   false,
+					Secure:     true,
 				},
-				expiration:     0,
 				now:            now,
 				expectedOutput: expectedMaxAge,
 			}),

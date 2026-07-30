@@ -2,6 +2,9 @@ package oidc
 
 import (
 	"context"
+	"encoding/json"
+	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"time"
@@ -195,6 +198,21 @@ var _ = Describe("ProviderVerifier", func() {
 		Expect(idToken.Subject).To(Equal(claims.Subject))
 	},
 		Entry("with the default opts and claims", &verifierTableInput{}),
+		Entry("with skip discovery and an allowed signing algorithm", &verifierTableInput{
+			modifyOpts: func(p *ProviderVerifierOptions) {
+				p.SkipDiscovery = true
+				p.JWKsURL = m.JWKSEndpoint()
+				p.SupportedSigningAlgs = []string{"RS256"}
+			},
+		}),
+		Entry("with skip discovery and a disallowed signing algorithm", &verifierTableInput{
+			modifyOpts: func(p *ProviderVerifierOptions) {
+				p.SkipDiscovery = true
+				p.JWKsURL = m.JWKSEndpoint()
+				p.SupportedSigningAlgs = []string{"HS256"}
+			},
+			expectedError: "failed to verify token: oidc: malformed jwt: unexpected signature algorithm \"RS256\"; expected [\"HS256\"]",
+		}),
 		Entry("when the audience is mismatched", &verifierTableInput{
 			modifyClaims: func(j *jwt.RegisteredClaims) {
 				j.Audience = jwt.ClaimStrings{"OtherClient"}
@@ -230,4 +248,78 @@ var _ = Describe("ProviderVerifier", func() {
 			expectedError: "failed to verify token: oidc: token is expired",
 		}),
 	)
+
+	Describe("intersectSigningAlgs", func() {
+		DescribeTable("when determining allowed signing algorithms", func(discoveredSigningAlgs, configuredSigningAlgs, expected []string, expectedError string) {
+			actual, err := intersectSigningAlgs(discoveredSigningAlgs, configuredSigningAlgs)
+			Expect(actual).To(Equal(expected))
+			if len(expectedError) > 0 {
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal(expectedError))
+			}
+		},
+			Entry("returns discovered values when no configured values are provided", []string{"RS256", "HS256"}, []string(nil), []string{"RS256", "HS256"}, ""),
+			Entry("returns configured values when no discovered values are provided", []string(nil), []string{"RS256"}, []string{"RS256"}, ""),
+			Entry("returns the configured order of the intersection", []string{"RS256", "HS256", "EdDSA"}, []string{"EdDSA", "RS256"}, []string{"EdDSA", "RS256"}, ""),
+			Entry("returns an error when there is no intersection", []string{"RS256", "HS256"}, []string{"EdDSA"}, nil, "no supported signing algorithms in common between provider and configuration: discovered=[RS256 HS256], configured=[EdDSA]"),
+		)
+	})
+
+	It("uses the intersection between discovered and configured signing algorithms", func() {
+		customServer, err := mockoidc.NewServer(nil)
+		Expect(err).ToNot(HaveOccurred())
+		customServer.AddMiddleware(newConfiguredSigningAlgsIssuerMiddleware(customServer, []string{"RS256", "HS256"}))
+
+		listener, err := net.Listen("tcp", "127.0.0.1:0")
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(customServer.Start(listener, nil)).To(Succeed())
+		defer func() {
+			Expect(customServer.Shutdown()).To(Succeed())
+		}()
+
+		pv, err := NewProviderVerifier(context.Background(), ProviderVerifierOptions{
+			AudienceClaims:       []string{"aud"},
+			ClientID:             customServer.Config().ClientID,
+			ExtraAudiences:       []string{},
+			IssuerURL:            customServer.Issuer(),
+			SupportedSigningAlgs: []string{"HS256"},
+		})
+		Expect(err).ToNot(HaveOccurred())
+
+		rawIDToken, err := customServer.Keypair.SignJWT(jwt.RegisteredClaims{
+			Audience:  jwt.ClaimStrings{customServer.Config().ClientID},
+			Issuer:    customServer.Issuer(),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(1 * time.Hour)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			Subject:   "user",
+		})
+		Expect(err).ToNot(HaveOccurred())
+
+		_, err = pv.Verifier().Verify(context.Background(), rawIDToken)
+		Expect(err).To(MatchError(HavePrefix("failed to verify token: oidc: malformed jwt: unexpected signature algorithm \"RS256\"; expected [\"HS256\"]")))
+	})
 })
+
+func newConfiguredSigningAlgsIssuerMiddleware(m *mockoidc.MockOIDC, supportedSigningAlgs []string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+			provider := providerJSON{
+				Issuer:               m.Issuer(),
+				AuthURL:              m.AuthorizationEndpoint(),
+				TokenURL:             m.TokenEndpoint(),
+				JWKsURL:              m.JWKSEndpoint(),
+				UserInfoURL:          m.UserinfoEndpoint(),
+				SupportedSigningAlgs: supportedSigningAlgs,
+			}
+
+			data, err := json.Marshal(provider)
+			if err != nil {
+				rw.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
+			_, _ = rw.Write(data)
+		})
+	}
+}

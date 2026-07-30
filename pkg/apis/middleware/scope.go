@@ -2,9 +2,12 @@ package middleware
 
 import (
 	"context"
+	"net"
 	"net/http"
+	"strings"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
 )
 
 type scopeKey string
@@ -18,8 +21,12 @@ const RequestScopeKey scopeKey = "request-scope"
 // within the chain.
 type RequestScope struct {
 	// ReverseProxy tracks whether OAuth2-Proxy is operating in reverse proxy
-	// mode and if request `X-Forwarded-*` headers should be trusted
+	// mode and if request `X-Forwarded-*` headers may be trusted
 	ReverseProxy bool
+
+	// TrustedProxies tracks which direct callers are allowed to supply
+	// forwarded headers when ReverseProxy mode is enabled.
+	TrustedProxies *ip.NetSet
 
 	// RequestID is set to the request's `X-Request-Id` header if set.
 	// Otherwise a random UUID is set.
@@ -57,4 +64,44 @@ func GetRequestScope(req *http.Request) *RequestScope {
 func AddRequestScope(req *http.Request, scope *RequestScope) *http.Request {
 	ctx := context.WithValue(req.Context(), RequestScopeKey, scope)
 	return req.WithContext(ctx)
+}
+
+// CanTrustForwardedHeaders returns whether forwarded headers should be
+// processed for this request.
+func (s *RequestScope) CanTrustForwardedHeaders(req *http.Request) bool {
+	if s == nil || req == nil || !s.ReverseProxy || s.TrustedProxies == nil {
+		return false
+	}
+
+	if isUnixSocketRemoteAddr(req.RemoteAddr) {
+		return true
+	}
+
+	remoteIP := parseRemoteAddrIP(req.RemoteAddr)
+	if remoteIP == nil {
+		return false
+	}
+
+	return s.TrustedProxies.Has(remoteIP)
+}
+
+func parseRemoteAddrIP(remoteAddr string) net.IP {
+	if remoteAddr == "" {
+		return nil
+	}
+
+	if ip := net.ParseIP(remoteAddr); ip != nil {
+		return ip
+	}
+
+	host, _, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		return nil
+	}
+
+	return net.ParseIP(host)
+}
+
+func isUnixSocketRemoteAddr(remoteAddr string) bool {
+	return remoteAddr == "@" || strings.HasPrefix(remoteAddr, "/")
 }

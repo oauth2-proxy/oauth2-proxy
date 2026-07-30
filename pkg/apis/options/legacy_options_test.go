@@ -27,6 +27,7 @@ var _ = Describe("Legacy Options", func() {
 			legacyOpts.LegacyUpstreams.Upstreams = []string{"http://foo.bar/baz", "file:///var/lib/website#/bar", "static://204"}
 			legacyOpts.LegacyProvider.ClientID = "oauth-proxy"
 			legacyOpts.LegacyUpstreams.DisableKeepAlives = false
+			legacyOpts.LegacyProvider.OIDCEnabledSigningAlgs = []string{"RS256", "EdDSA"}
 
 			staticCode := 204
 			opts.UpstreamServers = UpstreamConfig{
@@ -128,6 +129,7 @@ var _ = Describe("Legacy Options", func() {
 			opts.Providers[0].OIDCConfig.ExtraAudiences = []string{}
 			opts.Providers[0].OIDCConfig.InsecureSkipNonce = ptr.To(true)
 			opts.Providers[0].OIDCConfig.InsecureSkipIssuerVerification = ptr.To(false)
+			opts.Providers[0].OIDCConfig.EnabledSigningAlgs = []string{"RS256", "EdDSA"}
 			opts.Providers[0].LoginURLParameters = []LoginURLParameter{
 				{Name: "approval_prompt", Default: []string{"force"}},
 			}

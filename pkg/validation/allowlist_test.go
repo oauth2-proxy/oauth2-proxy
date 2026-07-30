@@ -23,6 +23,11 @@ var _ = Describe("Allowlist", func() {
 		errStrings []string
 	}
 
+	type validateTrustedProxyIPsTableInput struct {
+		trustedProxyIPs []string
+		errStrings      []string
+	}
+
 	DescribeTable("validateRoutes",
 		func(r *validateRoutesTableInput) {
 			opts := &options.Options{
@@ -118,6 +123,31 @@ var _ = Describe("Allowlist", func() {
 			errStrings: []string{
 				"trusted_ips[0] ([::1]) could not be recognized",
 				"trusted_ips[1] (alkwlkbn/32) could not be recognized",
+			},
+		}),
+	)
+
+	DescribeTable("validateTrustedProxyIPs",
+		func(t *validateTrustedProxyIPsTableInput) {
+			opts := &options.Options{
+				TrustedProxyIPs: t.trustedProxyIPs,
+			}
+			Expect(validateTrustedProxyIPs(opts)).To(ConsistOf(t.errStrings))
+		},
+		Entry("Valid trusted proxy IPs", &validateTrustedProxyIPsTableInput{
+			trustedProxyIPs: []string{
+				"127.0.0.1",
+				"10.32.0.1/32",
+				"::1",
+				"2a12:105:ee7:9234:0:0:0:0/64",
+			},
+			errStrings: []string{},
+		}),
+		Entry("Invalid trusted proxy IPs", &validateTrustedProxyIPsTableInput{
+			trustedProxyIPs: []string{"[::1]", "alkwlkbn/32"},
+			errStrings: []string{
+				"trusted_proxy_ips[0] ([::1]) could not be recognized",
+				"trusted_proxy_ips[1] (alkwlkbn/32) could not be recognized",
 			},
 		}),
 	)

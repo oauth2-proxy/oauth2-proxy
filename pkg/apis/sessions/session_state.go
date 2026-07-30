@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
 	"github.com/pierrec/lz4/v4"
 	"github.com/vmihailenco/msgpack/v5"
 )
@@ -27,6 +28,9 @@ type SessionState struct {
 	User              string   `msgpack:"u,omitempty"`
 	Groups            []string `msgpack:"g,omitempty"`
 	PreferredUsername string   `msgpack:"pu,omitempty"`
+
+	// Additional claims
+	AdditionalClaims map[string]interface{} `msgpack:"ac,omitempty"`
 
 	// Internal helpers, not serialized
 	Clock     func() time.Time `msgpack:"-"` // override for time.Now, for testing
@@ -123,6 +127,8 @@ func (s *SessionState) String() string {
 	}
 	if s.RefreshToken != "" {
 		o += " refresh_token:true"
+	} else {
+		o += " refresh_token:false"
 	}
 	if len(s.Groups) > 0 {
 		o += fmt.Sprintf(" groups:%v", s.Groups)
@@ -156,8 +162,18 @@ func (s *SessionState) GetClaim(claim string) []string {
 	case "preferred_username":
 		return []string{s.PreferredUsername}
 	default:
-		return []string{}
+		return s.getAdditionalClaim(claim)
 	}
+}
+
+func (s *SessionState) getAdditionalClaim(claim string) []string {
+	if value, ok := s.AdditionalClaims[claim]; ok {
+		var result []string
+		if err := util.CoerceClaim(value, &result); err == nil {
+			return result
+		}
+	}
+	return []string{}
 }
 
 // CheckNonce compares the Nonce against a potential hash of it

@@ -76,7 +76,17 @@ func (s *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) error {
 
 	for _, c := range req.Cookies() {
 		if cookieNameRegex.MatchString(c.Name) {
-			clearCookie := s.makeCookie(req, c.Name, "", time.Hour*-1)
+			sessionCookieOptions := &pkgcookies.CookieOptions{
+				Name:       c.Name,
+				Value:      "",
+				Domains:    s.Cookie.Domains,
+				Expiration: time.Hour * -1,
+				SameSite:   s.Cookie.SameSite,
+				Path:       s.Cookie.Path,
+				HTTPOnly:   s.Cookie.HTTPOnly,
+				Secure:     s.Cookie.Secure,
+			}
+			clearCookie := pkgcookies.MakeCookieFromOptions(req, sessionCookieOptions)
 
 			http.SetCookie(rw, clearCookie)
 		}
@@ -117,7 +127,7 @@ func (s *SessionStore) setSessionCookie(rw http.ResponseWriter, req *http.Reques
 	return nil
 }
 
-// makeSessionCookie creates an http.Cookie containing the authenticated user's
+// makeSessionCookie creates a http.Cookie containing the authenticated user's
 // authentication details
 func (s *SessionStore) makeSessionCookie(req *http.Request, value []byte, now time.Time) ([]*http.Cookie, error) {
 	strValue := string(value)
@@ -132,21 +142,21 @@ func (s *SessionStore) makeSessionCookie(req *http.Request, value []byte, now ti
 			return nil, err
 		}
 	}
-	c := s.makeCookie(req, s.Cookie.Name, strValue, s.Cookie.Expire)
+	sessionCookieOptions := &pkgcookies.CookieOptions{
+		Name:       s.Cookie.Name,
+		Value:      strValue,
+		Domains:    s.Cookie.Domains,
+		Expiration: s.Cookie.Expire,
+		SameSite:   s.Cookie.SameSite,
+		Path:       s.Cookie.Path,
+		HTTPOnly:   s.Cookie.HTTPOnly,
+		Secure:     s.Cookie.Secure,
+	}
+	c := pkgcookies.MakeCookieFromOptions(req, sessionCookieOptions)
 	if len(c.String()) > maxCookieLength {
 		return splitCookie(c), nil
 	}
 	return []*http.Cookie{c}, nil
-}
-
-func (s *SessionStore) makeCookie(req *http.Request, name string, value string, expiration time.Duration) *http.Cookie {
-	return pkgcookies.MakeCookieFromOptions(
-		req,
-		name,
-		value,
-		s.Cookie,
-		expiration,
-	)
 }
 
 // NewCookieSessionStore initialises a new instance of the SessionStore from

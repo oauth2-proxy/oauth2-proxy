@@ -4,9 +4,26 @@ import (
 	"fmt"
 	"os"
 
+	jose "github.com/go-jose/go-jose/v4"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 )
+
+var supportedOIDCSigningAlgorithms = map[jose.SignatureAlgorithm]struct{}{
+	jose.EdDSA: {},
+	jose.HS256: {},
+	jose.HS384: {},
+	jose.HS512: {},
+	jose.RS256: {},
+	jose.RS384: {},
+	jose.RS512: {},
+	jose.ES256: {},
+	jose.ES384: {},
+	jose.ES512: {},
+	jose.PS256: {},
+	jose.PS384: {},
+	jose.PS512: {},
+}
 
 // validateProviders is the initial validation migration for multiple providrers
 // It currently includes only logic that can verify the providers one by one and does not break the valdation pipe
@@ -57,6 +74,22 @@ func validateProvider(provider options.Provider, providerIDs map[string]struct{}
 
 	if provider.Type == "entra-id" {
 		msgs = append(msgs, validateEntraConfig(provider)...)
+	}
+
+	msgs = append(msgs, validateOIDCSigningAlgorithms(provider)...)
+
+	return msgs
+}
+
+func validateOIDCSigningAlgorithms(provider options.Provider) []string {
+	msgs := []string{}
+
+	for _, algorithm := range provider.OIDCConfig.EnabledSigningAlgs {
+		if _, ok := supportedOIDCSigningAlgorithms[jose.SignatureAlgorithm(algorithm)]; ok {
+			continue
+		}
+
+		msgs = append(msgs, fmt.Sprintf("provider %s has invalid EnabledSigningAlgs entry %q", provider.ID, algorithm))
 	}
 
 	return msgs
@@ -132,7 +165,8 @@ func validateEntraConfig(provider options.Provider) []string {
 			return msgs
 		}
 
-		_, err := os.ReadFile(federatedTokenPath)
+		// #nosec G703 -- AZURE_FEDERATED_TOKEN_FILE is set by the operator, not user input
+		_, err := os.Stat(federatedTokenPath)
 		if err != nil {
 			msgs = append(msgs, "could not read entra federated token file")
 		}

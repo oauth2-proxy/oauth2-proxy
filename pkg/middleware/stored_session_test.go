@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"sync"
+	"testing"
 	"time"
 
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
@@ -800,4 +801,54 @@ func (f *fakeSessionStore) Clear(rw http.ResponseWriter, req *http.Request) erro
 
 func (f *fakeSessionStore) VerifyConnection(_ context.Context) error {
 	return nil
+}
+
+// TestIsFatalRefreshError tests the isFatalRefreshError function to ensure
+// it correctly identifies fatal OAuth2 errors that should invalidate a session.
+func TestIsFatalRefreshError(t *testing.T) {
+	tests := []struct {
+		name     string
+		err      error
+		expected bool
+	}{
+		{
+			name:     "nil error",
+			err:      nil,
+			expected: false,
+		},
+		{
+			name:     "invalid_grant error",
+			err:      fmt.Errorf("failed to get token: oauth2: \"invalid_grant\" \"Session not active\""),
+			expected: true,
+		},
+		{
+			name:     "invalid_client error",
+			err:      fmt.Errorf("invalid_client: client not found"),
+			expected: true,
+		},
+		{
+			name:     "network timeout - not fatal",
+			err:      fmt.Errorf("Post \"https://keycloak/token\": dial tcp: connect: connection refused"),
+			expected: false,
+		},
+		{
+			name:     "server error - not fatal",
+			err:      fmt.Errorf("unexpected status code 500"),
+			expected: false,
+		},
+		{
+			name:     "generic refresh error - not fatal",
+			err:      fmt.Errorf("error refreshing tokens: context deadline exceeded"),
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isFatalRefreshError(tt.err)
+			if result != tt.expected {
+				t.Errorf("isFatalRefreshError(%v) = %v, want %v", tt.err, result, tt.expected)
+			}
+		})
+	}
 }

@@ -24,7 +24,7 @@ var (
 	serverAddr     string
 	unixServer     *httptest.Server
 	unixServerAddr string
-	invalidServer  = "http://::1"
+	invalidServer  = "http://127.0.0.1:1"
 )
 
 func TestUpstreamSuite(t *testing.T) {

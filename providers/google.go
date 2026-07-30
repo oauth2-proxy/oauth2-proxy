@@ -219,7 +219,7 @@ func (p *GoogleProvider) Redeem(ctx context.Context, redirectURL, code, codeVeri
 
 	err = requests.New(p.RedeemURL.String()).
 		WithContext(ctx).
-		WithMethod("POST").
+		WithMethod(http.MethodPost).
 		WithBody(bytes.NewBufferString(params.Encode())).
 		SetHeader("Content-Type", "application/x-www-form-urlencoded").
 		Do().
@@ -543,7 +543,7 @@ func (p *GoogleProvider) redeemRefreshToken(ctx context.Context, s *sessions.Ses
 
 	err = requests.New(p.RedeemURL.String()).
 		WithContext(ctx).
-		WithMethod("POST").
+		WithMethod(http.MethodPost).
 		WithBody(bytes.NewBufferString(params.Encode())).
 		SetHeader("Content-Type", "application/x-www-form-urlencoded").
 		Do().

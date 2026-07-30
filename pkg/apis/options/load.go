@@ -145,7 +145,7 @@ func loadAndSubstituteEnvs(configFileName string) ([]byte, error) {
 func registerFlags(v *viper.Viper, prefix string, flagSet *pflag.FlagSet, options interface{}) error {
 	val := reflect.ValueOf(options)
 	var typ reflect.Type
-	if val.Kind() == reflect.Ptr {
+	if val.Kind() == reflect.Pointer {
 		typ = val.Elem().Type()
 	} else {
 		typ = val.Type()

@@ -76,7 +76,7 @@ var _ = Describe("Claim Extractor Suite", func() {
 			func(in newClaimExtractorTableInput) {
 				_, err := NewClaimExtractor(context.Background(), in.idToken, nil, nil)
 				if in.expectedError != nil {
-					Expect(err).To(MatchError(in.expectedError))
+					Expect(err).To(MatchError(in.expectedError.Error()))
 				} else {
 					Expect(err).ToNot(HaveOccurred())
 				}
@@ -405,7 +405,7 @@ var _ = Describe("Claim Extractor Suite", func() {
 			into:          "",
 			expectExists:  false,
 			expectedValue: "",
-			expectedError: errors.New("could no coerce claim: unknown type for destination: string"),
+			expectedError: errors.New("could not coerce claim: unknown type for destination: string"),
 		}),
 		Entry("flattens a complex claim value into a JSON string", getClaimIntoTableInput{
 			testClaimExtractorOpts: testClaimExtractorOpts{
@@ -448,53 +448,6 @@ var _ = Describe("Claim Extractor Suite", func() {
 			expectExists:  false,
 			expectedValue: stringPointer(""),
 			expectedError: errors.New("could not get claim \"user\": failed to fetch claims from profile URL: error making request to profile URL: unexpected status \"403\": Unauthorized"),
-		}),
-	)
-
-	type coerceClaimTableInput struct {
-		value         interface{}
-		dst           interface{}
-		expectedDst   interface{}
-		expectedError error
-	}
-
-	DescribeTable("coerceClaim",
-		func(in coerceClaimTableInput) {
-			err := coerceClaim(in.value, in.dst)
-			if in.expectedError != nil {
-				Expect(err).To(MatchError(in.expectedError))
-				return
-			}
-
-			Expect(err).ToNot(HaveOccurred())
-			Expect(in.dst).To(Equal(in.expectedDst))
-		},
-		Entry("coerces a string to a string", coerceClaimTableInput{
-			value:       "some_string",
-			dst:         stringPointer(""),
-			expectedDst: stringPointer("some_string"),
-		}),
-		Entry("coerces a slice to a string slice", coerceClaimTableInput{
-			value:       []interface{}{"a", "b"},
-			dst:         stringSlicePointer([]string{}),
-			expectedDst: stringSlicePointer([]string{"a", "b"}),
-		}),
-		Entry("coerces a bool to a bool", coerceClaimTableInput{
-			value:       true,
-			dst:         boolPointer(false),
-			expectedDst: boolPointer(true),
-		}),
-		Entry("coerces a string to a bool", coerceClaimTableInput{
-			value:       "true",
-			dst:         boolPointer(false),
-			expectedDst: boolPointer(true),
-		}),
-		Entry("coerces a map to a string", coerceClaimTableInput{
-			value: map[string]interface{}{
-				"foo": []interface{}{"bar", "baz"},
-			},
-			dst:         stringPointer(""),
-			expectedDst: stringPointer("{\"foo\":[\"bar\",\"baz\"]}"),
 		}),
 	)
 
@@ -602,10 +555,6 @@ func stringPointer(in string) *string {
 }
 
 func stringSlicePointer(in []string) *[]string {
-	return &in
-}
-
-func boolPointer(in bool) *bool {
 	return &in
 }
 
