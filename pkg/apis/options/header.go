@@ -40,10 +40,10 @@ type Header struct {
 // make up the header value
 type HeaderValue struct {
 	// Allow users to load the value from a secret source
-	*SecretSource `yaml:"secretSource,omitempty"`
+	SecretSource *SecretSource `yaml:"secretSource,omitempty"`
 
 	// Allow users to load the value from a session claim
-	*ClaimSource `yaml:"claimSource,omitempty"`
+	ClaimSource *ClaimSource `yaml:"claimSource,omitempty"`
 }
 
 // ClaimSource allows loading a header value from a claim within the session
