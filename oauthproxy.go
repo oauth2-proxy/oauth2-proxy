@@ -630,7 +630,7 @@ func (p *OAuthProxy) isTrustedIP(req *http.Request) bool {
 		return false
 	}
 
-	remoteAddr, err := ip.GetClientIP(p.realClientIPParser, req)
+	remoteAddr, err := ip.GetClientIP(p.realClientIPParser, req, requestTrustedProxies(req))
 	if err != nil {
 		logger.Errorf("Error obtaining real IP for trusted IP list: %v", err)
 		// Possibly spoofed X-Real-IP header
@@ -642,6 +642,15 @@ func (p *OAuthProxy) isTrustedIP(req *http.Request) bool {
 	}
 
 	return p.trustedIPs.Has(remoteAddr)
+}
+
+// requestTrustedProxies returns the set of proxies trusted to supply forwarded headers for
+// req, as computed for the request's RequestScope, or nil if no scope/restriction is set.
+func requestTrustedProxies(req *http.Request) ipapi.TrustedProxies {
+	if scope := middlewareapi.GetRequestScope(req); scope != nil {
+		return scope.TrustedProxies
+	}
+	return nil
 }
 
 // SignInPage writes the sign in template to the response
@@ -883,7 +892,7 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 // OAuthCallback is the OAuth2 authentication flow callback that finishes the
 // OAuth2 authentication flow
 func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
-	remoteAddr := ip.GetClientString(p.realClientIPParser, req, true)
+	remoteAddr := ip.GetClientString(p.realClientIPParser, req, true, requestTrustedProxies(req))
 
 	// finish the oauth cycle
 	// #nosec G120 -- The default max size in Go is already capped at 10MB so this would be the absolute max and is

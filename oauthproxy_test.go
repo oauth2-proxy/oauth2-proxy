@@ -2177,6 +2177,7 @@ func TestTrustedIPs(t *testing.T) {
 	tests := []struct {
 		name               string
 		trustedIPs         []string
+		trustedProxyIPs    []string
 		reverseProxy       bool
 		realClientIPHeader string
 		req                *http.Request
@@ -2337,6 +2338,25 @@ func TestTrustedIPs(t *testing.T) {
 			}(),
 			expectTrusted: false,
 		},
+		// Reported vulnerability: a client sends X-Forwarded-For set to an IP on the
+		// --trusted-ip allowlist, hoping to bypass auth. The trusted reverse proxy appends the
+		// client's real (untrusted) IP rather than replacing the header. With --trusted-proxy-ip
+		// scoped to just the proxy, oauth2-proxy must walk to the rightmost hop (the attacker's
+		// real IP) instead of trusting the client-supplied leftmost value.
+		{
+			name:               "SpoofedLeftmostHopBehindTrustedProxyIsNotTrusted",
+			trustedIPs:         []string{"9.9.9.9"},
+			trustedProxyIPs:    []string{"10.0.0.5/32"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Forwarded-For",
+			req: func() *http.Request {
+				req, _ := http.NewRequest(http.MethodGet, "/", nil)
+				req.Header.Add("X-Forwarded-For", "9.9.9.9, 6.6.6.6")
+				req.RemoteAddr = "10.0.0.5:12345"
+				return req
+			}(),
+			expectTrusted: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -2352,6 +2372,7 @@ func TestTrustedIPs(t *testing.T) {
 				},
 			}
 			opts.TrustedIPs = tt.trustedIPs
+			opts.TrustedProxyIPs = tt.trustedProxyIPs
 			opts.ReverseProxy = tt.reverseProxy
 			opts.RealClientIPHeader = tt.realClientIPHeader
 			err := validation.Validate(opts)

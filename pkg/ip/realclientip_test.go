@@ -55,40 +55,92 @@ func TestXForwardedForClientIPParser(t *testing.T) {
 	p := &xForwardedForClientIPParser{header: http.CanonicalHeaderKey("X-Forwarded-For")}
 
 	tests := []struct {
+		name        string
 		headerValue string
+		remoteAddr  net.IP
+		trusted     *NetSet
 		errString   string
 		expectedIP  net.IP
 	}{
-		{"", "", nil},
-		{"1.2.3.4", "", net.ParseIP("1.2.3.4")},
-		{"10::23", "", net.ParseIP("10::23")},
-		{"::1", "", net.ParseIP("::1")},
-		{"[::1]:1234", "", net.ParseIP("::1")},
-		{"10.0.10.11:1234", "", net.ParseIP("10.0.10.11")},
-		{"192.168.10.50, 10.0.0.1, 1.2.3.4", "", net.ParseIP("192.168.10.50")},
-		{"nil", "unable to parse ip (nil) from X-Forwarded-For header", nil},
-		{"10000.10000.10000.10000", "unable to parse ip (10000.10000.10000.10000) from X-Forwarded-For header", nil},
+		// No trusted-proxy restriction configured (nil): behaves exactly like the historical
+		// leftmost-picking parser, regardless of remoteAddr.
+		{name: "empty header", headerValue: "", expectedIP: nil},
+		{name: "single hop", headerValue: "1.2.3.4", expectedIP: net.ParseIP("1.2.3.4")},
+		{name: "single hop v6", headerValue: "10::23", expectedIP: net.ParseIP("10::23")},
+		{name: "loopback v6", headerValue: "::1", expectedIP: net.ParseIP("::1")},
+		{name: "v6 with port", headerValue: "[::1]:1234", expectedIP: net.ParseIP("::1")},
+		{name: "v4 with port", headerValue: "10.0.10.11:1234", expectedIP: net.ParseIP("10.0.10.11")},
+		{name: "no trusted proxies falls back to leftmost", headerValue: "192.168.10.50, 10.0.0.1, 1.2.3.4", expectedIP: net.ParseIP("192.168.10.50")},
+		{name: "unparseable hop", headerValue: "nil", errString: "unable to parse ip (nil) from X-Forwarded-For header"},
+		{name: "malformed hop", headerValue: "10000.10000.10000.10000", errString: "unable to parse ip (10000.10000.10000.10000) from X-Forwarded-For header"},
+
+		// The reported attack: a client sends X-Forwarded-For set to an IP it wants to
+		// impersonate; the trusted reverse proxy appends the real client IP rather than
+		// replacing the header. Only the proxy's own /32 is trusted, so the walk must stop at
+		// the rightmost (attacker) hop instead of trusting the client-supplied leftmost value.
+		{
+			name:        "spoofed leftmost hop behind a trusted proxy",
+			headerValue: "9.9.9.9, 6.6.6.6",
+			remoteAddr:  net.ParseIP("10.0.0.5"),
+			trusted:     mustNetSet(t, "10.0.0.5/32"),
+			expectedIP:  net.ParseIP("6.6.6.6"),
+		},
+		// Direct peer isn't a trusted proxy at all: the header must be ignored entirely and
+		// the real connecting peer used, since nothing in the header can be believed.
+		{
+			name:        "untrusted direct peer ignores header",
+			headerValue: "9.9.9.9",
+			remoteAddr:  net.ParseIP("6.6.6.6"),
+			trusted:     mustNetSet(t, "10.0.0.5/32"),
+			expectedIP:  net.ParseIP("6.6.6.6"),
+		},
+		// A chain of two trusted proxies (client -> ProxyA(10.0.0.6) -> ProxyB(10.0.0.5) ->
+		// us) still resolves to the real (untrusted) client hop, skipping past both trusted
+		// proxy-appended hops and the attacker's forged leftmost claim.
+		{
+			name:        "chain of trusted proxies",
+			headerValue: "9.9.9.9, 6.6.6.6, 10.0.0.6",
+			remoteAddr:  net.ParseIP("10.0.0.5"),
+			trusted:     mustNetSet(t, "10.0.0.5/32", "10.0.0.6/32"),
+			expectedIP:  net.ParseIP("6.6.6.6"),
+		},
+		// Degenerate case: every hop (and the direct peer) is itself a trusted proxy; there's
+		// no untrusted hop to find, so fall back to the oldest (leftmost) entry.
+		{
+			name:        "all hops trusted falls back to leftmost",
+			headerValue: "10.0.0.7, 10.0.0.6",
+			remoteAddr:  net.ParseIP("10.0.0.5"),
+			trusted:     mustNetSet(t, "10.0.0.5/32", "10.0.0.6/32", "10.0.0.7/32"),
+			expectedIP:  net.ParseIP("10.0.0.7"),
+		},
 	}
 
 	for _, test := range tests {
-		h := http.Header{}
-		h.Add("X-Forwarded-For", test.headerValue)
+		t.Run(test.name, func(t *testing.T) {
+			h := http.Header{}
+			h.Add("X-Forwarded-For", test.headerValue)
 
-		ip, err := p.GetRealClientIP(h)
+			var trusted ipapi.TrustedProxies
+			if test.trusted != nil {
+				trusted = test.trusted
+			}
 
-		if test.errString == "" {
-			assert.Nil(t, err)
-		} else {
-			assert.NotNil(t, err)
-			assert.Equal(t, test.errString, err.Error())
-		}
+			ip, err := p.GetRealClientIP(h, test.remoteAddr, trusted)
 
-		if test.expectedIP == nil {
-			assert.Nil(t, ip)
-		} else {
-			assert.NotNil(t, ip)
-			assert.Equal(t, test.expectedIP, ip)
-		}
+			if test.errString == "" {
+				assert.Nil(t, err)
+			} else {
+				assert.NotNil(t, err)
+				assert.Equal(t, test.errString, err.Error())
+			}
+
+			if test.expectedIP == nil {
+				assert.Nil(t, ip)
+			} else {
+				assert.NotNil(t, ip)
+				assert.Equal(t, test.expectedIP, ip)
+			}
+		})
 	}
 }
 
@@ -100,10 +152,20 @@ func TestXForwardedForClientIPParserIgnoresOthers(t *testing.T) {
 	h.Add("X-Real-IP", "10.0.0.1")
 	h.Add("X-ProxyUser-IP", "10.0.0.1")
 	h.Add("X-Forwarded-For", expectedIPString)
-	ip, err := p.GetRealClientIP(h)
+	ip, err := p.GetRealClientIP(h, nil, nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, ip)
 	assert.Equal(t, ip, net.ParseIP(expectedIPString))
+}
+
+// mustNetSet builds a *NetSet from CIDR/IP strings, failing the test on error.
+func mustNetSet(t *testing.T, ipStrs ...string) *NetSet {
+	t.Helper()
+	set, err := ParseNetSet(ipStrs)
+	if err != nil {
+		t.Fatalf("failed to build NetSet: %v", err)
+	}
+	return set
 }
 
 func TestGetRemoteIP(t *testing.T) {
@@ -174,10 +236,10 @@ func TestGetClientString(t *testing.T) {
 			RemoteAddr: test.remoteAddr,
 		}
 
-		client := GetClientString(test.parser, req, false)
+		client := GetClientString(test.parser, req, false, nil)
 		assert.Equal(t, test.expectedClient, client)
 
-		clientFull := GetClientString(test.parser, req, true)
+		clientFull := GetClientString(test.parser, req, true, nil)
 		assert.Equal(t, test.expectedClientFull, clientFull)
 	}
 }
