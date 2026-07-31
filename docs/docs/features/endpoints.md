@@ -16,6 +16,7 @@ OAuth2 Proxy responds directly to the following endpoints. All other endpoints w
 - /oauth2/callback - the URL used at the end of the OAuth cycle. The oauth app will be configured with this as the callback url.
 - /oauth2/userinfo - the URL is used to return user's email from the session in JSON format.
 - /oauth2/auth - only returns a 202 Accepted response or a 401 Unauthorized response; for use with the [Nginx `auth_request` directive](../configuration/integrations/nginx)
+- /oauth2/auth/sign_in - returns a 202 Accepted response when authenticated, or redirects to the sign-in flow when unauthenticated; for use with the [Traefik `ForwardAuth` middleware](../configuration/integrations/traefik)
 - /oauth2/static/\* - stylesheets and other dependencies used in the sign_in and error pages
 
 ### Sign out
@@ -55,6 +56,19 @@ X-Auth-Request-Redirect: https://my-oidc-provider.example.com/sign_out_page?id_t
 ### Auth
 
 This endpoint returns 202 Accepted response or a 401 Unauthorized response.
+
+It can be configured using the following query parameters:
+- `allowed_groups`: comma separated list of allowed groups
+- `allowed_email_domains`: comma separated list of allowed email domains
+- `allowed_emails`: comma separated list of allowed emails
+
+### Auth Sign In
+
+This endpoint returns a 202 Accepted response when authenticated and authorized, or redirects to the sign-in flow when there is no valid session. If the user is authenticated but fails authorization checks (e.g., not in an allowed group), it returns 403 Forbidden to prevent infinite redirect loops.
+
+When `--skip-provider-button` is set, unauthenticated requests are redirected directly to the OAuth provider. Otherwise, the oauth2-proxy sign-in page is shown.
+
+This endpoint is useful with reverse proxies like Traefik that use `ForwardAuth`, as it combines auth checking with sign-in redirect in a single endpoint — no separate error middleware is needed.
 
 It can be configured using the following query parameters:
 - `allowed_groups`: comma separated list of allowed groups
