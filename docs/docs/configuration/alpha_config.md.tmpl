@@ -143,29 +143,33 @@ injectRequestHeaders:
           claim: "email" # extract the email claim contents from the id token
   - name: "X-Static-Secret"
     values:
-      # secrets need to be encoded with base64 when directly in the yaml config but will be send decoded
       - secretSource:
-          value: "c3VwZXItc2VjcmV0"
+          value: "super-secret"
+  - name: "X-Static-Binary-Secret"
+    values:
+      - secretSource:
+          value: !!binary c3VwZXItc2VjcmV0
   - name: "X-Static-File-Secret"
+    values:
       - secretSource:
           fromFile: "/path/to/my/secret"
   - name: "X-Static-Env-Secret"
+    values:
       - secretSource:
-          value: "${MY_SECRET_ENV}" # content still needs to be base64 encoded
+          fromEnv: "MY_SECRET_ENV"
 injectResponseHeaders:
   # Following will result in a header "Authorization: Basic <user:password> (encoded)"
   - name: "Authorization"
     values:
     - claimSource:
         claim: user
-        prefix: "Basic "
         basicAuthPassword:
-          value: c3VwZXItc2VjcmV0LXBhc3N3b3Jk # base64 encoded password
+          value: super-secret-password
 ```
 
-**Value sources:** 
+**Value sources:**
 * `claimSource` - `claim` (session claims either from id token or from profile URL)
-* `secretSource` - `value` (base64), `fromFile` (file path)
+* `secretSource` - `value` (literal string or `!!binary` value), `fromEnv` (environment variable), `fromFile` (file path)
 
 **Request option:** `preserveRequestValue: true` retains existing header values
 

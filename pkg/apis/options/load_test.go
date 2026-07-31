@@ -533,6 +533,8 @@ injectResponseHeaders:
   values:
   - secretSource:
       value: secret
+  - secretSource:
+      value: !!binary YmluYXJ5LXNlY3JldA==
 `)
 
 		By("Creating a config file")
@@ -582,6 +584,11 @@ injectResponseHeaders:
 						{
 							SecretSource: &SecretSource{
 								Value: []byte("secret"),
+							},
+						},
+						{
+							SecretSource: &SecretSource{
+								Value: []byte("binary-secret"),
 							},
 						},
 					},

@@ -143,29 +143,33 @@ injectRequestHeaders:
           claim: "email" # extract the email claim contents from the id token
   - name: "X-Static-Secret"
     values:
-      # secrets need to be encoded with base64 when directly in the yaml config but will be send decoded
       - secretSource:
-          value: "c3VwZXItc2VjcmV0"
+          value: "super-secret"
+  - name: "X-Static-Binary-Secret"
+    values:
+      - secretSource:
+          value: !!binary c3VwZXItc2VjcmV0
   - name: "X-Static-File-Secret"
+    values:
       - secretSource:
           fromFile: "/path/to/my/secret"
   - name: "X-Static-Env-Secret"
+    values:
       - secretSource:
-          value: "${MY_SECRET_ENV}" # content still needs to be base64 encoded
+          fromEnv: "MY_SECRET_ENV"
 injectResponseHeaders:
   # Following will result in a header "Authorization: Basic <user:password> (encoded)"
   - name: "Authorization"
     values:
     - claimSource:
         claim: user
-        prefix: "Basic "
         basicAuthPassword:
-          value: c3VwZXItc2VjcmV0LXBhc3N3b3Jk # base64 encoded password
+          value: super-secret-password
 ```
 
-**Value sources:** 
+**Value sources:**
 * `claimSource` - `claim` (session claims either from id token or from profile URL)
-* `secretSource` - `value` (base64), `fromFile` (file path)
+* `secretSource` - `value` (literal string or `!!binary` value), `fromEnv` (environment variable), `fromFile` (file path)
 
 **Request option:** `preserveRequestValue: true` retains existing header values
 
@@ -410,12 +414,8 @@ make up the header value
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `value` | _[]byte_ | Value expects a base64 encoded string value. |
-| `fromEnv` | _string_ | FromEnv expects the name of an environment variable. |
-| `fromFile` | _string_ | FromFile expects a path to a file containing the secret value. |
-| `claim` | _string_ | Claim is the name of the claim in the session that the value should be<br/>loaded from. Available claims: `access_token` `id_token` `created_at`<br/>`expires_on` `refresh_token` `email` `user` `groups` `preferred_username`. |
-| `prefix` | _string_ | Prefix is an optional prefix that will be prepended to the value of the<br/>claim if it is non-empty. |
-| `basicAuthPassword` | _[SecretSource](#secretsource)_ | BasicAuthPassword converts this claim into a basic auth header.<br/>Note the value of claim will become the basic auth username and the<br/>basicAuthPassword will be used as the password value. |
+| `secretSource` | _[SecretSource](#secretsource)_ | Allow users to load the value from a secret source |
+| `claimSource` | _[ClaimSource](#claimsource)_ | Allow users to load the value from a session claim |
 
 ### KeycloakOptions
 
@@ -624,7 +624,7 @@ Only one source within the struct should be defined at any time.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `value` | _[]byte_ | Value expects a base64 encoded string value. |
+| `value` | _[]byte_ | Value is used as provided. YAML's !!binary tag can be used for base64-encoded input. |
 | `fromEnv` | _string_ | FromEnv expects the name of an environment variable. |
 | `fromFile` | _string_ | FromFile expects a path to a file containing the secret value. |
 
