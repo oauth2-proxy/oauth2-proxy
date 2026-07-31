@@ -530,6 +530,7 @@ character.
 | ----- | ---- | ----------- |
 | `allowedTenants` | _[]string_ | AllowedTenants is a list of allowed tenants. In case of multi-tenant apps, incoming tokens are<br/>issued by different issuers and OIDC issuer verification needs to be disabled.<br/>When not specified, all tenants are allowed. Redundant for single-tenant apps<br/>(regular ID token validation matches the issuer). |
 | `federatedTokenAuth` | _bool_ | FederatedTokenAuth enable oAuth2 client authentication with federated token projected<br/>by Entra Workload Identity plugin, instead of client secret. |
+| `redeemScope` | _string_ | RedeemScope is the OAuth scope specification used when redeeming the<br/>authorization code for tokens. Entra ID cannot issue an access token<br/>for multiple audiences; setting a narrowed, single-audience scope here<br/>works around that. If unset, no scope parameter is sent with the token<br/>request. |
 
 ### OIDCOptions
 
