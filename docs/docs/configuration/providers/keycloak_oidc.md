@@ -14,7 +14,7 @@ title: Keycloak OIDC
 ```
     --provider=keycloak-oidc
     --client-id=<your client's id>
-    --client-secret=<your client's secret>
+    --client-secret=<your client's secret> // Or --client-assertion-file, see client authentication with a JWT assertion
     --redirect-url=https://internal.yourcompany.com/oauth2/callback
     --oidc-issuer-url=https://<keycloak host>/realms/<your realm> // For Keycloak versions <17: --oidc-issuer-url=https://<keycloak host>/auth/realms/<your realm>
     --email-domain=<yourcompany.com> // Validate email domain for users, see option documentation
@@ -83,6 +83,89 @@ through "dedicated" client mappers._
 
 You should now be able to create a test user in Keycloak and get access to the OAuth2 Proxy instance, make sure to set 
 an email address matching `<yourcompany.com>` and select _Email verified_.
+
+**Client authentication with a JWT assertion**
+
+Instead of a client secret, OAuth2 Proxy can authenticate at the token endpoint with a JWT sent as the `client_assertion` 
+parameter, as described in [RFC 7523](https://datatracker.ietf.org/doc/html/rfc7523). On Kubernetes this JWT can be a 
+projected service account token, which Keycloak accepts as a client credential through [federated client authentication](https://www.keycloak.org/2026/01/federated-client-authentication) removing the need to manage a client secret at all.
+
+:::note
+This requires Keycloak 26.6 or newer, where 
+federated client authentication and the Kubernetes 
+trust relationship provider are supported. On Keycloak 26.4 or 26.5 both were preview features and have to be enabled explicitly 
+with `--features=client-auth-federated,kubernetes-service-accounts`.
+:::
+
+1. Register your cluster as a trust relationship provider by navigating to:  
+   **Identity providers** -> **Add provider** -> **Kubernetes**
+   * **Alias** `<your identity provider's alias>`
+   * **Issuer** your cluster's OIDC issuer. Managed clusters usually publish an external issuer URL.
+   * Keycloak reads the service account signing keys from the issuer, so it must be able to reach 
+     `<issuer>/.well-known/openid-configuration` and the JWKS endpoint it advertises.
+2. Make the **Signed JWT - Federated** client authenticator available in the realm.
+   * Keycloak only adds it to the built-in **clients** flow while creating a realm, and never backfills it afterwards, so 
+     a realm that predates federated client authentication needs the execution added by hand. Skip this step if 
+     **Authentication** -> **clients** already lists **Signed JWT - Federated**.
+   * Built-in flows cannot be edited, so start by duplicating the existing one. Navigate to **Authentication** and select 
+     **Duplicate** from the **Action** dropdown of the **clients** flow
+       * **Name** 'clients with federated jwt'
+       * **Description** 'Client authentication flow with Kubernetes ServiceAccount federated JWT support.'
+           * _Select **Add**._
+   * Select **Add execution**, tick **Signed JWT - Federated** and select **Add**
+   * Set the **Requirement** dropdown of the new execution to 'Alternative', which is how the other client authenticators 
+     in this flow are bound
+   * Select **Bind flow** from the **Action** dropdown, choose 'Client authentication flow' as the binding type and select 
+     **Save**
+3. Create the client for OAuth2 Proxy as described under *Creating the client* above, with one difference:
+   * **Client ID** `system:serviceaccount:<namespace>:<serviceaccount>`, the service account OAuth2 Proxy runs as
+       * _This is also the value of `--client-id`. Naming the client after the service account keeps the mapping obvious, 
+         any Client ID works as long as **Federated subject** below matches the token._
+   * If you already have an equivalent client, select **Export** from its **Action** dropdown, then **Import client** and 
+     **Browse** to the exported JSON, overriding **Client ID** with the value above. This clones the redirect URIs, mappers 
+     and scopes instead of repeating their configuration.
+4. Point the client at the service account by navigating to **Clients** -> **\<your client's id\>** -> **Credentials**
+   * **Client Authenticator** 'Signed JWT - Federated'
+   * **Identity provider** select `<your identity provider's alias>` from step 1.
+   * **Federated subject** `system:serviceaccount:<namespace>:<serviceaccount>`, matching the `sub` claim of the projected 
+     token.
+   * No client secret is generated, so `--client-secret` can be dropped.
+5. Project the service account token into the OAuth2 Proxy pod, requesting the realm issuer URL as its audience.
+
+    ```yaml
+    spec:
+      serviceAccountName: oauth2-proxy
+      containers:
+        - name: oauth2-proxy
+          volumeMounts:
+            - name: keycloak-token
+              mountPath: /var/run/secrets/tokens
+              readOnly: true
+      volumes:
+        - name: keycloak-token
+          projected:
+            sources:
+              - serviceAccountToken:
+                  path: keycloak
+                  audience: https://<keycloak host>/realms/<your realm>
+                  expirationSeconds: 3600
+    ```
+
+   * Keycloak caps the lifetime of a Kubernetes client assertion at one hour, matching the Kubernetes default, so do not 
+     raise `expirationSeconds` above `3600`.
+6. Replace `--client-secret` with the path of the projected token:
+
+    ```
+    --client-assertion-file=/var/run/secrets/tokens/keycloak
+    ```
+
+The file is re-read on every token request, so Kubernetes is free to rotate it in place.
+
+:::note
+Keycloak normally rejects a client assertion whose `jti` it has already seen. The Kubernetes trust relationship provider 
+deliberately permits reuse, which is what makes it safe for OAuth2 Proxy to send the same projected token for several token 
+requests until Kubernetes replaces the file.
+:::
 
 **Authorization**
 
