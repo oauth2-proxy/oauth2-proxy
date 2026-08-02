@@ -88,6 +88,13 @@ var _ = Describe("Proxy Suite", func() {
 							StaticCode: &ok,
 						},
 						{
+							ID:         "single-path-backend-host",
+							Host:       "host.localhost",
+							Path:       "/other-path",
+							Static:     ptr.To(true),
+							StaticCode: &ok,
+						},
+						{
 							ID:            "backend-with-rewrite-prefix",
 							Path:          "^/rewrite-prefix/(.*)",
 							RewriteTarget: "/different/backend/path/$1",
@@ -233,6 +240,26 @@ var _ = Describe("Proxy Suite", func() {
 			}),
 			Entry("with a request to the to a subpath of a backend registered to a single path", &proxyTableInput{
 				target: "http://example.localhost/single-path/unregistered",
+				response: testHTTPResponse{
+					code: 404,
+					header: map[string][]string{
+						"X-Content-Type-Options": {"nosniff"},
+						contentType:              {textPlainUTF8},
+					},
+					raw: "404 page not found\n",
+				},
+			}),
+			Entry("with a request to the to backend registered to a single path and a hostname", &proxyTableInput{
+				target: "http://host.localhost/other-path",
+				response: testHTTPResponse{
+					code:   200,
+					header: map[string][]string{},
+					raw:    "Authenticated",
+				},
+				upstream: "single-path-backend-host",
+			}),
+			Entry("with a request to the to an unregistered path for this hostname", &proxyTableInput{
+				target: "http://example.localhost/other-path",
 				response: testHTTPResponse{
 					code: 404,
 					header: map[string][]string{

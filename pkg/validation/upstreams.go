@@ -39,9 +39,10 @@ func validateUpstream(upstream options.Upstream, ids, paths map[string]struct{})
 	}
 	ids[upstream.ID] = struct{}{}
 
-	// Ensure upstream Paths are unique
-	if _, ok := paths[upstream.Path]; ok {
-		msgs = append(msgs, fmt.Sprintf("multiple upstreams found with path %q: upstream paths must be unique", upstream.Path))
+	// Ensure upstream Hosts & Paths are unique
+	route := upstream.Host + upstream.Path
+	if _, ok := paths[route]; ok {
+		msgs = append(msgs, fmt.Sprintf("multiple upstreams found with path %q: upstream paths must be unique", upstream.Host+upstream.Path))
 	}
 	paths[upstream.Path] = struct{}{}
 

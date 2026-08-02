@@ -61,7 +61,8 @@ type Upstream struct {
 	ID string `yaml:"id,omitempty"`
 
 	// Path is used to map requests to the upstream server.
-	// The closest match will take precedence and all Paths must be unique.
+	// The closest match will take precedence and all Paths must be unique across
+	// all upstreams using the same Host.
 	// Path can also take a pattern when used with RewriteTarget.
 	// Path segments can be captured and matched using regular experessions.
 	// Eg:
@@ -69,6 +70,10 @@ type Upstream struct {
 	// - `^/bar/$`: Match any path prefixed with `/bar/`
 	// - `^/baz/(.*)$`: Match any path prefixed with `/baz` and capture the remaining path for use with RewriteTarget
 	Path string `yaml:"path,omitempty"`
+
+	// Host is used to map requests to the upstream server.
+	// If not provided, matching will be performed by Path only.
+	Host string `yaml:"host,omitempty"`
 
 	// RewriteTarget allows users to rewrite the request path before it is sent to
 	// the upstream server (for an HTTP/HTTPS upstream) or mapped to the filesystem

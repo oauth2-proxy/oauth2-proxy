@@ -43,8 +43,8 @@ var _ = Describe("Validator suite", func() {
 				rdUnescaped, err := url.QueryUnescape(rd)
 				Expect(err).ToNot(HaveOccurred())
 
-				validator := NewValidator(testAllowedDomains)
-				Expect(validator.IsValidRedirect(rdUnescaped)).To(BeFalse(), "Expected redirect not to be valid")
+				validator := newValidator(testAllowedDomains)
+				Expect(validator.isValidRedirect(rdUnescaped)).To(BeFalse(), "Expected redirect not to be valid")
 			})
 		}
 
@@ -54,8 +54,8 @@ var _ = Describe("Validator suite", func() {
 	Context("Validator", func() {
 		DescribeTable("IsValidRedirect",
 			func(testRedirect string, expected bool) {
-				validator := NewValidator(testAllowedDomains)
-				Expect(validator.IsValidRedirect(testRedirect)).To(Equal(expected))
+				validator := newValidator(testAllowedDomains)
+				Expect(validator.isValidRedirect(testRedirect)).To(Equal(expected))
 			},
 			Entry("No Redirect", "", false),
 			Entry("Single Slash", "/redirect", true),

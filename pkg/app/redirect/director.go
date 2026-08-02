@@ -10,34 +10,34 @@ import (
 
 // AppDirector is responsible for determining where OAuth2 Proxy should redirect
 // a users request to after the user has authenticated with the identity provider.
-type AppDirector interface {
-	GetRedirect(req *http.Request) (string, error)
+type AppDirector struct {
+	proxyPrefix string
+	validator   *validator
 }
 
 // AppDirectorOpts are the requirements for constructing a new AppDirector.
 type AppDirectorOpts struct {
-	ProxyPrefix string
-	Validator   Validator
+	ProxyPrefix    string
+	AllowedDomains []string
 }
 
 // NewAppDirector constructs a new AppDirector for getting the application
 // redirect URL.
-func NewAppDirector(opts AppDirectorOpts) AppDirector {
+func NewAppDirector(opts AppDirectorOpts) *AppDirector {
 	prefix := opts.ProxyPrefix
 	if !strings.HasSuffix(prefix, "/") {
 		prefix = fmt.Sprintf("%s/", prefix)
 	}
 
-	return &appDirector{
+	return &AppDirector{
 		proxyPrefix: prefix,
-		validator:   opts.Validator,
+		validator:   newValidator(opts.AllowedDomains),
 	}
 }
 
-// appDirector implements the AppDirector interface.
-type appDirector struct {
-	proxyPrefix string
-	validator   Validator
+// IsValidRedirect checks whether the redirect URL is safe and allowed.
+func (a *AppDirector) IsValidRedirect(redirect string) bool {
+	return a.validator.isValidRedirect(redirect)
 }
 
 // GetRedirect determines the full URL or URI path to redirect clients to once
@@ -50,7 +50,7 @@ type appDirector struct {
 // - `X-Forwarded-Uri` direct URI path (when ReverseProxy mode is enabled)
 // - `req.URL.RequestURI` if not under the ProxyPath (i.e. /oauth2/*)
 // - `/`
-func (a *appDirector) GetRedirect(req *http.Request) (string, error) {
+func (a *AppDirector) GetRedirect(req *http.Request) (string, error) {
 	err := req.ParseForm()
 	if err != nil {
 		return "", err
@@ -66,7 +66,7 @@ func (a *appDirector) GetRedirect(req *http.Request) (string, error) {
 	} {
 		redirect := rdGetter(req)
 		// Call `p.IsValidRedirect` again here a final time to be safe
-		if redirect != "" && a.validator.IsValidRedirect(redirect) {
+		if redirect != "" && a.validator.isValidRedirect(redirect) {
 			return redirect, nil
 		}
 	}
@@ -77,8 +77,8 @@ func (a *appDirector) GetRedirect(req *http.Request) (string, error) {
 // validateRedirect checks that the redirect is valid.
 // When an invalid, non-empty redirect is found, an error will be logged using
 // the provided format.
-func (a *appDirector) validateRedirect(redirect string, errorFormat string) string {
-	if a.validator.IsValidRedirect(redirect) {
+func (a *AppDirector) validateRedirect(redirect string, errorFormat string) string {
+	if a.validator.isValidRedirect(redirect) {
 		return redirect
 	}
 	if redirect != "" {
@@ -88,9 +88,9 @@ func (a *appDirector) validateRedirect(redirect string, errorFormat string) stri
 }
 
 // hasProxyPrefix determines whether the obtained path would be a request to
-// one of OAuth2 Proxy's own endpoints, eg. th callback URL.
+// one of OAuth2 Proxy's own endpoints, e.g. the callback URL.
 // Redirects to these endpoints should not be allowed as they will create
 // redirection loops.
-func (a *appDirector) hasProxyPrefix(path string) bool {
+func (a *AppDirector) hasProxyPrefix(path string) bool {
 	return strings.HasPrefix(path, a.proxyPrefix)
 }
