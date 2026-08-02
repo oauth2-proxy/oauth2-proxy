@@ -10,6 +10,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions"
 	sessionscookie "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/cookie"
+	sessionshttp "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/http"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/persistence"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/redis"
 	. "github.com/onsi/ginkgo/v2"
@@ -73,6 +74,32 @@ var _ = Describe("NewSessionStore", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(ss).To(BeAssignableToTypeOf(&persistence.Manager{}))
 			Expect(ss.(*persistence.Manager).Store).To(BeAssignableToTypeOf(&redis.SessionStore{}))
+		})
+	})
+
+	Context("with type 'http'", func() {
+		BeforeEach(func() {
+			opts.Type = options.HTTPSessionStoreType
+			opts.HTTP.BaseURL = "http://session-store.example.com"
+		})
+
+		It("creates a persistence.Manager that wraps an http.Store", func() {
+			ss, err := sessions.NewSessionStore(opts, cookieOpts)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ss).To(BeAssignableToTypeOf(&persistence.Manager{}))
+			Expect(ss.(*persistence.Manager).Store).To(BeAssignableToTypeOf(&sessionshttp.Store{}))
+		})
+
+		Context("without a base URL", func() {
+			BeforeEach(func() {
+				opts.HTTP.BaseURL = ""
+			})
+
+			It("returns an error", func() {
+				ss, err := sessions.NewSessionStore(opts, cookieOpts)
+				Expect(err).To(HaveOccurred())
+				Expect(ss).To(BeNil())
+			})
 		})
 	})
 

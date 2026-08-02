@@ -8,6 +8,7 @@ import (
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
+	sessionshttp "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/http"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/redis"
 )
 
@@ -59,6 +60,25 @@ func validateRedisSessionStore(o *options.Options) []string {
 
 	key := fmt.Sprintf("%s-healthcheck-%s", o.Cookie.Name, nonce)
 	return sendRedisConnectionTest(client, key, nonce)
+}
+
+// validateHTTPSessionStore builds an HTTP store client from the options and
+// verifies that the configured backend is reachable
+func validateHTTPSessionStore(o *options.Options) []string {
+	if o.Session.Type != options.HTTPSessionStoreType {
+		return []string{}
+	}
+
+	store, err := sessionshttp.NewStore(o.Session.HTTP.BaseURL, o.Session.HTTP.APIKey)
+	if err != nil {
+		return []string{fmt.Sprintf("unable to initialize an http session store client: %v", err)}
+	}
+
+	if err := store.VerifyConnection(context.Background()); err != nil {
+		return []string{fmt.Sprintf("unable to connect to the http session store: %v", err)}
+	}
+
+	return []string{}
 }
 
 func sendRedisConnectionTest(client redis.Client, key string, val string) []string {

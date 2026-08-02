@@ -106,3 +106,12 @@
 # cookie_refresh = ""
 # cookie_secure = true
 # cookie_httponly = true
+
+## Session Storage
+## Session store type can be "cookie" (default), "redis", or "http"
+# session_store_type = "cookie"
+
+## HTTP Session Storage (requires session_store_type = "http")
+## See https://oauth2-proxy.github.io/oauth2-proxy/docs/configuration/sessions#http-storage
+# http_store_base_url = "https://session-store.example.com"
+# http_store_api_key = "your-secret-api-key"
