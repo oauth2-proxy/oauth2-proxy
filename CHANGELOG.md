@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.3
 
+- [#3293](https://github.com/oauth2-proxy/oauth2-proxy/pull/3293) feat: add Apple Sign in with Apple provider (@LYJW131)
+
 # V7.15.3
 
 ## Release Highlights
