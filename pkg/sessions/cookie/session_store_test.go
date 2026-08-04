@@ -4,6 +4,7 @@ import (
 	"fmt"
 	mathrand "math/rand"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -136,6 +137,74 @@ func Test_splitCookieName(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			splitName := splitCookieName(tc.Name, tc.Count)
 			assert.Equal(t, tc.Output, splitName)
+		})
+	}
+}
+
+func Test_setSessionCookieClearsStaleCookies(t *testing.T) {
+	store := &SessionStore{
+		Cookie: &options.Cookie{
+			Name:   "_oauth2_proxy",
+			Secret: "0123456789abcdef",
+			Path:   "/",
+			Expire: time.Hour,
+		},
+	}
+	now := time.Now()
+
+	testCases := map[string]struct {
+		value             []byte
+		existingCookies   []string
+		wantSessionParts  int
+		wantClearedCookie []string
+	}{
+		"split session becomes a single cookie": {
+			value:             []byte("small session"),
+			existingCookies:   []string{"_oauth2_proxy_0", "_oauth2_proxy_1", "_oauth2_proxy_csrf"},
+			wantSessionParts:  1,
+			wantClearedCookie: []string{"_oauth2_proxy_0", "_oauth2_proxy_1"},
+		},
+		"split session uses fewer parts": {
+			value:             []byte(strings.Repeat("v", 4500)),
+			existingCookies:   []string{"_oauth2_proxy_0", "_oauth2_proxy_1", "_oauth2_proxy_2", "_oauth2_proxy_3"},
+			wantSessionParts:  2,
+			wantClearedCookie: []string{"_oauth2_proxy_2", "_oauth2_proxy_3"},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "https://example.com/", nil)
+			for _, cookieName := range tc.existingCookies {
+				req.AddCookie(&http.Cookie{Name: cookieName, Value: "old"})
+			}
+
+			newCookies, err := store.makeSessionCookie(req, tc.value, now)
+			assert.NoError(t, err)
+			assert.Len(t, newCookies, tc.wantSessionParts)
+
+			rw := httptest.NewRecorder()
+			err = store.setSessionCookie(rw, req, tc.value, now)
+			assert.NoError(t, err)
+
+			responseCookies := make(map[string]*http.Cookie)
+			for _, cookie := range rw.Result().Cookies() {
+				responseCookies[cookie.Name] = cookie
+			}
+			for _, cookieName := range tc.wantClearedCookie {
+				cookie := responseCookies[cookieName]
+				if assert.NotNil(t, cookie, "stale cookie %q was not cleared", cookieName) {
+					assert.Equal(t, -1, cookie.MaxAge)
+				}
+			}
+			for _, wantCookie := range newCookies {
+				cookie := responseCookies[wantCookie.Name]
+				if assert.NotNil(t, cookie, "current cookie %q was not set", wantCookie.Name) {
+					assert.Greater(t, cookie.MaxAge, 0)
+				}
+			}
+			assert.Len(t, responseCookies, len(newCookies)+len(tc.wantClearedCookie))
+			assert.NotContains(t, responseCookies, "_oauth2_proxy_csrf")
 		})
 	}
 }
