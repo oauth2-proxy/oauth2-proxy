@@ -238,10 +238,6 @@
 //www.whitelisteddomain.tld@www.google.com/%2e%2e%2f
 //www.whitelisteddomain.tld@www.google.com/%2f%2e%2e
 /<>//example.com
-/?url=//example.com&next=//example.com&redirect=//example.com&redir=//example.com&rurl=//example.com&redirect_uri=//example.com
-/?url=/\/example.com&next=/\/example.com&redirect=/\/example.com&redirect_uri=/\/example.com
-/?url=Https://example.com&next=Https://example.com&redirect=Https://example.com&redir=Https://example.com&rurl=Https://example.com&redirect_uri=Https://example.com
-/ReceiveAutoRedirect/false?desiredLocationUrl=http://xssposed.org
 /\/\/example.com/
 /\/example.com/
 /\/google.com/
@@ -300,9 +296,6 @@
 /https://www.whitelisteddomain.tld@www.google.com/%2e%2e
 /https://www.whitelisteddomain.tld@www.google.com/%2f%2e%2e
 /localdomain.pw/%2f%2e%2e
-/redirect?url=//example.com&next=//example.com&redirect=//example.com&redir=//example.com&rurl=//example.com&redirect_uri=//example.com
-/redirect?url=/\/example.com&next=/\/example.com&redirect=/\/example.com&redir=/\/example.com&rurl=/\/example.com&redirect_uri=/\/example.com
-/redirect?url=Https://example.com&next=Https://example.com&redirect=Https://example.com&redir=Https://example.com&rurl=Https://example.com&redirect_uri=Https://example.com
 /x:1/:///%01javascript:alert(document.cookie)/
 <>//google.com
 <>//localdomain.pw

@@ -34,6 +34,8 @@
 ## Changes since v7.15.2
 
 - [#3477](https://github.com/oauth2-proxy/oauth2-proxy/pull/3477) chore(dep): bump go to 1.26 and migrate of reverse proxy handling
+- [#3417](https://github.com/oauth2-proxy/oauth2-proxy/pull/3417) fix: allow https:// in query params while still blocking open redirects (@wucm667)
+
 
 # V7.15.2
 
