@@ -913,7 +913,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		// the pre-v7.7.1 behaviour and is consistent with the other auth-failure
 		// paths below (CSRF cookie missing, CSRF mismatch), which also return 403.
 		logger.Errorf("Error while parsing OAuth2 state: %v", err)
-		p.ErrorPage(rw, req, http.StatusForbidden, err.Error())
+		p.ErrorPage(rw, req, http.StatusForbidden, err.Error(), "Login Failed: invalid or missing state parameter.")
 		return
 	}
 
