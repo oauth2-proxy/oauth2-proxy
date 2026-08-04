@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"embed"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -48,6 +50,7 @@ const (
 
 	robotsPath                    = "/robots.txt"
 	protectedResourceMetadataPath = "/.well-known/oauth-protected-resource"
+	dynamicClientRegistrationPath = "/register"
 	signInPath                    = "/sign_in"
 	signOutPath                   = "/sign_out"
 	oauthStartPath                = "/start"
@@ -338,6 +341,14 @@ func (p *OAuthProxy) buildServeMux(proxyPrefix string) {
 	// build this well-known URL themselves and don't know about our
 	// ProxyPrefix. See ProtectedResourceMetadata.
 	r.Path(protectedResourceMetadataPath).HandlerFunc(p.ProtectedResourceMetadata)
+
+	// Also host root, not under proxyPrefix, for the same reason - MCP
+	// clients (confirmed against Claude Code) request RFC 7591 Dynamic
+	// Client Registration at <this proxy's own origin>/register rather
+	// than the authorization server's real advertised
+	// registration_endpoint, even after correctly resolving that server
+	// via RFC 9728/8414 discovery. See DynamicClientRegistration.
+	r.Path(dynamicClientRegistrationPath).HandlerFunc(p.DynamicClientRegistration)
 
 	// The authonly path should be registered separately to prevent it from getting no-cache headers.
 	// We do this to allow users to have a short cache (via nginx) of the response to reduce the
@@ -1399,6 +1410,78 @@ func (p *OAuthProxy) ProtectedResourceMetadata(rw http.ResponseWriter, req *http
 	rw.Header().Set("Content-Type", applicationJSON)
 	rw.WriteHeader(http.StatusOK)
 	rw.Write(body)
+}
+
+// DynamicClientRegistration proxies RFC 7591 Dynamic Client Registration
+// requests to the configured OIDC issuer's own registration_endpoint
+// (discovered from its .well-known/openid-configuration document) and
+// relays the response verbatim, including its status code.
+//
+// MCP clients need this because of the same origin-assumption behavior
+// ProtectedResourceMetadata's WWW-Authenticate header is meant to correct
+// for authorization/token requests: confirmed against Claude Code, once it
+// receives Protected Resource Metadata pointing at an external
+// authorization server, it correctly directs the user's browser to that
+// server's own /authorize and posts to its own /token - but it still POSTs
+// its DCR request to THIS proxy's own /register instead of the issuer's
+// real advertised registration_endpoint. Forwarding the Authorization
+// header lets Initial-Access-Token-gated ("authenticated" RFC 7591)
+// registration work too, not just anonymous.
+func (p *OAuthProxy) DynamicClientRegistration(rw http.ResponseWriter, req *http.Request) {
+	client := &http.Client{Timeout: 10 * time.Second}
+
+	discoveryResp, err := client.Get(strings.TrimSuffix(p.oidcIssuerURL, "/") + "/.well-known/openid-configuration")
+	if err != nil {
+		logger.Errorf("error fetching issuer discovery document for dynamic client registration: %v", err)
+		http.Error(rw, "failed to reach issuer", http.StatusBadGateway)
+		return
+	}
+	defer discoveryResp.Body.Close()
+
+	var discovery struct {
+		RegistrationEndpoint string `json:"registration_endpoint"`
+	}
+	if err := json.NewDecoder(discoveryResp.Body).Decode(&discovery); err != nil || discovery.RegistrationEndpoint == "" {
+		logger.Errorf("issuer discovery document has no registration_endpoint: %v", err)
+		http.Error(rw, "issuer does not support dynamic client registration", http.StatusNotImplemented)
+		return
+	}
+
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		http.Error(rw, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	upstreamReq, err := http.NewRequest(http.MethodPost, discovery.RegistrationEndpoint, bytes.NewReader(body))
+	if err != nil {
+		logger.Errorf("error building dynamic client registration request: %v", err)
+		http.Error(rw, "internal error", http.StatusInternalServerError)
+		return
+	}
+	upstreamReq.Header.Set("Content-Type", applicationJSON)
+	if auth := req.Header.Get("Authorization"); auth != "" {
+		upstreamReq.Header.Set("Authorization", auth)
+	}
+
+	upstreamResp, err := client.Do(upstreamReq)
+	if err != nil {
+		logger.Errorf("error forwarding dynamic client registration request: %v", err)
+		http.Error(rw, "failed to reach issuer", http.StatusBadGateway)
+		return
+	}
+	defer upstreamResp.Body.Close()
+
+	respBody, err := io.ReadAll(upstreamResp.Body)
+	if err != nil {
+		logger.Errorf("error reading dynamic client registration response: %v", err)
+		http.Error(rw, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	rw.Header().Set("Content-Type", applicationJSON)
+	rw.WriteHeader(upstreamResp.StatusCode)
+	rw.Write(respBody)
 }
 
 // LoggingCSRFCookiesInOAuthCallback Log all CSRF cookies found in HTTP request OAuth callback,
