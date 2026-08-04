@@ -121,6 +121,35 @@ func (s *SessionStore) setSessionCookie(rw http.ResponseWriter, req *http.Reques
 	if err != nil {
 		return err
 	}
+
+	newCookieNames := make(map[string]struct{}, len(cookies))
+	for _, c := range cookies {
+		newCookieNames[c.Name] = struct{}{}
+	}
+
+	sessionCookieName := regexp.QuoteMeta(s.Cookie.Name)
+	sessionCookiePattern := regexp.MustCompile(fmt.Sprintf("^%s(_\\d+)?$", sessionCookieName))
+	for _, c := range req.Cookies() {
+		if !sessionCookiePattern.MatchString(c.Name) {
+			continue
+		}
+		if _, ok := newCookieNames[c.Name]; ok {
+			continue
+		}
+
+		clearCookieOptions := &pkgcookies.CookieOptions{
+			Name:       c.Name,
+			Value:      "",
+			Domains:    s.Cookie.Domains,
+			Expiration: time.Hour * -1,
+			SameSite:   s.Cookie.SameSite,
+			Path:       s.Cookie.Path,
+			HTTPOnly:   s.Cookie.HTTPOnly,
+			Secure:     s.Cookie.Secure,
+		}
+		http.SetCookie(rw, pkgcookies.MakeCookieFromOptions(req, clearCookieOptions))
+	}
+
 	for _, c := range cookies {
 		http.SetCookie(rw, c)
 	}
