@@ -60,23 +60,23 @@ server {
     auth_request_set $auth_cookie $upstream_http_set_cookie;
     add_header Set-Cookie $auth_cookie;
 
-    # When using the --set-authorization-header flag, some provider's cookies can exceed the 4kb
-    # limit and so the OAuth2 Proxy splits these into multiple parts.
+    # Large OIDC tokens can make the session cookie exceed the 4KB limit,
+    # causing OAuth2 Proxy to split the cookie into multiple parts.
     # Nginx normally only copies the first `Set-Cookie` header from the auth_request to the response,
-    # so if your cookies are larger than 4kb, you will need to extract additional cookies manually.
-    auth_request_set $auth_cookie_name_upstream_1 $upstream_cookie_auth_cookie_name_1;
+    # so extract the second part when using the default cookie name, `_oauth2_proxy`.
+    auth_request_set $auth_cookie_upstream_1 $upstream_cookie__oauth2_proxy_1;
 
     # Extract the Cookie attributes from the first Set-Cookie header and append them
     # to the second part ($upstream_cookie_* variables only contain the raw cookie content)
     if ($auth_cookie ~* "(; .*)") {
-        set $auth_cookie_name_0 $auth_cookie;
-        set $auth_cookie_name_1 "auth_cookie_name_1=$auth_cookie_name_upstream_1$1";
+        set $auth_cookie_0 $auth_cookie;
+        set $auth_cookie_1 "_oauth2_proxy_1=$auth_cookie_upstream_1$1";
     }
 
     # Send both Set-Cookie headers now if there was a second part
-    if ($auth_cookie_name_upstream_1) {
-        add_header Set-Cookie $auth_cookie_name_0;
-        add_header Set-Cookie $auth_cookie_name_1;
+    if ($auth_cookie_upstream_1) {
+        add_header Set-Cookie $auth_cookie_0;
+        add_header Set-Cookie $auth_cookie_1;
     }
 
     proxy_pass http://backend/;
@@ -90,6 +90,24 @@ server {
   }
 }
 ```
+
+### Multi-part session cookies
+
+The example above is ready to use with the default `--cookie-name=_oauth2_proxy` setting and handles a session split into two cookies. If you configure a custom cookie name, update both references to the second cookie part:
+
+| Cookie configuration | Nginx upstream cookie variable | `Set-Cookie` name |
+| --- | --- | --- |
+| Default (`_oauth2_proxy`) | `$upstream_cookie__oauth2_proxy_1` | `_oauth2_proxy_1=` |
+| `--cookie-name=my_cookie` | `$upstream_cookie_my_cookie_1` | `my_cookie_1=` |
+
+For example, with `--cookie-name=my_cookie`, change the relevant lines to:
+
+```nginx
+auth_request_set $auth_cookie_upstream_1 $upstream_cookie_my_cookie_1;
+set $auth_cookie_1 "my_cookie_1=$auth_cookie_upstream_1$1";
+```
+
+If a session is split into more than two cookies, repeat the extraction for each additional numeric suffix. For consistently large sessions, prefer `--session-store-type=redis` so only a small session ticket is stored in the browser cookie.
 
 ### Understanding the `error_page` redirect pattern
 
@@ -166,8 +184,6 @@ It is recommended to use `--session-store-type=redis` when expecting large sessi
 :::tip Kubernetes Dashboard with Azure Entra ID
 For a complete example of integrating oauth2-proxy with Kubernetes Dashboard on AKS using Azure Entra ID, including RBAC configuration and troubleshooting, see the [Kubernetes Dashboard on AKS](../providers/ms_entra_id.md#kubernetes-dashboard-on-aks) section in the Microsoft Entra ID provider documentation.
 :::
-
-You have to substitute *name* with the actual cookie name you configured via --cookie-name parameter. If you don't set a custom cookie name the variable  should be "$upstream_cookie__oauth2_proxy_1" instead of "$upstream_cookie_name_1" and the new cookie-name should be "_oauth2_proxy_1=" instead of "name_1=".
 
 :::note
 If you set up your OAuth2 provider to rotate your client secret, you can use the `client-secret-file` option to reload the secret when it is updated.
