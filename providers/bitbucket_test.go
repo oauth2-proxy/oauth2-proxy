@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -38,7 +39,7 @@ func testBitbucketProvider(hostname, team string, repository string) *BitbucketP
 	return p
 }
 
-func testBitbucketBackend(payload string) *httptest.Server {
+func testBitbucketBackend(payloads map[string]string) *httptest.Server {
 	paths := map[string]bool{
 		"/2.0/user/emails": true,
 		"/2.0/teams":       true,
@@ -46,15 +47,20 @@ func testBitbucketBackend(payload string) *httptest.Server {
 
 	return httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			url := r.URL
-			if !paths[url.Path] {
-				log.Printf("%s not in %+v\n", url.Path, paths)
+			requestURL := r.URL
+			payloadPath := requestURL.Path
+			if strings.HasPrefix(requestURL.Path, "/2.0/repositories/") {
+				payloadPath = "/2.0/repositories"
+			}
+
+			if !paths[requestURL.Path] && payloadPath != "/2.0/repositories" {
+				log.Printf("%s not in %+v\n", requestURL.Path, paths)
 				w.WriteHeader(404)
-			} else if !IsAuthorizedInURL(r.URL) {
+			} else if !IsAuthorizedInHeader(r.Header) || requestURL.Query().Get("access_token") != "" {
 				w.WriteHeader(403)
 			} else {
 				w.WriteHeader(200)
-				w.Write([]byte(payload))
+				w.Write([]byte(payloads[payloadPath]))
 			}
 		}))
 }
@@ -113,7 +119,9 @@ func TestBitbucketProviderOverrides(t *testing.T) {
 }
 
 func TestBitbucketProviderGetEmailAddress(t *testing.T) {
-	b := testBitbucketBackend("{\"values\": [ { \"email\": \"michael.bland@gsa.gov\", \"is_primary\": true } ] }")
+	b := testBitbucketBackend(map[string]string{
+		"/2.0/user/emails": "{\"values\": [ { \"email\": \"michael.bland@gsa.gov\", \"is_primary\": true } ] }",
+	})
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
@@ -126,7 +134,10 @@ func TestBitbucketProviderGetEmailAddress(t *testing.T) {
 }
 
 func TestBitbucketProviderGetEmailAddressAndGroup(t *testing.T) {
-	b := testBitbucketBackend("{\"values\": [ { \"email\": \"michael.bland@gsa.gov\", \"is_primary\": true, \"username\": \"bioinformatics\" } ] }")
+	b := testBitbucketBackend(map[string]string{
+		"/2.0/user/emails": "{\"values\": [ { \"email\": \"michael.bland@gsa.gov\", \"is_primary\": true } ] }",
+		"/2.0/teams":       "{\"values\": [ { \"username\": \"bioinformatics\" } ] }",
+	})
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
@@ -138,10 +149,28 @@ func TestBitbucketProviderGetEmailAddressAndGroup(t *testing.T) {
 	assert.Equal(t, "michael.bland@gsa.gov", email)
 }
 
+func TestBitbucketProviderGetEmailAddressAndRepository(t *testing.T) {
+	b := testBitbucketBackend(map[string]string{
+		"/2.0/user/emails":  "{\"values\": [ { \"email\": \"michael.bland@gsa.gov\", \"is_primary\": true } ] }",
+		"/2.0/repositories": "{\"values\": [ { \"full_name\": \"oauth2-proxy/oauth2-proxy\" } ] }",
+	})
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testBitbucketProvider(bURL.Host, "", "oauth2-proxy/oauth2-proxy")
+
+	session := CreateAuthorizedSession()
+	email, err := p.GetEmailAddress(context.Background(), session)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "michael.bland@gsa.gov", email)
+}
+
 // Note that trying to trigger the "failed building request" case is not
 // practical, since the only way it can fail is if the URL fails to parse.
 func TestBitbucketProviderGetEmailAddressFailedRequest(t *testing.T) {
-	b := testBitbucketBackend("unused payload")
+	b := testBitbucketBackend(map[string]string{
+		"/2.0/user/emails": "unused payload",
+	})
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
@@ -157,7 +186,9 @@ func TestBitbucketProviderGetEmailAddressFailedRequest(t *testing.T) {
 }
 
 func TestBitbucketProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) {
-	b := testBitbucketBackend("{\"foo\": \"bar\"}")
+	b := testBitbucketBackend(map[string]string{
+		"/2.0/user/emails": "{\"foo\": \"bar\"}",
+	})
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
