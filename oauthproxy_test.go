@@ -843,6 +843,33 @@ func TestSignInPageSkipProviderDirect(t *testing.T) {
 	}
 }
 
+func TestOAuthCallbackProviderErrorIncludesDescription(t *testing.T) {
+	sipTest, err := NewSignInPageTest(false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Okta (and other OIDC providers) return error_description alongside the
+	// error code when, for example, the user is not assigned the application.
+	code, body := sipTest.GetEndpoint(
+		"/oauth2/callback?error=access_denied&error_description=User+is+not+assigned+to+the+client+application.",
+	)
+	assert.Equal(t, http.StatusForbidden, code)
+	assert.Contains(t, body, "access_denied")
+	assert.Contains(t, body, "User is not assigned to the client application.")
+}
+
+func TestOAuthCallbackProviderErrorWithoutDescription(t *testing.T) {
+	sipTest, err := NewSignInPageTest(false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	code, body := sipTest.GetEndpoint("/oauth2/callback?error=access_denied")
+	assert.Equal(t, http.StatusForbidden, code)
+	assert.Contains(t, body, "The upstream identity provider returned an error: access_denied")
+}
+
 type ProcessCookieTest struct {
 	opts         *options.Options
 	proxy        *OAuthProxy
