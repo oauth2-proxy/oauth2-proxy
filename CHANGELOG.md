@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.3
 
+- [#3487](https://github.com/oauth2-proxy/oauth2-proxy/issues/3487) Add opt-in `--oidc-lazy-discovery` (default off): when the OIDC issuer is unreachable at startup, oauth2-proxy starts anyway and performs OIDC discovery in the background (retrying with backoff), so Basic Auth via `--htpasswd-file` and other provider-independent features keep working while discovery is pending. The readiness endpoint reports not-ready and OAuth2 login returns 503 until discovery succeeds.
+
 # V7.15.3
 
 ## Release Highlights

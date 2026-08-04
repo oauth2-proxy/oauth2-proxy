@@ -13,6 +13,10 @@ const (
 	// for OIDCOptions.SkipDiscovery
 	DefaultSkipDiscovery bool = false
 
+	// DefaultOIDCLazyDiscovery is the default value for OIDCOptions.LazyDiscovery.
+	// When false, a failed OIDC discovery aborts startup (historical behaviour).
+	DefaultOIDCLazyDiscovery bool = false
+
 	// DefaultInsecureSkipNonce is the default value
 	// for OIDCOptions.InsecureSkipNonce
 	DefaultInsecureSkipNonce bool = true
@@ -300,6 +304,16 @@ type OIDCOptions struct {
 	// SkipDiscovery allows to skip OIDC discovery and use manually supplied Endpoints
 	// default set to 'false'
 	SkipDiscovery *bool `yaml:"skipDiscovery,omitempty"`
+	// LazyDiscovery allows oauth2-proxy to start even when the OIDC issuer is
+	// unreachable. When enabled, OIDC discovery is performed in the background
+	// (retrying with backoff) instead of blocking startup, so features that do
+	// not depend on the provider - such as Basic Auth via htpasswdFile - remain
+	// available while discovery is pending. The readiness endpoint reports
+	// not-ready until discovery succeeds. Only applies when discovery is enabled
+	// (SkipDiscovery is false). Note that a configuration error (rather than an
+	// unreachable issuer) is retried indefinitely instead of failing startup.
+	// default set to 'false'
+	LazyDiscovery *bool `yaml:"lazyDiscovery,omitempty"`
 	// JwksURL is the OpenID Connect JWKS URL
 	// eg: https://www.googleapis.com/oauth2/v3/certs
 	JwksURL string `yaml:"jwksURL,omitempty"`
@@ -349,6 +363,7 @@ func providerDefaults() Providers {
 				InsecureAllowUnverifiedEmail: ptr.To(DefaultInsecureAllowUnverifiedEmail),
 				InsecureSkipNonce:            ptr.To(DefaultInsecureSkipNonce),
 				SkipDiscovery:                ptr.To(DefaultSkipDiscovery),
+				LazyDiscovery:                ptr.To(DefaultOIDCLazyDiscovery),
 				UserIDClaim:                  OIDCEmailClaim, // Deprecated: Use OIDCEmailClaim
 				EmailClaim:                   OIDCEmailClaim,
 				GroupsClaim:                  OIDCGroupsClaim,
@@ -393,6 +408,9 @@ func (o *OIDCOptions) EnsureDefaults() {
 	}
 	if o.SkipDiscovery == nil {
 		o.SkipDiscovery = ptr.To(DefaultSkipDiscovery)
+	}
+	if o.LazyDiscovery == nil {
+		o.LazyDiscovery = ptr.To(DefaultOIDCLazyDiscovery)
 	}
 	if o.UserIDClaim == "" {
 		o.UserIDClaim = OIDCEmailClaim
