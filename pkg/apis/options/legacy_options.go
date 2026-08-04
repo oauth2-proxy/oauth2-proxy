@@ -540,6 +540,7 @@ type LegacyProvider struct {
 	InsecureOIDCSkipIssuerVerification bool     `flag:"insecure-oidc-skip-issuer-verification" cfg:"insecure_oidc_skip_issuer_verification"`
 	InsecureOIDCSkipNonce              bool     `flag:"insecure-oidc-skip-nonce" cfg:"insecure_oidc_skip_nonce"`
 	SkipOIDCDiscovery                  bool     `flag:"skip-oidc-discovery" cfg:"skip_oidc_discovery"`
+	OIDCLazyDiscovery                  bool     `flag:"oidc-lazy-discovery" cfg:"oidc_lazy_discovery"`
 	OIDCJwksURL                        string   `flag:"oidc-jwks-url" cfg:"oidc_jwks_url"`
 	OIDCEmailClaim                     string   `flag:"oidc-email-claim" cfg:"oidc_email_claim"`
 	OIDCGroupsClaim                    string   `flag:"oidc-groups-claim" cfg:"oidc_groups_claim"`
@@ -602,6 +603,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.Bool("insecure-oidc-skip-issuer-verification", false, "Do not verify if issuer matches OIDC discovery URL")
 	flagSet.Bool("insecure-oidc-skip-nonce", true, "skip verifying the OIDC ID Token's nonce claim")
 	flagSet.Bool("skip-oidc-discovery", false, "Skip OIDC discovery and use manually supplied Endpoints")
+	flagSet.Bool("oidc-lazy-discovery", false, "Start oauth2-proxy even if the OIDC issuer is unreachable and perform discovery in the background, retrying with backoff. Features that do not depend on the provider (e.g. Basic Auth via htpasswd-file) remain available while discovery is pending")
 	flagSet.String("oidc-jwks-url", "", "OpenID Connect JWKS URL (ie: https://www.googleapis.com/oauth2/v3/certs)")
 	flagSet.String("oidc-groups-claim", OIDCGroupsClaim, "which OIDC claim contains the user groups")
 	flagSet.String("oidc-email-claim", OIDCEmailClaim, "which OIDC claim contains the user's email")
@@ -723,6 +725,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		InsecureSkipIssuerVerification: &l.InsecureOIDCSkipIssuerVerification,
 		InsecureSkipNonce:              &l.InsecureOIDCSkipNonce,
 		SkipDiscovery:                  &l.SkipOIDCDiscovery,
+		LazyDiscovery:                  &l.OIDCLazyDiscovery,
 		JwksURL:                        l.OIDCJwksURL,
 		UserIDClaim:                    l.UserIDClaim,
 		EmailClaim:                     l.OIDCEmailClaim,
