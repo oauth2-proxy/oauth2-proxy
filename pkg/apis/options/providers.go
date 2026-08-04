@@ -48,6 +48,10 @@ const (
 	// DefaultUseSystemTrustStore is the default value
 	// for Provider.UseSystemTrustStore
 	DefaultUseSystemTrustStore bool = false
+
+	// DefaultBackChannelLogoutEnabled is the default value
+	// for OIDCOptions.BackChannelLogoutEnabled
+	DefaultBackChannelLogoutEnabled bool = false
 )
 
 // OIDCAudienceClaims is the generic audience claim list used by the OIDC provider.
@@ -326,6 +330,12 @@ type OIDCOptions struct {
 	// between this list and the provider's discovered supported algorithms.
 	// By default `RS256` is used if nothing has been discovered or specified.
 	EnabledSigningAlgs []string `yaml:"enabledSigningAlgs,omitempty"`
+	// BackChannelLogoutEnabled enables the OIDC back-channel logout endpoint
+	// (POST /oauth2/backchannel-logout). When enabled, the identity provider can
+	// POST a signed logout_token to instantly revoke sessions server-side without
+	// a browser redirect. Requires --session-store-type=redis.
+	// default set to 'false'
+	BackChannelLogoutEnabled *bool `yaml:"backChannelLogoutEnabled,omitempty"`
 }
 
 type LoginGovOptions struct {
