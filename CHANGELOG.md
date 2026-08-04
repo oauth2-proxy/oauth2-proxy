@@ -159,6 +159,7 @@ We improved our supply chain security by added additional checks to prevent pote
 ## Changes since v7.14.2
 
 - [#3183](https://github.com/oauth2-proxy/oauth2-proxy/pull/3183) fix: allow URL parameters to configure username, password and max idle connection timeout if the matching configuration is empty.
+- [#3335](https://github.com/oauth2-proxy/oauth2-proxy/pull/3335) feat: make session refresh timeouts user configurable (@raskinfe)
 
 # V7.14.2
 
