@@ -30,6 +30,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/proxyhttp"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/version"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
@@ -89,12 +90,16 @@ type OAuthProxy struct {
 
 	SignInPath string
 
-	allowedRoutes        []allowedRoute
-	apiRoutes            []apiRoute
-	redirectURL          *url.URL // the url to receive requests at
-	relativeRedirectURL  bool
-	whitelistDomains     []string
-	provider             providers.Provider
+	allowedRoutes       []allowedRoute
+	apiRoutes           []apiRoute
+	redirectURL         *url.URL // the url to receive requests at
+	relativeRedirectURL bool
+	whitelistDomains    []string
+	provider            providers.Provider
+	// lazyProvider is non-nil only when the provider is being initialised in the
+	// background (see --oidc-lazy-discovery). Its background discovery loop is
+	// started in Start so it can be tied to the proxy's shutdown context.
+	lazyProvider         *providers.LazyProvider
 	sessionStore         sessionsapi.SessionStore
 	ProxyPrefix          string
 	basicAuthValidator   basic.Validator
@@ -137,10 +142,13 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		}
 	}
 
-	provider, err := providers.NewProvider(opts.Providers[0])
+	provider, err := setupProvider(opts.Providers[0])
 	if err != nil {
 		return nil, fmt.Errorf("error initialising provider: %v", err)
 	}
+	// A LazyProvider needs its background discovery loop started; it is launched
+	// in Start so it can be cancelled on shutdown (see p.lazyProvider usage).
+	lazyProvider, _ := provider.(*providers.LazyProvider)
 
 	pageWriter, err := pagewriter.NewWriter(pagewriter.Opts{
 		TemplatesPath:    opts.Templates.Path,
@@ -205,7 +213,8 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		return nil, err
 	}
 
-	preAuthChain, err := buildPreAuthChain(opts, sessionStore, trustedProxies)
+	readinessVerifiable := readinessVerifiers{sessionStore, providerReadiness{provider: provider}}
+	preAuthChain, err := buildPreAuthChain(opts, readinessVerifiable, trustedProxies)
 	if err != nil {
 		return nil, fmt.Errorf("could not build pre-auth chain: %v", err)
 	}
@@ -229,6 +238,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 
 		ProxyPrefix:          opts.ProxyPrefix,
 		provider:             provider,
+		lazyProvider:         lazyProvider,
 		sessionStore:         sessionStore,
 		redirectURL:          redirectURL,
 		relativeRedirectURL:  opts.RelativeRedirectURL,
@@ -279,6 +289,12 @@ func (p *OAuthProxy) Start() error {
 		<-sigint
 		cancel() // cancel the context
 	}()
+
+	// When lazy OIDC discovery is enabled, perform discovery in the background
+	// and tie its lifetime to the proxy's shutdown context so it stops cleanly.
+	if p.lazyProvider != nil {
+		go p.lazyProvider.InitWithRetry(ctx)
+	}
 
 	return p.server.Start(ctx)
 }
@@ -358,7 +374,7 @@ func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
 // buildPreAuthChain constructs a chain that should process every request before
 // the OAuth2 Proxy authentication logic kicks in.
 // For example forcing HTTPS or health checks.
-func buildPreAuthChain(opts *options.Options, sessionStore sessionsapi.SessionStore, trustedProxies *ip.NetSet) (alice.Chain, error) {
+func buildPreAuthChain(opts *options.Options, readiness middleware.Verifiable, trustedProxies *ip.NetSet) (alice.Chain, error) {
 	chain := alice.New(middleware.NewScope(opts.ReverseProxy, opts.Logging.RequestIDHeader, trustedProxies))
 
 	if opts.ForceHTTPS {
@@ -382,14 +398,14 @@ func buildPreAuthChain(opts *options.Options, sessionStore sessionsapi.SessionSt
 	if opts.Logging.SilencePing {
 		chain = chain.Append(
 			middleware.NewHealthCheck(healthCheckPaths, healthCheckUserAgents),
-			middleware.NewReadynessCheck(opts.ReadyPath, sessionStore),
+			middleware.NewReadynessCheck(opts.ReadyPath, readiness),
 			middleware.NewRequestLogger(),
 		)
 	} else {
 		chain = chain.Append(
 			middleware.NewRequestLogger(),
 			middleware.NewHealthCheck(healthCheckPaths, healthCheckUserAgents),
-			middleware.NewReadynessCheck(opts.ReadyPath, sessionStore),
+			middleware.NewReadynessCheck(opts.ReadyPath, readiness),
 		)
 	}
 
@@ -476,6 +492,84 @@ func buildProviderName(p providers.Provider, override string) string {
 		return override
 	}
 	return p.Data().ProviderName
+}
+
+// setupProvider constructs the identity provider. When OIDC discovery fails and
+// lazy discovery is enabled for an OIDC-based provider, it returns a
+// providers.LazyProvider that serves OIDC flows as "not ready" while background
+// discovery is performed (started by Start) - so Basic Auth and other
+// provider-independent features keep working. Otherwise a discovery failure is
+// returned to the caller and aborts startup, preserving the historical
+// behaviour.
+func setupProvider(providerConfig options.Provider) (providers.Provider, error) {
+	provider, err := providers.NewProvider(providerConfig)
+	if err == nil {
+		return provider, nil
+	}
+
+	lazyEnabled := ptr.Deref(providerConfig.OIDCConfig.LazyDiscovery, options.DefaultOIDCLazyDiscovery)
+	skipDiscovery := ptr.Deref(providerConfig.OIDCConfig.SkipDiscovery, options.DefaultSkipDiscovery)
+	needsVerifier, verifierErr := providers.ProviderRequiresOIDCProviderVerifier(providerConfig.Type)
+	if verifierErr != nil {
+		return nil, verifierErr
+	}
+
+	// Only defer to lazy initialisation when OIDC discovery is the failing step:
+	// the user must have opted in, discovery must be enabled, and the provider
+	// must actually use OIDC discovery.
+	if !lazyEnabled || skipDiscovery || !needsVerifier {
+		return nil, err
+	}
+
+	lazy, lazyErr := providers.NewLazyProvider(providerConfig)
+	if lazyErr != nil {
+		// If even the discovery-independent placeholder cannot be built, the
+		// failure is a genuine configuration error rather than an unreachable
+		// issuer, so surface the original error and abort startup.
+		return nil, err
+	}
+
+	logger.Errorf("OIDC discovery failed at startup; continuing with lazy discovery: %v", err)
+	logger.Printf("WARNING: with --oidc-lazy-discovery, discovery is retried indefinitely in the background. " +
+		"If the failure above is a configuration error (e.g. issuer mismatch or no common signing algorithms) " +
+		"rather than an unreachable issuer, the provider will never become ready - watch the readiness endpoint and logs.")
+	return lazy, nil
+}
+
+// providerReadiness reports the readiness of a LazyProvider for the /ready deep
+// health check. Non-lazy providers are always considered ready.
+type providerReadiness struct {
+	provider providers.Provider
+}
+
+func (p providerReadiness) VerifyConnection(_ context.Context) error {
+	if lazy, ok := p.provider.(*providers.LazyProvider); ok && !lazy.Ready() {
+		return errors.New("provider not ready: OIDC discovery is still pending")
+	}
+	return nil
+}
+
+// providerReady reports whether the identity provider can serve OAuth2 flows.
+// A LazyProvider is only ready once background OIDC discovery has completed; all
+// other providers are always ready.
+func (p *OAuthProxy) providerReady() bool {
+	if p.lazyProvider != nil {
+		return p.lazyProvider.Ready()
+	}
+	return true
+}
+
+// readinessVerifiers combines multiple Verifiable checks into one; VerifyConnection
+// fails if any of them fail.
+type readinessVerifiers []middleware.Verifiable
+
+func (rs readinessVerifiers) VerifyConnection(ctx context.Context) error {
+	for _, r := range rs {
+		if err := r.VerifyConnection(ctx); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // buildRoutesAllowlist builds an []allowedRoute  list from either the legacy
@@ -823,6 +917,15 @@ func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 }
 
 func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, overrides url.Values) {
+	// With lazy OIDC discovery the provider may not be ready yet. Returning an
+	// error here avoids a silent self-redirect loop (GetLoginURL would be empty)
+	// and keeps provider-independent auth (e.g. Basic Auth) usable meanwhile.
+	if !p.providerReady() {
+		logger.Errorf("cannot start OAuth2 login flow: identity provider is not ready (OIDC discovery is still pending)")
+		p.ErrorPage(rw, req, http.StatusServiceUnavailable, "The identity provider is not ready yet. Please try again shortly.")
+		return
+	}
+
 	extraParams := p.provider.Data().LoginURLParams(overrides)
 	prepareNoCache(rw)
 

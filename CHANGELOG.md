@@ -34,6 +34,7 @@
 ## Changes since v7.15.3
 
 - [#3493](https://github.com/oauth2-proxy/oauth2-proxy/pull/3493) chore(deps): update gomod @tuunit
+- [#3489](https://github.com/oauth2-proxy/oauth2-proxy/pull/3489) Add opt-in `--oidc-lazy-discovery` to perform OIDC discovery in the background (retrying with backoff)
 
 # V7.15.3
 

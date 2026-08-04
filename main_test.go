@@ -187,6 +187,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 					InsecureAllowUnverifiedEmail:   ptr.To(false),
 					InsecureSkipIssuerVerification: ptr.To(false),
 					SkipDiscovery:                  ptr.To(false),
+					LazyDiscovery:                  ptr.To(false),
 					EnabledSigningAlgs:             []string{},
 				},
 				MicrosoftEntraIDConfig: options.MicrosoftEntraIDOptions{
