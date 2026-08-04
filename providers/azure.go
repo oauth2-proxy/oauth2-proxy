@@ -92,7 +92,7 @@ func NewAzureProvider(p *ProviderData, opts options.AzureOptions) *AzureProvider
 		azureV2GraphScope := fmt.Sprintf("https://%s/.default", p.ProfileURL.Host)
 
 		if strings.Contains(p.Scope, " groups") {
-			logger.Print("WARNING: `groups` scope is not an accepted scope when using Azure OAuth V2 endpoint. Removing it from the scope list")
+			logger.Warn("`groups` scope is not an accepted scope when using Azure OAuth V2 endpoint. Removing it from the scope list")
 			p.Scope = strings.ReplaceAll(p.Scope, " groups", "")
 		}
 
@@ -102,7 +102,7 @@ func NewAzureProvider(p *ProviderData, opts options.AzureOptions) *AzureProvider
 		}
 
 		if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
-			logger.Print("WARNING: `--resource` option has no effect when using the Azure OAuth V2 endpoint.")
+			logger.Warn("`--resource` option has no effect when using the Azure OAuth V2 endpoint.")
 		}
 	}
 
@@ -197,7 +197,7 @@ func (p *AzureProvider) EnrichSession(ctx context.Context, session *sessions.Ses
 	err := p.extractClaimsIntoSession(ctx, session)
 
 	if err != nil {
-		logger.Printf("unable to get email and/or groups claims from token: %v", err)
+		logger.Infof("unable to get email and/or groups claims from token: %v", err)
 	}
 
 	if session.Email == "" {
@@ -288,7 +288,7 @@ func (p *AzureProvider) verifySessionToken(ctx context.Context, session *session
 
 	if session.IDToken != "" {
 		if _, err := p.Verifier.Verify(ctx, session.IDToken); err != nil {
-			logger.Printf("unable to verify ID token, fallback to access token: %v", err)
+			logger.Infof("unable to verify ID token, fallback to access token: %v", err)
 			if _, err = p.Verifier.Verify(ctx, session.AccessToken); err != nil {
 				return fmt.Errorf("unable to verify access token: %v", err)
 			}
@@ -353,7 +353,7 @@ func (p *AzureProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sess
 	err = p.extractClaimsIntoSession(ctx, s)
 
 	if err != nil {
-		logger.Printf("unable to get email and/or groups claims from token: %v", err)
+		logger.Infof("unable to get email and/or groups claims from token: %v", err)
 	}
 
 	return nil
@@ -445,7 +445,7 @@ func getEmailFromJSON(json *simplejson.Json) (string, error) {
 	if err != nil || email == "" {
 		email, err = json.Get("userPrincipalName").String()
 		if err != nil {
-			logger.Errorf("unable to find userPrincipalName: %s", err)
+			logger.ErrMsgf("unable to find userPrincipalName: %s", err)
 			return "", err
 		}
 	}

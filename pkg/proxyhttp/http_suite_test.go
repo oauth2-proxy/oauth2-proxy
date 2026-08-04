@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
+	"log/slog"
 	"net/http"
 	"testing"
 
@@ -22,8 +23,7 @@ var ipv6CertDataSource, ipv6KeyDataSource options.SecretSource
 var transport *http.Transport
 
 func TestHTTPSuite(t *testing.T) {
-	logger.SetOutput(GinkgoWriter)
-	logger.SetErrOutput(GinkgoWriter)
+	logger.Setup(slog.LevelDebug, "text", GinkgoWriter, GinkgoWriter)
 
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "HTTP")
