@@ -49,8 +49,20 @@ func rewritePath(rewriteRegExp *regexp.Regexp, rewriteTarget string, writer page
 			return
 		}
 
+		// When the original path was percent-encoded, RawPath holds the escaped
+		// form. Rewrite it too so the encoding is preserved when proxying to the
+		// upstream; otherwise EscapedPath() (via reqURL.String()) re-encodes the
+		// decoded Path and drops characters such as %2F and %3A. See issue #2105.
+		if reqURL.RawPath != "" {
+			newRawPath := rewriteRegExp.ReplaceAllString(reqURL.RawPath, rewriteTarget)
+			reqURL.RawPath = strings.SplitN(newRawPath, "?", 2)[0]
+		}
+
 		req.RequestURI = reqURL.String()
-		req.URL.Path = reqURL.Path // set path for websocket connections
+		// Set path and raw (encoded) path for websocket connections, which are
+		// proxied using req.URL rather than req.RequestURI.
+		req.URL.Path = reqURL.Path
+		req.URL.RawPath = reqURL.RawPath
 		next.ServeHTTP(rw, req)
 	})
 }
