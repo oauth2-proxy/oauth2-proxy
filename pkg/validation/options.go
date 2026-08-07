@@ -61,6 +61,7 @@ func Validate(o *options.Options) error {
 				verifier, err := newVerifierFromJwtIssuer(
 					o.Providers[0].OIDCConfig.AudienceClaims,
 					o.Providers[0].OIDCConfig.ExtraAudiences,
+					o.Providers[0].OIDCConfig.EnabledSigningAlgs,
 					jwtIssuer,
 				)
 				if err != nil {
@@ -143,13 +144,8 @@ func parseJwtIssuers(issuers []string, msgs []string) ([]jwtIssuer, []string) {
 
 // newVerifierFromJwtIssuer takes in issuer information in jwtIssuer info and returns
 // a verifier for that issuer.
-func newVerifierFromJwtIssuer(audienceClaims []string, extraAudiences []string, jwtIssuer jwtIssuer) (internaloidc.IDTokenVerifier, error) {
-	pvOpts := internaloidc.ProviderVerifierOptions{
-		AudienceClaims: audienceClaims,
-		ClientID:       jwtIssuer.audience,
-		ExtraAudiences: extraAudiences,
-		IssuerURL:      jwtIssuer.issuerURI,
-	}
+func newVerifierFromJwtIssuer(audienceClaims []string, extraAudiences []string, supportedSigningAlgs []string, jwtIssuer jwtIssuer) (internaloidc.IDTokenVerifier, error) {
+	pvOpts := providerVerifierOptionsFromJwtIssuer(audienceClaims, extraAudiences, supportedSigningAlgs, jwtIssuer)
 
 	pv, err := internaloidc.NewProviderVerifier(context.TODO(), pvOpts)
 	if err != nil {
@@ -164,6 +160,16 @@ func newVerifierFromJwtIssuer(audienceClaims []string, extraAudiences []string, 
 	}
 
 	return pv.Verifier(), nil
+}
+
+func providerVerifierOptionsFromJwtIssuer(audienceClaims []string, extraAudiences []string, supportedSigningAlgs []string, jwtIssuer jwtIssuer) internaloidc.ProviderVerifierOptions {
+	return internaloidc.ProviderVerifierOptions{
+		AudienceClaims:       audienceClaims,
+		ClientID:             jwtIssuer.audience,
+		ExtraAudiences:       extraAudiences,
+		IssuerURL:            jwtIssuer.issuerURI,
+		SupportedSigningAlgs: supportedSigningAlgs,
+	}
 }
 
 // jwtIssuer hold parsed JWT issuer info that's used to construct a verifier.
