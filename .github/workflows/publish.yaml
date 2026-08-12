@@ -4,25 +4,54 @@ on:
   release:
     types: [published]
 
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: reporting/oauth2-proxy
+
 jobs:
   Publish:
     runs-on: ubuntu-22.04
-    name: Publish to docker repository
+    name: Publish to Amazon ECR
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Docker registry login
-        uses: docker/login-action@v3.0.0
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@a03048d87541d1d9fcf2ecf528a4a65ba9bd7838 # v5.0.0
         with:
-          registry: docker.eu1.hsdp.io
-          username: ${{ secrets.PICS_DOCKER_USER }}
-          password: ${{ secrets.PICS_DOCKER_PASSWORD }}
-          logout: true
+          role-to-assume: ${{ secrets.PICS_ECR_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@062b18b96a7aff071d4dc91bc00c4c1a7945b076 # v2.0.1
+
+      - name: Create ECR repository (if it does not exist)
+        run: |
+          aws ecr create-repository \
+            --repository-name "${ECR_REPOSITORY}" \
+            --image-scanning-configuration scanOnPush=true \
+            2>/dev/null || true
+
+      - name: Enforce image tag immutability
+        run: |
+          aws ecr put-image-tag-mutability \
+            --repository-name "${ECR_REPOSITORY}" \
+            --image-tag-mutability IMMUTABLE
+
+      - name: Apply ECR delete-protection policy
+        run: |
+          aws ecr set-repository-policy \
+            --repository-name "${ECR_REPOSITORY}" \
+            --policy-text '{"Version":"2012-10-17","Statement":[{"Sid":"DenyDeleteRepository","Effect":"Deny","Principal":"*","Action":"ecr:DeleteRepository"}]}'
 
       - name: Publish Docker image
         uses: docker/build-push-action@v4
         with:
           context: ${{ github.workspace }}
           push: true
-          tags: docker.eu1.hsdp.io/reporting/oauth2-proxy:${{ github.event.release.tag_name }}
+          tags: ${{ secrets.PICS_ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ github.event.release.tag_name }}
