@@ -50,7 +50,7 @@ jobs:
       id: go-version
 
     - name: Set up Go
-      uses: actions/setup-go@v6
+      uses: actions/setup-go@v7
       with:
         go-version: ${{ steps.go-version.outputs.version }}
         check-latest: true
