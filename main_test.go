@@ -188,6 +188,8 @@ redirect_url="http://localhost:4180/oauth2/callback"
 					InsecureSkipIssuerVerification: ptr.To(false),
 					SkipDiscovery:                  ptr.To(false),
 					LazyDiscovery:                  ptr.To(false),
+					LazyDiscoveryInitialInterval:   options.DefaultOIDCLazyDiscoveryInitialInterval,
+					LazyDiscoveryMaxInterval:       options.DefaultOIDCLazyDiscoveryMaxInterval,
 					EnabledSigningAlgs:             []string{},
 				},
 				MicrosoftEntraIDConfig: options.MicrosoftEntraIDOptions{

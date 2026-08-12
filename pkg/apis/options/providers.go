@@ -1,6 +1,10 @@
 package options
 
-import "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
+import (
+	"time"
+
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
+)
 
 const (
 	// OIDCEmailClaim is the generic email claim used by the OIDC provider.
@@ -16,6 +20,14 @@ const (
 	// DefaultOIDCLazyDiscovery is the default value for OIDCOptions.LazyDiscovery.
 	// When false, a failed OIDC discovery aborts startup (historical behaviour).
 	DefaultOIDCLazyDiscovery bool = false
+
+	// DefaultOIDCLazyDiscoveryInitialInterval is the default value for
+	// OIDCOptions.LazyDiscoveryInitialInterval.
+	DefaultOIDCLazyDiscoveryInitialInterval time.Duration = 3 * time.Second
+
+	// DefaultOIDCLazyDiscoveryMaxInterval is the default value for
+	// OIDCOptions.LazyDiscoveryMaxInterval.
+	DefaultOIDCLazyDiscoveryMaxInterval time.Duration = 30 * time.Second
 
 	// DefaultInsecureSkipNonce is the default value
 	// for OIDCOptions.InsecureSkipNonce
@@ -304,16 +316,17 @@ type OIDCOptions struct {
 	// SkipDiscovery allows to skip OIDC discovery and use manually supplied Endpoints
 	// default set to 'false'
 	SkipDiscovery *bool `yaml:"skipDiscovery,omitempty"`
-	// LazyDiscovery allows oauth2-proxy to start even when the OIDC issuer is
-	// unreachable. When enabled, OIDC discovery is performed in the background
-	// (retrying with backoff) instead of blocking startup, so features that do
-	// not depend on the provider - such as Basic Auth via htpasswdFile - remain
-	// available while discovery is pending. The readiness endpoint reports
-	// not-ready until discovery succeeds. Only applies when discovery is enabled
-	// (SkipDiscovery is false). Note that a configuration error (rather than an
-	// unreachable issuer) is retried indefinitely instead of failing startup.
-	// default set to 'false'
+	// LazyDiscovery lets oauth2-proxy start when the OIDC issuer is unreachable,
+	// retrying discovery in the background instead of failing startup. OAuth2
+	// login returns 503 until discovery succeeds; other features (e.g. Basic Auth)
+	// keep working. default set to 'false'
 	LazyDiscovery *bool `yaml:"lazyDiscovery,omitempty"`
+	// LazyDiscoveryInitialInterval is the backoff before the first background
+	// discovery retry, doubling up to LazyDiscoveryMaxInterval. default set to '3s'
+	LazyDiscoveryInitialInterval time.Duration `yaml:"lazyDiscoveryInitialInterval,omitempty"`
+	// LazyDiscoveryMaxInterval is the maximum backoff between background
+	// discovery retries. default set to '30s'
+	LazyDiscoveryMaxInterval time.Duration `yaml:"lazyDiscoveryMaxInterval,omitempty"`
 	// JwksURL is the OpenID Connect JWKS URL
 	// eg: https://www.googleapis.com/oauth2/v3/certs
 	JwksURL string `yaml:"jwksURL,omitempty"`
@@ -411,6 +424,15 @@ func (o *OIDCOptions) EnsureDefaults() {
 	}
 	if o.LazyDiscovery == nil {
 		o.LazyDiscovery = ptr.To(DefaultOIDCLazyDiscovery)
+	}
+	if o.LazyDiscoveryInitialInterval <= 0 {
+		o.LazyDiscoveryInitialInterval = DefaultOIDCLazyDiscoveryInitialInterval
+	}
+	if o.LazyDiscoveryMaxInterval <= 0 {
+		o.LazyDiscoveryMaxInterval = DefaultOIDCLazyDiscoveryMaxInterval
+	}
+	if o.LazyDiscoveryMaxInterval < o.LazyDiscoveryInitialInterval {
+		o.LazyDiscoveryMaxInterval = o.LazyDiscoveryInitialInterval
 	}
 	if o.UserIDClaim == "" {
 		o.UserIDClaim = OIDCEmailClaim

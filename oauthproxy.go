@@ -213,8 +213,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		return nil, err
 	}
 
-	readinessVerifiable := readinessVerifiers{sessionStore, providerReadiness{provider: provider}}
-	preAuthChain, err := buildPreAuthChain(opts, readinessVerifiable, trustedProxies)
+	preAuthChain, err := buildPreAuthChain(opts, sessionStore, trustedProxies)
 	if err != nil {
 		return nil, fmt.Errorf("could not build pre-auth chain: %v", err)
 	}
@@ -374,7 +373,7 @@ func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
 // buildPreAuthChain constructs a chain that should process every request before
 // the OAuth2 Proxy authentication logic kicks in.
 // For example forcing HTTPS or health checks.
-func buildPreAuthChain(opts *options.Options, readiness middleware.Verifiable, trustedProxies *ip.NetSet) (alice.Chain, error) {
+func buildPreAuthChain(opts *options.Options, sessionStore sessionsapi.SessionStore, trustedProxies *ip.NetSet) (alice.Chain, error) {
 	chain := alice.New(middleware.NewScope(opts.ReverseProxy, opts.Logging.RequestIDHeader, trustedProxies))
 
 	if opts.ForceHTTPS {
@@ -398,14 +397,14 @@ func buildPreAuthChain(opts *options.Options, readiness middleware.Verifiable, t
 	if opts.Logging.SilencePing {
 		chain = chain.Append(
 			middleware.NewHealthCheck(healthCheckPaths, healthCheckUserAgents),
-			middleware.NewReadynessCheck(opts.ReadyPath, readiness),
+			middleware.NewReadynessCheck(opts.ReadyPath, sessionStore),
 			middleware.NewRequestLogger(),
 		)
 	} else {
 		chain = chain.Append(
 			middleware.NewRequestLogger(),
 			middleware.NewHealthCheck(healthCheckPaths, healthCheckUserAgents),
-			middleware.NewReadynessCheck(opts.ReadyPath, readiness),
+			middleware.NewReadynessCheck(opts.ReadyPath, sessionStore),
 		)
 	}
 
@@ -536,40 +535,16 @@ func setupProvider(providerConfig options.Provider) (providers.Provider, error) 
 	return lazy, nil
 }
 
-// providerReadiness reports the readiness of a LazyProvider for the /ready deep
-// health check. Non-lazy providers are always considered ready.
-type providerReadiness struct {
-	provider providers.Provider
-}
-
-func (p providerReadiness) VerifyConnection(_ context.Context) error {
-	if lazy, ok := p.provider.(*providers.LazyProvider); ok && !lazy.Ready() {
-		return errors.New("provider not ready: OIDC discovery is still pending")
-	}
-	return nil
-}
-
 // providerReady reports whether the identity provider can serve OAuth2 flows.
 // A LazyProvider is only ready once background OIDC discovery has completed; all
-// other providers are always ready.
+// other providers are always ready. Note this does not gate the /ready endpoint
+// (which stays healthy under lazy discovery so the pod remains in load-balancer
+// rotation); it only gates the OAuth2 login flow.
 func (p *OAuthProxy) providerReady() bool {
 	if p.lazyProvider != nil {
 		return p.lazyProvider.Ready()
 	}
 	return true
-}
-
-// readinessVerifiers combines multiple Verifiable checks into one; VerifyConnection
-// fails if any of them fail.
-type readinessVerifiers []middleware.Verifiable
-
-func (rs readinessVerifiers) VerifyConnection(ctx context.Context) error {
-	for _, r := range rs {
-		if err := r.VerifyConnection(ctx); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // buildRoutesAllowlist builds an []allowedRoute  list from either the legacy
