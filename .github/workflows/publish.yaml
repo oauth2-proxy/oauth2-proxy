@@ -10,7 +10,7 @@ permissions:
 
 env:
   AWS_REGION: us-east-1
-  ECR_REPOSITORY: reporting/oauth2-proxy
+  ECR_REPOSITORY: reporting-dev/base-images-build/reporting/oauth2-proxy
 
 jobs:
   Publish:
