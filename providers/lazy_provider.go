@@ -18,12 +18,6 @@ import (
 // keep working while discovery is pending.
 var ErrProviderNotReady = errors.New("provider not ready: OIDC discovery has not completed yet")
 
-// Background discovery backoff bounds.
-const (
-	lazyDiscoveryInitialInterval = 3 * time.Second
-	lazyDiscoveryMaxInterval     = 30 * time.Second
-)
-
 // LazyProvider wraps a Provider whose construction depends on OIDC discovery.
 // It starts out not-ready, delegating only Data() to a discovery-independent
 // placeholder, and returns ErrProviderNotReady from OAuth flow methods. Once
@@ -78,7 +72,16 @@ func (l *LazyProvider) setInner(p Provider) {
 // succeeds the real provider is swapped in and the LazyProvider becomes ready.
 // It is intended to be run in a goroutine.
 func (l *LazyProvider) InitWithRetry(ctx context.Context) {
-	interval := lazyDiscoveryInitialInterval
+	initialInterval := l.providerConfig.OIDCConfig.LazyDiscoveryInitialInterval
+	if initialInterval <= 0 {
+		initialInterval = options.DefaultOIDCLazyDiscoveryInitialInterval
+	}
+	maxInterval := l.providerConfig.OIDCConfig.LazyDiscoveryMaxInterval
+	if maxInterval < initialInterval {
+		maxInterval = initialInterval
+	}
+
+	interval := initialInterval
 	attempt := 0
 	for {
 		attempt++
@@ -100,8 +103,8 @@ func (l *LazyProvider) InitWithRetry(ctx context.Context) {
 		}
 
 		interval *= 2
-		if interval > lazyDiscoveryMaxInterval {
-			interval = lazyDiscoveryMaxInterval
+		if interval > maxInterval {
+			interval = maxInterval
 		}
 	}
 }
