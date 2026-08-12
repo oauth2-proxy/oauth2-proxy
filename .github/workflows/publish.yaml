@@ -30,12 +30,10 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@062b18b96a7aff071d4dc91bc00c4c1a7945b076 # v2.0.1
 
-      - name: Create ECR repository (if it does not exist)
-        run: |
-          aws ecr create-repository \
-            --repository-name "${ECR_REPOSITORY}" \
-            --image-scanning-configuration scanOnPush=true \
-            2>/dev/null || true
+aws ecr create-repository \
+  --repository-name "${ECR_REPOSITORY}" \
+  --image-scanning-configuration scanOnPush=true \
+  >/dev/null 2>&1 || aws ecr describe-repositories --repository-names "${ECR_REPOSITORY}" >/dev/null
 
       - name: Enforce image tag immutability
         run: |
@@ -54,4 +52,4 @@ jobs:
         with:
           context: ${{ github.workspace }}
           push: true
-          tags: ${{ secrets.PICS_ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ github.event.release.tag_name }}
+tags: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.event.release.tag_name }}
