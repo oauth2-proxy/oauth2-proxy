@@ -20,7 +20,7 @@ jobs:
         id: pages
         uses: actions/configure-pages@v5
       
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           # renovate: datasource=node-version depName=node
           node-version: 24
@@ -37,7 +37,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           # renovate: datasource=node-version depName=node
           node-version: 24
