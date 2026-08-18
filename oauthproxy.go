@@ -896,10 +896,21 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 	errorString := req.Form.Get("error")
 	if errorString != "" {
-		logger.Errorf("Error while parsing OAuth2 callback: %s", errorString)
+		// Many providers (e.g. Okta, Entra ID, Keycloak) return a human-readable
+		// error_description alongside the error code. Surfacing it lets end users
+		// distinguish causes of an otherwise opaque code such as access_denied
+		// (for example "User is not assigned to the application" versus a policy
+		// denial) without needing access to the proxy logs.
+		errorDescription := req.Form.Get("error_description")
+		logger.Errorf("Error while parsing OAuth2 callback: %s %s", errorString, errorDescription)
 		message := fmt.Sprintf("Login Failed: The upstream identity provider returned an error: %s", errorString)
-		// Set the debug message and override the non debug message to be the same for this case
-		p.ErrorPage(rw, req, http.StatusForbidden, message, message)
+		if errorDescription != "" {
+			message = fmt.Sprintf("%s: %s", message, errorDescription)
+		}
+		// Set the debug message and override the non debug message to be the same
+		// for this case. The message is passed as an argument rather than a format
+		// string so a provider-supplied description containing '%' is rendered verbatim.
+		p.ErrorPage(rw, req, http.StatusForbidden, message, "%s", message)
 		return
 	}
 
