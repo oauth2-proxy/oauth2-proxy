@@ -107,15 +107,14 @@ type OAuthProxy struct {
 	realClientIPParser   ipapi.RealClientIPParser
 	trustedIPs           *ip.NetSet
 
-	sessionChain      alice.Chain
-	headersChain      alice.Chain
-	preAuthChain      alice.Chain
-	pageWriter        pagewriter.Writer
-	server            proxyhttp.Server
-	upstreamProxy     http.Handler
-	serveMux          *mux.Router
-	redirectValidator redirect.Validator
-	appDirector       redirect.AppDirector
+	sessionChain  alice.Chain
+	headersChain  alice.Chain
+	preAuthChain  alice.Chain
+	pageWriter    pagewriter.Writer
+	server        proxyhttp.Server
+	upstreamProxy http.Handler
+	serveMux      *mux.Router
+	appDirector   *redirect.AppDirector
 
 	encodeState bool
 }
@@ -215,10 +214,9 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		return nil, fmt.Errorf("could not build headers chain: %v", err)
 	}
 
-	redirectValidator := redirect.NewValidator(opts.WhitelistDomains)
 	appDirector := redirect.NewAppDirector(redirect.AppDirectorOpts{
-		ProxyPrefix: opts.ProxyPrefix,
-		Validator:   redirectValidator,
+		ProxyPrefix:    opts.ProxyPrefix,
+		AllowedDomains: opts.WhitelistDomains,
 	})
 
 	p := &OAuthProxy{
@@ -250,7 +248,6 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		preAuthChain:       preAuthChain,
 		pageWriter:         pageWriter,
 		upstreamProxy:      upstreamProxy,
-		redirectValidator:  redirectValidator,
 		appDirector:        appDirector,
 		encodeState:        opts.EncodeState,
 	}
@@ -952,7 +949,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if !p.redirectValidator.IsValidRedirect(appRedirect) {
+	if !p.appDirector.IsValidRedirect(appRedirect) {
 		appRedirect = "/"
 	}
 
