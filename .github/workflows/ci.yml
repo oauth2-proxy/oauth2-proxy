@@ -35,12 +35,6 @@ jobs:
         go-version: ${{ steps.go-version.outputs.version }}
         check-latest: true
 
-    - name: Install golangci-lint
-      uses: golangci/golangci-lint-action@v9
-      with:
-        install-only: true
-        version: v2.11.4 # renovate: datasource=github-tags depName=golangci/golangci-lint
-
     - name: Verify Code Generation
       run: |
         make verify-generate

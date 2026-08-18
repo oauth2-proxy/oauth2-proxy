@@ -25,7 +25,8 @@ help: ## Display this help
 
 
 GO ?= go
-GOLANGCILINT ?= golangci-lint
+# renovate: datasource=github-tags depName=golangci/golangci-lint
+GOLANGCILINT_VERSION ?= v2.11.4
 
 BINARY := oauth2-proxy
 VERSION ?= $(shell git describe --always --dirty --tags 2>/dev/null || echo "undefined")
@@ -143,7 +144,7 @@ verify-generate: generate ## Verify command to check if alpha config docs are in
 ##@ Miscellaneous
 
 .PHONY: test
-test: lint ## Run all Go tests
+test: ## Run all Go tests
 	GO111MODULE=on $(GO) test $(TESTCOVER) -v -race ./...
 
 .PHONY: release
@@ -157,7 +158,11 @@ clean: ## Cleanup release and build files
 
 .PHONY: lint
 lint: validate-go-version ## Lint all files using golangci-lint
-	GO111MODULE=on $(GOLANGCILINT) run
+	GO111MODULE=on $(GO) run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCILINT_VERSION) run --timeout 10m
+
+.PHONY: lint-fix
+lint-fix: validate-go-version ## Lint all files and apply fixes using golangci-lint
+	GO111MODULE=on $(GO) run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCILINT_VERSION) run --timeout 10m --fix
 
 .PHONY: validate-go-version
 validate-go-version: ## Validate Go environment requirements
