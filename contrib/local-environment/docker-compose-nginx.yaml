@@ -1,24 +1,14 @@
 # This docker-compose file can be used to bring up an example instance of oauth2-proxy
 # for manual testing and exploration of features.
 # Alongside OAuth2-Proxy, this file also starts Dex to act as the identity provider,
-# etcd for storage for Dex, nginx as a reverse proxy and other http services for upstreams
+# nginx as a reverse proxy and other HTTP services for upstreams.
 #
 # This file is an extension of the main compose file and must be used with it
 #    docker-compose -f docker-compose.yaml -f docker-compose-nginx.yaml <command>
 # Alternatively:
 #    make nginx-<command> (eg make nginx-up, make nginx-down)
 #
-# Access one of the following URLs to initiate a login flow:
-#    - http://oauth2-proxy.localhost
-#    - http://httpbin.oauth2-proxy.localhost
-#
-# The OAuth2 Proxy itself is hosted at http://oauth2-proxy.oauth2-proxy.localhost
-#
-# Note, the above URLs should work with Chrome, but you may need to add hosts
-# entries for other browsers
-#    127.0.0.1 oauth2-proxy.localhost
-#    127.0.0.1 httpbin.oauth2-proxy.localhost
-#    127.0.0.1 oauth2-proxy.oauth2-proxy.localhost
+# Access http://oauth2-proxy.localtest.me:8080 to initiate a login flow.
 version: "3.0"
 services:
   oauth2-proxy:
@@ -33,7 +23,6 @@ services:
     networks:
       oauth2-proxy: {}
       dex: {}
-      etcd: {}
       httpbin: {}
     depends_on:
       - dex
@@ -52,7 +41,6 @@ services:
     networks:
       oauth2-proxy: {}
       dex: {}
-      etcd: {}
       httpbin: {}
   dex:
     container_name: dex
@@ -68,26 +56,13 @@ services:
       dex:
         aliases:
           - dex.localtest.me
-      etcd: {}
-    depends_on:
-      - etcd
   httpbin:
     container_name: httpbin
     image: kennethreitz/httpbin
     ports: []
     networks:
       httpbin: {}
-  etcd:
-    container_name: etcd
-    image: gcr.io/etcd-development/etcd:v3.7.1
-    entrypoint: /usr/local/bin/etcd
-    command:
-      - --listen-client-urls=http://0.0.0.0:2379
-      - --advertise-client-urls=http://etcd:2379
-    networks:
-      etcd: {}
 networks:
   dex: {}
-  etcd: {}
   httpbin: {}
   oauth2-proxy: {}

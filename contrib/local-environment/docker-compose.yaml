@@ -1,7 +1,7 @@
 # This docker-compose file can be used to bring up an example instance of oauth2-proxy
 # for manual testing and exploration of features.
 # Alongside OAuth2-Proxy, this file also starts Dex to act as the identity provider,
-# etcd for storage for Dex  and HTTPBin as an example upstream.
+# HTTPBin as an example upstream.
 #
 # This can either be created using docker-compose
 #    docker-compose -f docker-compose.yaml <command>
@@ -41,25 +41,12 @@ services:
       dex:
         aliases:
           - dex.localtest.me
-      etcd: {}
-    depends_on:
-      - etcd
   httpbin:
     container_name: httpbin
     image: kennethreitz/httpbin
     ports: []
     networks:
       httpbin: {}
-  etcd:
-    container_name: etcd
-    image: gcr.io/etcd-development/etcd:v3.7.1
-    entrypoint: /usr/local/bin/etcd
-    command:
-      - --listen-client-urls=http://0.0.0.0:2379
-      - --advertise-client-urls=http://etcd:2379
-    networks:
-      etcd: {}
 networks:
   dex: {}
-  etcd: {}
   httpbin: {}
