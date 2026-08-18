@@ -236,3 +236,128 @@ func TestProviderCAFilesError(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "unable to load provider CA file(s)")
 }
+
+func TestParseJwtIssuers(t *testing.T) {
+	testCases := []struct {
+		name     string
+		issuers  []string
+		jwksURLs []string
+		expected []jwtIssuer
+		msgs     []string
+	}{
+		{
+			name:    "issuer and audience without jwks url",
+			issuers: []string{"https://issuer.example.com=client-id"},
+			expected: []jwtIssuer{
+				{issuerURI: "https://issuer.example.com", audience: "client-id"},
+			},
+		},
+		{
+			name:    "audience containing an equals sign",
+			issuers: []string{"https://issuer.example.com=aud=with=equals"},
+			expected: []jwtIssuer{
+				{issuerURI: "https://issuer.example.com", audience: "aud=with=equals"},
+			},
+		},
+		{
+			name:     "explicit jwks url overrides the derived url",
+			issuers:  []string{"http://sts.example.com/adfs/services/trust=urn:microsoft:userinfo"},
+			jwksURLs: []string{"http://sts.example.com/adfs/services/trust=https://sts.example.com/adfs/discovery/keys"},
+			expected: []jwtIssuer{
+				{
+					issuerURI: "http://sts.example.com/adfs/services/trust",
+					audience:  "urn:microsoft:userinfo",
+					jwksURI:   "https://sts.example.com/adfs/discovery/keys",
+				},
+			},
+		},
+		{
+			name:     "jwks url containing an equals sign",
+			issuers:  []string{"https://issuer.example.com=client-id"},
+			jwksURLs: []string{"https://issuer.example.com=https://issuer.example.com/keys?format=jwks"},
+			expected: []jwtIssuer{
+				{
+					issuerURI: "https://issuer.example.com",
+					audience:  "client-id",
+					jwksURI:   "https://issuer.example.com/keys?format=jwks",
+				},
+			},
+		},
+		{
+			name:     "jwks url for an unrelated issuer is ignored",
+			issuers:  []string{"https://issuer.example.com=client-id"},
+			jwksURLs: []string{"https://other.example.com=https://other.example.com/keys"},
+			expected: []jwtIssuer{
+				{issuerURI: "https://issuer.example.com", audience: "client-id"},
+			},
+		},
+		{
+			name:     "invalid issuer spec is reported",
+			issuers:  []string{"https://issuer.example.com"},
+			expected: []jwtIssuer{},
+			msgs:     []string{"invalid jwt verifier uri=audience spec: https://issuer.example.com"},
+		},
+		{
+			name:     "invalid jwks url spec is reported",
+			issuers:  []string{"https://issuer.example.com=client-id"},
+			jwksURLs: []string{"https://issuer.example.com"},
+			expected: []jwtIssuer{
+				{issuerURI: "https://issuer.example.com", audience: "client-id"},
+			},
+			msgs: []string{"invalid jwt issuer jwks url spec: https://issuer.example.com"},
+		},
+		{
+			name:     "empty jwks url value is reported",
+			issuers:  []string{"https://issuer.example.com=client-id"},
+			jwksURLs: []string{"https://issuer.example.com="},
+			expected: []jwtIssuer{
+				{issuerURI: "https://issuer.example.com", audience: "client-id"},
+			},
+			msgs: []string{"invalid jwt issuer jwks url spec: https://issuer.example.com="},
+		},
+		{
+			name:     "empty issuer in jwks url spec is reported",
+			issuers:  []string{"https://issuer.example.com=client-id"},
+			jwksURLs: []string{"=https://issuer.example.com/keys"},
+			expected: []jwtIssuer{
+				{issuerURI: "https://issuer.example.com", audience: "client-id"},
+			},
+			msgs: []string{"invalid jwt issuer jwks url spec: =https://issuer.example.com/keys"},
+		},
+		{
+			name:    "multiple issuers each with their own jwks url",
+			issuers: []string{"https://a.example.com=aud-a", "https://b.example.com=aud-b"},
+			jwksURLs: []string{
+				"https://a.example.com=https://a.example.com/keys",
+				"https://b.example.com=https://b.example.com/keys",
+			},
+			expected: []jwtIssuer{
+				{issuerURI: "https://a.example.com", audience: "aud-a", jwksURI: "https://a.example.com/keys"},
+				{issuerURI: "https://b.example.com", audience: "aud-b", jwksURI: "https://b.example.com/keys"},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			issuers, msgs := parseJwtIssuers(tc.issuers, tc.jwksURLs, nil)
+			assert.Equal(t, tc.expected, issuers)
+			assert.Equal(t, tc.msgs, msgs)
+		})
+	}
+}
+
+func TestNewVerifierFromJwtIssuerWithExplicitJWKsURL(t *testing.T) {
+	// An explicit JWKS URL must skip discovery entirely, so the verifier can be
+	// constructed without reaching the issuer (the JWKS is fetched lazily).
+	issuer := jwtIssuer{
+		issuerURI: "http://sts.example.com/adfs/services/trust",
+		audience:  "urn:microsoft:userinfo",
+		jwksURI:   "https://sts.example.com/adfs/discovery/keys",
+	}
+
+	verifier, err := newVerifierFromJwtIssuer(nil, nil, issuer)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, verifier)
+}

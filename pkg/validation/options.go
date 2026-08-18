@@ -56,7 +56,7 @@ func Validate(o *options.Options) error {
 		// Configure extra issuers
 		if len(o.ExtraJwtIssuers) > 0 {
 			var jwtIssuers []jwtIssuer
-			jwtIssuers, msgs = parseJwtIssuers(o.ExtraJwtIssuers, msgs)
+			jwtIssuers, msgs = parseJwtIssuers(o.ExtraJwtIssuers, o.ExtraJwtIssuerJWKsURLs, msgs)
 			for _, jwtIssuer := range jwtIssuers {
 				verifier, err := newVerifierFromJwtIssuer(
 					o.Providers[0].OIDCConfig.AudienceClaims,
@@ -126,8 +126,10 @@ func parseSignatureKey(o *options.Options, msgs []string) []string {
 }
 
 // parseJwtIssuers takes in an array of strings in the form of issuer=audience
-// and parses to an array of jwtIssuer structs.
-func parseJwtIssuers(issuers []string, msgs []string) ([]jwtIssuer, []string) {
+// and parses to an array of jwtIssuer structs. The optional jwksURLs array holds
+// issuer=jwksURL pairs that override the discovered/derived JWKS URL per issuer.
+func parseJwtIssuers(issuers []string, jwksURLs []string, msgs []string) ([]jwtIssuer, []string) {
+	jwksByIssuer, msgs := parseJwtIssuerJWKsURLs(jwksURLs, msgs)
 	parsedIssuers := make([]jwtIssuer, 0, len(issuers))
 	for _, jwtVerifier := range issuers {
 		components := strings.Split(jwtVerifier, "=")
@@ -136,9 +138,25 @@ func parseJwtIssuers(issuers []string, msgs []string) ([]jwtIssuer, []string) {
 			continue
 		}
 		uri, audience := components[0], strings.Join(components[1:], "=")
-		parsedIssuers = append(parsedIssuers, jwtIssuer{issuerURI: uri, audience: audience})
+		parsedIssuers = append(parsedIssuers, jwtIssuer{issuerURI: uri, audience: audience, jwksURI: jwksByIssuer[uri]})
 	}
 	return parsedIssuers, msgs
+}
+
+// parseJwtIssuerJWKsURLs parses an array of strings in the form of issuer=jwksURL
+// into a map keyed by issuer. The jwksURL value may itself contain "=", so only the
+// first separator is significant.
+func parseJwtIssuerJWKsURLs(jwksURLs []string, msgs []string) (map[string]string, []string) {
+	jwksByIssuer := make(map[string]string, len(jwksURLs))
+	for _, spec := range jwksURLs {
+		issuer, jwksURL, found := strings.Cut(spec, "=")
+		if !found || issuer == "" || jwksURL == "" {
+			msgs = append(msgs, fmt.Sprintf("invalid jwt issuer jwks url spec: %s", spec))
+			continue
+		}
+		jwksByIssuer[issuer] = jwksURL
+	}
+	return jwksByIssuer, msgs
 }
 
 // newVerifierFromJwtIssuer takes in issuer information in jwtIssuer info and returns
@@ -149,6 +167,22 @@ func newVerifierFromJwtIssuer(audienceClaims []string, extraAudiences []string, 
 		ClientID:       jwtIssuer.audience,
 		ExtraAudiences: extraAudiences,
 		IssuerURL:      jwtIssuer.issuerURI,
+	}
+
+	// If an explicit JWKS URL is configured for this issuer, use it directly and
+	// skip both discovery and the hardcoded <issuer>/.well-known/jwks.json fallback.
+	// This is required for issuers (e.g. AD FS) whose JWKS lives at a different
+	// path/host/scheme than the issuer-derived default, while keeping the issuer
+	// match against the token's "iss" claim intact.
+	if jwtIssuer.jwksURI != "" {
+		pvOpts.JWKsURL = jwtIssuer.jwksURI
+		pvOpts.SkipDiscovery = true
+
+		pv, err := internaloidc.NewProviderVerifier(context.TODO(), pvOpts)
+		if err != nil {
+			return nil, fmt.Errorf("could not construct provider verifier for JWT Issuer: %v", err)
+		}
+		return pv.Verifier(), nil
 	}
 
 	pv, err := internaloidc.NewProviderVerifier(context.TODO(), pvOpts)
@@ -170,6 +204,7 @@ func newVerifierFromJwtIssuer(audienceClaims []string, extraAudiences []string, 
 type jwtIssuer struct {
 	issuerURI string
 	audience  string
+	jwksURI   string
 }
 
 func parseURL(toParse string, urltype string, msgs []string) (*url.URL, []string) {

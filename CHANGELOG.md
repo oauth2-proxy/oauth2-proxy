@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.3
 
+- [#3455](https://github.com/oauth2-proxy/oauth2-proxy/pull/3455) feat: allow configuring an explicit JWKS URL per extra JWT issuer via `--extra-jwt-issuer-jwks-url` (fixes AD FS-style issuers whose JWKS is not served at `<issuer>/.well-known/jwks.json`)
+
 # V7.15.3
 
 ## Release Highlights
