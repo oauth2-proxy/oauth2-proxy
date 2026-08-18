@@ -511,6 +511,7 @@ type LegacyProvider struct {
 	AzureGraphGroupField                   string   `flag:"azure-graph-group-field" cfg:"azure_graph_group_field"`
 	EntraIDAllowedTenants                  []string `flag:"entra-id-allowed-tenant" cfg:"entra_id_allowed_tenants"`
 	EntraIDFederatedTokenAuth              bool     `flag:"entra-id-federated-token-auth" cfg:"entra_id_federated_token_auth"`
+	EntraIDRedeemScope                     string   `flag:"entra-id-redeem-scope" cfg:"entra_id_redeem_scope"`
 	BitbucketTeam                          string   `flag:"bitbucket-team" cfg:"bitbucket_team"`
 	BitbucketRepository                    string   `flag:"bitbucket-repository" cfg:"bitbucket_repository"`
 	GitHubOrg                              string   `flag:"github-org" cfg:"github_org"`
@@ -580,6 +581,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("azure-graph-group-field", "", "configures the group field to be used when building the groups list(`id` or `displayName`. Default is `id`) from Microsoft Graph(available only for v2.0 oidc url). Based on this value, the `allowed-group` config values should be adjusted accordingly. If using `id` as group field, `allowed-group` should contains groups IDs, if using `displayName` as group field, `allowed-group` should contains groups name")
 	flagSet.StringSlice("entra-id-allowed-tenant", []string{}, "list of tenants allowed for MS Entra ID multi-tenant application")
 	flagSet.Bool("entra-id-federated-token-auth", false, "enable oAuth client authentication with federated token projected by Azure Workload Identity plugin, instead of client secret.")
+	flagSet.String("entra-id-redeem-scope", "", "OAuth scope specification used when redeeming the authorization code for tokens. Useful to obtain a single-audience access token. If unset, no scope parameter is sent with the token request")
 	flagSet.String("bitbucket-team", "", "restrict logins to members of this team")
 	flagSet.String("bitbucket-repository", "", "restrict logins to user with access to this repository")
 	flagSet.String("github-org", "", "restrict logins to members of this organisation")
@@ -800,6 +802,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		provider.MicrosoftEntraIDConfig = MicrosoftEntraIDOptions{
 			AllowedTenants:     l.EntraIDAllowedTenants,
 			FederatedTokenAuth: &l.EntraIDFederatedTokenAuth,
+			RedeemScope:        l.EntraIDRedeemScope,
 		}
 	}
 

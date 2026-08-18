@@ -227,6 +227,13 @@ type MicrosoftEntraIDOptions struct {
 	// FederatedTokenAuth enable oAuth2 client authentication with federated token projected
 	// by Entra Workload Identity plugin, instead of client secret.
 	FederatedTokenAuth *bool `yaml:"federatedTokenAuth,omitempty"`
+
+	// RedeemScope is the OAuth scope specification used when redeeming the
+	// authorization code for tokens. Entra ID cannot issue an access token
+	// for multiple audiences; setting a narrowed, single-audience scope here
+	// works around that. If unset, no scope parameter is sent with the token
+	// request.
+	RedeemScope string `yaml:"redeemScope,omitempty"`
 }
 
 type ADFSOptions struct {
