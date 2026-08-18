@@ -312,6 +312,19 @@ They may change between releases without notice.
 | `metricsServer` | _[Server](#server)_ | MetricsServer is used to configure the HTTP(S) server for metrics.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
 | `providers` | _[Providers](#providers)_ | Providers is used to configure your provider. **Multiple-providers is not<br/>yet working.** [This feature is tracked in<br/>#925](https://github.com/oauth2-proxy/oauth2-proxy/issues/926) |
 
+### AppleOptions
+
+(**Appears on:** [Provider](#provider))
+
+
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `teamID` | _string_ | TeamID is the 10-character Apple Developer Team ID |
+| `keyID` | _string_ | KeyID is the 10-character identifier for the private key |
+| `privateKey` | _string_ | PrivateKey is the PEM-encoded ES256 private key content (from .p8 file) |
+| `privateKeyFile` | _string_ | PrivateKeyFile is the path to the .p8 private key file |
+
 ### AzureOptions
 
 (**Appears on:** [Provider](#provider))
@@ -552,6 +565,7 @@ character.
 | `audienceClaims` | _[]string_ | AudienceClaim allows to define any claim that is verified against the client id<br/>By default `aud` claim is used for verification. |
 | `extraAudiences` | _[]string_ | ExtraAudiences is a list of additional audiences that are allowed<br/>to pass verification in addition to the client id. |
 | `enabledSigningAlgs` | _[]string_ | EnabledSigningAlgs is a list of allowed JWT signing algorithms.<br/>When discovery is enabled, the effective set is the intersection<br/>between this list and the provider's discovered supported algorithms.<br/>By default `RS256` is used if nothing has been discovered or specified. |
+| `authStyle` | _string_ | AuthStyle specifies how the endpoint wants the client ID & client secret sent.<br/>Possible values are:<br/>  - "inParams" (or "params"): sends credentials in the POST body as application/x-www-form-urlencoded parameters<br/>  - "inHeader" (or "header"): sends credentials using HTTP Basic Authorization<br/>  - "" (empty, default): auto-detect by trying both ways<br/>Some providers like Apple require "inParams". |
 
 ### Provider
 
@@ -574,6 +588,7 @@ Provider holds all configuration for a single provider
 | `googleConfig` | _[GoogleOptions](#googleoptions)_ | GoogleConfig holds all configurations for Google provider. |
 | `oidcConfig` | _[OIDCOptions](#oidcoptions)_ | OIDCConfig holds all configurations for OIDC provider<br/>or providers utilize OIDC configurations. |
 | `loginGovConfig` | _[LoginGovOptions](#logingovoptions)_ | LoginGovConfig holds all configurations for LoginGov provider. |
+| `appleConfig` | _[AppleOptions](#appleoptions)_ | AppleConfig holds all configurations for Apple provider. |
 | `id` | _string_ | ID should be a unique identifier for the provider.<br/>This value is required for all providers. |
 | `provider` | _[ProviderType](#providertype)_ | Type is the OAuth provider<br/>must be set from the supported providers group,<br/>otherwise 'Google' is set as default |
 | `name` | _string_ | Name is the providers display name<br/>if set, it will be shown to the users in the login page. |

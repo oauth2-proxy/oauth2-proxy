@@ -93,6 +93,8 @@ type Provider struct {
 	OIDCConfig OIDCOptions `yaml:"oidcConfig,omitempty"`
 	// LoginGovConfig holds all configurations for LoginGov provider.
 	LoginGovConfig LoginGovOptions `yaml:"loginGovConfig,omitempty"`
+	// AppleConfig holds all configurations for Apple provider.
+	AppleConfig AppleOptions `yaml:"appleConfig,omitempty"`
 
 	// ID should be a unique identifier for the provider.
 	// This value is required for all providers.
@@ -198,6 +200,9 @@ const (
 
 	// SourceHutProvider is the provider type for SourceHut
 	SourceHutProvider ProviderType = "sourcehut"
+
+	// AppleProvider is the provider type for Apple Sign in with Apple
+	AppleProvider ProviderType = "apple"
 )
 
 type KeycloakOptions struct {
@@ -326,6 +331,13 @@ type OIDCOptions struct {
 	// between this list and the provider's discovered supported algorithms.
 	// By default `RS256` is used if nothing has been discovered or specified.
 	EnabledSigningAlgs []string `yaml:"enabledSigningAlgs,omitempty"`
+	// AuthStyle specifies how the endpoint wants the client ID & client secret sent.
+	// Possible values are:
+	//   - "inParams" (or "params"): sends credentials in the POST body as application/x-www-form-urlencoded parameters
+	//   - "inHeader" (or "header"): sends credentials using HTTP Basic Authorization
+	//   - "" (empty, default): auto-detect by trying both ways
+	// Some providers like Apple require "inParams".
+	AuthStyle string `yaml:"authStyle,omitempty"`
 }
 
 type LoginGovOptions struct {
@@ -335,6 +347,17 @@ type LoginGovOptions struct {
 	JWTKeyFile string `yaml:"jwtKeyFile,omitempty"`
 	// PubJWKURL is the JWK pubkey access endpoint
 	PubJWKURL string `yaml:"pubjwkURL,omitempty"`
+}
+
+type AppleOptions struct {
+	// TeamID is the 10-character Apple Developer Team ID
+	TeamID string `yaml:"teamID,omitempty"`
+	// KeyID is the 10-character identifier for the private key
+	KeyID string `yaml:"keyID,omitempty"`
+	// PrivateKey is the PEM-encoded ES256 private key content (from .p8 file)
+	PrivateKey string `yaml:"privateKey,omitempty"`
+	// PrivateKeyFile is the path to the .p8 private key file
+	PrivateKeyFile string `yaml:"privateKeyFile,omitempty"`
 }
 
 // Legacy default providers configuration
