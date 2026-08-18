@@ -12,6 +12,7 @@ data in one of the available session storage backends.
 At present the available backends are (as passed to `--session-store-type`):
 - [cookie](#cookie-storage) (default)
 - [redis](#redis-storage)
+- [http](#http-storage)
 
 ### Cookie Storage
 
@@ -94,6 +95,186 @@ Redis Cluster is available to be the backend store as well. To leverage it, you 
 
 Note that flags `--redis-use-sentinel=true` and `--redis-use-cluster=true` are mutually exclusive.
 
-Note, if Redis timeout option is set to non-zero, the `--redis-connection-idle-timeout` 
-must be less than [Redis timeout option](https://redis.io/docs/reference/clients/#client-timeouts). For example: if either redis.conf includes 
+Note, if Redis timeout option is set to non-zero, the `--redis-connection-idle-timeout`
+must be less than [Redis timeout option](https://redis.io/docs/reference/clients/#client-timeouts). For example: if either redis.conf includes
 `timeout 15` or using `CONFIG SET timeout 15` the `--redis-connection-idle-timeout` must be at least `--redis-connection-idle-timeout=14`
+
+### HTTP Storage
+
+The HTTP Storage backend stores encrypted sessions on a remote server via a REST API. Like the [Redis storage](#redis-storage),
+a ticket is sent back to the user as the cookie value instead of the entire session data.
+
+The ticket format is the same as Redis storage:
+
+`{CookieName}-{ticketID}.{secret}`
+
+Where:
+
+- The `CookieName` is the OAuth2 cookie name (_oauth2_proxy by default)
+- The `ticketID` is a 128-bit random number, hex-encoded
+- The `secret` is a 128-bit random number, base64url encoded (no padding). The secret is unique for every session.
+- The pair of `{CookieName}-{ticketID}` comprises a ticket handle, and thus, the session key
+
+The session is encrypted with the secret and sent to the HTTP storage backend for storage.
+
+#### Usage
+
+When using the HTTP store, specify `--session-store-type=http` as well as the HTTP storage backend URL, via
+`--http-store-base-url=https://your-storage-backend.example.com`.
+
+Optionally, you can provide an API key for authentication using `--http-store-api-key=your-secret-api-key`.
+
+Example configuration:
+```
+--session-store-type=http
+--http-store-base-url=https://session-store.example.com
+--http-store-api-key=mysecretapikey123
+```
+
+#### REST API Specification
+
+The HTTP storage backend must implement the following REST API.
+
+##### Authentication
+
+All requests include an `Authorization` header with a Bearer token if an API key is configured:
+```
+Authorization: Bearer {api-key}
+```
+
+##### Endpoints
+
+**1. Save Session**
+
+Stores or updates a session with the given key and TTL.
+
+```
+PUT /sessions/{key}
+Content-Type: application/json
+
+{
+  "data": "base64-encoded-encrypted-session-data",
+  "ttl_seconds": 3600
+}
+```
+
+Response:
+- `200 OK` or `201 Created` on success
+- `4xx` or `5xx` on error
+
+**2. Load Session**
+
+Retrieves a session by key.
+
+```
+GET /sessions/{key}
+```
+
+Response:
+- `200 OK` with JSON body on success:
+  ```json
+  {
+    "data": "base64-encoded-encrypted-session-data"
+  }
+  ```
+- `404 Not Found` if session does not exist
+- `4xx` or `5xx` on error
+
+**3. Clear Session**
+
+Deletes a session by key.
+
+```
+DELETE /sessions/{key}
+```
+
+Response:
+- `200 OK` or `204 No Content` on success
+- `404 Not Found` if session does not exist (also treated as success)
+- `4xx` or `5xx` on error
+
+**4. Health Check**
+
+Verifies that the storage backend is accessible and healthy.
+
+```
+GET /health
+```
+
+Response:
+- `200 OK` if the backend is healthy
+- `5xx` on error
+
+#### Implementation Notes
+
+- Session data is already encrypted by oauth2-proxy before being sent to the HTTP storage backend
+- The `key` parameter in the URL is the session ticket handle: `{CookieName}-{ticketID}`
+- The HTTP storage backend should respect the `ttl_seconds` parameter and automatically expire sessions after this duration
+- The HTTP client has a 30-second timeout for all requests
+- Distributed locking is not currently supported with the HTTP storage backend
+
+#### Example Backend Implementation
+
+Here's a simple example of an HTTP storage backend using Python and Flask:
+
+```python
+from flask import Flask, request, jsonify
+import time
+
+app = Flask(__name__)
+
+# In-memory storage (use Redis, database, etc. in production)
+sessions = {}
+API_KEY = "mysecretapikey123"
+
+def check_auth():
+    auth = request.headers.get('Authorization', '')
+    if not auth.startswith('Bearer '):
+        return False
+    return auth[7:] == API_KEY
+
+@app.route('/health')
+def health():
+    if not check_auth():
+        return jsonify({"error": "unauthorized"}), 401
+    return jsonify({"status": "healthy"}), 200
+
+@app.route('/sessions/<key>', methods=['PUT'])
+def save_session(key):
+    if not check_auth():
+        return jsonify({"error": "unauthorized"}), 401
+
+    data = request.json
+    sessions[key] = {
+        'data': data['data'],
+        'expires_at': time.time() + data['ttl_seconds']
+    }
+    return jsonify({"status": "ok"}), 200
+
+@app.route('/sessions/<key>', methods=['GET'])
+def load_session(key):
+    if not check_auth():
+        return jsonify({"error": "unauthorized"}), 401
+
+    if key not in sessions:
+        return jsonify({"error": "not found"}), 404
+
+    session = sessions[key]
+    if time.time() > session['expires_at']:
+        del sessions[key]
+        return jsonify({"error": "not found"}), 404
+
+    return jsonify({"data": session['data']}), 200
+
+@app.route('/sessions/<key>', methods=['DELETE'])
+def clear_session(key):
+    if not check_auth():
+        return jsonify({"error": "unauthorized"}), 401
+
+    if key in sessions:
+        del sessions[key]
+    return jsonify({"status": "ok"}), 200
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8080)
+```
