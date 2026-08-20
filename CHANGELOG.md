@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.3
 
+- fix: clear stale cookie session parts after session size changes
+
 # V7.15.3
 
 ## Release Highlights
