@@ -512,6 +512,7 @@ type LegacyProvider struct {
 	EntraIDAllowedTenants                  []string `flag:"entra-id-allowed-tenant" cfg:"entra_id_allowed_tenants"`
 	EntraIDFederatedTokenAuth              bool     `flag:"entra-id-federated-token-auth" cfg:"entra_id_federated_token_auth"`
 	BitbucketTeam                          string   `flag:"bitbucket-team" cfg:"bitbucket_team"`
+	BitbucketWorkspace                     string   `flag:"bitbucket-workspace" cfg:"bitbucket_workspace"`
 	BitbucketRepository                    string   `flag:"bitbucket-repository" cfg:"bitbucket_repository"`
 	GitHubOrg                              string   `flag:"github-org" cfg:"github_org"`
 	GitHubTeam                             string   `flag:"github-team" cfg:"github_team"`
@@ -580,7 +581,8 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("azure-graph-group-field", "", "configures the group field to be used when building the groups list(`id` or `displayName`. Default is `id`) from Microsoft Graph(available only for v2.0 oidc url). Based on this value, the `allowed-group` config values should be adjusted accordingly. If using `id` as group field, `allowed-group` should contains groups IDs, if using `displayName` as group field, `allowed-group` should contains groups name")
 	flagSet.StringSlice("entra-id-allowed-tenant", []string{}, "list of tenants allowed for MS Entra ID multi-tenant application")
 	flagSet.Bool("entra-id-federated-token-auth", false, "enable oAuth client authentication with federated token projected by Azure Workload Identity plugin, instead of client secret.")
-	flagSet.String("bitbucket-team", "", "restrict logins to members of this team")
+	flagSet.String("bitbucket-team", "", "[deprecated, use bitbucket-workspace instead] restrict logins to members of this team")
+	flagSet.String("bitbucket-workspace", "", "restrict logins to members of this workspace, use workspace slug (eg. `myworkspace`) instead of workspace name (eg. `My Workspace`)")
 	flagSet.String("bitbucket-repository", "", "restrict logins to user with access to this repository")
 	flagSet.String("github-org", "", "restrict logins to members of this organisation")
 	flagSet.String("github-team", "", "restrict logins to members of this team")
@@ -777,6 +779,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 	case "bitbucket":
 		provider.BitbucketConfig = BitbucketOptions{
 			Team:       l.BitbucketTeam,
+			Workspace:  l.BitbucketWorkspace,
 			Repository: l.BitbucketRepository,
 		}
 	case "google":

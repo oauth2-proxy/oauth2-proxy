@@ -342,7 +342,8 @@ They may change between releases without notice.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `team` | _string_ | Team sets restrict logins to members of this team |
+| `team` | _string_ | Team sets restrict logins to members of this team - Bitbucket has deprecated the teams, it will act as workspace instead |
+| `workspace` | _string_ | Workspace sets restrict logins to members of this workspace, use workspace slug |
 | `repository` | _string_ | Repository sets restrict logins to user with access to this repository |
 
 ### ClaimSource
