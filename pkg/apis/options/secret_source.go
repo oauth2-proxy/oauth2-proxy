@@ -3,7 +3,7 @@ package options
 // SecretSource references an individual secret value.
 // Only one source within the struct should be defined at any time.
 type SecretSource struct {
-	// Value expects a base64 encoded string value.
+	// Value is used as provided. YAML's !!binary tag can be used for base64-encoded input.
 	Value []byte `yaml:"value,omitempty"`
 
 	// FromEnv expects the name of an environment variable.
