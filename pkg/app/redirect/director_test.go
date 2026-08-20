@@ -206,3 +206,96 @@ var _ = Describe("Director Suite", func() {
 		Expect(redirect).To(Equal("/foo?bar"))
 	})
 })
+
+var _ = Describe("forward_auth redirect preservation (issue #2940)", func() {
+	// These tests model the Caddy `forward_auth` (and nginx `auth_request`)
+	// flow: when /oauth2/auth returns 401, the reverse proxy redirects the
+	// client to /oauth2/sign_in?rd={scheme}://{host}{uri}. The {uri} includes
+	// the originally requested path and query, so `rd` is an absolute URL for
+	// the same host the client used to reach the proxy.
+	//
+	// The Caddy integration docs require --reverse-proxy=true but do not mention
+	// --whitelist-domain. Without it the absolute `rd` used to be rejected and,
+	// because sign_in/start are served under the proxy prefix, the redirect
+	// collapsed to "/", silently losing the originally requested URL (and its
+	// query) after login.
+	var (
+		appDirector    AppDirector
+		trustedProxies *ip.NetSet
+	)
+
+	BeforeEach(func() {
+		var err error
+		trustedProxies, err = ip.ParseNetSet([]string{"127.0.0.1"})
+		Expect(err).ToNot(HaveOccurred())
+		appDirector = NewAppDirector(AppDirectorOpts{
+			ProxyPrefix: testProxyPrefix,
+			// No --whitelist-domain configured, matching the Caddy docs.
+			Validator: NewValidator([]string{}),
+		})
+	})
+
+	// makeSignInRequest builds the /oauth2/sign_in request that Caddy's
+	// `redir * /oauth2/sign_in?rd={scheme}://{host}{uri}` produces for an
+	// original request on the given host, with `rd` set to rd.
+	makeSignInRequest := func(host, rd string) *http.Request {
+		req, _ := http.NewRequest("GET", "https://oauth2-proxy.internal/oauth2/sign_in?rd="+rd, nil)
+		req.Header.Set("X-Forwarded-Proto", "http")
+		req.Header.Set("X-Forwarded-Host", host)
+		// Caddy's `reverse_proxy /oauth2/* { header_up X-Forwarded-Uri {uri} }`
+		// sets X-Forwarded-Uri to the sign_in request's own URI, which is under
+		// the proxy prefix.
+		req.Header.Set("X-Forwarded-Uri", "/oauth2/sign_in?rd="+rd)
+		req.RemoteAddr = "127.0.0.1:4180"
+		req = middleware.AddRequestScope(req, &middleware.RequestScope{
+			ReverseProxy:   true,
+			TrustedProxies: trustedProxies,
+		})
+		return req
+	}
+
+	It("preserves the originally requested path and query from a same-host absolute rd", func() {
+		// Original request was /echo/foo?bar=baz on localhost.
+		req := makeSignInRequest("localhost", "http://localhost/echo/foo?bar=baz")
+		redirect, err := appDirector.GetRedirect(req)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(redirect).To(Equal("/echo/foo?bar=baz"))
+	})
+
+	It("preserves the path when the same-host rd includes a port", func() {
+		req := makeSignInRequest("localhost:8080", "http://localhost:8080/echo/foo?bar=baz")
+		redirect, err := appDirector.GetRedirect(req)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(redirect).To(Equal("/echo/foo?bar=baz"))
+	})
+
+	It("preserves the absolute rd as-is when the host is whitelisted", func() {
+		whitelisted := NewAppDirector(AppDirectorOpts{
+			ProxyPrefix: testProxyPrefix,
+			Validator:   NewValidator([]string{"localhost"}),
+		})
+		req := makeSignInRequest("localhost", "http://localhost/echo/foo?bar=baz")
+		redirect, err := whitelisted.GetRedirect(req)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(redirect).To(Equal("http://localhost/echo/foo?bar=baz"))
+	})
+
+	It("does not redirect to a different, non-whitelisted host's path", func() {
+		// rd points at evil.example.com while the request was served on
+		// localhost: the path must not be extracted and the redirect must not
+		// leak the attacker-controlled host.
+		req := makeSignInRequest("localhost", "http://evil.example.com/echo/foo")
+		redirect, err := appDirector.GetRedirect(req)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(redirect).To(Equal("/"))
+	})
+
+	It("still rejects open-redirect rd values", func() {
+		// Extracted paths are re-validated, so protocol-relative and other
+		// open-redirect payloads are rejected even when the host matches.
+		req := makeSignInRequest("localhost", "//evil.example.com/path")
+		redirect, err := appDirector.GetRedirect(req)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(redirect).To(Equal("/"))
+	})
+})

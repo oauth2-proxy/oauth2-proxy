@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.3
 
+- [#2940](https://github.com/oauth2-proxy/oauth2-proxy/issues/2940) fix: preserve originally requested URL in `forward_auth`/`auth_request` redirects when the host is not whitelisted (@zhaoxinyi02)
+
 # V7.15.3
 
 ## Release Highlights
