@@ -12,11 +12,28 @@
 
 ## Release Highlights
 
+- 🔵 Golang version upgrade to v1.26.7
+    - Upgrade of all dependencies to their latest versions
+- 🕵️‍♀️ Vulnerabilities have been addressed
+    - [CVE-2026-33818](https://nvd.nist.gov/vuln/detail/CVE-2026-33818)
+    - [CVE-2026-39821](https://nvd.nist.gov/vuln/detail/CVE-2026-39821)
+    - [CVE-2026-39822](https://nvd.nist.gov/vuln/detail/CVE-2026-39822)
+    - [CVE-2026-42505](https://nvd.nist.gov/vuln/detail/CVE-2026-42505)
+    - [CVE-2026-46600](https://nvd.nist.gov/vuln/detail/CVE-2026-46600)
+    - [CVE-2026-56852](https://nvd.nist.gov/vuln/detail/CVE-2026-56852)
+    - [CVE-2026-56853](https://nvd.nist.gov/vuln/detail/CVE-2026-56853)
+    - [CVE-2026-56858](https://nvd.nist.gov/vuln/detail/CVE-2026-56858)
+    - [CVE-2026-56859](https://nvd.nist.gov/vuln/detail/CVE-2026-56859)
+    - [CVE-2026-56860](https://nvd.nist.gov/vuln/detail/CVE-2026-56860)
+    - [CVE-2026-56862](https://nvd.nist.gov/vuln/detail/CVE-2026-56862)
+
 ## Important Notes
 
 ## Breaking Changes
 
 ## Changes since v7.15.3
+
+- [#3493](https://github.com/oauth2-proxy/oauth2-proxy/pull/3493) chore(deps): update gomod @tuunit
 
 # V7.15.3
 
