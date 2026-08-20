@@ -62,12 +62,14 @@ type Upstream struct {
 
 	// Path is used to map requests to the upstream server.
 	// The closest match will take precedence and all Paths must be unique.
-	// Path can also take a pattern when used with RewriteTarget.
-	// Path segments can be captured and matched using regular experessions.
+	// Without RewriteTarget, Path follows gorilla/mux route syntax.
 	// Eg:
-	// - `^/foo$`: Match only the explicit path `/foo`
-	// - `^/bar/$`: Match any path prefixed with `/bar/`
-	// - `^/baz/(.*)$`: Match any path prefixed with `/baz` and capture the remaining path for use with RewriteTarget
+	// - `/foo`: Match only the explicit path `/foo`
+	// - `/bar/`: Match any path prefixed with `/bar/`
+	// - `/baz/{path:.*}`: Match any path prefixed with `/baz/`
+	// When RewriteTarget is set, Path is treated as a regular expression.
+	// Eg: `^/baz/(.*)$` matches any path prefixed with `/baz` and captures the
+	// remaining path for use with RewriteTarget.
 	Path string `yaml:"path,omitempty"`
 
 	// RewriteTarget allows users to rewrite the request path before it is sent to
