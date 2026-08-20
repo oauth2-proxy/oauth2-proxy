@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.3
 
+- [#3456](https://github.com/oauth2-proxy/oauth2-proxy/pull/3456) fix: renew the session refresh lock lease during the provider redeem so a slow refresh cannot expire the lock mid-flight and cause a concurrent double-redeem of single-use rotating refresh tokens (@ohadkedem)
+
 # V7.15.3
 
 ## Release Highlights

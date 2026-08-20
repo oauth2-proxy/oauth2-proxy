@@ -215,6 +215,27 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
 
 	// We are holding the lock and the session needs a refresh
 	logger.Printf("Refreshing session - User: %s; SessionAge: %s", session.User, session.Age())
+
+	// Renew the lock lease while the (possibly slow) provider redeem runs, so a
+	// fixed-TTL lock cannot expire mid-refresh and let a concurrent request
+	// re-present and double-redeem the single-use rotating refresh token.
+	stopWatchdog := make(chan struct{})
+	go func() {
+		ticker := time.NewTicker(sessionRefreshLockDuration / 3)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-stopWatchdog:
+				return
+			case <-ticker.C:
+				if lockErr := session.RefreshLock(context.Background(), sessionRefreshLockDuration); lockErr != nil {
+					logger.Errorf("unable to renew session lock during refresh: %v", lockErr)
+				}
+			}
+		}
+	}()
+	defer close(stopWatchdog)
+
 	if err := s.refreshSession(rw, req, session); err != nil {
 		logger.Errorf("Unable to refresh session: %v", err)
 
