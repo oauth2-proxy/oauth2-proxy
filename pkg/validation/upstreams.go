@@ -45,6 +45,13 @@ func validateUpstream(upstream options.Upstream, ids, paths map[string]struct{})
 	}
 	paths[upstream.Path] = struct{}{}
 
+	if upstream.WriteBufferSize != nil && *upstream.WriteBufferSize < 0 {
+		msgs = append(msgs, "upstream writeBufferSize must be greater than or equal to 0")
+	}
+	if upstream.ReadBufferSize != nil && *upstream.ReadBufferSize < 0 {
+		msgs = append(msgs, "upstream readBufferSize must be greater than or equal to 0")
+	}
+
 	msgs = append(msgs, validateUpstreamURI(upstream)...)
 	msgs = append(msgs, validateStaticUpstream(upstream)...)
 	return msgs
