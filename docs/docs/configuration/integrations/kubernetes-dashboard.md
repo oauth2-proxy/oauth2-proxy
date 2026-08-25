@@ -60,7 +60,6 @@ alphaConfig:
             - aud
           emailClaim: email
           groupsClaim: groups
-          userIDClaim: oid
         scope: openid email profile
 
     upstreamConfig:

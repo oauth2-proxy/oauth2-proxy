@@ -39,7 +39,6 @@ var _ = Describe("Load", func() {
 			ProviderType:          "google",
 			AzureTenant:           "common",
 			ApprovalPrompt:        "force",
-			UserIDClaim:           "email",
 			OIDCEmailClaim:        "email",
 			OIDCGroupsClaim:       "groups",
 			OIDCAudienceClaims:    []string{"aud"},
