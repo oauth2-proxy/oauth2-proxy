@@ -88,7 +88,9 @@ func validateProvider(provider options.Provider, providerIDs map[string]struct{}
 // could not be honoured. Rather than change what a session's email resolves to
 // behind the user's back, refuse to start and name the replacement.
 func validateOIDCUserIDClaim(provider options.Provider) []string {
-	claim := provider.OIDCConfig.UserIDClaim
+	// Reading the deprecated field is the point here: it exists only so that a
+	// configuration still setting it can be detected and rejected.
+	claim := provider.OIDCConfig.UserIDClaim //nolint:staticcheck
 	switch claim {
 	case "":
 		return nil

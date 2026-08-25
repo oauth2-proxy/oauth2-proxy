@@ -396,7 +396,7 @@ func TestEmailClaimCorrectlySet(t *testing.T) {
 					IssuerURL:     msIssuerURL,
 					SkipDiscovery: ptr.To(true),
 					JwksURL:       msKeysURL,
-					UserIDClaim:   tc.userIDClaim,
+					UserIDClaim:   tc.userIDClaim, //nolint:staticcheck // asserting the removed option no longer affects EmailClaim
 					EmailClaim:    tc.emailClaim,
 				},
 			}
