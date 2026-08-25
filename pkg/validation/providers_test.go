@@ -62,7 +62,7 @@ var _ = Describe("Providers", func() {
 		ClientID:     "ClientID",
 		ClientSecret: "ClientSecret",
 		OIDCConfig: options.OIDCOptions{
-			UserIDClaim: "sub",
+			UserIDClaim: "sub", //nolint:staticcheck // deliberately setting the removed option to assert it is rejected
 		},
 	}
 
@@ -71,7 +71,7 @@ var _ = Describe("Providers", func() {
 		ClientID:     "ClientID",
 		ClientSecret: "ClientSecret",
 		OIDCConfig: options.OIDCOptions{
-			UserIDClaim: "email",
+			UserIDClaim: "email", //nolint:staticcheck // deliberately setting the removed option to assert it is rejected
 		},
 	}
 
