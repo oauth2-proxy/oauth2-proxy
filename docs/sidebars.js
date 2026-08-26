@@ -34,6 +34,7 @@ const sidebars = {
             "configuration/integrations/traefik",
             "configuration/integrations/caddy",
             "configuration/integrations/headlamp",
+            "configuration/integrations/kubestellar-console",
             "configuration/integrations/kubernetes-dashboard"
           ],
         },
