@@ -64,7 +64,7 @@ It can be configured using the following query parameters:
 ### Proxy (/)
 
 This endpoint returns the upstream response if authenticated.
-If unauthenticated it returns a 401 Unauthorized. If the authenticatd user
+If unauthenticated it returns a 401 Unauthorized. If the authenticated user
 is not in one of the allowed groups, or emails then it returns a 403 forbidden
 
 It can be configured using the following query parameters:

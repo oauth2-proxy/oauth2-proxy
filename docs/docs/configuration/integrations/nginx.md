@@ -179,10 +179,10 @@ nginx.ingress.kubernetes.io/auth-signin: "https://<oauth2-proxy-fqdn>/oauth2/sta
 
 This minimal configuration works for standard authentication flows. Lua/cookie handling is only needed for advanced scenarios (e.g., multi-part cookies, custom session logic). See the official ingress-nginx example: https://kubernetes.github.io/ingress-nginx/examples/auth/oauth-external-auth/.
 
-It is recommended to use `--session-store-type=redis` when expecting large sessions/OIDC tokens (_e.g._ with MS Azure).
+It is recommended to use `--session-store-type=redis` when expecting large sessions/OIDC tokens (_e.g._ with Microsoft Entra ID).
 
-:::tip Kubernetes Dashboard with Azure Entra ID
-For a complete example of integrating oauth2-proxy with Kubernetes Dashboard on AKS using Azure Entra ID, including RBAC configuration and troubleshooting, see the [Kubernetes Dashboard on AKS](../providers/ms_entra_id.md#kubernetes-dashboard-on-aks) section in the Microsoft Entra ID provider documentation.
+:::tip Kubernetes Dashboard with Microsoft Entra ID
+For a complete example of integrating oauth2-proxy with Kubernetes Dashboard on AKS using Microsoft Entra ID, including RBAC configuration and troubleshooting, see the [Kubernetes Dashboard integration guide](./kubernetes-dashboard.md).
 :::
 
 :::note
