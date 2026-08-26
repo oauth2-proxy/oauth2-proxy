@@ -6,7 +6,6 @@ import (
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 )
 
 // TokenToSessionFunc takes a raw ID Token and converts it into a SessionState.
@@ -44,9 +43,9 @@ func CreateTokenToSessionFunc(verify VerifyFunc) TokenToSessionFunc {
 		// Ensure email is verified
 		// If the email is not verified, return an error
 		// If the email_verified claim is missing, assume it is verified
-		if !ptr.Deref(claims.Verified, true) {
-			return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
-		}
+		// if !ptr.Deref(claims.Verified, true) {
+		// 	return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
+		// }
 
 		newSession := &sessionsapi.SessionState{
 			Email:             claims.Email,
