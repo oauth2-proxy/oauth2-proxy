@@ -1502,6 +1502,24 @@ func TestAuthSkippedForPreflightRequests(t *testing.T) {
 	assert.Equal(t, "response", rw.Body.String())
 }
 
+func TestAuthOnlySkippedForPreflightRequests(t *testing.T) {
+	opts := baseTestOptions()
+	opts.SkipAuthPreflight = true
+	err := validation.Validate(opts)
+	assert.NoError(t, err)
+
+	proxy, err := NewOAuthProxy(opts, func(_ string) bool { return true })
+	assert.NoError(t, err)
+
+	rw := httptest.NewRecorder()
+	req, err := http.NewRequest(http.MethodOptions, opts.ProxyPrefix+authOnlyPath, nil)
+	assert.NoError(t, err)
+
+	proxy.ServeHTTP(rw, req)
+
+	assert.Equal(t, http.StatusAccepted, rw.Code)
+}
+
 type SignatureAuthenticator struct {
 	auth hmacauth.HmacAuth
 }
