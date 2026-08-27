@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.4
 
+- [#3523](https://github.com/oauth2-proxy/oauth2-proxy/pull/3523) fix: honour insecure_oidc_allow_unverified_email for extra JWT issuers (@SaiPisey2)
+
 # V7.15.4
 
 ## Release Highlights
