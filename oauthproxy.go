@@ -419,7 +419,7 @@ func buildSessionChain(opts *options.Options, provider providers.Provider, sessi
 
 		for _, verifier := range opts.GetJWTBearerVerifiers() {
 			sessionLoaders = append(sessionLoaders,
-				middlewareapi.CreateTokenToSessionFunc(verifier.Verify))
+				middlewareapi.CreateTokenToSessionFunc(verifier.Verify, provider.Data().AllowUnverifiedEmail))
 		}
 
 		chain = chain.Append(middleware.NewJwtSessionLoader(sessionLoaders, opts.BearerTokenLoginFallback))
