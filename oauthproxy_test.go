@@ -1775,6 +1775,65 @@ func TestAjaxForbiddendRequest(t *testing.T) {
 	assert.NotEqual(t, applicationJSON, mime)
 }
 
+func TestSubresourceRequest(t *testing.T) {
+	tests := []struct {
+		name            string
+		dest            string
+		expectLoginPage bool
+	}{
+		{"script is denied without redirect", "script", false},
+		{"image is denied without redirect", "image", false},
+		{"document initiates login", "document", true},
+		{"absent header initiates login", "", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opts := baseTestOptions()
+			err := validation.Validate(opts)
+			assert.NoError(t, err)
+			proxy, err := NewOAuthProxy(opts, func(email string) bool {
+				return true
+			})
+			assert.NoError(t, err)
+
+			rw := httptest.NewRecorder()
+			req, err := http.NewRequest(http.MethodGet, "/test", nil)
+			assert.NoError(t, err)
+			if tt.dest != "" {
+				req.Header.Set("Sec-Fetch-Dest", tt.dest)
+			}
+			proxy.ServeHTTP(rw, req)
+
+			if tt.expectLoginPage {
+				assert.Contains(t, rw.Body.String(), "Sign in")
+			} else {
+				assert.Equal(t, http.StatusUnauthorized, rw.Code)
+			}
+		})
+	}
+}
+
+func TestIsSubresourceRequest(t *testing.T) {
+	tests := []struct {
+		name     string
+		dest     string
+		expected bool
+	}{
+		{"absent header", "", false},
+		{"document", "document", false},
+		{"non-document", "script", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, _ := http.NewRequest(http.MethodGet, "/", nil)
+			if tt.dest != "" {
+				req.Header.Set("Sec-Fetch-Dest", tt.dest)
+			}
+			assert.Equal(t, tt.expected, isSubresourceRequest(req))
+		})
+	}
+}
+
 func TestClearSplitCookie(t *testing.T) {
 	opts := baseTestOptions()
 	opts.Cookie.Secret = base64CookieSecret
