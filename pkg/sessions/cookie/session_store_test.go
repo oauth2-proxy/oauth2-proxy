@@ -4,6 +4,7 @@ import (
 	"fmt"
 	mathrand "math/rand"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -49,10 +50,70 @@ func Test_copyCookie(t *testing.T) {
 		Raw:        "raw",
 		Unparsed:   []string{"unparsed"},
 		SameSite:   http.SameSiteLaxMode,
+		Partitioned: true,
 	}
 
 	got := copyCookie(c)
 	assert.Equal(t, c, got)
+}
+
+func TestPartitionedSessionCookieRoundTrip(t *testing.T) {
+	cookieOpts := &options.Cookie{
+		Name:        "_oauth2_proxy",
+		Secret:      strings.Repeat("s", 32),
+		Path:        "/",
+		Expire:      time.Hour,
+		Secure:      true,
+		SameSite:    "none",
+		Partitioned: true,
+	}
+	store, err := NewCookieSessionStore(&options.SessionOptions{}, cookieOpts)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	saveRequest := httptest.NewRequest(http.MethodGet, "https://example.com/", nil)
+	saveResponse := httptest.NewRecorder()
+	session := &sessionsapi.SessionState{User: "user"}
+	if !assert.NoError(t, store.Save(saveResponse, saveRequest, session)) {
+		return
+	}
+
+	setCookieHeaders := saveResponse.Header().Values("Set-Cookie")
+	if !assert.NotEmpty(t, setCookieHeaders) {
+		return
+	}
+	for _, header := range setCookieHeaders {
+		assert.Contains(t, header, "; Secure; SameSite=None; Partitioned")
+		cookie, err := http.ParseSetCookie(header)
+		if assert.NoError(t, err) {
+			assert.True(t, cookie.Partitioned)
+			assert.True(t, cookie.Secure)
+			assert.Equal(t, http.SameSiteNoneMode, cookie.SameSite)
+		}
+	}
+
+	loadRequest := httptest.NewRequest(http.MethodGet, "https://example.com/", nil)
+	for _, cookie := range saveResponse.Result().Cookies() {
+		loadRequest.AddCookie(cookie)
+	}
+	loaded, err := store.Load(loadRequest)
+	if assert.NoError(t, err) {
+		assert.Equal(t, session.User, loaded.User)
+	}
+
+	clearResponse := httptest.NewRecorder()
+	if !assert.NoError(t, store.Clear(clearResponse, loadRequest)) {
+		return
+	}
+	for _, header := range clearResponse.Header().Values("Set-Cookie") {
+		assert.Contains(t, header, "; Secure; SameSite=None; Partitioned")
+		cookie, err := http.ParseSetCookie(header)
+		if assert.NoError(t, err) {
+			assert.Equal(t, -1, cookie.MaxAge)
+			assert.True(t, cookie.Partitioned)
+		}
+	}
 }
 
 func Test_splitCookie(t *testing.T) {
@@ -85,6 +146,7 @@ func Test_splitCookie(t *testing.T) {
 			Secure:   true,
 			HttpOnly: true,
 			SameSite: http.SameSiteLaxMode,
+			Partitioned: true,
 		},
 		"With max length name and attributes": {
 			Name:     strings.Repeat("n", 256),
@@ -100,6 +162,10 @@ func Test_splitCookie(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			splitCookies := splitCookie(tc)
 			for i, cookie := range splitCookies {
+				assert.Equal(t, tc.Partitioned, cookie.Partitioned)
+				if tc.Partitioned {
+					assert.Contains(t, cookie.String(), "; Partitioned")
+				}
 				if i < len(splitCookies)-1 {
 					assert.Equal(t, 4000, len(cookie.String()))
 				} else {

@@ -159,6 +159,7 @@ func (c *csrf) SetCookie(rw http.ResponseWriter, req *http.Request) (*http.Cooki
 		Path:       c.cookieOpts.Path,
 		HTTPOnly:   c.cookieOpts.HTTPOnly,
 		Secure:     c.cookieOpts.Secure,
+		Partitioned: c.cookieOpts.Partitioned,
 	}
 
 	cookie := MakeCookieFromOptions(req, csrfCookieOptions)
@@ -220,6 +221,7 @@ func (c *csrf) ClearCookie(rw http.ResponseWriter, req *http.Request) {
 		Path:       c.cookieOpts.Path,
 		HTTPOnly:   c.cookieOpts.HTTPOnly,
 		Secure:     c.cookieOpts.Secure,
+		Partitioned: c.cookieOpts.Partitioned,
 	}
 
 	http.SetCookie(rw, MakeCookieFromOptions(req, csrfCookieOptions))

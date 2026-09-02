@@ -68,3 +68,59 @@ func TestCookieGetSecret(t *testing.T) {
 		assert.Equal(t, "", secret)
 	})
 }
+
+func TestCookiePartitionedOptionLoading(t *testing.T) {
+	tests := []struct {
+		name     string
+		config   string
+		env      string
+		args     []string
+		expected bool
+	}{
+		{
+			name:     "default",
+			expected: false,
+		},
+		{
+			name:     "config file",
+			config:   "cookie_partitioned = true\n",
+			expected: true,
+		},
+		{
+			name:     "environment variable",
+			env:      "true",
+			expected: true,
+		},
+		{
+			name:     "command line flag",
+			env:      "false",
+			args:     []string{"--cookie-partitioned"},
+			expected: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("OAUTH2_PROXY_COOKIE_PARTITIONED", tc.env)
+
+			configFile := ""
+			if tc.config != "" {
+				configFile = t.TempDir() + "/oauth2-proxy.cfg"
+				if !assert.NoError(t, os.WriteFile(configFile, []byte(tc.config), 0600)) {
+					return
+				}
+			}
+
+			flagSet := NewFlagSet()
+			if !assert.NoError(t, flagSet.Parse(tc.args)) {
+				return
+			}
+
+			opts := NewOptions()
+			if !assert.NoError(t, Load(configFile, flagSet, opts)) {
+				return
+			}
+			assert.Equal(t, tc.expected, opts.Cookie.Partitioned)
+		})
+	}
+}
