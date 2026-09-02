@@ -230,6 +230,7 @@ func (t *ticket) clearCookie(rw http.ResponseWriter, req *http.Request) {
 		Path:       t.options.Path,
 		HTTPOnly:   t.options.HTTPOnly,
 		Secure:     t.options.Secure,
+		Partitioned: t.options.Partitioned,
 	}
 	http.SetCookie(rw, cookies.MakeCookieFromOptions(req, cookieOptions))
 }
@@ -257,6 +258,7 @@ func (t *ticket) makeCookie(req *http.Request, value string, expires time.Durati
 		Path:       t.options.Path,
 		HTTPOnly:   t.options.HTTPOnly,
 		Secure:     t.options.Secure,
+		Partitioned: t.options.Partitioned,
 	}
 
 	return cookies.MakeCookieFromOptions(req, cookieOptions), nil
