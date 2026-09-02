@@ -551,7 +551,7 @@ character.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | `issuerURL` | _string_ | IssuerURL is the OpenID Connect issuer URL<br/>eg: https://accounts.google.com |
-| `insecureAllowUnverifiedEmail` | _bool_ | InsecureAllowUnverifiedEmail prevents failures if an email address in an id_token is not verified<br/>default set to 'false' |
+| `insecureAllowUnverifiedEmail` | _bool_ | InsecureAllowUnverifiedEmail prevents failures if an email address in an id_token is not verified.<br/>It also applies to bearer tokens accepted from the issuers listed in extra_jwt_issuers.<br/>default set to 'false' |
 | `insecureSkipIssuerVerification` | _bool_ | InsecureSkipIssuerVerification skips verification of ID token issuers. When false, ID Token Issuers must match the OIDC discovery URL<br/>default set to 'false' |
 | `insecureSkipNonce` | _bool_ | InsecureSkipNonce skips verifying the ID Token's nonce claim that must match<br/>the random nonce sent in the initial OAuth flow. Otherwise, the nonce is checked<br/>after the initial OAuth redeem & subsequent token refreshes.<br/>default set to 'true'<br/>Warning: In a future release, this will change to 'false' by default for enhanced security. |
 | `skipDiscovery` | _bool_ | SkipDiscovery allows to skip OIDC discovery and use manually supplied Endpoints<br/>default set to 'false' |
