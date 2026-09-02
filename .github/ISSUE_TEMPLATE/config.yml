@@ -1,6 +1,6 @@
 blank_issues_enabled: false
 contact_links:
-  - name: OAuth2 Proxy Slack
+  - name: Support & Community
     url: https://cloud-native.slack.com/archives/C098Y5URZ2N
-    about: Feel free to ask any questions here.
+    about: Feel free to ask any questions here. Be it configuration support. Contribution related or other. Invite Link: https://slack.cncf.io
 
