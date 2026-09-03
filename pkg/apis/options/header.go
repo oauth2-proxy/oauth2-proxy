@@ -53,13 +53,14 @@ type ClaimSource struct {
 	// `expires_on` `refresh_token` `email` `user` `groups` `preferred_username`.
 	Claim string `yaml:"claim,omitempty"`
 
-	// Prefix is an optional prefix that will be prepended to the value of the
-	// claim if it is non-empty.
+	// Prefix is an optional prefix that will be prepended to each claim value
+	// if it is non-empty.
 	Prefix string `yaml:"prefix,omitempty"`
 
 	// BasicAuthPassword converts this claim into a basic auth header.
 	// Note the value of claim will become the basic auth username and the
 	// basicAuthPassword will be used as the password value.
+	// The Prefix field is disregarded when this option is enabled.
 	BasicAuthPassword *SecretSource `yaml:"basicAuthPassword,omitempty"`
 }
 
