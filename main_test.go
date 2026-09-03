@@ -95,7 +95,6 @@ providers:
   oidcConfig:
     groupsClaim: groups
     emailClaim: email
-    userIDClaim: email
     insecureSkipIssuerVerification: false
     insecureSkipNonce: true
     audienceClaims: [aud]
@@ -180,7 +179,6 @@ redirect_url="http://localhost:4180/oauth2/callback"
 				OIDCConfig: options.OIDCOptions{
 					GroupsClaim:                    "groups",
 					EmailClaim:                     "email",
-					UserIDClaim:                    "email",
 					AudienceClaims:                 []string{"aud"},
 					ExtraAudiences:                 []string{},
 					InsecureSkipNonce:              ptr.To(true),
