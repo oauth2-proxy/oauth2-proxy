@@ -17,8 +17,9 @@ type TokenToSessionFunc func(ctx context.Context, token string) (*sessionsapi.Se
 type VerifyFunc func(ctx context.Context, token string) (*oidc.IDToken, error)
 
 // CreateTokenToSessionFunc provides a handler that is a default implementation
-// for converting a JWT into a session.
-func CreateTokenToSessionFunc(verify VerifyFunc) TokenToSessionFunc {
+// for converting a JWT into a session. When allowUnverifiedEmail is set, a
+// token whose email_verified claim is false is still accepted.
+func CreateTokenToSessionFunc(verify VerifyFunc, allowUnverifiedEmail bool) TokenToSessionFunc {
 	return func(ctx context.Context, token string) (*sessionsapi.SessionState, error) {
 		var claims struct {
 			Subject           string   `json:"sub"`
@@ -44,7 +45,7 @@ func CreateTokenToSessionFunc(verify VerifyFunc) TokenToSessionFunc {
 		// Ensure email is verified
 		// If the email is not verified, return an error
 		// If the email_verified claim is missing, assume it is verified
-		if !ptr.Deref(claims.Verified, true) {
+		if !allowUnverifiedEmail && !ptr.Deref(claims.Verified, true) {
 			return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
 		}
 
