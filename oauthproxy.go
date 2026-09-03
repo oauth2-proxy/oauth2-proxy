@@ -1054,7 +1054,7 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 		p.headersChain.Then(p.upstreamProxy).ServeHTTP(rw, req)
 	case ErrNeedsLogin:
 		// we need to send the user to a login screen
-		if p.forceJSONErrors || isAjax(req) || p.isAPIPath(req) {
+		if p.forceJSONErrors || isAjax(req) || p.isAPIPath(req) || isSubresourceRequest(req) {
 			logger.Printf("No valid authentication in request. Access Denied.")
 			// no point redirecting an AJAX request
 			p.errorJSON(rw, http.StatusUnauthorized)
@@ -1333,6 +1333,11 @@ func isAjax(req *http.Request) bool {
 		}
 	}
 	return false
+}
+
+func isSubresourceRequest(req *http.Request) bool {
+	secFetchDest := req.Header.Get("Sec-Fetch-Dest")
+	return secFetchDest != "" && secFetchDest != "document"
 }
 
 // errorJSON returns the error code with an application/json mime type
