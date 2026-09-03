@@ -1,6 +1,7 @@
 package options
 
 import (
+	"log/slog"
 	"testing"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
@@ -9,8 +10,7 @@ import (
 )
 
 func TestOptionsSuite(t *testing.T) {
-	logger.SetOutput(GinkgoWriter)
-	logger.SetErrOutput(GinkgoWriter)
+	logger.Setup(slog.LevelDebug, "text", GinkgoWriter, GinkgoWriter)
 
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Options Suite")

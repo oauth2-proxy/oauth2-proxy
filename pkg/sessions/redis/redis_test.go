@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"encoding/pem"
 	"log"
+	"log/slog"
 	"os"
 	"testing"
 
@@ -32,8 +33,7 @@ var (
 )
 
 func TestRedis(t *testing.T) {
-	logger.SetOutput(GinkgoWriter)
-	logger.SetErrOutput(GinkgoWriter)
+	logger.Setup(slog.LevelDebug, "text", GinkgoWriter, GinkgoWriter)
 
 	redisLogger := &wrappedRedisLogger{Logger: log.New(os.Stderr, "redis: ", log.LstdFlags|log.Lshortfile)}
 	redisLogger.SetOutput(GinkgoWriter)

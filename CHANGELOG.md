@@ -2,7 +2,12 @@
 
 ## Release Highlights
 
+- Logging now uses Go's `log/slog`, adding configurable log levels and optional structured JSON output while keeping text output as the default.
+
 ## Important Notes
+
+- The new `--logging-level` flag controls log verbosity with `debug`, `info`, `warn`, and `error` levels.
+- The new `--logging-format` flag supports `text` and `json`; `text` remains the default, and existing text template options continue to apply to text output.
 
 ## Breaking Changes
 
