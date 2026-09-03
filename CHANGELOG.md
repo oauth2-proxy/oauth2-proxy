@@ -7,6 +7,7 @@
 ## Breaking Changes
 
 ## Changes since v7.15.4
+- [#3482](https://github.com/oauth2-proxy/oauth2-proxy/issues/3482) Make GitHub support auth without read:org scope
 
 # V7.15.4
 

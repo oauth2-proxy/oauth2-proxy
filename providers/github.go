@@ -112,10 +112,16 @@ func (p *GitHubProvider) makeGitHubAPIEndpoint(endpoint string, params *url.Valu
 	}
 }
 
-// setOrgTeam adds GitHub org reading parameters to the OAuth2 scope
+// setOrgTeam restricts logins to the given organisation and/or team.
+// Organization and team membership can only be read with the read:org scope,
+// so it is added to the scope if it is missing.
 func (p *GitHubProvider) setOrgTeam(org, team string) {
 	p.Org = org
 	p.Team = team
+
+	if (org != "" || team != "") && !p.scopeContains("read:org") {
+		p.Scope += " read:org"
+	}
 }
 
 // setRepo configures the target repository and optional token to use
@@ -129,11 +135,15 @@ func (p *GitHubProvider) setUsers(users []string) {
 	p.Users = users
 }
 
-// EnrichSession updates the User & Email after the initial Redeem
+// EnrichSession updates the User, Email & Groups after the initial Redeem.
+// Organization and team memberships are only retrieved when the scope
+// includes read:org, as the /user/orgs and /user/teams endpoints require it.
 func (p *GitHubProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
 	// Construct user info JSON from multiple GitHub API endpoints to have a more detailed session state
-	if err := p.getOrgAndTeam(ctx, s); err != nil {
-		return err
+	if p.scopeContains("read:org") {
+		if err := p.getOrgAndTeam(ctx, s); err != nil {
+			return err
+		}
 	}
 
 	if err := p.checkRestrictions(ctx, s); err != nil {
@@ -145,6 +155,17 @@ func (p *GitHubProvider) EnrichSession(ctx context.Context, s *sessions.SessionS
 	}
 
 	return p.getUser(ctx, s)
+}
+
+// scopeContains reports whether the configured OAuth2 scope list includes the
+// given scope, matching scope names exactly.
+func (p *GitHubProvider) scopeContains(scope string) bool {
+	for _, s := range strings.Split(p.Scope, " ") {
+		if s == scope {
+			return true
+		}
+	}
+	return false
 }
 
 // ValidateSession validates the AccessToken
