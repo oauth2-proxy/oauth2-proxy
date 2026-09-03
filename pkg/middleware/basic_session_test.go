@@ -55,7 +55,7 @@ var _ = Describe("Basic Auth Session Suite", func() {
 				// Create the handler with a next handler that will capture the session
 				// from the scope
 				var gotSession *sessionsapi.SessionState
-				handler := NewBasicAuthSessionLoader(validator, in.sessionGroups, in.preferEmail)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				handler := NewBasicAuthSessionLoader(validator, in.sessionGroups, in.preferEmail, "Authorization")(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					gotSession = middlewareapi.GetRequestScope(r).Session
 				}))
 				handler.ServeHTTP(rw, req)
