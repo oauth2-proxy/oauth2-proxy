@@ -20,6 +20,7 @@ type CookieOptions struct {
 	Path       string
 	HTTPOnly   bool
 	Secure     bool
+	Partitioned bool
 }
 
 // MakeCookieFromOptions constructs a cookie based on the given *options.CookieOptions,
@@ -43,6 +44,7 @@ func MakeCookieFromOptions(req *http.Request, opts *CookieOptions) *http.Cookie 
 		HttpOnly: opts.HTTPOnly,
 		Secure:   opts.Secure,
 		SameSite: ParseSameSite(opts.SameSite),
+		Partitioned: opts.Partitioned,
 	}
 
 	if opts.Expiration > time.Duration(0) {
