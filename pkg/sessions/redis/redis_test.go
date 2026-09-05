@@ -27,8 +27,9 @@ func (l *wrappedRedisLogger) Printf(_ context.Context, format string, v ...inter
 }
 
 var (
-	cert   tls.Certificate
-	caPath string
+	cert    tls.Certificate
+	caPath  string
+	keyPath string
 )
 
 func TestRedis(t *testing.T) {
@@ -61,8 +62,16 @@ var _ = BeforeSuite(func() {
 	_, err = certFile.Write(certData)
 	defer certFile.Close()
 	Expect(err).ToNot(HaveOccurred())
+
+	keyFile, err := os.CreateTemp("", "key.*.pem")
+	Expect(err).ToNot(HaveOccurred())
+	keyPath = keyFile.Name()
+	_, err = keyFile.Write(keyOut.Bytes())
+	defer keyFile.Close()
+	Expect(err).ToNot(HaveOccurred())
 })
 
 var _ = AfterSuite(func() {
 	Expect(os.Remove(caPath)).ToNot(HaveOccurred())
+	Expect(os.Remove(keyPath)).ToNot(HaveOccurred())
 })
