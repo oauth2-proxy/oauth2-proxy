@@ -1784,6 +1784,7 @@ func TestSubresourceRequest(t *testing.T) {
 		{"script is denied without redirect", "script", false},
 		{"image is denied without redirect", "image", false},
 		{"document initiates login", "document", true},
+		{"iframe initiates login", "iframe", true},
 		{"absent header initiates login", "", true},
 	}
 	for _, tt := range tests {
@@ -1821,6 +1822,11 @@ func TestIsSubresourceRequest(t *testing.T) {
 	}{
 		{"absent header", "", false},
 		{"document", "document", false},
+		{"iframe", "iframe", false},
+		{"frame", "frame", false},
+		{"embed", "embed", false},
+		{"object", "object", false},
+		{"empty", "empty", true},
 		{"non-document", "script", true},
 	}
 	for _, tt := range tests {

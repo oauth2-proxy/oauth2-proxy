@@ -1335,9 +1335,17 @@ func isAjax(req *http.Request) bool {
 	return false
 }
 
+var navigationDests = map[string]struct{}{
+	"document": {}, "iframe": {}, "frame": {}, "embed": {}, "object": {},
+}
+
 func isSubresourceRequest(req *http.Request) bool {
-	secFetchDest := req.Header.Get("Sec-Fetch-Dest")
-	return secFetchDest != "" && secFetchDest != "document"
+	dest := req.Header.Get("Sec-Fetch-Dest")
+	if dest == "" {
+		return false
+	}
+	_, isNavigation := navigationDests[dest]
+	return !isNavigation
 }
 
 // errorJSON returns the error code with an application/json mime type

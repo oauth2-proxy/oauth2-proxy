@@ -11,7 +11,7 @@ title: Behaviour
 2. Unauthenticated Requests: When authentication is missing but required, the user is redirected to the configured Identity Provider (IdP) login page by default.
     - Ajax Requests: If the request has `Accept: application/json` header:
         - Returns `401 Unauthorized`.
-    - Subresource Requests: If the browser sends a `Sec-Fetch-Dest` header with a value other than `document` (e.g. `script`, `image`, `style`):
+    - Subresource Requests: If the browser sends a `Sec-Fetch-Dest` header with a value other than `document`, `iframe`, `frame`, `embed` or `object`:
         - Returns `401 Unauthorized`.
     - Invalid JWT Tokens: If `--skip-jwt-bearer-tokens` is set and the request includes an invalid JWT:
         - Redirects to the login page by default.
