@@ -111,9 +111,13 @@ func (p *BitbucketProvider) GetEmailAddress(ctx context.Context, s *sessions.Ses
 		}
 	}
 
-	requestURL := p.ValidateURL.String() + "?access_token=" + s.AccessToken
-	err := requests.New(requestURL).
+	authHeaders := makeAuthorizationHeader(tokenTypeBearer, s.AccessToken, map[string]string{
+		acceptHeader: acceptApplicationJSON,
+	})
+
+	err := requests.New(p.ValidateURL.String()).
 		WithContext(ctx).
+		WithHeaders(authHeaders).
 		Do().
 		UnmarshalInto(&emails)
 	if err != nil {
@@ -126,10 +130,13 @@ func (p *BitbucketProvider) GetEmailAddress(ctx context.Context, s *sessions.Ses
 		*teamURL = *p.ValidateURL
 		teamURL.Path = "/2.0/teams"
 
-		requestURL := teamURL.String() + "?role=member&access_token=" + s.AccessToken
+		query := teamURL.Query()
+		query.Set("role", "member")
+		teamURL.RawQuery = query.Encode()
 
-		err := requests.New(requestURL).
+		err := requests.New(teamURL.String()).
 			WithContext(ctx).
+			WithHeaders(authHeaders).
 			Do().
 			UnmarshalInto(&teams)
 		if err != nil {
@@ -154,12 +161,14 @@ func (p *BitbucketProvider) GetEmailAddress(ctx context.Context, s *sessions.Ses
 		*repositoriesURL = *p.ValidateURL
 		repositoriesURL.Path = "/2.0/repositories/" + strings.Split(p.Repository, "/")[0]
 
-		requestURL := repositoriesURL.String() + "?role=contributor" +
-			"&q=full_name=" + url.QueryEscape("\""+p.Repository+"\"") +
-			"&access_token=" + s.AccessToken
+		query := repositoriesURL.Query()
+		query.Set("role", "contributor")
+		query.Set("q", "full_name=\""+p.Repository+"\"")
+		repositoriesURL.RawQuery = query.Encode()
 
-		err := requests.New(requestURL).
+		err := requests.New(repositoriesURL.String()).
 			WithContext(ctx).
+			WithHeaders(authHeaders).
 			Do().
 			UnmarshalInto(&repositories)
 		if err != nil {
