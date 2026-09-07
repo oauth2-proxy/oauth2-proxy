@@ -152,6 +152,14 @@ This ensures:
 - ✅ API clients fail fast with appropriate HTTP status codes
 - ✅ `/oauth2/auth` remains a pure boolean oracle (2xx/401)
 
+### CORS Preflight Requests and `--skip-auth-preflight`
+
+`--skip-auth-preflight` only applies when oauth2-proxy receives the original `OPTIONS` request directly, such as when it is running as a reverse proxy.
+
+When nginx is configured with `auth_request`, it checks the original request via a separate internal GET subrequest to `/oauth2/auth` instead of proxying the original `OPTIONS` request through oauth2-proxy. In this integration, `--skip-auth-preflight` does not bypass authentication for browser CORS preflight checks.
+
+If you need unauthenticated preflight handling with nginx or ingress-nginx, handle `OPTIONS` before `auth_request` runs, or let your ingress CORS configuration answer the preflight directly. If nginx answers the preflight itself, make sure it also returns the required CORS headers.
+
 When you use ingress-nginx in Kubernetes, you can configure the same behavior with the following annotations on your Ingress resource:
 
 ```yaml

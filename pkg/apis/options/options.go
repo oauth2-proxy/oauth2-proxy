@@ -129,7 +129,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.StringSlice("skip-auth-route", []string{}, "bypass authentication for requests that match the method & path. Format: method=path_regex OR method!=path_regex. For all methods: path_regex OR !=path_regex")
 	flagSet.StringSlice("api-route", []string{}, "return HTTP 401 instead of redirecting to authentication server if token is not valid. Format: path_regex")
 	flagSet.Bool("skip-provider-button", false, "will skip sign-in-page to directly reach the next step: oauth/start")
-	flagSet.Bool("skip-auth-preflight", false, "will skip authentication for OPTIONS requests")
+	flagSet.Bool("skip-auth-preflight", false, "will skip authentication for OPTIONS requests handled directly by oauth2-proxy (nginx auth_request uses a separate GET subrequest)")
 	flagSet.Bool("ssl-insecure-skip-verify", false, "skip validation of certificates presented when using HTTPS providers")
 	flagSet.Bool("skip-jwt-bearer-tokens", false, "will skip requests that have verified JWT bearer tokens (default false)")
 	flagSet.Bool("bearer-token-login-fallback", true, "if skip-jwt-bearer-tokens is set, fall back to normal login redirect with an invalid JWT. If false, 403 instead")
