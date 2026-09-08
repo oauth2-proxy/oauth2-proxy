@@ -82,6 +82,41 @@ func TestAzureEntraOIDCProviderEnrichSessionGroupOverage(t *testing.T) {
 	assert.Contains(t, session.Groups, "b1aef995-6b55-4ac6-bbfe-e829810e9352", "Pagination using $skiptoken failed")
 }
 
+func TestAzureEntraOIDCProviderEnrichSessionGraphError(t *testing.T) {
+	// Create ID Token that indicates group overage with _claim_names
+	key, _ := rsa.GenerateKey(rand.Reader, 2048)
+	claimsWithGroupOverage := &claimsWithGroupOverage{
+		jwt.RegisteredClaims{
+			Issuer: "https://login.microsoftonline.com/18014347-dd57-41a1-8191-7a1f734ea457/v2.0",
+		},
+		map[string]string{"groups": "src1"},
+	}
+
+	jwtWithClaims := jwt.NewWithClaims(jwt.SigningMethodRS256, claimsWithGroupOverage)
+	signedJWT, err := jwtWithClaims.SignedString(key)
+	assert.NoError(t, err)
+
+	session := CreateAuthorizedSession()
+	session.IDToken = signedJWT
+	session.Email = "mock@example.com"
+
+	provider := NewMicrosoftEntraIDProvider(&ProviderData{},
+		options.Provider{OIDCConfig: options.OIDCOptions{
+			IssuerURL: "https://login.microsoftonline.com/18014347-dd57-41a1-8191-7a1f734ea457/v2.0",
+		}},
+	)
+
+	// Mock a Graph server that rejects the groups request
+	mockedGraph := mockGraphAPI(true)
+	mockedGraphURL, _ := url.Parse(mockedGraph.URL)
+	updateURL(provider.microsoftGraphURL, mockedGraphURL.Host)
+
+	// A failed Graph lookup during overage must surface as an error, not a
+	// silently under-populated session.
+	err = provider.EnrichSession(context.Background(), session)
+	assert.Error(t, err)
+}
+
 func TestAzureEntraOIDCProviderValidateSessionAllowedTenants(t *testing.T) {
 	// Create multi-tenant Azure Entra provider with allowed tenants
 	provider := NewMicrosoftEntraIDProvider(
