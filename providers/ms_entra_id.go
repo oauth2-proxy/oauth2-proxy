@@ -248,7 +248,7 @@ func (p *MicrosoftEntraIDProvider) addGraphGroupsToSession(ctx context.Context, 
 			UnmarshalSimpleJSON()
 
 		if err != nil {
-			return fmt.Errorf("invalid response from microsoft graph: %v", err)
+			return fmt.Errorf("invalid response from microsoft graph: %w", err)
 		}
 		reqGroups := response.Get("value").MustArray()
 

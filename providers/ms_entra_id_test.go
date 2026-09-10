@@ -113,8 +113,11 @@ func TestAzureEntraOIDCProviderEnrichSessionGraphError(t *testing.T) {
 
 	// A failed Graph lookup during overage must surface as an error, not a
 	// silently under-populated session.
+	groupsBefore := session.Groups
 	err = provider.EnrichSession(context.Background(), session)
-	assert.Error(t, err)
+	assert.ErrorContains(t, err, "invalid response from microsoft graph")
+	// The session must be left exactly as it was, not half-populated.
+	assert.Equal(t, groupsBefore, session.Groups)
 }
 
 func TestAzureEntraOIDCProviderValidateSessionAllowedTenants(t *testing.T) {
