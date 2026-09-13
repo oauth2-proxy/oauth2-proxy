@@ -285,7 +285,8 @@ type OIDCOptions struct {
 	// IssuerURL is the OpenID Connect issuer URL
 	// eg: https://accounts.google.com
 	IssuerURL string `yaml:"issuerURL,omitempty"`
-	// InsecureAllowUnverifiedEmail prevents failures if an email address in an id_token is not verified
+	// InsecureAllowUnverifiedEmail prevents failures if an email address in an id_token is not verified.
+	// It also applies to bearer tokens accepted from the issuers listed in extra_jwt_issuers.
 	// default set to 'false'
 	InsecureAllowUnverifiedEmail *bool `yaml:"insecureAllowUnverifiedEmail,omitempty"`
 	// InsecureSkipIssuerVerification skips verification of ID token issuers. When false, ID Token Issuers must match the OIDC discovery URL
