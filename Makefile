@@ -26,7 +26,7 @@ help: ## Display this help
 
 GO ?= go
 # renovate: datasource=github-tags depName=golangci/golangci-lint
-GOLANGCILINT_VERSION ?= v2.11.4
+GOLANGCILINT_VERSION ?= v2.13.2
 
 BINARY := oauth2-proxy
 VERSION ?= $(shell git describe --always --dirty --tags 2>/dev/null || echo "undefined")
