@@ -1,0 +1,20 @@
+name: Sync Prow Labels
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths: [.github/prow.yaml]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: oauth2-proxy/prow-github-actions@c5ba2c6994ab70e129b5d028ba885f02ba44db65 # main
+      with:
+        jobs: label-sync
+        github-token: ${{ secrets.GITHUB_TOKEN }}
