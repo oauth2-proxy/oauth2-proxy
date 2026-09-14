@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -73,7 +72,7 @@ func (p *OIDCProvider) GetLoginURL(redirectURI, state, nonce string, extraParams
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
 func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code, codeVerifier string) (*sessions.SessionState, error) {
-	clientSecret, err := p.GetClientSecret()
+	c, err := p.tokenEndpointConfig(redirectURL)
 	if err != nil {
 		return nil, err
 	}
@@ -83,14 +82,11 @@ func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code, codeVerifi
 		opts = append(opts, oauth2.SetAuthURLParam("code_verifier", codeVerifier))
 	}
 
-	c := oauth2.Config{
-		ClientID:     p.ClientID,
-		ClientSecret: clientSecret,
-		Endpoint: oauth2.Endpoint{
-			TokenURL: p.RedeemURL.String(),
-		},
-		RedirectURL: redirectURL,
+	authOpts, err := p.clientAuthCodeOptions()
+	if err != nil {
+		return nil, err
 	}
+	opts = append(opts, authOpts...)
 
 	ctx = oidc.ClientContext(ctx, requests.DefaultHTTPClient)
 	token, err := c.Exchange(ctx, code, opts...)
@@ -162,25 +158,9 @@ func (p *OIDCProvider) RefreshSession(ctx context.Context, s *sessions.SessionSt
 // Access Token and (optionally) the ID Token.
 // https://openid.net/specs/openid-connect-core-1_0.html#RefreshTokenResponse
 func (p *OIDCProvider) redeemRefreshToken(ctx context.Context, s *sessions.SessionState) error {
-	clientSecret, err := p.GetClientSecret()
+	token, err := p.refreshToken(ctx, s.RefreshToken)
 	if err != nil {
 		return err
-	}
-
-	c := oauth2.Config{
-		ClientID:     p.ClientID,
-		ClientSecret: clientSecret,
-		Endpoint: oauth2.Endpoint{
-			TokenURL: p.RedeemURL.String(),
-		},
-	}
-	t := &oauth2.Token{
-		RefreshToken: s.RefreshToken,
-		Expiry:       time.Now().Add(-time.Hour),
-	}
-	token, err := c.TokenSource(ctx, t).Token()
-	if err != nil {
-		return fmt.Errorf("failed to get token: %v", err)
 	}
 
 	newSession, err := p.createSession(ctx, token, true)

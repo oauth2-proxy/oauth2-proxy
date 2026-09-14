@@ -575,6 +575,7 @@ Provider holds all configuration for a single provider
 | `clientID` | _string_ | ClientID is the OAuth Client ID that is defined in the provider<br/>This value is required for all providers. |
 | `clientSecret` | _string_ | ClientSecret is the OAuth Client Secret that is defined in the provider<br/>This value is required for all providers. |
 | `clientSecretFile` | _string_ | ClientSecretFile is the name of the file<br/>containing the OAuth Client Secret, it will be used if ClientSecret is not set. |
+| `clientAssertionFile` | _string_ | ClientAssertionFile is the path to a JWT client assertion (RFC 7523) used<br/>at the token endpoint instead of a client secret. It is re-read on every<br/>token request, so it can hold a credential rotated in place. It is<br/>mutually exclusive with ClientSecret and ClientSecretFile. |
 | `keycloakConfig` | _[KeycloakOptions](#keycloakoptions)_ | KeycloakConfig holds all configurations for Keycloak provider. |
 | `azureConfig` | _[AzureOptions](#azureoptions)_ | AzureConfig holds all configurations for Azure provider. |
 | `microsoftEntraIDConfig` | _[MicrosoftEntraIDOptions](#microsoftentraidoptions)_ | MicrosoftEntraIDConfig holds all configurations for Entra ID provider. |
