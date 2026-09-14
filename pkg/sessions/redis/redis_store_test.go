@@ -321,4 +321,23 @@ var _ = Describe("Redis SessionStore Tests", func() {
 			Expect(opts).To(BeNil())
 		})
 	})
+
+	Describe("Redis TLS client credentials", func() {
+		It("returns an error when only client certificate path is set", func() {
+			_, err := buildStandaloneClient(options.RedisStoreOptions{
+				ConnectionURL:  "redis://localhost:6379",
+				ClientCertPath: "/some/path/cert.pem",
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("must both be set"))
+		})
+		It("returns an error when only client private key path is set", func() {
+			_, err := buildStandaloneClient(options.RedisStoreOptions{
+				ConnectionURL: "redis://localhost:6379",
+				ClientKeyPath: "/some/path/key.pem",
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("must both be set"))
+		})
+	})
 })
