@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.4
 
+- [#3527](https://github.com/oauth2-proxy/oauth2-proxy/pull/3527) fix(encryption): return an error instead of panicking on a short GCM ciphertext @winklemad
+
 # V7.15.4
 
 ## Release Highlights
