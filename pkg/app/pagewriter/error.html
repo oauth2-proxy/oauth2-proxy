@@ -4,6 +4,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="color-scheme" content="light dark">
   <title>{{.StatusCode}} {{.Title}}</title>
 <link rel="stylesheet" href="{{.ProxyPrefix}}/static/css/bulma.min.css">
 <link rel="stylesheet" href="{{.ProxyPrefix}}/static/css/all.min.css">
@@ -36,6 +37,33 @@
   }
   footer a {
     text-decoration: underline;
+  }
+  @media (prefers-color-scheme: dark) {
+    html,
+    body.has-background-light,
+    footer.footer.has-background-light {
+      background-color: #121212 !important;
+      color: #f5f5f5;
+    }
+    .error-box,
+    #more-info.card {
+      background-color: #1f1f1f;
+      color: #f5f5f5;
+    }
+    .subtitle,
+    .card-header-title {
+      color: #f5f5f5;
+    }
+    #more-info.card {
+      border-color: #3a3a3a;
+    }
+    hr {
+      background-color: #3a3a3a;
+    }
+    footer.footer.has-text-grey,
+    footer.footer a.has-text-grey {
+      color: #b5b5b5 !important;
+    }
   }
 </style>
 </head>

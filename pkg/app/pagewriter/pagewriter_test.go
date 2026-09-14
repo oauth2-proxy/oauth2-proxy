@@ -52,6 +52,7 @@ var _ = Describe("Writer", func() {
 				body, err := io.ReadAll(recorder.Result().Body)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(body)).To(HavePrefix("\n<!DOCTYPE html>"))
+				Expect(string(body)).To(ContainSubstring("@media (prefers-color-scheme: dark)"))
 			})
 
 			It("Writes the default sign in template", func() {
