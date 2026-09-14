@@ -11,6 +11,10 @@ type SecretSource struct {
 
 	// FromFile expects a path to a file containing the secret value.
 	FromFile string `yaml:"fromFile,omitempty"`
+
+	// Prefix is an optional prefix that will be prepended to the secret value
+	// if it is non-empty.
+	Prefix string `yaml:"prefix,omitempty"`
 }
 
 // EnsureDefaults sets any default values for SecretSource fields.
