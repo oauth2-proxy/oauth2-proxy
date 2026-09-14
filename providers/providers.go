@@ -171,6 +171,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 	p.setAllowedGroups(providerConfig.AllowedGroups)
 
 	p.BackendLogoutURL = providerConfig.BackendLogoutURL
+	p.BackChannelLogoutSupported = ptr.Deref(providerConfig.OIDCConfig.BackChannelLogoutEnabled, options.DefaultBackChannelLogoutEnabled)
 
 	return p, nil
 }
