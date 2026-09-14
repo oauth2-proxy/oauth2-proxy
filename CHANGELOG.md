@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.4
 
+- [#3535](https://github.com/oauth2-proxy/oauth2-proxy/pull/3535) fix: surface Microsoft Graph errors during Entra group overage instead of logging in with an incomplete group set @no-hup
+
 # V7.15.4
 
 ## Release Highlights
