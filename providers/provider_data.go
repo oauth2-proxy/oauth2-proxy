@@ -234,9 +234,10 @@ func defaultURL(u *url.URL, d *url.URL) *url.URL {
 		return u
 	}
 
-	// If the default is given, return that
+	// If the default is given, return a copy to avoid modifying the shared default
 	if d != nil {
-		return d
+		copied := *d
+		return &copied
 	}
 	return &url.URL{}
 }
