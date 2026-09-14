@@ -1463,6 +1463,212 @@ func TestAuthOnlyEndpointSetBasicAuthFalseRequestHeaders(t *testing.T) {
 	assert.Equal(t, 0, len(pcTest.rw.Header().Values("Authorization")), "should not have Authorization header entries")
 }
 
+func NewAuthOnlyWithSignInEndpointTest(querystring string, modifiers ...OptionsModifier) (*ProcessCookieTest, error) {
+	pcTest, err := NewProcessCookieTestWithOptionsModifiers(modifiers...)
+	if err != nil {
+		return nil, err
+	}
+	pcTest.req, _ = http.NewRequest(
+		"GET",
+		fmt.Sprintf("%s/auth/sign_in%s", pcTest.opts.ProxyPrefix, querystring),
+		nil)
+	return pcTest, nil
+}
+
+func TestAuthOnlyWithSignInEndpointAccepted(t *testing.T) {
+	test, err := NewAuthOnlyWithSignInEndpointTest("")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	created := time.Now()
+	startSession := &sessions.SessionState{
+		Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: &created}
+	err = test.SaveSession(startSession)
+	assert.NoError(t, err)
+
+	test.proxy.ServeHTTP(test.rw, test.req)
+	assert.Equal(t, http.StatusAccepted, test.rw.Code)
+	bodyBytes, _ := io.ReadAll(test.rw.Body)
+	assert.Equal(t, "", string(bodyBytes))
+	assert.Equal(t, "no-cache, no-store, must-revalidate, max-age=0", test.rw.Header().Get("Cache-Control"))
+	assert.Equal(t, "0", test.rw.Header().Get("X-Accel-Expires"))
+}
+
+func TestAuthOnlyWithSignInEndpointRedirectOnNoCookie(t *testing.T) {
+	test, err := NewAuthOnlyWithSignInEndpointTest("", func(opts *options.Options) {
+		opts.SkipProviderButton = true
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	loginURL, _ := url.Parse("https://accounts.google.com/o/oauth2/v2/auth")
+	test.proxy.provider = &TestProvider{
+		ProviderData: &providers.ProviderData{
+			LoginURL: loginURL,
+		},
+		ValidToken: true,
+	}
+
+	test.proxy.ServeHTTP(test.rw, test.req)
+	assert.Equal(t, http.StatusFound, test.rw.Code)
+	location := test.rw.Header().Get("Location")
+	assert.Contains(t, location, "accounts.google.com")
+}
+
+func TestAuthOnlyWithSignInEndpointSignInPageOnNoCookie(t *testing.T) {
+	test, err := NewAuthOnlyWithSignInEndpointTest("")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	test.proxy.ServeHTTP(test.rw, test.req)
+	assert.Equal(t, http.StatusForbidden, test.rw.Code)
+	bodyBytes, _ := io.ReadAll(test.rw.Body)
+	assert.Contains(t, string(bodyBytes), "Sign in")
+}
+
+func TestAuthOnlyWithSignInEndpointRedirectOnExpiration(t *testing.T) {
+	test, err := NewAuthOnlyWithSignInEndpointTest("", func(opts *options.Options) {
+		opts.Cookie.Expire = time.Duration(24) * time.Hour
+		opts.SkipProviderButton = true
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	loginURL, _ := url.Parse("https://accounts.google.com/o/oauth2/v2/auth")
+	test.proxy.provider = &TestProvider{
+		ProviderData: &providers.ProviderData{
+			LoginURL: loginURL,
+		},
+		ValidToken: true,
+	}
+
+	reference := time.Now().Add(time.Duration(25) * time.Hour * -1)
+	startSession := &sessions.SessionState{
+		Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: &reference}
+	err = test.SaveSession(startSession)
+	assert.NoError(t, err)
+
+	test.proxy.ServeHTTP(test.rw, test.req)
+	assert.Equal(t, http.StatusFound, test.rw.Code)
+	location := test.rw.Header().Get("Location")
+	assert.Contains(t, location, "accounts.google.com")
+}
+
+func TestAuthOnlyWithSignInEndpointForbiddenOnEmailValidation(t *testing.T) {
+	test, err := NewAuthOnlyWithSignInEndpointTest("")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	created := time.Now()
+	startSession := &sessions.SessionState{
+		Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: &created}
+	err = test.SaveSession(startSession)
+	assert.NoError(t, err)
+	test.validateUser = false
+
+	test.proxy.ServeHTTP(test.rw, test.req)
+	assert.Equal(t, http.StatusForbidden, test.rw.Code)
+}
+
+func TestAuthOnlyWithSignInEndpointForbiddenOnGroupAuthorization(t *testing.T) {
+	test, err := NewAuthOnlyWithSignInEndpointTest("?allowed_groups=a,b", func(opts *options.Options) {
+		opts.Providers[0].AllowedGroups = []string{"a", "b", "c"}
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	created := time.Now()
+	startSession := &sessions.SessionState{
+		Groups:      []string{"c"},
+		Email:       "michael.bland@gsa.gov",
+		AccessToken: "my_access_token",
+		CreatedAt:   &created,
+	}
+	err = test.SaveSession(startSession)
+	assert.NoError(t, err)
+
+	test.proxy.ServeHTTP(test.rw, test.req)
+	assert.Equal(t, http.StatusForbidden, test.rw.Code)
+	bodyBytes, _ := io.ReadAll(test.rw.Body)
+	assert.Equal(t, "Forbidden\n", string(bodyBytes))
+}
+
+func TestAuthOnlyWithSignInEndpointSetXAuthRequestHeaders(t *testing.T) {
+	var pcTest ProcessCookieTest
+
+	pcTest.opts = baseTestOptions()
+	pcTest.opts.InjectResponseHeaders = []options.Header{
+		{
+			Name: "X-Auth-Request-User",
+			Values: []options.HeaderValue{
+				{
+					ClaimSource: &options.ClaimSource{
+						Claim: "user",
+					},
+				},
+			},
+		},
+		{
+			Name: "X-Auth-Request-Email",
+			Values: []options.HeaderValue{
+				{
+					ClaimSource: &options.ClaimSource{
+						Claim: "email",
+					},
+				},
+			},
+		},
+		{
+			Name: "X-Auth-Request-Groups",
+			Values: []options.HeaderValue{
+				{
+					ClaimSource: &options.ClaimSource{
+						Claim: "groups",
+					},
+				},
+			},
+		},
+	}
+	pcTest.opts.Providers[0].AllowedGroups = []string{"oauth_groups"}
+	err := validation.Validate(pcTest.opts)
+	assert.NoError(t, err)
+
+	pcTest.proxy, err = NewOAuthProxy(pcTest.opts, func(email string) bool {
+		return pcTest.validateUser
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	pcTest.proxy.provider = &TestProvider{
+		ProviderData: &providers.ProviderData{},
+		ValidToken:   true,
+	}
+
+	pcTest.validateUser = true
+
+	pcTest.rw = httptest.NewRecorder()
+	pcTest.req, _ = http.NewRequest("GET",
+		pcTest.opts.ProxyPrefix+authSignInPath, nil)
+
+	created := time.Now()
+	startSession := &sessions.SessionState{
+		User: "oauth_user", Groups: []string{"oauth_groups"}, Email: "oauth_user@example.com", AccessToken: "oauth_token", CreatedAt: &created}
+	err = pcTest.SaveSession(startSession)
+	assert.NoError(t, err)
+
+	pcTest.proxy.ServeHTTP(pcTest.rw, pcTest.req)
+	assert.Equal(t, http.StatusAccepted, pcTest.rw.Code)
+	assert.Equal(t, "oauth_user", pcTest.rw.Header().Get("X-Auth-Request-User"))
+	assert.Equal(t, startSession.Groups, pcTest.rw.Header().Values("X-Auth-Request-Groups"))
+	assert.Equal(t, "oauth_user@example.com", pcTest.rw.Header().Get("X-Auth-Request-Email"))
+}
+
 func TestAuthSkippedForPreflightRequests(t *testing.T) {
 	upstreamServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
