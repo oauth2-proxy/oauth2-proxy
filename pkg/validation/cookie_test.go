@@ -333,3 +333,71 @@ func TestValidateCookie(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateCookiePartitioned(t *testing.T) {
+	const incompatibleSameSite = "lax"
+
+	validCookie := options.Cookie{
+		Name:         "_oauth2_proxy",
+		Secret:       "secretthirtytwobytes+abcdefghijk",
+		Secure:       true,
+		SameSite:     cookieSameSiteNone,
+		CSRFSameSite: "",
+		Partitioned:  true,
+	}
+
+	tests := []struct {
+		name       string
+		cookie     options.Cookie
+		errStrings []string
+	}{
+		{
+			name:       "valid",
+			cookie:     validCookie,
+			errStrings: []string{},
+		},
+		{
+			name: "requires secure cookies",
+			cookie: func() options.Cookie {
+				cookie := validCookie
+				cookie.Secure = false
+				return cookie
+			}(),
+			errStrings: []string{"cookie_partitioned=true requires cookie_secure=true"},
+		},
+		{
+			name: "requires SameSite=None",
+			cookie: func() options.Cookie {
+				cookie := validCookie
+				cookie.SameSite = incompatibleSameSite
+				return cookie
+			}(),
+			errStrings: []string{"cookie_partitioned=true requires cookie_samesite=\"none\""},
+		},
+		{
+			name: "requires compatible CSRF SameSite",
+			cookie: func() options.Cookie {
+				cookie := validCookie
+				cookie.CSRFSameSite = incompatibleSameSite
+				return cookie
+			}(),
+			errStrings: []string{"cookie_partitioned=true requires cookie_csrf_samesite to be empty or \"none\""},
+		},
+		{
+			name: "allows explicit CSRF SameSite=None",
+			cookie: func() options.Cookie {
+				cookie := validCookie
+				cookie.CSRFSameSite = cookieSameSiteNone
+				return cookie
+			}(),
+			errStrings: []string{},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+			g.Expect(validateCookie(tc.cookie)).To(ConsistOf(tc.errStrings))
+		})
+	}
+}

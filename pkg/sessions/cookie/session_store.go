@@ -85,6 +85,7 @@ func (s *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) error {
 				Path:       s.Cookie.Path,
 				HTTPOnly:   s.Cookie.HTTPOnly,
 				Secure:     s.Cookie.Secure,
+				Partitioned: s.Cookie.Partitioned,
 			}
 			clearCookie := pkgcookies.MakeCookieFromOptions(req, sessionCookieOptions)
 
@@ -151,6 +152,7 @@ func (s *SessionStore) makeSessionCookie(req *http.Request, value []byte, now ti
 		Path:       s.Cookie.Path,
 		HTTPOnly:   s.Cookie.HTTPOnly,
 		Secure:     s.Cookie.Secure,
+		Partitioned: s.Cookie.Partitioned,
 	}
 	c := pkgcookies.MakeCookieFromOptions(req, sessionCookieOptions)
 	if len(c.String()) > maxCookieLength {
@@ -278,5 +280,6 @@ func copyCookie(c *http.Cookie) *http.Cookie {
 		Raw:        c.Raw,
 		Unparsed:   c.Unparsed,
 		SameSite:   c.SameSite,
+		Partitioned: c.Partitioned,
 	}
 }

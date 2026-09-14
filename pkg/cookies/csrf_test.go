@@ -192,6 +192,36 @@ var _ = Describe("CSRF Cookie Tests", func() {
 					),
 				))
 			})
+
+			It("sets the Partitioned attribute on set cookies", func() {
+				// prepare
+				cookieOpts.Partitioned = true
+				cookieOpts.SameSite = sameSiteNone
+				rw := httptest.NewRecorder()
+
+				// test
+				_, err := publicCSRF.SetCookie(rw, req)
+
+				// validate
+				Expect(err).ToNot(HaveOccurred())
+
+				header := rw.Header().Get("Set-Cookie")
+				Expect(header).To(ContainSubstring(
+					fmt.Sprintf("%s=", privateCSRF.cookieName()),
+				))
+				Expect(header).To(ContainSubstring(
+					fmt.Sprintf(
+						"; Path=%s; Domain=%s; Max-Age=%d; HttpOnly; Secure; SameSite=None; Partitioned",
+						cookiePath,
+						cookieDomain,
+						int(cookieOpts.CSRFExpire.Seconds()),
+					),
+				))
+
+				parsed, err := http.ParseSetCookie(header)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(parsed.Partitioned).To(BeTrue())
+			})
 		})
 
 		Context("LoadCSRFCookie", func() {
@@ -269,6 +299,31 @@ var _ = Describe("CSRF Cookie Tests", func() {
 						cookieDomain,
 					),
 				))
+			})
+
+			It("sets the Partitioned attribute on deletion cookies", func() {
+				// prepare
+				cookieOpts.Partitioned = true
+				cookieOpts.SameSite = sameSiteNone
+				rw := httptest.NewRecorder()
+
+				// test
+				publicCSRF.ClearCookie(rw, req)
+
+				// validate
+				header := rw.Header().Get("Set-Cookie")
+				Expect(header).To(Equal(
+					fmt.Sprintf(
+						"%s=; Path=%s; Domain=%s; Max-Age=0; HttpOnly; Secure; SameSite=None; Partitioned",
+						privateCSRF.cookieName(),
+						cookiePath,
+						cookieDomain,
+					),
+				))
+
+				parsed, err := http.ParseSetCookie(header)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(parsed.Partitioned).To(BeTrue())
 			})
 		})
 
