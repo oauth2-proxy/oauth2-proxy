@@ -2947,6 +2947,60 @@ func TestAllowedRequestWithForwardedUriHeaderRequiresTrustedProxy(t *testing.T) 
 	assert.Equal(t, 401, rw.Code)
 }
 
+// TestSkipAuthPreflightWithForwardedMethod asserts the trust boundary for
+// skip-auth-preflight in forward-auth mode. X-Forwarded-Method: OPTIONS is
+// honoured only when the request originates from a trusted proxy; an untrusted
+// source cannot use it to bypass authentication.
+func TestSkipAuthPreflightWithForwardedMethod(t *testing.T) {
+	upstreamServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(upstreamServer.Close)
+
+	newProxy := func(t *testing.T, trustedIPs []string) *OAuthProxy {
+		t.Helper()
+		opts := baseTestOptions()
+		opts.ReverseProxy = true
+		opts.TrustedProxyIPs = trustedIPs
+		opts.SkipAuthPreflight = true
+		opts.UpstreamServers = options.UpstreamConfig{
+			Upstreams: []options.Upstream{
+				{ID: upstreamServer.URL, Path: "/", URI: upstreamServer.URL},
+			},
+		}
+		require.NoError(t, validation.Validate(opts))
+		proxy, err := NewOAuthProxy(opts, func(_ string) bool { return true })
+		require.NoError(t, err)
+		return proxy
+	}
+
+	authPath := "/oauth2" + authOnlyPath
+
+	t.Run("trusted proxy X-Forwarded-Method OPTIONS is allowed", func(t *testing.T) {
+		proxy := newProxy(t, []string{"127.0.0.1/32"})
+		req, err := http.NewRequest(http.MethodGet, authPath, nil)
+		require.NoError(t, err)
+		req.RemoteAddr = "127.0.0.1:4180"
+		req.Header.Set("X-Forwarded-Method", http.MethodOptions)
+
+		rw := httptest.NewRecorder()
+		proxy.ServeHTTP(rw, req)
+		assert.Equal(t, http.StatusAccepted, rw.Code)
+	})
+
+	t.Run("untrusted proxy X-Forwarded-Method OPTIONS is not allowed", func(t *testing.T) {
+		proxy := newProxy(t, []string{"127.0.0.1/32"})
+		req, err := http.NewRequest(http.MethodGet, authPath, nil)
+		require.NoError(t, err)
+		req.RemoteAddr = "192.0.2.10:4180"
+		req.Header.Set("X-Forwarded-Method", http.MethodOptions)
+
+		rw := httptest.NewRecorder()
+		proxy.ServeHTTP(rw, req)
+		assert.Equal(t, http.StatusUnauthorized, rw.Code)
+	})
+}
+
 func TestAllowedRequestNegateWithoutMethod(t *testing.T) {
 	upstreamServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)

@@ -587,7 +587,7 @@ func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, req *http.Request, code i
 
 // IsAllowedRequest is used to check if auth should be skipped for this request
 func (p *OAuthProxy) IsAllowedRequest(req *http.Request) bool {
-	isPreflightRequestAllowed := p.skipAuthPreflight && req.Method == http.MethodOptions
+	isPreflightRequestAllowed := p.skipAuthPreflight && requestutil.GetRequestMethod(req) == http.MethodOptions
 	return isPreflightRequestAllowed || p.isAllowedRoute(req) || p.isTrustedIP(req)
 }
 
