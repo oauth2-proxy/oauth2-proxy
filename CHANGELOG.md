@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.4
 
+- [#3538](https://github.com/oauth2-proxy/oauth2-proxy/pull/3538) Resolve the request path once per skip-auth check instead of once per configured route (@no-hup)
+
 # V7.15.4
 
 ## Release Highlights
