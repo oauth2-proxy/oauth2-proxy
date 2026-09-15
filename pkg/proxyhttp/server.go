@@ -346,11 +346,11 @@ func (ln tcpKeepAliveListener) Accept() (net.Conn, error) {
 	}
 	err = tc.SetKeepAlive(true)
 	if err != nil {
-		logger.Errorf("Error setting Keep-Alive: %v", err)
+		logger.ErrMsgf("error setting Keep-Alive: %v", err)
 	}
 	err = tc.SetKeepAlivePeriod(3 * time.Minute)
 	if err != nil {
-		logger.Printf("Error setting Keep-Alive period: %v", err)
+		logger.ErrMsgf("error setting Keep-Alive period: %v", err)
 	}
 	return tc, nil
 }

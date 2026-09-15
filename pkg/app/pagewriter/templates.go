@@ -60,7 +60,7 @@ func addTemplate(t *template.Template, customDir, fileName, defaultTemplate stri
 	if err != nil {
 		// This should not happen.
 		// Default templates should be tested and so should never fail to parse.
-		logger.Panic("Could not parse defaultTemplate: ", err)
+		logger.PanicMsg("could not parse defaultTemplate", "error", err)
 	}
 	return t, nil
 }
@@ -70,7 +70,7 @@ func addTemplate(t *template.Template, customDir, fileName, defaultTemplate stri
 func isFile(fileName string) bool {
 	info, err := os.Stat(fileName)
 	if err != nil {
-		logger.Errorf("Could not load file %s: %v, will use default template", fileName, err)
+		logger.ErrMsgf("could not load file %s: %v, will use default template", fileName, err)
 		return false
 	}
 	return info.Mode().IsRegular()

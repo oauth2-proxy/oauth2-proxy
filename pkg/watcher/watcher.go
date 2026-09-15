@@ -25,19 +25,19 @@ func WatchFileForUpdates(filename string, done <-chan bool, action func()) error
 		for {
 			select {
 			case <-done:
-				logger.Printf("shutting down watcher for: %s", filename)
+				logger.Infof("shutting down watcher for: %s", filename)
 				return
 			case event := <-watcher.Events:
 				filterEvent(watcher, event, filename, action)
 			case err = <-watcher.Errors:
-				logger.Errorf("error watching '%s': %s", filename, err)
+				logger.ErrMsgf("error watching '%s': %s", filename, err)
 			}
 		}
 	}()
 	if err := watcher.Add(filename); err != nil {
 		return fmt.Errorf("failed to add '%s' to watcher: %v", filename, err)
 	}
-	logger.Printf("watching '%s' for updates", filename)
+	logger.Infof("watching '%s' for updates", filename)
 
 	return nil
 }
@@ -51,11 +51,11 @@ func filterEvent(watcher *fsnotify.Watcher, event fsnotify.Event, filename strin
 	// In Kubernetes the file path is a symlink, so we should take action
 	// when the ConfigMap/Secret is replaced.
 	case event.Op&fsnotify.Remove != 0:
-		logger.Printf("watching interrupted on event: %s", event)
+		logger.Infof("watching interrupted on event: %s", event)
 		WaitForReplacement(filename, event.Op, watcher)
 		action()
 	case event.Op&(fsnotify.Create|fsnotify.Write) != 0:
-		logger.Printf("reloading after event: %s", event)
+		logger.Infof("reloading after event: %s", event)
 		action()
 	}
 }
@@ -72,7 +72,7 @@ func WaitForReplacement(filename string, op fsnotify.Op, watcher *fsnotify.Watch
 	for {
 		if _, err := os.Stat(filename); err == nil {
 			if err := watcher.Add(filename); err == nil {
-				logger.Printf("watching resumed for '%s'", filename)
+				logger.Infof("watching resumed for '%s'", filename)
 				return
 			}
 		}

@@ -50,7 +50,7 @@ func loadBasicAuthSession(validator basic.Validator, sessionGroups []string, pre
 
 		session, err := getSession(validator, sessionGroups, req)
 		if err != nil {
-			logger.Errorf("Error retrieving session from token in Authorization header: %v", err)
+			logger.ErrMsgf("error retrieving session from token in Authorization header: %v", err)
 		}
 
 		// Add the session to the scope if it was found
@@ -75,12 +75,12 @@ func getBasicSession(validator basic.Validator, sessionGroups []string, req *htt
 	}
 
 	if validator.Validate(user, password) {
-		logger.PrintAuthf(user, req, logger.AuthSuccess, "Authenticated via basic auth and HTpasswd File")
+		logger.LogAuth(user, req, logger.AuthSuccess, "authenticated via basic auth and HTpasswd File")
 
 		return &sessionsapi.SessionState{User: user, Groups: sessionGroups}, nil
 	}
 
-	logger.PrintAuthf(user, req, logger.AuthFailure, "Invalid authentication via basic auth: not in Htpasswd File")
+	logger.LogAuth(user, req, logger.AuthFailure, "invalid authentication via basic auth: not in Htpasswd File")
 	return nil, nil
 }
 

@@ -35,6 +35,6 @@ func (s *staticResponseHandler) ServeHTTP(rw http.ResponseWriter, req *http.Requ
 	rw.WriteHeader(s.code)
 	_, err := fmt.Fprintf(rw, "Authenticated")
 	if err != nil {
-		logger.Errorf("Error writing static response: %v", err)
+		logger.ErrMsgf("error writing static response: %v", err)
 	}
 }

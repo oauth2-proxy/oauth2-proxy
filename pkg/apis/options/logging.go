@@ -7,6 +7,8 @@ import (
 
 // Logging contains all options required for configuring the logging
 type Logging struct {
+	Level           string         `flag:"logging-level" cfg:"logging_level"`
+	Format          string         `flag:"logging-format" cfg:"logging_format"`
 	AuthEnabled     bool           `flag:"auth-logging" cfg:"auth_logging"`
 	AuthFormat      string         `flag:"auth-logging-format" cfg:"auth_logging_format"`
 	RequestEnabled  bool           `flag:"request-logging" cfg:"request_logging"`
@@ -33,13 +35,15 @@ type LogFileOptions struct {
 func loggingFlagSet() *pflag.FlagSet {
 	flagSet := pflag.NewFlagSet("logging", pflag.ExitOnError)
 
+	flagSet.String("logging-level", "info", "Log level: debug, info, warn, error")
+	flagSet.String("logging-format", "text", "Log format: text, json")
 	flagSet.Bool("auth-logging", true, "Log authentication attempts")
-	flagSet.String("auth-logging-format", logger.DefaultAuthLoggingFormat, "Template for authentication log lines")
+	flagSet.String("auth-logging-format", logger.DefaultAuthLoggingFormat, "Template for authentication log lines when logging-format=text")
 	flagSet.Bool("standard-logging", true, "Log standard runtime information")
-	flagSet.String("standard-logging-format", logger.DefaultStandardLoggingFormat, "Template for standard log lines")
+	flagSet.String("standard-logging-format", logger.DefaultStandardLoggingFormat, "Template for standard log lines when logging-format=text")
 	flagSet.Bool("request-logging", true, "Log HTTP requests")
-	flagSet.String("request-logging-format", logger.DefaultRequestLoggingFormat, "Template for HTTP request log lines")
-	flagSet.Bool("errors-to-info-log", false, "Log errors to the standard logging channel instead of stderr")
+	flagSet.String("request-logging-format", logger.DefaultRequestLoggingFormat, "Template for HTTP request log lines when logging-format=text")
+	flagSet.Bool("errors-to-info-log", false, "Log errors to the standard logging channel instead of stderr")
 
 	flagSet.StringSlice("exclude-logging-path", []string{}, "Exclude logging requests to paths (eg: '/path1,/path2,/path3')")
 	flagSet.Bool("logging-local-time", true, "If the time in log files and backup filenames are local or UTC time")
@@ -58,6 +62,8 @@ func loggingFlagSet() *pflag.FlagSet {
 // loggingDefaults creates a Logging structure, populating each field with its default value
 func loggingDefaults() Logging {
 	return Logging{
+		Level:           "info",
+		Format:          "text",
 		ExcludePaths:    nil,
 		LocalTime:       true,
 		SilencePing:     false,
