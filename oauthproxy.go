@@ -595,8 +595,11 @@ func isAllowedMethod(req *http.Request, route allowedRoute) bool {
 	return route.method == "" || req.Method == route.method
 }
 
-func isAllowedPath(req *http.Request, route allowedRoute) bool {
-	matches := route.pathRegex.MatchString(requestutil.GetRequestPath(req))
+// isAllowedPath reports whether route matches path, which must be the value
+// returned by requestutil.GetRequestPath for the request being checked: that
+// is what strips the query and fragment before the regex sees it.
+func isAllowedPath(path string, route allowedRoute) bool {
+	matches := route.pathRegex.MatchString(path)
 
 	if route.negate {
 		return !matches
@@ -607,8 +610,20 @@ func isAllowedPath(req *http.Request, route allowedRoute) bool {
 
 // IsAllowedRoute is used to check if the request method & path is allowed without auth
 func (p *OAuthProxy) isAllowedRoute(req *http.Request) bool {
+	// Resolved at most once per request, and only once a route's method has
+	// matched, so a request that matches no method does no extra work.
+	var path string
+	havePath := false
+
 	for _, route := range p.allowedRoutes {
-		if isAllowedMethod(req, route) && isAllowedPath(req, route) {
+		if !isAllowedMethod(req, route) {
+			continue
+		}
+		if !havePath {
+			path = requestutil.GetRequestPath(req)
+			havePath = true
+		}
+		if isAllowedPath(path, route) {
 			return true
 		}
 	}
