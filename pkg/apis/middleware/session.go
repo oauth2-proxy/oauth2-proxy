@@ -2,12 +2,17 @@ package middleware
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 )
+
+// defaultGroupsClaim is the token claim used to populate a session's Groups
+// when no groups claim name is configured.
+const defaultGroupsClaim = "groups"
 
 // TokenToSessionFunc takes a raw ID Token and converts it into a SessionState.
 type TokenToSessionFunc func(ctx context.Context, token string) (*sessionsapi.SessionState, error)
@@ -18,14 +23,21 @@ type VerifyFunc func(ctx context.Context, token string) (*oidc.IDToken, error)
 
 // CreateTokenToSessionFunc provides a handler that is a default implementation
 // for converting a JWT into a session.
-func CreateTokenToSessionFunc(verify VerifyFunc) TokenToSessionFunc {
+//
+// groupsClaim controls which token claim is used to populate the session's
+// Groups. This mirrors the primary OIDC provider's --oidc-groups-claim so that
+// bearer tokens verified through this path (e.g. --extra-jwt-issuers) resolve
+// groups from the same claim. When empty it defaults to "groups".
+func CreateTokenToSessionFunc(verify VerifyFunc, groupsClaim string) TokenToSessionFunc {
+	if groupsClaim == "" {
+		groupsClaim = defaultGroupsClaim
+	}
 	return func(ctx context.Context, token string) (*sessionsapi.SessionState, error) {
 		var claims struct {
-			Subject           string   `json:"sub"`
-			Email             string   `json:"email"`
-			Verified          *bool    `json:"email_verified"`
-			PreferredUsername string   `json:"preferred_username"`
-			Groups            []string `json:"groups"`
+			Subject           string `json:"sub"`
+			Email             string `json:"email"`
+			Verified          *bool  `json:"email_verified"`
+			PreferredUsername string `json:"preferred_username"`
 		}
 
 		idToken, err := verify(ctx, token)
@@ -35,6 +47,11 @@ func CreateTokenToSessionFunc(verify VerifyFunc) TokenToSessionFunc {
 
 		if err := idToken.Claims(&claims); err != nil {
 			return nil, fmt.Errorf("failed to parse bearer token claims: %v", err)
+		}
+
+		groups, err := extractGroups(idToken, groupsClaim)
+		if err != nil {
+			return nil, err
 		}
 
 		if claims.Email == "" {
@@ -51,7 +68,7 @@ func CreateTokenToSessionFunc(verify VerifyFunc) TokenToSessionFunc {
 		newSession := &sessionsapi.SessionState{
 			Email:             claims.Email,
 			User:              claims.Subject,
-			Groups:            claims.Groups,
+			Groups:            groups,
 			PreferredUsername: claims.PreferredUsername,
 			AccessToken:       token,
 			IDToken:           token,
@@ -61,4 +78,31 @@ func CreateTokenToSessionFunc(verify VerifyFunc) TokenToSessionFunc {
 
 		return newSession, nil
 	}
+}
+
+// extractGroups reads the configured groups claim from the token. The claim may
+// be encoded either as an array of strings or as a single string. A missing
+// claim yields no groups.
+func extractGroups(idToken *oidc.IDToken, groupsClaim string) ([]string, error) {
+	var rawClaims map[string]json.RawMessage
+	if err := idToken.Claims(&rawClaims); err != nil {
+		return nil, fmt.Errorf("failed to parse bearer token claims: %v", err)
+	}
+
+	raw, ok := rawClaims[groupsClaim]
+	if !ok {
+		return nil, nil
+	}
+
+	var groups []string
+	if err := json.Unmarshal(raw, &groups); err == nil {
+		return groups, nil
+	}
+
+	var single string
+	if err := json.Unmarshal(raw, &single); err == nil {
+		return []string{single}, nil
+	}
+
+	return nil, nil
 }

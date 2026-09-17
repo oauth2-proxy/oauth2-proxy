@@ -109,7 +109,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				rw := httptest.NewRecorder()
 
 				sessionLoaders := []middlewareapi.TokenToSessionFunc{
-					middlewareapi.CreateTokenToSessionFunc(verifier),
+					middlewareapi.CreateTokenToSessionFunc(verifier, ""),
 				}
 
 				// Create the handler with a next handler that will capture the session
@@ -179,7 +179,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				rw := httptest.NewRecorder()
 
 				sessionLoaders := []middlewareapi.TokenToSessionFunc{
-					middlewareapi.CreateTokenToSessionFunc(verifier),
+					middlewareapi.CreateTokenToSessionFunc(verifier, ""),
 				}
 
 				// Create the handler with a next handler that will capture the session
@@ -261,7 +261,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 			j = &jwtSessionLoader{
 				jwtRegex: regexp.MustCompile(jwtRegexFormat),
 				sessionLoaders: []middlewareapi.TokenToSessionFunc{
-					middlewareapi.CreateTokenToSessionFunc(verifier),
+					middlewareapi.CreateTokenToSessionFunc(verifier, ""),
 				},
 			}
 		})
@@ -483,16 +483,20 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 		notVerified := false
 
 		type idTokenClaims struct {
-			Email    string `json:"email,omitempty"`
-			Verified *bool  `json:"email_verified,omitempty"`
+			Email    string   `json:"email,omitempty"`
+			Verified *bool    `json:"email_verified,omitempty"`
+			Groups   []string `json:"groups,omitempty"`
+			ADGroups []string `json:"ADGroups,omitempty"`
 			jwt.RegisteredClaims
 		}
 
 		type tokenToSessionTableInput struct {
 			idToken         idTokenClaims
+			groupsClaim     string
 			expectedErr     error
 			expectedUser    string
 			expectedEmail   string
+			expectedGroups  []string
 			expectedExpires *time.Time
 		}
 
@@ -517,7 +521,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				rawIDToken, err := jwt.NewWithClaims(jwt.SigningMethodRS256, in.idToken).SignedString(key)
 				Expect(err).ToNot(HaveOccurred())
 
-				session, err := middlewareapi.CreateTokenToSessionFunc(verifier)(ctx, rawIDToken)
+				session, err := middlewareapi.CreateTokenToSessionFunc(verifier, in.groupsClaim)(ctx, rawIDToken)
 				if in.expectedErr != nil {
 					Expect(err).To(MatchError(in.expectedErr))
 					Expect(session).To(BeNil())
@@ -529,6 +533,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				Expect(session.IDToken).To(Equal(rawIDToken))
 				Expect(session.User).To(Equal(in.expectedUser))
 				Expect(session.Email).To(Equal(in.expectedEmail))
+				Expect(session.Groups).To(Equal(in.expectedGroups))
 				Expect(session.ExpiresOn.Unix()).To(Equal(in.expectedExpires.Unix()))
 				Expect(session.RefreshToken).To(BeEmpty())
 				Expect(session.PreferredUsername).To(BeEmpty())
@@ -581,6 +586,62 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 					Verified: &notVerified,
 				},
 				expectedErr: errors.New("email in id_token (foo@example.com) isn't verified"),
+			}),
+			Entry("with groups in the default claim", tokenToSessionTableInput{
+				idToken: idTokenClaims{
+					RegisteredClaims: jwt.RegisteredClaims{
+						Audience:  jwt.ClaimStrings{"asdf1234"},
+						ExpiresAt: jwt.NewNumericDate(expiresFuture),
+						IssuedAt:  jwt.NewNumericDate(time.Now()),
+						Issuer:    "https://issuer.example.com",
+						NotBefore: jwt.NewNumericDate(time.Time{}),
+						Subject:   "123456789",
+					},
+					Groups: []string{"foo", "bar"},
+				},
+				expectedErr:     nil,
+				expectedUser:    "123456789",
+				expectedEmail:   "123456789",
+				expectedGroups:  []string{"foo", "bar"},
+				expectedExpires: &expiresFuture,
+			}),
+			Entry("with groups in a custom claim", tokenToSessionTableInput{
+				idToken: idTokenClaims{
+					RegisteredClaims: jwt.RegisteredClaims{
+						Audience:  jwt.ClaimStrings{"asdf1234"},
+						ExpiresAt: jwt.NewNumericDate(expiresFuture),
+						IssuedAt:  jwt.NewNumericDate(time.Now()),
+						Issuer:    "https://issuer.example.com",
+						NotBefore: jwt.NewNumericDate(time.Time{}),
+						Subject:   "123456789",
+					},
+					ADGroups: []string{"foo", "bar"},
+				},
+				groupsClaim:     "ADGroups",
+				expectedErr:     nil,
+				expectedUser:    "123456789",
+				expectedEmail:   "123456789",
+				expectedGroups:  []string{"foo", "bar"},
+				expectedExpires: &expiresFuture,
+			}),
+			Entry("with a custom claim configured but groups in the default claim", tokenToSessionTableInput{
+				idToken: idTokenClaims{
+					RegisteredClaims: jwt.RegisteredClaims{
+						Audience:  jwt.ClaimStrings{"asdf1234"},
+						ExpiresAt: jwt.NewNumericDate(expiresFuture),
+						IssuedAt:  jwt.NewNumericDate(time.Now()),
+						Issuer:    "https://issuer.example.com",
+						NotBefore: jwt.NewNumericDate(time.Time{}),
+						Subject:   "123456789",
+					},
+					Groups: []string{"foo", "bar"},
+				},
+				groupsClaim:     "ADGroups",
+				expectedErr:     nil,
+				expectedUser:    "123456789",
+				expectedEmail:   "123456789",
+				expectedGroups:  nil,
+				expectedExpires: &expiresFuture,
 			}),
 		)
 	})
