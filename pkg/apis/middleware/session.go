@@ -82,7 +82,9 @@ func CreateTokenToSessionFunc(verify VerifyFunc, groupsClaim string) TokenToSess
 
 // extractGroups reads the configured groups claim from the token. The claim may
 // be encoded either as an array of strings or as a single string. A missing
-// claim yields no groups.
+// claim yields no groups, while a claim present in any other format is reported
+// as an error so that a misconfigured issuer or groups claim name cannot be
+// mistaken for a user that belongs to no groups.
 func extractGroups(idToken *oidc.IDToken, groupsClaim string) ([]string, error) {
 	var rawClaims map[string]json.RawMessage
 	if err := idToken.Claims(&rawClaims); err != nil {
@@ -104,5 +106,5 @@ func extractGroups(idToken *oidc.IDToken, groupsClaim string) ([]string, error) 
 		return []string{single}, nil
 	}
 
-	return nil, nil
+	return nil, fmt.Errorf("failed to parse groups claim %q: expected a string or an array of strings", groupsClaim)
 }
