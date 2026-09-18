@@ -483,10 +483,11 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 		notVerified := false
 
 		type idTokenClaims struct {
-			Email    string   `json:"email,omitempty"`
-			Verified *bool    `json:"email_verified,omitempty"`
-			Groups   []string `json:"groups,omitempty"`
-			ADGroups []string `json:"ADGroups,omitempty"`
+			Email         string   `json:"email,omitempty"`
+			Verified      *bool    `json:"email_verified,omitempty"`
+			Groups        []string `json:"groups,omitempty"`
+			ADGroups      []string `json:"ADGroups,omitempty"`
+			InvalidGroups any      `json:"invalidGroups,omitempty"`
 			jwt.RegisteredClaims
 		}
 
@@ -623,6 +624,36 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				expectedEmail:   "123456789",
 				expectedGroups:  []string{"foo", "bar"},
 				expectedExpires: &expiresFuture,
+			}),
+			Entry("with a groups claim that is an object", tokenToSessionTableInput{
+				idToken: idTokenClaims{
+					RegisteredClaims: jwt.RegisteredClaims{
+						Audience:  jwt.ClaimStrings{"asdf1234"},
+						ExpiresAt: jwt.NewNumericDate(expiresFuture),
+						IssuedAt:  jwt.NewNumericDate(time.Now()),
+						Issuer:    "https://issuer.example.com",
+						NotBefore: jwt.NewNumericDate(time.Time{}),
+						Subject:   "123456789",
+					},
+					InvalidGroups: map[string]any{"roles": []string{"foo"}},
+				},
+				groupsClaim: "invalidGroups",
+				expectedErr: errors.New("failed to parse groups claim \"invalidGroups\": expected a string or an array of strings"),
+			}),
+			Entry("with a groups claim that mixes strings and other types", tokenToSessionTableInput{
+				idToken: idTokenClaims{
+					RegisteredClaims: jwt.RegisteredClaims{
+						Audience:  jwt.ClaimStrings{"asdf1234"},
+						ExpiresAt: jwt.NewNumericDate(expiresFuture),
+						IssuedAt:  jwt.NewNumericDate(time.Now()),
+						Issuer:    "https://issuer.example.com",
+						NotBefore: jwt.NewNumericDate(time.Time{}),
+						Subject:   "123456789",
+					},
+					InvalidGroups: []any{"foo", 1},
+				},
+				groupsClaim: "invalidGroups",
+				expectedErr: errors.New("failed to parse groups claim \"invalidGroups\": expected a string or an array of strings"),
 			}),
 			Entry("with a custom claim configured but groups in the default claim", tokenToSessionTableInput{
 				idToken: idTokenClaims{
