@@ -487,6 +487,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 			Verified      *bool    `json:"email_verified,omitempty"`
 			Groups        []string `json:"groups,omitempty"`
 			ADGroups      []string `json:"ADGroups,omitempty"`
+			SingleGroup   string   `json:"singleGroup,omitempty"`
 			InvalidGroups any      `json:"invalidGroups,omitempty"`
 			jwt.RegisteredClaims
 		}
@@ -623,6 +624,25 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				expectedUser:    "123456789",
 				expectedEmail:   "123456789",
 				expectedGroups:  []string{"foo", "bar"},
+				expectedExpires: &expiresFuture,
+			}),
+			Entry("with a groups claim that is a single string", tokenToSessionTableInput{
+				idToken: idTokenClaims{
+					RegisteredClaims: jwt.RegisteredClaims{
+						Audience:  jwt.ClaimStrings{"asdf1234"},
+						ExpiresAt: jwt.NewNumericDate(expiresFuture),
+						IssuedAt:  jwt.NewNumericDate(time.Now()),
+						Issuer:    "https://issuer.example.com",
+						NotBefore: jwt.NewNumericDate(time.Time{}),
+						Subject:   "123456789",
+					},
+					SingleGroup: "foo",
+				},
+				groupsClaim:     "singleGroup",
+				expectedErr:     nil,
+				expectedUser:    "123456789",
+				expectedEmail:   "123456789",
+				expectedGroups:  []string{"foo"},
 				expectedExpires: &expiresFuture,
 			}),
 			Entry("with a groups claim that is an object", tokenToSessionTableInput{
