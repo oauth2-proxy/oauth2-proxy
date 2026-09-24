@@ -59,6 +59,27 @@ var _ = Describe("Cookie Tests", func() {
 				cookieDomains:  []string{".cookies.test"},
 				expectedOutput: ".cookies.test",
 			}),
+			Entry("a Host header carrying a port", getCookieDomainTableInput{
+				host:           "www.cookies.test:443",
+				cookieDomains:  []string{".cookies.test"},
+				expectedOutput: ".cookies.test",
+			}),
+			Entry("an X-Forwarded-Host header carrying a port", getCookieDomainTableInput{
+				host:           "backend.cookies.internal",
+				xForwardedHost: "www.cookies.test:443",
+				cookieDomains:  []string{".cookies.test"},
+				expectedOutput: ".cookies.test",
+			}),
+			Entry("a non-standard port", getCookieDomainTableInput{
+				host:           "www.cookies.test:8443",
+				cookieDomains:  []string{".cookies.test"},
+				expectedOutput: ".cookies.test",
+			}),
+			Entry("a host with a port that matches no domain", getCookieDomainTableInput{
+				host:           "www.example.com:443",
+				cookieDomains:  []string{".cookies.test"},
+				expectedOutput: "",
+			}),
 			Entry("a single suffix match for the X-Forwarded-Host header", getCookieDomainTableInput{
 				host:           "backend.cookies.internal",
 				xForwardedHost: "www.cookies.test",
