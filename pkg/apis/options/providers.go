@@ -313,7 +313,9 @@ type OIDCOptions struct {
 	// default set to 'groups'
 	GroupsClaim string `yaml:"groupsClaim,omitempty"`
 	// UserIDClaim indicates which claim contains the user ID
-	// default set to 'email'
+	//
+	// Deprecated: this option has been removed and is no longer accepted.
+	// Use EmailClaim instead. OAuth2 Proxy will refuse to start if it is set.
 	UserIDClaim string `yaml:"userIDClaim,omitempty"`
 	// AudienceClaim allows to define any claim that is verified against the client id
 	// By default `aud` claim is used for verification.
@@ -349,7 +351,6 @@ func providerDefaults() Providers {
 				InsecureAllowUnverifiedEmail: ptr.To(DefaultInsecureAllowUnverifiedEmail),
 				InsecureSkipNonce:            ptr.To(DefaultInsecureSkipNonce),
 				SkipDiscovery:                ptr.To(DefaultSkipDiscovery),
-				UserIDClaim:                  OIDCEmailClaim, // Deprecated: Use OIDCEmailClaim
 				EmailClaim:                   OIDCEmailClaim,
 				GroupsClaim:                  OIDCGroupsClaim,
 				AudienceClaims:               OIDCAudienceClaims,
@@ -393,9 +394,6 @@ func (o *OIDCOptions) EnsureDefaults() {
 	}
 	if o.SkipDiscovery == nil {
 		o.SkipDiscovery = ptr.To(DefaultSkipDiscovery)
-	}
-	if o.UserIDClaim == "" {
-		o.UserIDClaim = OIDCEmailClaim
 	}
 	if o.EmailClaim == "" {
 		o.EmailClaim = OIDCEmailClaim

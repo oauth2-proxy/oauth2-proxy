@@ -54,7 +54,6 @@ func NewLegacyOptions() *LegacyOptions {
 			ProviderType:           "google",
 			AzureTenant:            "common",
 			ApprovalPrompt:         "force",
-			UserIDClaim:            "email",
 			OIDCEmailClaim:         "email",
 			OIDCGroupsClaim:        "groups",
 			OIDCAudienceClaims:     []string{"aud"},
@@ -627,7 +626,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("jwt-key-file", "", "path to the private key file in PEM format used to sign the JWT so that you can say something like -jwt-key-file=/etc/ssl/private/jwt_signing_key.pem: required by login.gov")
 	flagSet.String("pubjwk-url", "", "JWK pubkey access endpoint: required by login.gov")
 
-	flagSet.String("user-id-claim", OIDCEmailClaim, "(DEPRECATED for `oidc-email-claim`) which claim contains the user ID")
+	flagSet.String("user-id-claim", "", "(REMOVED - use --oidc-email-claim instead) which claim contains the user ID")
 	flagSet.StringSlice("allowed-group", []string{}, "restrict logins to members of this group (may be given multiple times)")
 	flagSet.StringSlice("allowed-role", []string{}, "(keycloak-oidc) restrict logins to members of these roles (may be given multiple times)")
 	flagSet.String("backend-logout-url", "", "url to perform a backend logout, {id_token} can be used as placeholder for the id_token")

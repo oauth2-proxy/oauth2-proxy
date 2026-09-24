@@ -559,7 +559,7 @@ character.
 | `publicKeyFiles` | _[]string_ | PublicKeyFiles is a list of paths pointing to public key files in PEM format to use<br/>for verifying JWT tokens |
 | `emailClaim` | _string_ | EmailClaim indicates which claim contains the user email,<br/>default set to 'email' |
 | `groupsClaim` | _string_ | GroupsClaim indicates which claim contains the user groups<br/>default set to 'groups' |
-| `userIDClaim` | _string_ | UserIDClaim indicates which claim contains the user ID<br/>default set to 'email' |
+| `userIDClaim` | _string_ | UserIDClaim indicates which claim contains the user ID<br/><br/>Deprecated: this option has been removed and is no longer accepted.<br/>Use EmailClaim instead. OAuth2 Proxy will refuse to start if it is set. |
 | `audienceClaims` | _[]string_ | AudienceClaim allows to define any claim that is verified against the client id<br/>By default `aud` claim is used for verification. |
 | `extraAudiences` | _[]string_ | ExtraAudiences is a list of additional audiences that are allowed<br/>to pass verification in addition to the client id. |
 | `enabledSigningAlgs` | _[]string_ | EnabledSigningAlgs is a list of allowed JWT signing algorithms.<br/>When discovery is enabled, the effective set is the intersection<br/>between this list and the provider's discovered supported algorithms.<br/>By default `RS256` is used if nothing has been discovered or specified. |

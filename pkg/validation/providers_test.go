@@ -57,12 +57,32 @@ var _ = Describe("Providers", func() {
 		ClientSecret: "ClientSecret",
 	}
 
+	removedUserIDClaimProvider := options.Provider{
+		ID:           "ProviderIDRemovedUserIDClaim",
+		ClientID:     "ClientID",
+		ClientSecret: "ClientSecret",
+		OIDCConfig: options.OIDCOptions{
+			UserIDClaim: "sub", //nolint:staticcheck // deliberately setting the removed option to assert it is rejected
+		},
+	}
+
+	redundantUserIDClaimProvider := options.Provider{
+		ID:           "ProviderIDRedundantUserIDClaim",
+		ClientID:     "ClientID",
+		ClientSecret: "ClientSecret",
+		OIDCConfig: options.OIDCOptions{
+			UserIDClaim: "email", //nolint:staticcheck // deliberately setting the removed option to assert it is rejected
+		},
+	}
+
 	missingProvider := "at least one provider has to be defined"
 	emptyIDMsg := "provider has empty id: ids are required for all providers"
 	duplicateProviderIDMsg := "multiple providers found with id ProviderID: provider ids must be unique"
 	skipButtonAndMultipleProvidersMsg := "SkipProviderButton and multiple providers are mutually exclusive"
 	invalidOIDCSigningAlgorithmMsg := "provider ProviderIDInvalidOIDCSigningAlgorithms has invalid EnabledSigningAlgs entry \"invalid\""
 	invalidOIDCSigningAlgorithmCaseMsg := "provider ProviderIDInvalidOIDCSigningAlgorithmCase has invalid EnabledSigningAlgs entry \"rs256\""
+	removedUserIDClaimMsg := "provider ProviderIDRemovedUserIDClaim: user-id-claim has been removed; use oidc-email-claim=sub instead (in alpha config: replace userIDClaim with emailClaim)"
+	redundantUserIDClaimMsg := "provider ProviderIDRedundantUserIDClaim: user-id-claim has been removed and must be unset; it had no effect as oidc-email-claim already defaults to \"email\" (in alpha config: remove userIDClaim)"
 
 	DescribeTable("validateProviders",
 		func(o *validateProvidersTableInput) {
@@ -131,6 +151,22 @@ var _ = Describe("Providers", func() {
 				},
 			},
 			errStrings: []string{invalidOIDCSigningAlgorithmCaseMsg},
+		}),
+		Entry("with the removed user-id-claim option set to a non-email claim", &validateProvidersTableInput{
+			options: &options.Options{
+				Providers: options.Providers{
+					removedUserIDClaimProvider,
+				},
+			},
+			errStrings: []string{removedUserIDClaimMsg},
+		}),
+		Entry("with the removed user-id-claim option set to the email claim", &validateProvidersTableInput{
+			options: &options.Options{
+				Providers: options.Providers{
+					redundantUserIDClaimProvider,
+				},
+			},
+			errStrings: []string{redundantUserIDClaimMsg},
 		}),
 	)
 })

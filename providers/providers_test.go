@@ -364,16 +364,22 @@ func TestEmailClaimCorrectlySet(t *testing.T) {
 		expectedEmailClaim string
 	}{
 		{
-			name:               "do not override EmailClaim if UserIDClaim is empty",
+			name:               "use the default EmailClaim when UserIDClaim is empty",
 			userIDClaim:        "",
 			emailClaim:         "email",
 			expectedEmailClaim: "email",
 		},
 		{
-			name:               "set EmailClaim to UserIDClaim",
+			name:               "use an explicitly configured EmailClaim",
+			userIDClaim:        "",
+			emailClaim:         "custom_email_claim",
+			expectedEmailClaim: "custom_email_claim",
+		},
+		{
+			name:               "the removed UserIDClaim never overrides EmailClaim",
 			userIDClaim:        "user_id_claim",
 			emailClaim:         "email",
-			expectedEmailClaim: "user_id_claim",
+			expectedEmailClaim: "email",
 		},
 	}
 
@@ -390,7 +396,7 @@ func TestEmailClaimCorrectlySet(t *testing.T) {
 					IssuerURL:     msIssuerURL,
 					SkipDiscovery: ptr.To(true),
 					JwksURL:       msKeysURL,
-					UserIDClaim:   tc.userIDClaim,
+					UserIDClaim:   tc.userIDClaim, //nolint:staticcheck // asserting the removed option no longer affects EmailClaim
 					EmailClaim:    tc.emailClaim,
 				},
 			}
