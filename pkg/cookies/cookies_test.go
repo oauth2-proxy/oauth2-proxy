@@ -14,7 +14,10 @@ import (
 var _ = Describe("Cookie Tests", func() {
 	Context("GetCookieDomain", func() {
 		type getCookieDomainTableInput struct {
-			host           string
+			host string
+			// rawHost sets req.Host after the request is built, for values a
+			// URL cannot carry, such as a host whose port part is not numeric.
+			rawHost        string
 			xForwardedHost string
 			cookieDomains  []string
 			expectedOutput string
@@ -28,6 +31,10 @@ var _ = Describe("Cookie Tests", func() {
 					nil,
 				)
 				Expect(err).ToNot(HaveOccurred())
+
+				if in.rawHost != "" {
+					req.Host = in.rawHost
+				}
 
 				if in.xForwardedHost != "" {
 					req.Header.Add("X-Forwarded-Host", in.xForwardedHost)
@@ -78,6 +85,51 @@ var _ = Describe("Cookie Tests", func() {
 			Entry("blank is returned for no matches", getCookieDomainTableInput{
 				host:           "www.cookies.test",
 				cookieDomains:  []string{".cookies.wrong", ".cookies.false"},
+				expectedOutput: "",
+			}),
+			Entry("a Host header carrying a port", getCookieDomainTableInput{
+				host:           "www.cookies.test:443",
+				cookieDomains:  []string{".cookies.test"},
+				expectedOutput: ".cookies.test",
+			}),
+			Entry("an X-Forwarded-Host header carrying a port", getCookieDomainTableInput{
+				host:           "backend.cookies.internal",
+				xForwardedHost: "www.cookies.test:443",
+				cookieDomains:  []string{".cookies.test"},
+				expectedOutput: ".cookies.test",
+			}),
+			Entry("a non-standard port", getCookieDomainTableInput{
+				host:           "www.cookies.test:8443",
+				cookieDomains:  []string{".cookies.test"},
+				expectedOutput: ".cookies.test",
+			}),
+			Entry("a host with a port that matches no domain", getCookieDomainTableInput{
+				host:           "www.example.com:443",
+				cookieDomains:  []string{".cookies.test"},
+				expectedOutput: "",
+			}),
+			Entry("a Host header whose port part looks like a cookie domain", getCookieDomainTableInput{
+				host:           "backend.cookies.internal",
+				rawHost:        "evil.com:.cookies.test",
+				cookieDomains:  []string{".cookies.test"},
+				expectedOutput: "",
+			}),
+			Entry("a Host header whose port part ends in a cookie domain", getCookieDomainTableInput{
+				host:           "backend.cookies.internal",
+				rawHost:        "evil.com:443.cookies.test",
+				cookieDomains:  []string{".cookies.test"},
+				expectedOutput: "",
+			}),
+			Entry("an X-Forwarded-Host header whose port part looks like a cookie domain", getCookieDomainTableInput{
+				host:           "backend.cookies.internal",
+				xForwardedHost: "evil.com:.cookies.test",
+				cookieDomains:  []string{".cookies.test"},
+				expectedOutput: "",
+			}),
+			Entry("an X-Forwarded-Host header whose port part ends in a cookie domain", getCookieDomainTableInput{
+				host:           "backend.cookies.internal",
+				xForwardedHost: "evil.com:443.cookies.test",
+				cookieDomains:  []string{".cookies.test"},
 				expectedOutput: "",
 			}),
 		)
