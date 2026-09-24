@@ -401,8 +401,8 @@ func buildPreAuthChain(opts *options.Options, sessionStore sessionsapi.SessionSt
 func buildTrustedProxyNetSet(opts *options.Options) (*ip.NetSet, error) {
 	trustedProxyIPs := opts.TrustedProxyIPs
 	if opts.ReverseProxy && len(trustedProxyIPs) == 0 {
-		logger.Print("WARNING: --reverse-proxy is enabled but no --trusted-proxy-ip CIDRs were configured. All connecting IPs are trusted to supply X-Forwarded-* headers by default (0.0.0.0/0, ::/0). This preserves backwards compatibility but is a potential security risk; configure --trusted-proxy-ip to match your reverse proxy addresses.")
-		trustedProxyIPs = defaultTrustedProxyIPs
+		logger.Print("WARNING: --reverse-proxy is enabled but no --trusted-proxy-ip CIDRs were configured. X-Forwarded-* headers will NOT be trusted. Configure --trusted-proxy-ip to list your reverse proxy addresses, otherwise forwarded headers (including X-Forwarded-Uri) are ignored.")
+		return nil, nil
 	}
 
 	return ip.ParseNetSet(trustedProxyIPs)

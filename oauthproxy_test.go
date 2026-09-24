@@ -2793,6 +2793,7 @@ func TestAllowedRequestWithForwardedUriHeader(t *testing.T) {
 
 	opts := baseTestOptions()
 	opts.ReverseProxy = true
+	opts.TrustedProxyIPs = []string{"127.0.0.1/32"}
 	opts.UpstreamServers = options.UpstreamConfig{
 		Upstreams: []options.Upstream{
 			{
