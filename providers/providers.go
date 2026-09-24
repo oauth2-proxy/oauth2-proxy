@@ -83,6 +83,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 		ClientID:                providerConfig.ClientID,
 		ClientSecret:            providerConfig.ClientSecret,
 		ClientSecretFile:        providerConfig.ClientSecretFile,
+		ClientAssertionFile:     providerConfig.ClientAssertionFile,
 		AuthRequestResponseMode: providerConfig.AuthRequestResponseMode,
 		AdditionalClaims:        providerConfig.AdditionalClaims,
 	}

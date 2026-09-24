@@ -502,9 +502,10 @@ func legacyServerFlagset() *pflag.FlagSet {
 }
 
 type LegacyProvider struct {
-	ClientID         string `flag:"client-id" cfg:"client_id"`
-	ClientSecret     string `flag:"client-secret" cfg:"client_secret"`
-	ClientSecretFile string `flag:"client-secret-file" cfg:"client_secret_file"`
+	ClientID            string `flag:"client-id" cfg:"client_id"`
+	ClientSecret        string `flag:"client-secret" cfg:"client_secret"`
+	ClientSecretFile    string `flag:"client-secret-file" cfg:"client_secret_file"`
+	ClientAssertionFile string `flag:"client-assertion-file" cfg:"client_assertion_file"`
 
 	KeycloakGroups                         []string `flag:"keycloak-group" cfg:"keycloak_groups"`
 	AzureTenant                            string   `flag:"azure-tenant" cfg:"azure_tenant"`
@@ -592,6 +593,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("client-id", "", "the OAuth Client ID: ie: \"123456.apps.googleusercontent.com\"")
 	flagSet.String("client-secret", "", "the OAuth Client Secret")
 	flagSet.String("client-secret-file", "", "the file with OAuth Client Secret")
+	flagSet.String("client-assertion-file", "", "the file containing a JWT client assertion (RFC 7523) for token endpoint authentication, used instead of a client secret")
 
 	flagSet.String("provider", "google", "OAuth provider")
 	flagSet.String("provider-display-name", "", "Provider display name")
@@ -700,6 +702,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		ClientID:                 l.ClientID,
 		ClientSecret:             l.ClientSecret,
 		ClientSecretFile:         l.ClientSecretFile,
+		ClientAssertionFile:      l.ClientAssertionFile,
 		Type:                     ProviderType(l.ProviderType),
 		CAFiles:                  l.ProviderCAFiles,
 		UseSystemTrustStore:      &l.UseSystemTrustStore,
