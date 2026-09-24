@@ -196,6 +196,7 @@ func (p *MicrosoftEntraIDProvider) redeemRefreshTokenWithFederatedToken(ctx cont
 		s.User = newSession.User
 		s.Groups = newSession.Groups
 		s.PreferredUsername = newSession.PreferredUsername
+		s.AdditionalClaims = newSession.AdditionalClaims
 	}
 
 	s.AccessToken = newSession.AccessToken
