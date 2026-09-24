@@ -275,6 +275,9 @@ func (p *AzureProvider) extractClaimsIntoSession(ctx context.Context, session *s
 	if s.Groups != nil {
 		session.Groups = s.Groups
 	}
+	if s.AdditionalClaims != nil {
+		session.AdditionalClaims = s.AdditionalClaims
+	}
 
 	return nil
 }
