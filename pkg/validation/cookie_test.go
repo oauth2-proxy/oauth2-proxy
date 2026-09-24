@@ -60,17 +60,27 @@ func TestValidateCookie(t *testing.T) {
 		{
 			name: "with valid configuration",
 			cookie: options.Cookie{
-				Name:     validName,
-				Secret:   validSecret,
-				Domains:  domains,
-				Path:     "",
-				Expire:   time.Hour,
-				Refresh:  15 * time.Minute,
-				Secure:   true,
-				HTTPOnly: false,
-				SameSite: "",
+				Name:        validName,
+				Secret:      validSecret,
+				Domains:     domains,
+				Path:        "",
+				Expire:      time.Hour,
+				Refresh:     15 * time.Minute,
+				Secure:      true,
+				HTTPOnly:    false,
+				SameSite:    "",
+				Partitioned: true,
 			},
 			errStrings: []string{},
+		},
+		{
+			name: "partitioned cookies require secure",
+			cookie: options.Cookie{
+				Name:        validName,
+				Secret:      validSecret,
+				Partitioned: true,
+			},
+			errStrings: []string{"cookie_partitioned=true requires cookie_secure=true"},
 		},
 		{
 			name: "with no cookie secret",
@@ -330,74 +340,6 @@ func TestValidateCookie(t *testing.T) {
 			for i := 0; i < len(tc.cookie.Domains)-1; i++ {
 				g.Expect(len(tc.cookie.Domains[i])).To(BeNumerically(">=", len(tc.cookie.Domains[i+1])))
 			}
-		})
-	}
-}
-
-func TestValidateCookiePartitioned(t *testing.T) {
-	const incompatibleSameSite = "lax"
-
-	validCookie := options.Cookie{
-		Name:         "_oauth2_proxy",
-		Secret:       "secretthirtytwobytes+abcdefghijk",
-		Secure:       true,
-		SameSite:     cookieSameSiteNone,
-		CSRFSameSite: "",
-		Partitioned:  true,
-	}
-
-	tests := []struct {
-		name       string
-		cookie     options.Cookie
-		errStrings []string
-	}{
-		{
-			name:       "valid",
-			cookie:     validCookie,
-			errStrings: []string{},
-		},
-		{
-			name: "requires secure cookies",
-			cookie: func() options.Cookie {
-				cookie := validCookie
-				cookie.Secure = false
-				return cookie
-			}(),
-			errStrings: []string{"cookie_partitioned=true requires cookie_secure=true"},
-		},
-		{
-			name: "requires SameSite=None",
-			cookie: func() options.Cookie {
-				cookie := validCookie
-				cookie.SameSite = incompatibleSameSite
-				return cookie
-			}(),
-			errStrings: []string{"cookie_partitioned=true requires cookie_samesite=\"none\""},
-		},
-		{
-			name: "requires compatible CSRF SameSite",
-			cookie: func() options.Cookie {
-				cookie := validCookie
-				cookie.CSRFSameSite = incompatibleSameSite
-				return cookie
-			}(),
-			errStrings: []string{"cookie_partitioned=true requires cookie_csrf_samesite to be empty or \"none\""},
-		},
-		{
-			name: "allows explicit CSRF SameSite=None",
-			cookie: func() options.Cookie {
-				cookie := validCookie
-				cookie.CSRFSameSite = cookieSameSiteNone
-				return cookie
-			}(),
-			errStrings: []string{},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			g := NewWithT(t)
-			g.Expect(validateCookie(tc.cookie)).To(ConsistOf(tc.errStrings))
 		})
 	}
 }

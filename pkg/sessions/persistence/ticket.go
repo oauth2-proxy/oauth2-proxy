@@ -222,14 +222,14 @@ func (t *ticket) setCookie(rw http.ResponseWriter, req *http.Request, s *session
 // would set them
 func (t *ticket) clearCookie(rw http.ResponseWriter, req *http.Request) {
 	cookieOptions := &cookies.CookieOptions{
-		Name:       t.options.Name,
-		Value:      "",
-		Domains:    t.options.Domains,
-		Expiration: time.Hour * -1,
-		SameSite:   t.options.SameSite,
-		Path:       t.options.Path,
-		HTTPOnly:   t.options.HTTPOnly,
-		Secure:     t.options.Secure,
+		Name:        t.options.Name,
+		Value:       "",
+		Domains:     t.options.Domains,
+		Expiration:  time.Hour * -1,
+		SameSite:    t.options.SameSite,
+		Path:        t.options.Path,
+		HTTPOnly:    t.options.HTTPOnly,
+		Secure:      t.options.Secure,
 		Partitioned: t.options.Partitioned,
 	}
 	http.SetCookie(rw, cookies.MakeCookieFromOptions(req, cookieOptions))
@@ -250,14 +250,14 @@ func (t *ticket) makeCookie(req *http.Request, value string, expires time.Durati
 	}
 
 	cookieOptions := &cookies.CookieOptions{
-		Name:       t.options.Name,
-		Value:      value,
-		Domains:    t.options.Domains,
-		Expiration: expires,
-		SameSite:   t.options.SameSite,
-		Path:       t.options.Path,
-		HTTPOnly:   t.options.HTTPOnly,
-		Secure:     t.options.Secure,
+		Name:        t.options.Name,
+		Value:       value,
+		Domains:     t.options.Domains,
+		Expiration:  expires,
+		SameSite:    t.options.SameSite,
+		Path:        t.options.Path,
+		HTTPOnly:    t.options.HTTPOnly,
+		Secure:      t.options.Secure,
 		Partitioned: t.options.Partitioned,
 	}
 

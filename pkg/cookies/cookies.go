@@ -12,14 +12,14 @@ import (
 )
 
 type CookieOptions struct {
-	Name       string
-	Value      string
-	Domains    []string
-	Expiration time.Duration
-	SameSite   string
-	Path       string
-	HTTPOnly   bool
-	Secure     bool
+	Name        string
+	Value       string
+	Domains     []string
+	Expiration  time.Duration
+	SameSite    string
+	Path        string
+	HTTPOnly    bool
+	Secure      bool
 	Partitioned bool
 }
 
@@ -37,13 +37,13 @@ func MakeCookieFromOptions(req *http.Request, opts *CookieOptions) *http.Cookie 
 	}
 
 	c := &http.Cookie{
-		Name:     opts.Name,
-		Value:    opts.Value,
-		Path:     opts.Path,
-		Domain:   domain,
-		HttpOnly: opts.HTTPOnly,
-		Secure:   opts.Secure,
-		SameSite: ParseSameSite(opts.SameSite),
+		Name:        opts.Name,
+		Value:       opts.Value,
+		Path:        opts.Path,
+		Domain:      domain,
+		HttpOnly:    opts.HTTPOnly,
+		Secure:      opts.Secure,
+		SameSite:    ParseSameSite(opts.SameSite),
 		Partitioned: opts.Partitioned,
 	}
 

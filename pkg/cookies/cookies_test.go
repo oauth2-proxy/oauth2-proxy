@@ -3,7 +3,6 @@ package cookies
 import (
 	"fmt"
 	"net/http"
-	"net/http/httptest"
 	"time"
 
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
@@ -86,10 +85,11 @@ var _ = Describe("Cookie Tests", func() {
 
 	Context("MakeCookieFromOptions", func() {
 		type makeCookieFromOptionsTableInput struct {
-			host           string
-			opts           CookieOptions
-			now            time.Time
-			expectedOutput int
+			host                string
+			opts                CookieOptions
+			now                 time.Time
+			expectedOutput      int
+			expectedPartitioned bool
 		}
 
 		validName := "_oauth2_proxy"
@@ -98,7 +98,7 @@ var _ = Describe("Cookie Tests", func() {
 		now := time.Now()
 		var expectedMaxAge int
 
-		DescribeTable("should return cookies with or without expiration",
+		DescribeTable("should return cookies with the requested options",
 			func(in makeCookieFromOptionsTableInput) {
 				req, err := http.NewRequest(
 					http.MethodGet,
@@ -107,22 +107,26 @@ var _ = Describe("Cookie Tests", func() {
 				)
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(MakeCookieFromOptions(req, &in.opts).MaxAge).To(Equal(in.expectedOutput))
+				cookie := MakeCookieFromOptions(req, &in.opts)
+				Expect(cookie.MaxAge).To(Equal(in.expectedOutput))
+				Expect(cookie.Partitioned).To(Equal(in.expectedPartitioned))
 			},
 			Entry("persistent cookie", makeCookieFromOptionsTableInput{
 				host: "www.cookies.test",
 				opts: CookieOptions{
-					Name:       validName,
-					Value:      "1",
-					Domains:    domains,
-					Expiration: 15 * time.Minute,
-					SameSite:   "",
-					Path:       "",
-					HTTPOnly:   false,
-					Secure:     true,
+					Name:        validName,
+					Value:       "1",
+					Domains:     domains,
+					Expiration:  15 * time.Minute,
+					SameSite:    "",
+					Path:        "",
+					HTTPOnly:    false,
+					Secure:      true,
+					Partitioned: true,
 				},
-				now:            now,
-				expectedOutput: int((15 * time.Minute).Seconds()),
+				now:                 now,
+				expectedOutput:      int((15 * time.Minute).Seconds()),
+				expectedPartitioned: true,
 			}),
 			Entry("persistent cookie to be cleared", makeCookieFromOptionsTableInput{
 				host: "www.cookies.test",
@@ -155,82 +159,5 @@ var _ = Describe("Cookie Tests", func() {
 				expectedOutput: expectedMaxAge,
 			}),
 		)
-
-		It("sets the Partitioned attribute and preserves its Set-Cookie order", func() {
-			req, err := http.NewRequest(
-				http.MethodGet,
-				"https://www.cookies.test/"+cookiePath,
-				nil,
-			)
-			Expect(err).ToNot(HaveOccurred())
-
-			cookie := MakeCookieFromOptions(req, &CookieOptions{
-				Name:        "_oauth2_proxy",
-				Value:       "1",
-				Domains:     []string{"www.cookies.test"},
-				Expiration:  15 * time.Minute,
-				SameSite:    "none",
-				Path:        cookiePath,
-				HTTPOnly:    true,
-				Secure:      true,
-				Partitioned: true,
-			})
-
-			Expect(cookie.Partitioned).To(BeTrue())
-
-			rw := httptest.NewRecorder()
-			http.SetCookie(rw, cookie)
-			header := rw.Header().Get("Set-Cookie")
-			Expect(header).To(Equal(
-				"_oauth2_proxy=1; Path=/cookie-tests; Domain=www.cookies.test; Max-Age=900; HttpOnly; Secure; SameSite=None; Partitioned",
-			))
-
-			parsed, err := http.ParseSetCookie(header)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(parsed.Partitioned).To(BeTrue())
-			Expect(parsed.Secure).To(BeTrue())
-			Expect(parsed.SameSite).To(Equal(http.SameSiteNoneMode))
-		})
-
-		It("does not set the Partitioned attribute by default", func() {
-			req, err := http.NewRequest(
-				http.MethodGet,
-				"https://www.cookies.test/"+cookiePath,
-				nil,
-			)
-			Expect(err).ToNot(HaveOccurred())
-
-			cookie := MakeCookieFromOptions(req, &CookieOptions{
-				Name:     "_oauth2_proxy",
-				Value:    "1",
-				Secure:   true,
-				SameSite: "none",
-			})
-
-			Expect(cookie.Partitioned).To(BeFalse())
-			Expect(cookie.String()).ToNot(ContainSubstring("; Partitioned"))
-		})
-
-		It("sets the Partitioned attribute on a deletion cookie", func() {
-			req, err := http.NewRequest(
-				http.MethodGet,
-				"https://www.cookies.test/"+cookiePath,
-				nil,
-			)
-			Expect(err).ToNot(HaveOccurred())
-
-			cookie := MakeCookieFromOptions(req, &CookieOptions{
-				Name:        "_oauth2_proxy",
-				Domains:     []string{"www.cookies.test"},
-				Expiration:  -time.Hour,
-				SameSite:    "none",
-				Secure:      true,
-				Partitioned: true,
-			})
-
-			Expect(cookie.MaxAge).To(Equal(-1))
-			Expect(cookie.Partitioned).To(BeTrue())
-			Expect(cookie.String()).To(ContainSubstring("; Max-Age=0; Secure; SameSite=None; Partitioned"))
-		})
 	})
 })

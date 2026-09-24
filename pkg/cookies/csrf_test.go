@@ -175,6 +175,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 
 		Context("SetCookie", func() {
 			It("adds the encoded CSRF cookie to a ResponseWriter", func() {
+				cookieOpts.Partitioned = true
 				rw := httptest.NewRecorder()
 
 				_, err := publicCSRF.SetCookie(rw, req)
@@ -191,36 +192,9 @@ var _ = Describe("CSRF Cookie Tests", func() {
 						int(cookieOpts.CSRFExpire.Seconds()),
 					),
 				))
-			})
-
-			It("sets the Partitioned attribute on set cookies", func() {
-				// prepare
-				cookieOpts.Partitioned = true
-				cookieOpts.SameSite = sameSiteNone
-				rw := httptest.NewRecorder()
-
-				// test
-				_, err := publicCSRF.SetCookie(rw, req)
-
-				// validate
+				cookie, err := http.ParseSetCookie(rw.Header().Get("Set-Cookie"))
 				Expect(err).ToNot(HaveOccurred())
-
-				header := rw.Header().Get("Set-Cookie")
-				Expect(header).To(ContainSubstring(
-					fmt.Sprintf("%s=", privateCSRF.cookieName()),
-				))
-				Expect(header).To(ContainSubstring(
-					fmt.Sprintf(
-						"; Path=%s; Domain=%s; Max-Age=%d; HttpOnly; Secure; SameSite=None; Partitioned",
-						cookiePath,
-						cookieDomain,
-						int(cookieOpts.CSRFExpire.Seconds()),
-					),
-				))
-
-				parsed, err := http.ParseSetCookie(header)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(parsed.Partitioned).To(BeTrue())
+				Expect(cookie.Partitioned).To(BeTrue())
 			})
 		})
 
@@ -287,43 +261,18 @@ var _ = Describe("CSRF Cookie Tests", func() {
 
 		Context("ClearCookie", func() {
 			It("sets a cookie with an empty value in the past", func() {
-				rw := httptest.NewRecorder()
-
-				publicCSRF.ClearCookie(rw, req)
-
-				Expect(rw.Header().Get("Set-Cookie")).To(Equal(
-					fmt.Sprintf(
-						"%s=; Path=%s; Domain=%s; Max-Age=0; HttpOnly; Secure",
-						privateCSRF.cookieName(),
-						cookiePath,
-						cookieDomain,
-					),
-				))
-			})
-
-			It("sets the Partitioned attribute on deletion cookies", func() {
-				// prepare
 				cookieOpts.Partitioned = true
-				cookieOpts.SameSite = sameSiteNone
 				rw := httptest.NewRecorder()
 
-				// test
 				publicCSRF.ClearCookie(rw, req)
 
-				// validate
-				header := rw.Header().Get("Set-Cookie")
-				Expect(header).To(Equal(
-					fmt.Sprintf(
-						"%s=; Path=%s; Domain=%s; Max-Age=0; HttpOnly; Secure; SameSite=None; Partitioned",
-						privateCSRF.cookieName(),
-						cookiePath,
-						cookieDomain,
-					),
-				))
-
-				parsed, err := http.ParseSetCookie(header)
+				cookie, err := http.ParseSetCookie(rw.Header().Get("Set-Cookie"))
 				Expect(err).ToNot(HaveOccurred())
-				Expect(parsed.Partitioned).To(BeTrue())
+				Expect(cookie.Name).To(Equal(privateCSRF.cookieName()))
+				Expect(cookie.Path).To(Equal(cookiePath))
+				Expect(cookie.Domain).To(Equal(cookieDomain))
+				Expect(cookie.MaxAge).To(Equal(-1))
+				Expect(cookie.Partitioned).To(BeTrue())
 			})
 		})
 

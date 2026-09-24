@@ -8,7 +8,7 @@
 
 ## Changes since v7.15.4
 
-- [#2998](https://github.com/oauth2-proxy/oauth2-proxy/issues/2998) feat: add support for partitioned cookies
+- [#3531](https://github.com/oauth2-proxy/oauth2-proxy/pull/3531) feat: add support for partitioned cookies
 
 # V7.15.4
 

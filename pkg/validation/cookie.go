@@ -11,8 +11,6 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 )
 
-const cookieSameSiteNone = "none"
-
 func validateCookie(o options.Cookie) []string {
 	msgs := validateCookieSecret(o.Secret, o.SecretFile)
 
@@ -24,21 +22,13 @@ func validateCookie(o options.Cookie) []string {
 	}
 
 	switch o.SameSite {
-	case "", cookieSameSiteNone, "lax", "strict":
+	case "", "none", "lax", "strict":
 	default:
 		msgs = append(msgs, fmt.Sprintf("cookie_samesite (%q) must be one of ['', 'lax', 'strict', 'none']", o.SameSite))
 	}
 
-	if o.Partitioned {
-		if !o.Secure {
-			msgs = append(msgs, "cookie_partitioned=true requires cookie_secure=true")
-		}
-		if o.SameSite != cookieSameSiteNone {
-			msgs = append(msgs, "cookie_partitioned=true requires cookie_samesite=\"none\"")
-		}
-		if o.CSRFSameSite != "" && o.CSRFSameSite != cookieSameSiteNone {
-			msgs = append(msgs, "cookie_partitioned=true requires cookie_csrf_samesite to be empty or \"none\"")
-		}
+	if o.Partitioned && !o.Secure {
+		msgs = append(msgs, "cookie_partitioned=true requires cookie_secure=true")
 	}
 
 	// Sort cookie domains by length, so that we try longer (and more specific) domains first

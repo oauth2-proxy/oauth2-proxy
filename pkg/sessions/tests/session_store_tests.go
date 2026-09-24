@@ -64,14 +64,15 @@ func RunSessionStoreTests(newSS NewSessionStoreFunc, persistentFastForward Persi
 
 			// Set default options in CookieOptions
 			cookieOpts := &options.Cookie{
-				Name:     "_oauth2_proxy",
-				Path:     "/",
-				Expire:   time.Duration(168) * time.Hour,
-				Refresh:  time.Duration(1) * time.Hour,
-				Secure:   true,
-				HTTPOnly: true,
-				SameSite: "",
-				Secret:   string(cookieSecret),
+				Name:        "_oauth2_proxy",
+				Path:        "/",
+				Expire:      time.Duration(168) * time.Hour,
+				Refresh:     time.Duration(1) * time.Hour,
+				Secure:      true,
+				HTTPOnly:    true,
+				SameSite:    "",
+				Partitioned: true,
+				Secret:      string(cookieSecret),
 			}
 
 			expires := time.Now().Add(1 * time.Hour)
@@ -221,6 +222,12 @@ func CheckCookieOptions(in *testInput) {
 		It("have the correct SameSite set", func() {
 			for _, cookie := range cookies {
 				Expect(cookie.SameSite).To(Equal(cookiesapi.ParseSameSite(in.cookieOpts.SameSite)))
+			}
+		})
+
+		It("have the correct Partitioned set", func() {
+			for _, cookie := range cookies {
+				Expect(cookie.Partitioned).To(Equal(in.cookieOpts.Partitioned))
 			}
 		})
 
