@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.4
 
+- [#3540](https://github.com/oauth2-proxy/oauth2-proxy/pull/3540) fix: honor `--oidc-groups-claim` for tokens verified via `--extra-jwt-issuers` (#3539) (@jaewak)
+
 # V7.15.4
 
 ## Release Highlights
