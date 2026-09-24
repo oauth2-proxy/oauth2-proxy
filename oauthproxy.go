@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"embed"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -46,14 +48,16 @@ const (
 	schemeHTTPS     = "https"
 	applicationJSON = "application/json"
 
-	robotsPath        = "/robots.txt"
-	signInPath        = "/sign_in"
-	signOutPath       = "/sign_out"
-	oauthStartPath    = "/start"
-	oauthCallbackPath = "/callback"
-	authOnlyPath      = "/auth"
-	userInfoPath      = "/userinfo"
-	staticPathPrefix  = "/static/"
+	robotsPath                    = "/robots.txt"
+	protectedResourceMetadataPath = "/.well-known/oauth-protected-resource"
+	dynamicClientRegistrationPath = "/register"
+	signInPath                    = "/sign_in"
+	signOutPath                   = "/sign_out"
+	oauthStartPath                = "/start"
+	oauthCallbackPath             = "/callback"
+	authOnlyPath                  = "/auth"
+	userInfoPath                  = "/userinfo"
+	staticPathPrefix              = "/static/"
 
 	idTokenPlaceholder = "{id_token}"
 )
@@ -118,6 +122,12 @@ type OAuthProxy struct {
 	appDirector       redirect.AppDirector
 
 	encodeState bool
+
+	// oidcIssuerURL is the configured OIDC issuer, exposed via
+	// /.well-known/oauth-protected-resource (RFC 9728) so MCP-spec OAuth
+	// clients can discover the authorization server. See
+	// ProtectedResourceMetadata.
+	oidcIssuerURL string
 }
 
 // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
@@ -253,6 +263,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		redirectValidator:  redirectValidator,
 		appDirector:        appDirector,
 		encodeState:        opts.EncodeState,
+		oidcIssuerURL:      opts.Providers[0].OIDCConfig.IssuerURL,
 	}
 	p.buildServeMux(opts.ProxyPrefix)
 
@@ -324,6 +335,20 @@ func (p *OAuthProxy) buildServeMux(proxyPrefix string) {
 
 	// Register the robots path writer
 	r.Path(robotsPath).HandlerFunc(p.pageWriter.WriteRobotsTxt)
+
+	// RFC 9728 Protected Resource Metadata MUST live at the host root, not
+	// under proxyPrefix (unlike sign_in/start/callback below) - MCP clients
+	// build this well-known URL themselves and don't know about our
+	// ProxyPrefix. See ProtectedResourceMetadata.
+	r.Path(protectedResourceMetadataPath).HandlerFunc(p.ProtectedResourceMetadata)
+
+	// Also host root, not under proxyPrefix, for the same reason - MCP
+	// clients (confirmed against Claude Code) request RFC 7591 Dynamic
+	// Client Registration at <this proxy's own origin>/register rather
+	// than the authorization server's real advertised
+	// registration_endpoint, even after correctly resolving that server
+	// via RFC 9728/8414 discovery. See DynamicClientRegistration.
+	r.Path(dynamicClientRegistrationPath).HandlerFunc(p.DynamicClientRegistration)
 
 	// The authonly path should be registered separately to prevent it from getting no-cache headers.
 	// We do this to allow users to have a short cache (via nginx) of the response to reduce the
@@ -1057,7 +1082,7 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 		if p.forceJSONErrors || isAjax(req) || p.isAPIPath(req) {
 			logger.Printf("No valid authentication in request. Access Denied.")
 			// no point redirecting an AJAX request
-			p.errorJSON(rw, http.StatusUnauthorized)
+			p.unauthorizedJSON(rw, req)
 			return
 		}
 
@@ -1342,6 +1367,121 @@ func (p *OAuthProxy) errorJSON(rw http.ResponseWriter, code int) {
 	// we need to send some JSON response because we set the Content-Type to
 	// application/json
 	rw.Write([]byte("{}"))
+}
+
+// unauthorizedJSON returns a 401 with a WWW-Authenticate header pointing at
+// this server's OAuth 2.0 Protected Resource Metadata document (RFC 9728),
+// and a non-empty OAuth-shaped JSON error body (RFC 6750 section 3) -
+// required for MCP clients (modelcontextprotocol.io/specification/
+// 2025-06-18/basic/authorization) to discover how to authenticate. Plain
+// errorJSON's empty "{}" body and missing header left MCP clients unable
+// to parse the response as a valid OAuth error at all.
+func (p *OAuthProxy) unauthorizedJSON(rw http.ResponseWriter, req *http.Request) {
+	metadataURL := url.URL{
+		Scheme: requestutil.GetRequestProto(req),
+		Host:   requestutil.GetRequestHost(req),
+		Path:   protectedResourceMetadataPath,
+	}
+	rw.Header().Set("WWW-Authenticate", fmt.Sprintf(`Bearer resource_metadata=%q`, metadataURL.String()))
+	rw.Header().Set("Content-Type", applicationJSON)
+	rw.WriteHeader(http.StatusUnauthorized)
+	rw.Write([]byte(`{"error":"unauthorized","error_description":"authentication required"}`))
+}
+
+// ProtectedResourceMetadata serves OAuth 2.0 Protected Resource Metadata
+// (RFC 9728) at the well-known path MCP clients fetch after receiving a 401
+// with a WWW-Authenticate header (see unauthorizedJSON). Points clients at
+// the OIDC issuer this proxy is already configured with - the issuer's own
+// RFC 8414 Authorization Server Metadata (a document oauth2-proxy does not
+// need to serve itself) tells the client where to actually authenticate.
+func (p *OAuthProxy) ProtectedResourceMetadata(rw http.ResponseWriter, req *http.Request) {
+	resource := url.URL{
+		Scheme: requestutil.GetRequestProto(req),
+		Host:   requestutil.GetRequestHost(req),
+	}
+	body, err := json.Marshal(map[string]interface{}{
+		"resource":              resource.String(),
+		"authorization_servers": []string{p.oidcIssuerURL},
+	})
+	if err != nil {
+		p.errorJSON(rw, http.StatusInternalServerError)
+		return
+	}
+	rw.Header().Set("Content-Type", applicationJSON)
+	rw.WriteHeader(http.StatusOK)
+	rw.Write(body)
+}
+
+// DynamicClientRegistration proxies RFC 7591 Dynamic Client Registration
+// requests to the configured OIDC issuer's own registration_endpoint
+// (discovered from its .well-known/openid-configuration document) and
+// relays the response verbatim, including its status code.
+//
+// MCP clients need this because of the same origin-assumption behavior
+// ProtectedResourceMetadata's WWW-Authenticate header is meant to correct
+// for authorization/token requests: confirmed against Claude Code, once it
+// receives Protected Resource Metadata pointing at an external
+// authorization server, it correctly directs the user's browser to that
+// server's own /authorize and posts to its own /token - but it still POSTs
+// its DCR request to THIS proxy's own /register instead of the issuer's
+// real advertised registration_endpoint. Forwarding the Authorization
+// header lets Initial-Access-Token-gated ("authenticated" RFC 7591)
+// registration work too, not just anonymous.
+func (p *OAuthProxy) DynamicClientRegistration(rw http.ResponseWriter, req *http.Request) {
+	client := &http.Client{Timeout: 10 * time.Second}
+
+	discoveryResp, err := client.Get(strings.TrimSuffix(p.oidcIssuerURL, "/") + "/.well-known/openid-configuration")
+	if err != nil {
+		logger.Errorf("error fetching issuer discovery document for dynamic client registration: %v", err)
+		http.Error(rw, "failed to reach issuer", http.StatusBadGateway)
+		return
+	}
+	defer discoveryResp.Body.Close()
+
+	var discovery struct {
+		RegistrationEndpoint string `json:"registration_endpoint"`
+	}
+	if err := json.NewDecoder(discoveryResp.Body).Decode(&discovery); err != nil || discovery.RegistrationEndpoint == "" {
+		logger.Errorf("issuer discovery document has no registration_endpoint: %v", err)
+		http.Error(rw, "issuer does not support dynamic client registration", http.StatusNotImplemented)
+		return
+	}
+
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		http.Error(rw, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	upstreamReq, err := http.NewRequest(http.MethodPost, discovery.RegistrationEndpoint, bytes.NewReader(body))
+	if err != nil {
+		logger.Errorf("error building dynamic client registration request: %v", err)
+		http.Error(rw, "internal error", http.StatusInternalServerError)
+		return
+	}
+	upstreamReq.Header.Set("Content-Type", applicationJSON)
+	if auth := req.Header.Get("Authorization"); auth != "" {
+		upstreamReq.Header.Set("Authorization", auth)
+	}
+
+	upstreamResp, err := client.Do(upstreamReq)
+	if err != nil {
+		logger.Errorf("error forwarding dynamic client registration request: %v", err)
+		http.Error(rw, "failed to reach issuer", http.StatusBadGateway)
+		return
+	}
+	defer upstreamResp.Body.Close()
+
+	respBody, err := io.ReadAll(upstreamResp.Body)
+	if err != nil {
+		logger.Errorf("error reading dynamic client registration response: %v", err)
+		http.Error(rw, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	rw.Header().Set("Content-Type", applicationJSON)
+	rw.WriteHeader(upstreamResp.StatusCode)
+	rw.Write(respBody)
 }
 
 // LoggingCSRFCookiesInOAuthCallback Log all CSRF cookies found in HTTP request OAuth callback,
