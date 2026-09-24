@@ -151,14 +151,15 @@ func (c *csrf) SetCookie(rw http.ResponseWriter, req *http.Request) (*http.Cooki
 	}
 
 	csrfCookieOptions := &CookieOptions{
-		Name:       c.cookieName(),
-		Value:      encoded,
-		Domains:    c.cookieOpts.Domains,
-		Expiration: c.cookieOpts.CSRFExpire,
-		SameSite:   getCSRFSameSite(c.cookieOpts),
-		Path:       c.cookieOpts.Path,
-		HTTPOnly:   c.cookieOpts.HTTPOnly,
-		Secure:     c.cookieOpts.Secure,
+		Name:        c.cookieName(),
+		Value:       encoded,
+		Domains:     c.cookieOpts.Domains,
+		Expiration:  c.cookieOpts.CSRFExpire,
+		SameSite:    getCSRFSameSite(c.cookieOpts),
+		Path:        c.cookieOpts.Path,
+		HTTPOnly:    c.cookieOpts.HTTPOnly,
+		Secure:      c.cookieOpts.Secure,
+		Partitioned: c.cookieOpts.Partitioned,
 	}
 
 	cookie := MakeCookieFromOptions(req, csrfCookieOptions)
@@ -212,14 +213,15 @@ func ClearExtraCsrfCookies(opts *options.Cookie, rw http.ResponseWriter, req *ht
 // ClearCookie removes the CSRF cookie
 func (c *csrf) ClearCookie(rw http.ResponseWriter, req *http.Request) {
 	csrfCookieOptions := &CookieOptions{
-		Name:       c.cookieName(),
-		Value:      "",
-		Domains:    c.cookieOpts.Domains,
-		Expiration: time.Hour * -1,
-		SameSite:   getCSRFSameSite(c.cookieOpts),
-		Path:       c.cookieOpts.Path,
-		HTTPOnly:   c.cookieOpts.HTTPOnly,
-		Secure:     c.cookieOpts.Secure,
+		Name:        c.cookieName(),
+		Value:       "",
+		Domains:     c.cookieOpts.Domains,
+		Expiration:  time.Hour * -1,
+		SameSite:    getCSRFSameSite(c.cookieOpts),
+		Path:        c.cookieOpts.Path,
+		HTTPOnly:    c.cookieOpts.HTTPOnly,
+		Secure:      c.cookieOpts.Secure,
+		Partitioned: c.cookieOpts.Partitioned,
 	}
 
 	http.SetCookie(rw, MakeCookieFromOptions(req, csrfCookieOptions))

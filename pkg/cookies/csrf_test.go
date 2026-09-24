@@ -175,6 +175,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 
 		Context("SetCookie", func() {
 			It("adds the encoded CSRF cookie to a ResponseWriter", func() {
+				cookieOpts.Partitioned = true
 				rw := httptest.NewRecorder()
 
 				_, err := publicCSRF.SetCookie(rw, req)
@@ -191,6 +192,9 @@ var _ = Describe("CSRF Cookie Tests", func() {
 						int(cookieOpts.CSRFExpire.Seconds()),
 					),
 				))
+				cookie, err := http.ParseSetCookie(rw.Header().Get("Set-Cookie"))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(cookie.Partitioned).To(BeTrue())
 			})
 		})
 
@@ -257,18 +261,18 @@ var _ = Describe("CSRF Cookie Tests", func() {
 
 		Context("ClearCookie", func() {
 			It("sets a cookie with an empty value in the past", func() {
+				cookieOpts.Partitioned = true
 				rw := httptest.NewRecorder()
 
 				publicCSRF.ClearCookie(rw, req)
 
-				Expect(rw.Header().Get("Set-Cookie")).To(Equal(
-					fmt.Sprintf(
-						"%s=; Path=%s; Domain=%s; Max-Age=0; HttpOnly; Secure",
-						privateCSRF.cookieName(),
-						cookiePath,
-						cookieDomain,
-					),
-				))
+				cookie, err := http.ParseSetCookie(rw.Header().Get("Set-Cookie"))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(cookie.Name).To(Equal(privateCSRF.cookieName()))
+				Expect(cookie.Path).To(Equal(cookiePath))
+				Expect(cookie.Domain).To(Equal(cookieDomain))
+				Expect(cookie.MaxAge).To(Equal(-1))
+				Expect(cookie.Partitioned).To(BeTrue())
 			})
 		})
 
