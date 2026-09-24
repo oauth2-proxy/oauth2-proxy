@@ -1,7 +1,7 @@
 name: Feature request
 description: Feature requests or proposals related to the overall project or specific providers
 title: "[Feature]: <Short description>"
-labels: ["enhancement"]
+labels: ["kind/enhancement"]
 body:
   - type: textarea
     attributes:
@@ -33,19 +33,20 @@ body:
         - adfs
         - azure
         - bitbucket
+        - cidaas
         - digitalocean
-        - entra-id
         - facebook
         - gitea
         - github
         - gitlab
         - google
         - keycloak
-        - keycloak-oidc
         - linkedin
         - logingov
+        - ms-entra-id
         - nextcloud
         - oidc
+        - srht
     validations:
       required: false
 
