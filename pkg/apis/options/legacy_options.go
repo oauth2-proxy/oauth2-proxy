@@ -482,6 +482,7 @@ type LegacyServer struct {
 	TLSKeyFile           string   `flag:"tls-key-file" cfg:"tls_key_file"`
 	TLSMinVersion        string   `flag:"tls-min-version" cfg:"tls_min_version"`
 	TLSCipherSuites      []string `flag:"tls-cipher-suite" cfg:"tls_cipher_suites"`
+	ForceHTTP2           bool     `flag:"force-http2" cfg:"force_http2"`
 }
 
 func legacyServerFlagset() *pflag.FlagSet {
@@ -497,6 +498,7 @@ func legacyServerFlagset() *pflag.FlagSet {
 	flagSet.String("tls-key-file", "", "path to private key file")
 	flagSet.String("tls-min-version", "", "minimal TLS version for HTTPS clients (either \"TLS1.2\" or \"TLS1.3\")")
 	flagSet.StringSlice("tls-cipher-suite", []string{}, "restricts TLS cipher suites to those listed (e.g. TLS_RSA_WITH_RC4_128_SHA) (may be given multiple times)")
+	flagSet.Bool("force-http2", false, "enable HTTP/2 support (h2c for HTTP, h2 for HTTPS); required for gRPC proxying")
 
 	return flagSet
 }
@@ -653,6 +655,7 @@ func (l LegacyServer) convert() (Server, Server) {
 	appServer := Server{
 		BindAddress:       l.HTTPAddress,
 		SecureBindAddress: l.HTTPSAddress,
+		HTTP2:             l.ForceHTTP2,
 	}
 	if l.TLSKeyFile != "" || l.TLSCertFile != "" {
 		appServer.TLS = &TLS{

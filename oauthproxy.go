@@ -289,6 +289,7 @@ func (p *OAuthProxy) setupServer(opts *options.Options) error {
 		BindAddress:       opts.Server.BindAddress,
 		SecureBindAddress: opts.Server.SecureBindAddress,
 		TLS:               opts.Server.TLS,
+		HTTP2:             opts.Server.HTTP2,
 	}
 
 	// Option: AllowQuerySemicolons
@@ -306,6 +307,7 @@ func (p *OAuthProxy) setupServer(opts *options.Options) error {
 		BindAddress:       opts.MetricsServer.BindAddress,
 		SecureBindAddress: opts.MetricsServer.SecureBindAddress,
 		TLS:               opts.MetricsServer.TLS,
+		HTTP2:             opts.MetricsServer.HTTP2,
 	})
 	if err != nil {
 		return fmt.Errorf("could not build metrics server: %v", err)
