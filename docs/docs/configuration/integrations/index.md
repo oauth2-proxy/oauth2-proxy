@@ -18,6 +18,7 @@ OAuth2 Proxy can be integrated with popular reverse proxies and ingress controll
 OAuth2 Proxy can also be used to add authentication to Kubernetes web user interfaces:
 
 - [Headlamp](headlamp.md) ✨ *Recommended*
+- [KubeStellar Console](kubestellar-console.md) — includes guided oauth2-proxy install and troubleshooting missions
 - [Kubernetes Dashboard](kubernetes-dashboard.md) ⚠️ *Deprecated*
 
 :::tip
