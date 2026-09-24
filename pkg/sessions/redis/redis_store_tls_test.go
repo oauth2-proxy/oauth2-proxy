@@ -147,6 +147,62 @@ var _ = Describe("Redis SessionStore Tests", func() {
 		)
 	})
 
+	Context("with mutual TLS (client certificate)", func() {
+		BeforeEach(func() {
+			mr.Close()
+			// Require a client certificate on the wire; RequireAndVerifyClientCert would
+			// reject the test suite cert (ExtKeyUsageServerAuth only, no clientAuth EKU).
+			var err error
+			mr, err = miniredis.RunTLS(&tls.Config{
+				Certificates: []tls.Certificate{cert},
+				ClientAuth:   tls.RequireAnyClientCert,
+			})
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		Context("with standalone", func() {
+			tests.RunSessionStoreTests(
+				func(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
+					opts.Type = options.RedisSessionStoreType
+					opts.Redis.ConnectionURL = redissProtocol + mr.Addr()
+					opts.Redis.CAPath = caPath
+					opts.Redis.ClientCertPath = caPath
+					opts.Redis.ClientKeyPath = keyPath
+
+					var err error
+					ss, err = NewRedisSessionStore(opts, cookieOpts)
+					return ss, err
+				},
+				func(d time.Duration) error {
+					mr.FastForward(d)
+					return nil
+				},
+			)
+		})
+
+		Context("with cluster", func() {
+			tests.RunSessionStoreTests(
+				func(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
+					clusterAddr := redissProtocol + mr.Addr()
+					opts.Type = options.RedisSessionStoreType
+					opts.Redis.ClusterConnectionURLs = []string{clusterAddr}
+					opts.Redis.UseCluster = true
+					opts.Redis.CAPath = caPath
+					opts.Redis.ClientCertPath = caPath
+					opts.Redis.ClientKeyPath = keyPath
+
+					var err error
+					ss, err = NewRedisSessionStore(opts, cookieOpts)
+					return ss, err
+				},
+				func(d time.Duration) error {
+					mr.FastForward(d)
+					return nil
+				},
+			)
+		})
+	})
+
 	Context("with insecure TLS connection", func() {
 		tests.RunSessionStoreTests(
 			func(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
