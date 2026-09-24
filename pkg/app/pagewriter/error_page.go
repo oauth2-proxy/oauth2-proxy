@@ -79,7 +79,7 @@ func (e *errorPageWriter) WriteErrorPage(rw http.ResponseWriter, opts ErrorPageO
 	}
 
 	if err := e.template.Execute(rw, data); err != nil {
-		logger.Printf("Error rendering error template: %v", err)
+		logger.ErrMsgf("error rendering error template: %v", err)
 		http.Error(rw, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 	}
 }
@@ -88,7 +88,7 @@ func (e *errorPageWriter) WriteErrorPage(rw http.ResponseWriter, opts ErrorPageO
 // when there are issues with upstream servers.
 // It is expected to always render a bad gateway error.
 func (e *errorPageWriter) ProxyErrorHandler(rw http.ResponseWriter, req *http.Request, proxyErr error) {
-	logger.Errorf("Error proxying to upstream server: %v", proxyErr)
+	logger.ErrMsgf("error proxying to upstream server: %v", proxyErr)
 	scope := middlewareapi.GetRequestScope(req)
 	e.WriteErrorPage(rw, ErrorPageOpts{
 		Status:      http.StatusBadGateway,
