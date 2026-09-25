@@ -107,6 +107,24 @@ func TestInitializedOptions(t *testing.T) {
 	assert.Equal(t, nil, Validate(o))
 }
 
+func TestProviderVerifierOptionsFromJwtIssuer(t *testing.T) {
+	audienceClaims := []string{"aud", "client_id"}
+	extraAudiences := []string{"extra-audience"}
+	supportedSigningAlgs := []string{"RS256", "ES256"}
+	issuer := jwtIssuer{
+		issuerURI: "https://issuer.example.com",
+		audience:  "client-id",
+	}
+
+	got := providerVerifierOptionsFromJwtIssuer(audienceClaims, extraAudiences, supportedSigningAlgs, issuer)
+
+	assert.Equal(t, audienceClaims, got.AudienceClaims)
+	assert.Equal(t, issuer.audience, got.ClientID)
+	assert.Equal(t, extraAudiences, got.ExtraAudiences)
+	assert.Equal(t, issuer.issuerURI, got.IssuerURL)
+	assert.Equal(t, supportedSigningAlgs, got.SupportedSigningAlgs)
+}
+
 // Note that it's not worth testing nonparseable URLs, since url.Parse()
 // seems to parse damn near anything.
 func TestRedirectURL(t *testing.T) {
