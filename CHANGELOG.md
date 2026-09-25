@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.4
 
+- Add `--oidc-preferred-username-claim` / `oidc_preferred_username_claim` (alpha config: `preferredUsernameClaim`) to configure which OIDC claim populates the session's preferred username
+
 # V7.15.4
 
 ## Release Highlights

@@ -94,6 +94,7 @@ providers:
     useApplicationDefaultCredentials: false
   oidcConfig:
     groupsClaim: groups
+    preferredUsernameClaim: preferred_username
     emailClaim: email
     userIDClaim: email
     insecureSkipIssuerVerification: false
@@ -179,6 +180,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 				},
 				OIDCConfig: options.OIDCOptions{
 					GroupsClaim:                    "groups",
+					PreferredUsernameClaim:         "preferred_username",
 					EmailClaim:                     "email",
 					UserIDClaim:                    "email",
 					AudienceClaims:                 []string{"aud"},

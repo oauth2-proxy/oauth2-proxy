@@ -9,6 +9,9 @@ const (
 	// OIDCGroupsClaim is the generic groups claim used by the OIDC provider.
 	OIDCGroupsClaim string = "groups"
 
+	// OIDCPreferredUsernameClaim is the generic preferred username claim used by the OIDC provider.
+	OIDCPreferredUsernameClaim string = "preferred_username"
+
 	// DefaultSkipDiscovery is the default value
 	// for OIDCOptions.SkipDiscovery
 	DefaultSkipDiscovery bool = false
@@ -312,6 +315,9 @@ type OIDCOptions struct {
 	// GroupsClaim indicates which claim contains the user groups
 	// default set to 'groups'
 	GroupsClaim string `yaml:"groupsClaim,omitempty"`
+	// PreferredUsernameClaim indicates which claim contains the user's preferred username
+	// default set to 'preferred_username'
+	PreferredUsernameClaim string `yaml:"preferredUsernameClaim,omitempty"`
 	// UserIDClaim indicates which claim contains the user ID
 	// default set to 'email'
 	UserIDClaim string `yaml:"userIDClaim,omitempty"`
@@ -352,6 +358,7 @@ func providerDefaults() Providers {
 				UserIDClaim:                  OIDCEmailClaim, // Deprecated: Use OIDCEmailClaim
 				EmailClaim:                   OIDCEmailClaim,
 				GroupsClaim:                  OIDCGroupsClaim,
+				PreferredUsernameClaim:       OIDCPreferredUsernameClaim,
 				AudienceClaims:               OIDCAudienceClaims,
 				ExtraAudiences:               []string{},
 			},
@@ -402,6 +409,9 @@ func (o *OIDCOptions) EnsureDefaults() {
 	}
 	if o.GroupsClaim == "" {
 		o.GroupsClaim = OIDCGroupsClaim
+	}
+	if o.PreferredUsernameClaim == "" {
+		o.PreferredUsernameClaim = OIDCPreferredUsernameClaim
 	}
 	if len(o.AudienceClaims) == 0 {
 		o.AudienceClaims = OIDCAudienceClaims

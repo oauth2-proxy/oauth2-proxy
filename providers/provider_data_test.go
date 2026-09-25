@@ -232,6 +232,7 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 		UserClaim                string
 		EmailClaim               string
 		GroupsClaim              string
+		PreferredUsernameClaim   string
 		SkipClaimsFromProfileURL bool
 		SetProfileURL            bool
 		ExpectedError            error
@@ -406,6 +407,33 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 				PreferredUsername: "Jane Dobbs",
 			},
 		},
+		"Preferred Username Claim Switched": {
+			IDToken:                defaultIDToken,
+			AllowUnverified:        true,
+			UserClaim:              "sub",
+			EmailClaim:             "email",
+			GroupsClaim:            "groups",
+			PreferredUsernameClaim: "phone_number",
+			ExpectedSession: &sessions.SessionState{
+				User:              "123456789",
+				Email:             "janed@me.com",
+				Groups:            []string{"test:a", "test:b"},
+				PreferredUsername: "+4798765432",
+			},
+		},
+		"Preferred Username Claim Non Existent": {
+			IDToken:                defaultIDToken,
+			AllowUnverified:        true,
+			UserClaim:              "sub",
+			EmailClaim:             "email",
+			GroupsClaim:            "groups",
+			PreferredUsernameClaim: "aksjdfhjksadh",
+			ExpectedSession: &sessions.SessionState{
+				User:   "123456789",
+				Email:  "janed@me.com",
+				Groups: []string{"test:a", "test:b"},
+			},
+		},
 		"Request claims from ProfileURL": {
 			IDToken:                minimalIDToken,
 			SetProfileURL:          true,
@@ -474,6 +502,10 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 			provider.UserClaim = tc.UserClaim
 			provider.EmailClaim = tc.EmailClaim
 			provider.GroupsClaim = tc.GroupsClaim
+			provider.PreferredUsernameClaim = tc.PreferredUsernameClaim
+			if provider.PreferredUsernameClaim == "" {
+				provider.PreferredUsernameClaim = options.OIDCPreferredUsernameClaim
+			}
 			provider.SkipClaimsFromProfileURL = tc.SkipClaimsFromProfileURL
 			provider.AdditionalClaims = tc.AdditionalClaims
 
