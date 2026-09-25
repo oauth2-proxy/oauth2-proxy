@@ -76,6 +76,11 @@ type ProviderData struct {
 	loginURLParameterOverrides map[string]*regexp.Regexp
 
 	BackendLogoutURL string
+
+	// BackChannelLogoutSupported indicates that the OIDC back-channel logout
+	// endpoint is enabled. Set via --oidc-backchannel-logout or the YAML option
+	// oidcConfig.backChannelLogoutEnabled. Requires Redis session storage.
+	BackChannelLogoutSupported bool
 }
 
 // Data returns the ProviderData
@@ -281,6 +286,8 @@ func (p *ProviderData) buildSessionFromClaims(rawIDToken, accessToken string) (*
 		{p.GroupsClaim, &ss.Groups},
 		// TODO (@NickMeves) Deprecate for dynamic claim to session mapping
 		{"preferred_username", &ss.PreferredUsername},
+		// sid is the OIDC session ID used for back-channel logout
+		{"sid", &ss.SessionID},
 	} {
 		if _, err := extractor.GetClaimInto(c.claim, c.dst); err != nil {
 			return nil, err
