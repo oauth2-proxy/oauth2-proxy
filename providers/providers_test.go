@@ -402,3 +402,27 @@ func TestEmailClaimCorrectlySet(t *testing.T) {
 		})
 	}
 }
+
+func TestPreferredUsernameClaimCorrectlySet(t *testing.T) {
+	g := NewWithT(t)
+
+	providerConfig := options.Provider{
+		ID:               providerID,
+		Type:             "oidc",
+		ClientID:         clientID,
+		ClientSecretFile: clientSecret,
+		LoginURL:         msAuthURL,
+		RedeemURL:        msTokenURL,
+		OIDCConfig: options.OIDCOptions{
+			IssuerURL:              msIssuerURL,
+			SkipDiscovery:          ptr.To(true),
+			JwksURL:                msKeysURL,
+			PreferredUsernameClaim: "name",
+		},
+	}
+
+	pd, err := newProviderDataFromConfig(providerConfig)
+	g.Expect(err).ToNot(HaveOccurred())
+
+	g.Expect(pd.PreferredUsernameClaim).To(Equal("name"))
+}

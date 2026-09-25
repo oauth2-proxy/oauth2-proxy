@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.5
 
+- [#3548](https://github.com/oauth2-proxy/oauth2-proxy/pull/3548) feat: add `--oidc-preferred-username-claim` / `oidc_preferred_username_claim` (alpha config: `preferredUsernameClaim`) to configure which OIDC claim populates the session's preferred username (@sourava01)
+
 # V7.15.5
 
 ## Release Highlights
