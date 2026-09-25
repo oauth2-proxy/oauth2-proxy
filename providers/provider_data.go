@@ -57,6 +57,10 @@ type ProviderData struct {
 	// If not set, groups will not be extracted from the ID Token or userinfo response.
 	GroupsClaim string
 
+	// PreferredUsernameClaim is the claim to use for populating the SessionState.PreferredUsername field.
+	// Defaults to "preferred_username" if not set.
+	PreferredUsernameClaim string
+
 	// Verifier is the OIDC ID Token Verifier to be used by any OIDC-based providers to verify ID Tokens returned by the provider.
 	// It must be set up by the provider implementation and is not expected to be configured directly by users.
 	Verifier internaloidc.IDTokenVerifier
@@ -225,6 +229,10 @@ func (p *ProviderData) setProviderDefaults(defaults providerDefaults) {
 	if p.UserClaim == "" {
 		p.UserClaim = oidcUserClaim
 	}
+
+	if p.PreferredUsernameClaim == "" {
+		p.PreferredUsernameClaim = options.OIDCPreferredUsernameClaim
+	}
 }
 
 // defaultURL will set return a default value if the given value is not set.
@@ -280,7 +288,7 @@ func (p *ProviderData) buildSessionFromClaims(rawIDToken, accessToken string) (*
 		{p.EmailClaim, &ss.Email},
 		{p.GroupsClaim, &ss.Groups},
 		// TODO (@NickMeves) Deprecate for dynamic claim to session mapping
-		{"preferred_username", &ss.PreferredUsername},
+		{p.PreferredUsernameClaim, &ss.PreferredUsername},
 	} {
 		if _, err := extractor.GetClaimInto(c.claim, c.dst); err != nil {
 			return nil, err
