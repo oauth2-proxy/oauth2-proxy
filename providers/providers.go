@@ -37,6 +37,25 @@ func NewProvider(providerConfig options.Provider) (Provider, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not create provider data: %v", err)
 	}
+	return providerFromData(providerConfig, providerData)
+}
+
+// newPlaceholderProvider constructs a Provider without performing OIDC
+// discovery. The resulting provider has the correct display name and defaults
+// but no verifier or discovered endpoints, so it must not be used to serve OIDC
+// flows. It is used as the initial value of a LazyProvider until background
+// discovery completes.
+func newPlaceholderProvider(providerConfig options.Provider) (Provider, error) {
+	providerData, err := buildProviderData(providerConfig, true)
+	if err != nil {
+		return nil, fmt.Errorf("could not create provider data: %v", err)
+	}
+	return providerFromData(providerConfig, providerData)
+}
+
+// providerFromData constructs the concrete Provider implementation for the
+// configured provider type from an already-built ProviderData.
+func providerFromData(providerConfig options.Provider, providerData *ProviderData) (Provider, error) {
 	switch providerConfig.Type {
 	case options.ADFSProvider:
 		return NewADFSProvider(providerData, providerConfig), nil
@@ -78,6 +97,15 @@ func NewProvider(providerConfig options.Provider) (Provider, error) {
 }
 
 func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, error) {
+	return buildProviderData(providerConfig, false)
+}
+
+// buildProviderData builds the ProviderData for the given configuration. When
+// skipDiscovery is true, the OIDC discovery step (which reaches out to the
+// issuer over the network) is skipped, leaving the Verifier and discovered
+// endpoints unset. This is used to build a placeholder provider for lazy
+// initialisation, so oauth2-proxy can start before the issuer is reachable.
+func buildProviderData(providerConfig options.Provider, skipDiscovery bool) (*ProviderData, error) {
 	p := &ProviderData{
 		Scope:                   providerConfig.Scope,
 		ClientID:                providerConfig.ClientID,
@@ -87,12 +115,12 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 		AdditionalClaims:        providerConfig.AdditionalClaims,
 	}
 
-	needsVerifier, err := providerRequiresOIDCProviderVerifier(providerConfig.Type)
+	needsVerifier, err := ProviderRequiresOIDCProviderVerifier(providerConfig.Type)
 	if err != nil {
 		return nil, err
 	}
 
-	if needsVerifier {
+	if needsVerifier && !skipDiscovery {
 		pv, err := internaloidc.NewProviderVerifier(context.TODO(), internaloidc.ProviderVerifierOptions{
 			AudienceClaims:         providerConfig.OIDCConfig.AudienceClaims,
 			ClientID:               providerConfig.ClientID,
@@ -187,7 +215,10 @@ func parseCodeChallengeMethod(providerConfig options.Provider) string {
 	}
 }
 
-func providerRequiresOIDCProviderVerifier(providerType options.ProviderType) (bool, error) {
+// ProviderRequiresOIDCProviderVerifier reports whether the given provider type
+// relies on the OIDC ProviderVerifier (and therefore on OIDC discovery when it
+// is enabled).
+func ProviderRequiresOIDCProviderVerifier(providerType options.ProviderType) (bool, error) {
 	switch providerType {
 	case options.BitbucketProvider, options.DigitalOceanProvider, options.FacebookProvider, options.GitHubProvider,
 		options.GoogleProvider, options.KeycloakProvider, options.LinkedInProvider, options.LoginGovProvider,

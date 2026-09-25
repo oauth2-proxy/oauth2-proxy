@@ -531,36 +531,39 @@ type LegacyProvider struct {
 
 	// These options allow for other providers besides Google, with
 	// potential overrides.
-	ProviderType                       string   `flag:"provider" cfg:"provider"`
-	ProviderName                       string   `flag:"provider-display-name" cfg:"provider_display_name"`
-	ProviderCAFiles                    []string `flag:"provider-ca-file" cfg:"provider_ca_files"`
-	UseSystemTrustStore                bool     `flag:"use-system-trust-store" cfg:"use_system_trust_store"`
-	OIDCIssuerURL                      string   `flag:"oidc-issuer-url" cfg:"oidc_issuer_url"`
-	InsecureOIDCAllowUnverifiedEmail   bool     `flag:"insecure-oidc-allow-unverified-email" cfg:"insecure_oidc_allow_unverified_email"`
-	InsecureOIDCSkipIssuerVerification bool     `flag:"insecure-oidc-skip-issuer-verification" cfg:"insecure_oidc_skip_issuer_verification"`
-	InsecureOIDCSkipNonce              bool     `flag:"insecure-oidc-skip-nonce" cfg:"insecure_oidc_skip_nonce"`
-	SkipOIDCDiscovery                  bool     `flag:"skip-oidc-discovery" cfg:"skip_oidc_discovery"`
-	OIDCJwksURL                        string   `flag:"oidc-jwks-url" cfg:"oidc_jwks_url"`
-	OIDCEmailClaim                     string   `flag:"oidc-email-claim" cfg:"oidc_email_claim"`
-	OIDCGroupsClaim                    string   `flag:"oidc-groups-claim" cfg:"oidc_groups_claim"`
-	OIDCAudienceClaims                 []string `flag:"oidc-audience-claim" cfg:"oidc_audience_claims"`
-	OIDCExtraAudiences                 []string `flag:"oidc-extra-audience" cfg:"oidc_extra_audiences"`
-	OIDCPublicKeyFiles                 []string `flag:"oidc-public-key-file" cfg:"oidc_public_key_files"`
-	OIDCEnabledSigningAlgs             []string `flag:"oidc-enabled-signing-alg" cfg:"oidc_enabled_signing_algs"`
-	LoginURL                           string   `flag:"login-url" cfg:"login_url"`
-	AuthRequestResponseMode            string   `flag:"auth-request-response-mode" cfg:"auth_request_response_mode"`
-	RedeemURL                          string   `flag:"redeem-url" cfg:"redeem_url"`
-	ProfileURL                         string   `flag:"profile-url" cfg:"profile_url"`
-	SkipClaimsFromProfileURL           bool     `flag:"skip-claims-from-profile-url" cfg:"skip_claims_from_profile_url"`
-	ProtectedResource                  string   `flag:"resource" cfg:"resource"`
-	ValidateURL                        string   `flag:"validate-url" cfg:"validate_url"`
-	Scope                              string   `flag:"scope" cfg:"scope"`
-	Prompt                             string   `flag:"prompt" cfg:"prompt"`
-	ApprovalPrompt                     string   `flag:"approval-prompt" cfg:"approval_prompt"` // Deprecated by OIDC 1.0
-	UserIDClaim                        string   `flag:"user-id-claim" cfg:"user_id_claim"`
-	AllowedGroups                      []string `flag:"allowed-group" cfg:"allowed_groups"`
-	AllowedRoles                       []string `flag:"allowed-role" cfg:"allowed_roles"`
-	BackendLogoutURL                   string   `flag:"backend-logout-url" cfg:"backend_logout_url"`
+	ProviderType                       string        `flag:"provider" cfg:"provider"`
+	ProviderName                       string        `flag:"provider-display-name" cfg:"provider_display_name"`
+	ProviderCAFiles                    []string      `flag:"provider-ca-file" cfg:"provider_ca_files"`
+	UseSystemTrustStore                bool          `flag:"use-system-trust-store" cfg:"use_system_trust_store"`
+	OIDCIssuerURL                      string        `flag:"oidc-issuer-url" cfg:"oidc_issuer_url"`
+	InsecureOIDCAllowUnverifiedEmail   bool          `flag:"insecure-oidc-allow-unverified-email" cfg:"insecure_oidc_allow_unverified_email"`
+	InsecureOIDCSkipIssuerVerification bool          `flag:"insecure-oidc-skip-issuer-verification" cfg:"insecure_oidc_skip_issuer_verification"`
+	InsecureOIDCSkipNonce              bool          `flag:"insecure-oidc-skip-nonce" cfg:"insecure_oidc_skip_nonce"`
+	SkipOIDCDiscovery                  bool          `flag:"skip-oidc-discovery" cfg:"skip_oidc_discovery"`
+	OIDCLazyDiscovery                  bool          `flag:"oidc-lazy-discovery" cfg:"oidc_lazy_discovery"`
+	OIDCLazyDiscoveryInitialInterval   time.Duration `flag:"oidc-lazy-discovery-initial-interval" cfg:"oidc_lazy_discovery_initial_interval"`
+	OIDCLazyDiscoveryMaxInterval       time.Duration `flag:"oidc-lazy-discovery-max-interval" cfg:"oidc_lazy_discovery_max_interval"`
+	OIDCJwksURL                        string        `flag:"oidc-jwks-url" cfg:"oidc_jwks_url"`
+	OIDCEmailClaim                     string        `flag:"oidc-email-claim" cfg:"oidc_email_claim"`
+	OIDCGroupsClaim                    string        `flag:"oidc-groups-claim" cfg:"oidc_groups_claim"`
+	OIDCAudienceClaims                 []string      `flag:"oidc-audience-claim" cfg:"oidc_audience_claims"`
+	OIDCExtraAudiences                 []string      `flag:"oidc-extra-audience" cfg:"oidc_extra_audiences"`
+	OIDCPublicKeyFiles                 []string      `flag:"oidc-public-key-file" cfg:"oidc_public_key_files"`
+	OIDCEnabledSigningAlgs             []string      `flag:"oidc-enabled-signing-alg" cfg:"oidc_enabled_signing_algs"`
+	LoginURL                           string        `flag:"login-url" cfg:"login_url"`
+	AuthRequestResponseMode            string        `flag:"auth-request-response-mode" cfg:"auth_request_response_mode"`
+	RedeemURL                          string        `flag:"redeem-url" cfg:"redeem_url"`
+	ProfileURL                         string        `flag:"profile-url" cfg:"profile_url"`
+	SkipClaimsFromProfileURL           bool          `flag:"skip-claims-from-profile-url" cfg:"skip_claims_from_profile_url"`
+	ProtectedResource                  string        `flag:"resource" cfg:"resource"`
+	ValidateURL                        string        `flag:"validate-url" cfg:"validate_url"`
+	Scope                              string        `flag:"scope" cfg:"scope"`
+	Prompt                             string        `flag:"prompt" cfg:"prompt"`
+	ApprovalPrompt                     string        `flag:"approval-prompt" cfg:"approval_prompt"` // Deprecated by OIDC 1.0
+	UserIDClaim                        string        `flag:"user-id-claim" cfg:"user_id_claim"`
+	AllowedGroups                      []string      `flag:"allowed-group" cfg:"allowed_groups"`
+	AllowedRoles                       []string      `flag:"allowed-role" cfg:"allowed_roles"`
+	BackendLogoutURL                   string        `flag:"backend-logout-url" cfg:"backend_logout_url"`
 
 	AcrValues  string `flag:"acr-values" cfg:"acr_values"`
 	JWTKey     string `flag:"jwt-key" cfg:"jwt_key"`
@@ -602,6 +605,9 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.Bool("insecure-oidc-skip-issuer-verification", false, "Do not verify if issuer matches OIDC discovery URL")
 	flagSet.Bool("insecure-oidc-skip-nonce", true, "skip verifying the OIDC ID Token's nonce claim")
 	flagSet.Bool("skip-oidc-discovery", false, "Skip OIDC discovery and use manually supplied Endpoints")
+	flagSet.Bool("oidc-lazy-discovery", false, "Start oauth2-proxy even if the OIDC issuer is unreachable and perform discovery in the background, retrying with backoff. Features that do not depend on the provider (e.g. Basic Auth via htpasswd-file) remain available while discovery is pending")
+	flagSet.Duration("oidc-lazy-discovery-initial-interval", DefaultOIDCLazyDiscoveryInitialInterval, "Initial backoff before the first background OIDC discovery retry when oidc-lazy-discovery is enabled; doubles after each attempt up to oidc-lazy-discovery-max-interval")
+	flagSet.Duration("oidc-lazy-discovery-max-interval", DefaultOIDCLazyDiscoveryMaxInterval, "Maximum backoff between background OIDC discovery retries when oidc-lazy-discovery is enabled")
 	flagSet.String("oidc-jwks-url", "", "OpenID Connect JWKS URL (ie: https://www.googleapis.com/oauth2/v3/certs)")
 	flagSet.String("oidc-groups-claim", OIDCGroupsClaim, "which OIDC claim contains the user groups")
 	flagSet.String("oidc-email-claim", OIDCEmailClaim, "which OIDC claim contains the user's email")
@@ -723,6 +729,9 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		InsecureSkipIssuerVerification: &l.InsecureOIDCSkipIssuerVerification,
 		InsecureSkipNonce:              &l.InsecureOIDCSkipNonce,
 		SkipDiscovery:                  &l.SkipOIDCDiscovery,
+		LazyDiscovery:                  &l.OIDCLazyDiscovery,
+		LazyDiscoveryInitialInterval:   l.OIDCLazyDiscoveryInitialInterval,
+		LazyDiscoveryMaxInterval:       l.OIDCLazyDiscoveryMaxInterval,
 		JwksURL:                        l.OIDCJwksURL,
 		UserIDClaim:                    l.UserIDClaim,
 		EmailClaim:                     l.OIDCEmailClaim,
