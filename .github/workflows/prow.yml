@@ -1,0 +1,50 @@
+name: Prow
+
+on:
+  issue_comment:
+    types: [created]
+  issues:
+    types: [opened, reopened, labeled, unlabeled]
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review, labeled, unlabeled]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  public-commands:
+    if: github.event_name == 'issue_comment'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: oauth2-proxy/prow-github-actions@c5ba2c6994ab70e129b5d028ba885f02ba44db65 # main
+      with:
+        prow-commands: /assign /unassign /area /kind /provider /help
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  review-commands:
+    if: github.event_name == 'issue_comment' && github.event.issue.pull_request != null
+    runs-on: ubuntu-latest
+    steps:
+    - uses: oauth2-proxy/prow-github-actions@c5ba2c6994ab70e129b5d028ba885f02ba44db65 # main
+      with:
+        prow-commands: /lgtm
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  issue-label-requirements:
+    if: github.event_name == 'issues'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: oauth2-proxy/prow-github-actions@c5ba2c6994ab70e129b5d028ba885f02ba44db65 # main
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  pull-request-labels:
+    if: github.event_name == 'pull_request_target'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: oauth2-proxy/prow-github-actions@c5ba2c6994ab70e129b5d028ba885f02ba44db65 # main
+      with:
+        jobs: lgtm
+        github-token: ${{ secrets.GITHUB_TOKEN }}
