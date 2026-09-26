@@ -9,9 +9,10 @@ import (
 )
 
 const (
-	XForwardedProto = "X-Forwarded-Proto"
-	XForwardedHost  = "X-Forwarded-Host"
-	XForwardedURI   = "X-Forwarded-Uri"
+	XForwardedProto  = "X-Forwarded-Proto"
+	XForwardedHost   = "X-Forwarded-Host"
+	XForwardedURI    = "X-Forwarded-Uri"
+	XForwardedMethod = "X-Forwarded-Method"
 )
 
 // GetRequestProto returns the request scheme or X-Forwarded-Proto if present
@@ -43,6 +44,16 @@ func GetRequestURI(req *http.Request) string {
 		uri = req.URL.RequestURI()
 	}
 	return uri
+}
+
+// GetRequestMethod returns the request method or X-Forwarded-Method if present
+// and the request came from a trusted reverse proxy.
+func GetRequestMethod(req *http.Request) string {
+	method := req.Header.Get(XForwardedMethod)
+	if !CanTrustForwardedHeaders(req) || method == "" {
+		return req.Method
+	}
+	return method
 }
 
 // GetRequestPath returns the request URI or X-Forwarded-Uri if present and the

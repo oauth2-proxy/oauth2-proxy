@@ -33,6 +33,7 @@
 
 ## Changes since v7.15.3
 
+- [#3505](https://github.com/oauth2-proxy/oauth2-proxy/pull/3505) fix: respect `skip-auth-preflight` in forward auth / API mode via `X-Forwarded-Method`
 - [#3493](https://github.com/oauth2-proxy/oauth2-proxy/pull/3493) chore(deps): update gomod @tuunit
 
 # V7.15.3
