@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.4
 
+- Fix leading-dot cookie domains not matching their apex hosts
+
 # V7.15.4
 
 ## Release Highlights

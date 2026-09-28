@@ -80,6 +80,17 @@ var _ = Describe("Cookie Tests", func() {
 				cookieDomains:  []string{".cookies.wrong", ".cookies.false"},
 				expectedOutput: "",
 			}),
+			Entry("a leading-dot domain matches its apex Host header", getCookieDomainTableInput{
+				host:           "cookies.test",
+				cookieDomains:  []string{".cookies.test"},
+				expectedOutput: ".cookies.test",
+			}),
+			Entry("a leading-dot domain matches its apex X-Forwarded-Host header", getCookieDomainTableInput{
+				host:           "backend.cookies.internal",
+				xForwardedHost: "cookies.test",
+				cookieDomains:  []string{".cookies.test"},
+				expectedOutput: ".cookies.test",
+			}),
 		)
 	})
 
