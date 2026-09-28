@@ -78,13 +78,14 @@ func Test_splitCookie(t *testing.T) {
 			Value: strings.Repeat("a", 50000),
 		},
 		"With short name and attributes": {
-			Name:     "short",
-			Value:    strings.Repeat("v", 10000),
-			Path:     "/path",
-			Domain:   "x.y.z",
-			Secure:   true,
-			HttpOnly: true,
-			SameSite: http.SameSiteLaxMode,
+			Name:        "short",
+			Value:       strings.Repeat("v", 10000),
+			Path:        "/path",
+			Domain:      "x.y.z",
+			Secure:      true,
+			HttpOnly:    true,
+			SameSite:    http.SameSiteLaxMode,
+			Partitioned: true,
 		},
 		"With max length name and attributes": {
 			Name:     strings.Repeat("n", 256),
@@ -100,6 +101,7 @@ func Test_splitCookie(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			splitCookies := splitCookie(tc)
 			for i, cookie := range splitCookies {
+				assert.Equal(t, tc.Partitioned, cookie.Partitioned)
 				if i < len(splitCookies)-1 {
 					assert.Equal(t, 4000, len(cookie.String()))
 				} else {

@@ -77,14 +77,15 @@ func (s *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) error {
 	for _, c := range req.Cookies() {
 		if cookieNameRegex.MatchString(c.Name) {
 			sessionCookieOptions := &pkgcookies.CookieOptions{
-				Name:       c.Name,
-				Value:      "",
-				Domains:    s.Cookie.Domains,
-				Expiration: time.Hour * -1,
-				SameSite:   s.Cookie.SameSite,
-				Path:       s.Cookie.Path,
-				HTTPOnly:   s.Cookie.HTTPOnly,
-				Secure:     s.Cookie.Secure,
+				Name:        c.Name,
+				Value:       "",
+				Domains:     s.Cookie.Domains,
+				Expiration:  time.Hour * -1,
+				SameSite:    s.Cookie.SameSite,
+				Path:        s.Cookie.Path,
+				HTTPOnly:    s.Cookie.HTTPOnly,
+				Secure:      s.Cookie.Secure,
+				Partitioned: s.Cookie.Partitioned,
 			}
 			clearCookie := pkgcookies.MakeCookieFromOptions(req, sessionCookieOptions)
 
@@ -143,14 +144,15 @@ func (s *SessionStore) makeSessionCookie(req *http.Request, value []byte, now ti
 		}
 	}
 	sessionCookieOptions := &pkgcookies.CookieOptions{
-		Name:       s.Cookie.Name,
-		Value:      strValue,
-		Domains:    s.Cookie.Domains,
-		Expiration: s.Cookie.Expire,
-		SameSite:   s.Cookie.SameSite,
-		Path:       s.Cookie.Path,
-		HTTPOnly:   s.Cookie.HTTPOnly,
-		Secure:     s.Cookie.Secure,
+		Name:        s.Cookie.Name,
+		Value:       strValue,
+		Domains:     s.Cookie.Domains,
+		Expiration:  s.Cookie.Expire,
+		SameSite:    s.Cookie.SameSite,
+		Path:        s.Cookie.Path,
+		HTTPOnly:    s.Cookie.HTTPOnly,
+		Secure:      s.Cookie.Secure,
+		Partitioned: s.Cookie.Partitioned,
 	}
 	c := pkgcookies.MakeCookieFromOptions(req, sessionCookieOptions)
 	if len(c.String()) > maxCookieLength {
@@ -266,17 +268,18 @@ func joinCookies(cookies []*http.Cookie, cookieName string) (*http.Cookie, error
 
 func copyCookie(c *http.Cookie) *http.Cookie {
 	return &http.Cookie{
-		Name:       c.Name,
-		Value:      c.Value,
-		Path:       c.Path,
-		Domain:     c.Domain,
-		Expires:    c.Expires,
-		RawExpires: c.RawExpires,
-		MaxAge:     c.MaxAge,
-		Secure:     c.Secure,
-		HttpOnly:   c.HttpOnly,
-		Raw:        c.Raw,
-		Unparsed:   c.Unparsed,
-		SameSite:   c.SameSite,
+		Name:        c.Name,
+		Value:       c.Value,
+		Path:        c.Path,
+		Domain:      c.Domain,
+		Expires:     c.Expires,
+		RawExpires:  c.RawExpires,
+		MaxAge:      c.MaxAge,
+		Secure:      c.Secure,
+		HttpOnly:    c.HttpOnly,
+		Raw:         c.Raw,
+		Unparsed:    c.Unparsed,
+		SameSite:    c.SameSite,
+		Partitioned: c.Partitioned,
 	}
 }

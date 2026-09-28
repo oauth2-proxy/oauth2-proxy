@@ -85,10 +85,11 @@ var _ = Describe("Cookie Tests", func() {
 
 	Context("MakeCookieFromOptions", func() {
 		type makeCookieFromOptionsTableInput struct {
-			host           string
-			opts           CookieOptions
-			now            time.Time
-			expectedOutput int
+			host                string
+			opts                CookieOptions
+			now                 time.Time
+			expectedOutput      int
+			expectedPartitioned bool
 		}
 
 		validName := "_oauth2_proxy"
@@ -97,7 +98,7 @@ var _ = Describe("Cookie Tests", func() {
 		now := time.Now()
 		var expectedMaxAge int
 
-		DescribeTable("should return cookies with or without expiration",
+		DescribeTable("should return cookies with the requested options",
 			func(in makeCookieFromOptionsTableInput) {
 				req, err := http.NewRequest(
 					http.MethodGet,
@@ -106,22 +107,26 @@ var _ = Describe("Cookie Tests", func() {
 				)
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(MakeCookieFromOptions(req, &in.opts).MaxAge).To(Equal(in.expectedOutput))
+				cookie := MakeCookieFromOptions(req, &in.opts)
+				Expect(cookie.MaxAge).To(Equal(in.expectedOutput))
+				Expect(cookie.Partitioned).To(Equal(in.expectedPartitioned))
 			},
 			Entry("persistent cookie", makeCookieFromOptionsTableInput{
 				host: "www.cookies.test",
 				opts: CookieOptions{
-					Name:       validName,
-					Value:      "1",
-					Domains:    domains,
-					Expiration: 15 * time.Minute,
-					SameSite:   "",
-					Path:       "",
-					HTTPOnly:   false,
-					Secure:     true,
+					Name:        validName,
+					Value:       "1",
+					Domains:     domains,
+					Expiration:  15 * time.Minute,
+					SameSite:    "",
+					Path:        "",
+					HTTPOnly:    false,
+					Secure:      true,
+					Partitioned: true,
 				},
-				now:            now,
-				expectedOutput: int((15 * time.Minute).Seconds()),
+				now:                 now,
+				expectedOutput:      int((15 * time.Minute).Seconds()),
+				expectedPartitioned: true,
 			}),
 			Entry("persistent cookie to be cleared", makeCookieFromOptionsTableInput{
 				host: "www.cookies.test",

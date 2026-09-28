@@ -27,6 +27,10 @@ func validateCookie(o options.Cookie) []string {
 		msgs = append(msgs, fmt.Sprintf("cookie_samesite (%q) must be one of ['', 'lax', 'strict', 'none']", o.SameSite))
 	}
 
+	if o.Partitioned && !o.Secure {
+		msgs = append(msgs, "cookie_partitioned=true requires cookie_secure=true")
+	}
+
 	// Sort cookie domains by length, so that we try longer (and more specific) domains first
 	sort.Slice(o.Domains, func(i, j int) bool {
 		return len(o.Domains[i]) > len(o.Domains[j])
