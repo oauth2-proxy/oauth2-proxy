@@ -1,6 +1,7 @@
 package oidc
 
 import (
+	"log/slog"
 	"testing"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
@@ -9,7 +10,7 @@ import (
 )
 
 func TestOIDCSuite(t *testing.T) {
-	logger.SetOutput(GinkgoWriter)
+	logger.Setup(slog.LevelDebug, "text", GinkgoWriter, GinkgoWriter)
 
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "OIDC")

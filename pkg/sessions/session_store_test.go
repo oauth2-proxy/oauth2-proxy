@@ -3,6 +3,7 @@ package sessions_test
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"log/slog"
 	"testing"
 	"time"
 
@@ -17,8 +18,7 @@ import (
 )
 
 func TestSessionStore(t *testing.T) {
-	logger.SetOutput(GinkgoWriter)
-	logger.SetErrOutput(GinkgoWriter)
+	logger.Setup(slog.LevelDebug, "text", GinkgoWriter, GinkgoWriter)
 
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "SessionStore")

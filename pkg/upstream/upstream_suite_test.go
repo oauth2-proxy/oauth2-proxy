@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -28,8 +29,7 @@ var (
 )
 
 func TestUpstreamSuite(t *testing.T) {
-	logger.SetOutput(GinkgoWriter)
-	logger.SetErrOutput(GinkgoWriter)
+	logger.Setup(slog.LevelDebug, "text", GinkgoWriter, GinkgoWriter)
 	log.SetOutput(GinkgoWriter)
 
 	RegisterFailHandler(Fail)

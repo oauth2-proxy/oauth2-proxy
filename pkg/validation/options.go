@@ -75,7 +75,7 @@ func Validate(o *options.Options) error {
 	redirectURL, msgs = parseURL(o.RawRedirectURL, "redirect", msgs)
 	o.SetRedirectURL(redirectURL)
 	if o.RawRedirectURL == "" && !o.Cookie.Secure && !o.ReverseProxy {
-		logger.Print("WARNING: no explicit redirect URL: redirects will default to insecure HTTP")
+		logger.Warn("no explicit redirect URL: redirects will default to insecure HTTP")
 	}
 
 	msgs = append(msgs, validateUpstreams(o.UpstreamServers)...)
@@ -108,7 +108,7 @@ func parseSignatureKey(o *options.Options, msgs []string) []string {
 		return msgs
 	}
 
-	logger.Print("WARNING: `--signature-key` is deprecated. It will be removed in a future release")
+	logger.Warn("`--signature-key` is deprecated. It will be removed in a future release")
 
 	components := strings.Split(o.SignatureKey, ":")
 	if len(components) != 2 {

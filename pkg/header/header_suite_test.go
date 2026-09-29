@@ -1,6 +1,7 @@
 package header
 
 import (
+	"log/slog"
 	"os"
 	"path"
 	"testing"
@@ -15,8 +16,7 @@ var (
 )
 
 func TestHeaderSuite(t *testing.T) {
-	logger.SetOutput(GinkgoWriter)
-	logger.SetErrOutput(GinkgoWriter)
+	logger.Setup(slog.LevelDebug, "text", GinkgoWriter, GinkgoWriter)
 
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Header")

@@ -49,7 +49,7 @@ func (p *NextcloudProvider) EnrichSession(ctx context.Context, s *sessions.Sessi
 		Do().
 		UnmarshalSimpleJSON()
 	if err != nil {
-		logger.Errorf("failed making request %v", err)
+		logger.ErrMsgf("failed making request %v", err)
 		return err
 	}
 
