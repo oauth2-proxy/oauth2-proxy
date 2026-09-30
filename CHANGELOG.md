@@ -9,6 +9,7 @@
 ## Changes since v7.15.4
 
 - [#3546](https://github.com/oauth2-proxy/oauth2-proxy/pull/3546) fix: strip the port from the request host when matching cookie domains @kirilju
+- [#3547](https://github.com/oauth2-proxy/oauth2-proxy/pull/3547) fix: refresh additional claims for OIDC and MS Entra ID providers and properly populate additional claims during login (@Apollo3zehn)
 
 # V7.15.4
 
