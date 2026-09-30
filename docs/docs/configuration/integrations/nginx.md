@@ -155,12 +155,11 @@ location @oauth2_signin {
 
 #### API / Machine routes (no redirect)
 
-For API endpoints where clients expect a 401/403 status code (not a redirect):
+For API endpoints where clients expect a 401/403 status code (not a redirect), reuse the same `auth_request` header forwarding configuration from the main example as needed for your backend:
 
 ```nginx
 location /api/ {
   auth_request /oauth2/auth;
-  error_page 401 =401;  # Pass through the 401 status
   proxy_pass http://backend/;
 }
 ```
