@@ -60,6 +60,14 @@ func MakeCookieFromOptions(req *http.Request, opts *CookieOptions) *http.Cookie 
 // by checking the X-Fowarded-Host and host header of an an http request
 func GetCookieDomain(req *http.Request, cookieDomains []string) string {
 	host := requestutil.GetRequestHost(req)
+	// Strip any port before matching. A reverse proxy that rewrites the Host
+	// header to the upstream's address (for example Traefik's Errors
+	// middleware pointing at a Service on port 443) sends "host:port", which
+	// would never suffix-match a configured domain. warnInvalidDomain below
+	// already normalises the host this way.
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		host = h
+	}
 	for _, domain := range cookieDomains {
 		if strings.HasSuffix(host, domain) {
 			return domain

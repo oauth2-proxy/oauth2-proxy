@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.4
 
+- [#3546](https://github.com/oauth2-proxy/oauth2-proxy/pull/3546) fix: strip the port from the request host when matching cookie domains @kirilju
+
 # V7.15.4
 
 ## Release Highlights
