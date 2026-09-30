@@ -200,6 +200,42 @@ var _ = Describe("Util Suite", func() {
 		})
 	})
 
+	Context("GetRequestMethod", func() {
+		Context("trusted forwarded headers are disabled", func() {
+			BeforeEach(func() {
+				req = middleware.AddRequestScope(req, &middleware.RequestScope{})
+			})
+
+			It("returns the request method", func() {
+				Expect(util.GetRequestMethod(req)).To(Equal(http.MethodGet))
+			})
+
+			It("ignores X-Forwarded-Method and returns the request method", func() {
+				req.Header.Add("X-Forwarded-Method", http.MethodOptions)
+				Expect(util.GetRequestMethod(req)).To(Equal(http.MethodGet))
+			})
+		})
+
+		Context("trusted forwarded headers are enabled", func() {
+			BeforeEach(func() {
+				req.RemoteAddr = "127.0.0.1:4180"
+				req = middleware.AddRequestScope(req, &middleware.RequestScope{
+					ReverseProxy:   true,
+					TrustedProxies: trustedProxies,
+				})
+			})
+
+			It("returns the request method if X-Forwarded-Method is not present", func() {
+				Expect(util.GetRequestMethod(req)).To(Equal(http.MethodGet))
+			})
+
+			It("returns the X-Forwarded-Method when present", func() {
+				req.Header.Add("X-Forwarded-Method", http.MethodOptions)
+				Expect(util.GetRequestMethod(req)).To(Equal(http.MethodOptions))
+			})
+		})
+	})
+
 	Context("CanTrustForwardedHeaders", func() {
 		It("returns false when no scope is present", func() {
 			Expect(util.CanTrustForwardedHeaders(req)).To(BeFalse())
