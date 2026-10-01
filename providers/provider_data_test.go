@@ -109,6 +109,16 @@ var (
 	minimalIDToken = idTokenClaims{
 		RegisteredClaims: registeredClaims,
 	}
+
+	nestedClaimIDToken = idTokenClaims{
+		Name:  "Jane Dobbs",
+		Email: "janed@me.com",
+		Address: map[string]interface{}{
+			"locality": "Bangalore",
+		},
+		Verified:         &verified,
+		RegisteredClaims: registeredClaims,
+	}
 )
 
 type idTokenClaims struct {
@@ -118,6 +128,7 @@ type idTokenClaims struct {
 	Picture  string      `json:"picture,omitempty"`
 	Groups   interface{} `json:"groups,omitempty"`
 	Roles    interface{} `json:"roles,omitempty"`
+	Address  interface{} `json:"address,omitempty"`
 	Verified *bool       `json:"email_verified,omitempty"`
 	Nonce    string      `json:"nonce,omitempty"`
 	jwt.RegisteredClaims
@@ -232,6 +243,7 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 		UserClaim                string
 		EmailClaim               string
 		GroupsClaim              string
+		PreferredUsernameClaim   string
 		SkipClaimsFromProfileURL bool
 		SetProfileURL            bool
 		ExpectedError            error
@@ -406,6 +418,59 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 				PreferredUsername: "Jane Dobbs",
 			},
 		},
+		"Preferred Username Claim Switched": {
+			IDToken:                defaultIDToken,
+			AllowUnverified:        true,
+			UserClaim:              "sub",
+			EmailClaim:             "email",
+			GroupsClaim:            "groups",
+			PreferredUsernameClaim: "phone_number",
+			ExpectedSession: &sessions.SessionState{
+				User:              "123456789",
+				Email:             "janed@me.com",
+				Groups:            []string{"test:a", "test:b"},
+				PreferredUsername: "+4798765432",
+			},
+		},
+		"Preferred Username Claim Non Existent": {
+			IDToken:                defaultIDToken,
+			AllowUnverified:        true,
+			UserClaim:              "sub",
+			EmailClaim:             "email",
+			GroupsClaim:            "groups",
+			PreferredUsernameClaim: "aksjdfhjksadh",
+			ExpectedSession: &sessions.SessionState{
+				User:   "123456789",
+				Email:  "janed@me.com",
+				Groups: []string{"test:a", "test:b"},
+			},
+		},
+		"Preferred Username Claim Switched to Non String": {
+			IDToken:                defaultIDToken,
+			AllowUnverified:        true,
+			UserClaim:              "sub",
+			EmailClaim:             "email",
+			GroupsClaim:            "groups",
+			PreferredUsernameClaim: "roles",
+			ExpectedSession: &sessions.SessionState{
+				User:              "123456789",
+				Email:             "janed@me.com",
+				Groups:            []string{"test:a", "test:b"},
+				PreferredUsername: "[\"test:c\",\"test:d\"]",
+			},
+		},
+		"Preferred Username Claim Nested Path": {
+			IDToken:                nestedClaimIDToken,
+			AllowUnverified:        true,
+			UserClaim:              "sub",
+			EmailClaim:             "email",
+			PreferredUsernameClaim: "address.locality",
+			ExpectedSession: &sessions.SessionState{
+				User:              "123456789",
+				Email:             "janed@me.com",
+				PreferredUsername: "Bangalore",
+			},
+		},
 		"Request claims from ProfileURL": {
 			IDToken:                minimalIDToken,
 			SetProfileURL:          true,
@@ -474,6 +539,10 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 			provider.UserClaim = tc.UserClaim
 			provider.EmailClaim = tc.EmailClaim
 			provider.GroupsClaim = tc.GroupsClaim
+			provider.PreferredUsernameClaim = tc.PreferredUsernameClaim
+			if provider.PreferredUsernameClaim == "" {
+				provider.PreferredUsernameClaim = options.OIDCPreferredUsernameClaim
+			}
 			provider.SkipClaimsFromProfileURL = tc.SkipClaimsFromProfileURL
 			provider.AdditionalClaims = tc.AdditionalClaims
 
@@ -490,6 +559,15 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 			g.Expect(profileURLCalled).To(Equal(tc.ExpectProfileURLCalled))
 		})
 	}
+}
+
+func TestProviderData_setProviderDefaultsPreferredUsernameClaim(t *testing.T) {
+	g := NewWithT(t)
+
+	p := &ProviderData{}
+	p.setProviderDefaults(providerDefaults{})
+
+	g.Expect(p.PreferredUsernameClaim).To(Equal(options.OIDCPreferredUsernameClaim))
 }
 
 func TestProviderData_checkNonce(t *testing.T) {

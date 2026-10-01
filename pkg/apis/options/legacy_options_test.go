@@ -1046,6 +1046,28 @@ var _ = Describe("Legacy Options", func() {
 			GoogleServiceAccountJSON: "test.json",
 			GoogleGroupsLegacy:       []string{"1", "2"},
 		}
+
+		preferredUsernameClaimLegacyProvider := LegacyProvider{
+			ClientID:                   clientID,
+			ProviderType:               "oidc",
+			OIDCPreferredUsernameClaim: "name",
+		}
+
+		preferredUsernameClaimProvider := Provider{
+			ID:       "oidc=" + clientID,
+			ClientID: clientID,
+			Type:     "oidc",
+			OIDCConfig: OIDCOptions{
+				SkipDiscovery:                  ptr.To(false),
+				InsecureSkipNonce:              ptr.To(false),
+				InsecureAllowUnverifiedEmail:   ptr.To(false),
+				InsecureSkipIssuerVerification: ptr.To(false),
+				PreferredUsernameClaim:         "name",
+			},
+			LoginURLParameters:       defaultURLParams,
+			UseSystemTrustStore:      ptr.To(false),
+			SkipClaimsFromProfileURL: ptr.To(false),
+		}
 		DescribeTable("convertLegacyProviders",
 			func(in *convertProvidersTableInput) {
 				providers, err := in.legacyProvider.convert()
@@ -1082,6 +1104,11 @@ var _ = Describe("Legacy Options", func() {
 			Entry("with legacy provider config", &convertProvidersTableInput{
 				legacyProvider:    legacyConfigLegacyProvider,
 				expectedProviders: Providers{internalConfigProvider},
+				errMsg:            "",
+			}),
+			Entry("with preferred username claim", &convertProvidersTableInput{
+				legacyProvider:    preferredUsernameClaimLegacyProvider,
+				expectedProviders: Providers{preferredUsernameClaimProvider},
 				errMsg:            "",
 			}),
 		)
