@@ -1,35 +1,155 @@
-go:
+area/core:
   - changed-files:
     - any-glob-to-any-file:
-      - '**/*.go'
+      - '*.go'
+      - 'pkg/app/**'
+      - 'pkg/encryption/**'
+      - 'pkg/header/**'
+      - 'pkg/ip/**'
+      - 'pkg/logger/**'
+      - 'pkg/middleware/**'
+      - 'pkg/requests/**'
+      - 'pkg/util/**'
+      - 'pkg/version/**'
+      - 'pkg/watcher/**'
 
-docs:
+area/authentication:
   - changed-files:
     - any-glob-to-any-file:
+      - 'pkg/authentication/**'
+
+area/session:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'pkg/sessions/**'
+
+area/cookies:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'pkg/cookies/**'
+
+area/upstream:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'pkg/upstream/**'
+
+area/proxy:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'pkg/proxyhttp/**'
+
+area/api:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'pkg/apis/**'
+
+area/configuration:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'pkg/validation/**'
+      - 'contrib/**'
+
+area/provider:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'providers/**'
+      - 'pkg/providers/**'
+
+area/documentation:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'docs/**'
       - '**/*.md'
 
-changelog:
+area/ci:
   - changed-files:
     - any-glob-to-any-file:
-      - 'CHAGELOG.md'
+      - '.github/**'
+      - '.devcontainer/**'
 
-tests:
+area/testing:
   - changed-files:
     - any-glob-to-any-file:
       - '**/*_test.go'
+      - 'testdata/**'
 
-provider:
-  - changed-files:
-    - any-glob-to-any-file:
-      - 'providers/**/*'
-
-dependencies:
-- changed-files:
-  - any-glob-to-any-file:
-    - 'go.mod'
-    - 'go.sum'
-
-docker:
+area/docker:
   - changed-files:
     - any-glob-to-any-file:
       - '**/Dockerfile'
+      - 'contrib/local-environment/**'
+
+area/release:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '.github/workflows/create-release.yml'
+      - '.github/workflows/nightly.yml'
+      - '.github/workflows/publish-release.yml'
+
+provider/adfs:
+  - changed-files:
+    - any-glob-to-any-file: 'providers/adfs.*'
+
+provider/azure:
+  - changed-files:
+    - any-glob-to-any-file: 'providers/azure.*'
+
+provider/bitbucket:
+  - changed-files:
+    - any-glob-to-any-file: 'providers/bitbucket.*'
+
+provider/cidaas:
+  - changed-files:
+    - any-glob-to-any-file: 'providers/cidaas.*'
+
+provider/digitalocean:
+  - changed-files:
+    - any-glob-to-any-file: 'providers/digitalocean.*'
+
+provider/facebook:
+  - changed-files:
+    - any-glob-to-any-file: 'providers/facebook.*'
+
+provider/gitea:
+  - changed-files:
+    - any-glob-to-any-file: 'providers/gitea.*'
+
+provider/github:
+  - changed-files:
+    - any-glob-to-any-file: 'providers/github.*'
+
+provider/gitlab:
+  - changed-files:
+    - any-glob-to-any-file: 'providers/gitlab.*'
+
+provider/google:
+  - changed-files:
+    - any-glob-to-any-file: 'providers/google.*'
+
+provider/keycloak:
+  - changed-files:
+    - any-glob-to-any-file: 'providers/keycloak*.*'
+
+provider/linkedin:
+  - changed-files:
+    - any-glob-to-any-file: 'providers/linkedin.*'
+
+provider/logingov:
+  - changed-files:
+    - any-glob-to-any-file: 'providers/logingov.*'
+
+provider/ms-entra-id:
+  - changed-files:
+    - any-glob-to-any-file: 'providers/ms_entra_id.*'
+
+provider/nextcloud:
+  - changed-files:
+    - any-glob-to-any-file: 'providers/nextcloud.*'
+
+provider/oidc:
+  - changed-files:
+    - any-glob-to-any-file: 'providers/oidc.*'
+
+provider/srht:
+  - changed-files:
+    - any-glob-to-any-file: 'providers/srht.*'

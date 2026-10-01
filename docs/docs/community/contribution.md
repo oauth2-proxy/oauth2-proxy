@@ -1,111 +1,86 @@
 ---
 id: contribution
-title: Contribution Guide
+title: Becoming a Contributor
 ---
 
-We track bugs and issues using Github.
+OAuth2 Proxy protects applications across thousands of production environments. We see over half a billion container pulls a year on [Quay.io](https://quay.io/repository/oauth2-proxy/oauth2-proxy). Its a small project with a large impact.
 
-If you find a bug, please open an Issue. When opening an Issue or Pull Request please follow the preconfigured template and take special note of the checkboxes.
+We are run by a small volunteer maintainer group. Our day-to-day focus is keeping the lights on: reviewing security fixes, patching CVEs, and resolving critical bugs. To build beyond maintenance mode and ship key architectural milestones, we actively need new contributors.
 
-If you want to fix a bug, add a new feature or extend existing functionality, please create a fork, create a feature branch and open a PR back to this repo.
-Please mention open bug issue number(s) within your PR if applicable.
+## Where we need help
 
-## AI use
+You do not need deep Go internals experience to make a meaningful difference. The areas below represent our highest community needs today.
 
-OAuth2 Proxy is built by humans for humans. Authentication and authorization
-depend on trust between people and systems. That trust also matters in how we
-work together.
+### Documentation
 
-You may use AI tools when contributing, but YOU must not replace human
-communication or judgment using those tools. You must understand, test, and 
-review every AI-assisted change yourself. Write a clear, concise pull request 
-description and respond to review comments yourself.
+Clear docs save hours for thousands of operators. We need help with:
 
-Listing AI tooling as a co-author, co-signing commits using an AI tool, or 
-using the `assisted-by`, `co-developed` or similar commit trailer is not allowed.
+- **How-to guides**: Practical step-by-step tutorials for real production deployments.
+- **Integration guides**: Setting up OAuth2 Proxy with popular reverse proxies and load balancers (e.g., NGINX, Traefik, Caddy, Kubernetes ingress controllers and more).
+- **Structure and examples**: Improving overall navigation, fixing stale options and adding verified configuration examples for common setups.
+- **Blog Posts**: Use-case / config show cases with demonstrated impact of the project.
 
-The project maintainers will review contributions regardless of their origin. 
-But we may close issues or pull requests without comment when they appear to be 
-unreviewed automated output, low-quality slop, or contain essay-length descriptions 
-or comments that waste reviewer time.
+### Issue and PR triage
 
-If a contribution does not show the care needed for a high-quality change,
-maintainers will not spend time reviewing it.
+Review bandwidth is our biggest bottleneck. You can help triage incoming issues and pull requests by:
 
-# Go version
+- Reproducing reported bugs against current releases.
+- Asking for missing logs, minimal reproduction configs, and provider details.
+- Reviewing pull requests and verifying their test coverage.
+- Applying appropriate categorization labels with Prow bot commands.
+- Feel free to get in touch to get an idea where the most help is needed.
 
-We suggest using [Visual Studio Code](https://code.visualstudio.com/docs/languages/go) with the official [Go for Visual Studio Code](https://marketplace.visualstudio.com/items?itemName=golang.go) extension.
+### End-to-end (E2E) testing
 
-See the `go.mod` file in the root of this repository for the version of Go used by this project.
-You can follow [the installation guide for Go](https://go.dev/doc/install),
-and you can find this specific Go version on [the Go downloads page](https://go.dev/dl/).
+We want to revive our automated end-to-end test suite. We need help building and verifying those tests that spin up providers (Keycloak, Dex, mock OIDC servers) and upstream services to verify session lifecycles, cookie handling and header injection end-to-end.
 
-# Preparing your fork
-Clone your fork, create a feature branch and update the depedencies to get started.
-```bash
-git clone git@github.com:<YOUR_FORK>/oauth2-proxy
-cd oauth2-proxy
-git branch feature/<BRANCH_NAME>
-git push --set-upstream origin feature/<BRANCH_NAME>
-go mod download
-```
+## Automation and triage labels (Prow)
 
+We use [Prow GitHub Actions](https://github.com/cncf/prow-github-actions) for workflow automation and issue triage. Anyone can help classify issues and pull requests by leaving comment commands.
 
-# Testing / Debugging
-For starting oauth2-proxy locally open the debugging tab and create the `launch.json` and select `Go: Launch Package`.
+Each command must be on its own line in a comment:
 
-![Debugging Tab](/img/debug-tab.png)
-```json
-{
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "name": "Launch OAuth2 Proxy with Dex",
-            "type": "go",
-            "request": "launch",
-            "mode": "auto",
-            "program": "${workspaceFolder}",
-            "args": [
-                "--config",
-                // The following configuration contains settings for a locally deployed
-                // upstream and dex as an idetity provider
-                "contrib/local-environment/oauth2-proxy.cfg"
-            ]
-        },
-        {
-            "name": "Launch OAuth2 Proxy with Keycloak",
-            "type": "go",
-            "request": "launch",
-            "mode": "auto",
-            "program": "${workspaceFolder}",
-            "args": [
-                "--config",
-                // The following configuration contains settings for a locally deployed
-                // upstream and keycloak as an idetity provider
-                "contrib/local-environment/oauth2-proxy-keycloak.cfg"
-            ]
-        }
-    ]
-}
-```
+- `/kind <value>`: Classify the nature of the issue or PR.
+  - Allowed: `bug`, `enhancement`, `documentation`, `refactor`, `test`, `breaking-change`
+- `/area <value>`: Identify the component affected.
+  - Allowed: `core`, `authentication`, `authorization`, `session`, `cookies`, `upstream`, `proxy`, `provider`, `configuration`, `api`, `documentation`, `ci`, `testing`, `docker`, `release`, `security`
+- `/provider <value>`: Identify a specific identity provider implementation.
+  - Allowed: `adfs`, `azure`, `bitbucket`, `cidaas`, `digitalocean`, `facebook`, `gitea`, `github`, `gitlab`, `google`, `keycloak`, `linkedin`, `logingov`, `ms-entra-id`, `nextcloud`, `oidc`, `sourcehut`
+- `/assign` and `/unassign`: Claim or release ownership of an issue or PR.
+- `/help`: Add the `help wanted` label to signal that assistance is welcomed.
 
-Before you can start your local version of oauth2-proxy, you will have to use the provided docker compose files to start a local upstream service and identity provider. We suggest using [httpbin](https://hub.docker.com/r/kennethreitz/httpbin) as your upstream for testing as it allows for request and response introspection of all things HTTP.
+Pull requests require a valid `kind/<value>` label before they can merge. If you see an unclassified PR, help out by adding one with `/kind`.
 
-Inside the `contrib/local-environment` directory you can use the `Makefile` for
-starting different example setups:
+## Roadmap and project focus
 
-- Dex as your IdP: `make up` or `make down`
-- Dex as your IdP using the alpha-config: `make alpha-config-up`
-- Keycloak as your IdP: `make keycloak-up`
-- Dex as your IdP & nginx reverse proxy: `make nginx-up`
-- and many more...
+Understanding our current focus will help you align PRs with overall direction:
 
-Check out the `Makefile` to see what is available.
+### Maintenance baseline
 
-The username and password for all setups is usually `admin@example.com` and `password`.
+Because our maintainer capacity is limited, security patches and critical bug fixes always come first! Changes that keep the project secure, stable and compliant take priority in reviews. And therefore other PRs might stay open or unreviewed for a long time.
 
-The docker compose setups expose the services with a dynamic reverse DNS resolver: localtest.me
+### v8 focus
 
-- OAuth2 Proxy: http://oauth2-proxy.localtest.me:4180
-- Upstream: http://httpbin.localtest.me:8080
-- Dex: http://dex.localtest.me:5556
+The upcoming v8 major release modernizes configuration and observability:
+
+- **Structured YAML configuration**: Promoting the alpha YAML configuration to beta and stable. All ~160 configuration flags have been migrated from legacy TOML and CLI flags to a structured YAML schema.
+- **Expressive enums**: Replacing ambiguous boolean flags with speaking enum values that make intent clear.
+- **Structured contextual logging**: Adopting the `logr` abstraction with `zerolog` as the logging backend for consistent, structured log output across components in our codebase.
+
+### Midterm focus (v8 and beyond)
+
+Looking past v8, we want to align more closely with the official OAuth2 and OIDC specifications and simplify the architecture:
+
+- **Spec-driven development**: Tracking additions and missing features from current OAuth 2.0, OAuth 2.1, and OpenID Connect specifications.
+- **Expanded OAuth 2.0 flows**: Improving support for additional grant types and authorization flows.
+- **Generic OAuth 2.0 support**: Today, pure OAuth 2.0 without OIDC discovery is not guaranteed to work reliably. We plan to separate OAuth 2.0 and OIDC flows cleanly and introduce a generic OAuth 2.0 provider implementation.
+- **Clarifying project scope**: Clarifying what OAuth 2 Proxy is (an authentication proxy and identity forwarder) and what it is not (a full authorization policy engine). We would liek to remove unnecessary complexity.
+
+## Getting started
+
+Ready to contribute? Here is how to get involved:
+
+1. **Join the community call**: Find the meeting schedule and details on our [homepage](https://www.oauth2-proxy.dev).
+2. **Chat with us on Slack**: Join the `#oauth2-proxy` channel on the [CNCF Slack workspace](https://cloud-native.slack.com/archives/C098Y5URZ2N) (get an invite at [slack.cncf.io](https://slack.cncf.io/)).
+3. **Read the setup guide**: Check the repository [CONTRIBUTING.md](https://github.com/oauth2-proxy/oauth2-proxy/blob/master/CONTRIBUTING.md) for local development setup and our AI-use guidelines.
+4. **Pick an issue**: Look for issues with the `help wanted` or `good first issue` labels on GitHub, or jump into PR triage.

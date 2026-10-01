@@ -8,6 +8,7 @@ import (
 
 	ipapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/ip"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGetRealClientIPParser(t *testing.T) {
@@ -106,6 +107,93 @@ func TestXForwardedForClientIPParserIgnoresOthers(t *testing.T) {
 	assert.Equal(t, ip, net.ParseIP(expectedIPString))
 }
 
+func TestGetClientIPFromTrustedProxy(t *testing.T) {
+	parser, err := GetRealClientIPParser("X-Forwarded-For")
+	require.NoError(t, err)
+	trustedProxies, err := ParseNetSet([]string{"192.0.2.0/24", "2001:db8:1::/48"})
+	require.NoError(t, err)
+
+	tests := []struct {
+		name         string
+		headerValues []string
+		expectedIP   string
+		errString    string
+	}{
+		{"Ignores spoofed leftmost entry", []string{"10.0.0.5, 198.51.100.23"}, "198.51.100.23", ""},
+		{"Walks past trusted intermediate proxies", []string{"198.51.100.23, 192.0.2.20, 192.0.2.21"}, "198.51.100.23", ""},
+		{"Uses leftmost entry when entire chain is trusted", []string{"192.0.2.30, 192.0.2.20"}, "192.0.2.30", ""},
+		{"Repeated fields preserve chain order", []string{"10.0.0.5", "198.51.100.23, 192.0.2.20", "192.0.2.21"}, "198.51.100.23", ""},
+		{"Whitespace and IPv4 port", []string{" 198.51.100.23:1234 ,\t192.0.2.20:443 "}, "198.51.100.23", ""},
+		{"IPv6 client and proxies", []string{"2001:db8:2::23, 2001:db8:1::20"}, "2001:db8:2::23", ""},
+		{"IPv6 port and mixed chain", []string{" [2001:db8:2::23]:1234 , [2001:db8:1::20]:443, 192.0.2.20"}, "2001:db8:2::23", ""},
+		{"Stops at first untrusted hop", []string{"10.0.0.5, 198.51.100.22, 198.51.100.23, 192.0.2.20"}, "198.51.100.23", ""},
+		{"Ignores malformed entry beyond boundary", []string{"invalid, 198.51.100.23, 192.0.2.20"}, "198.51.100.23", ""},
+		{"Missing header", nil, "", ""},
+		{"Empty header", []string{""}, "", ""},
+		{"Whitespace only", []string{" \t"}, "", "unable to parse ip () from X-Forwarded-For header"},
+		{"Malformed rightmost hop", []string{"10.0.0.5, invalid"}, "", "unable to parse ip (invalid) from X-Forwarded-For header"},
+		{"Malformed relevant intermediate hop", []string{"10.0.0.5, invalid, 192.0.2.20"}, "", "unable to parse ip (invalid) from X-Forwarded-For header"},
+		{"Malformed leftmost in otherwise trusted chain", []string{"invalid, 192.0.2.20"}, "", "unable to parse ip (invalid) from X-Forwarded-For header"},
+		{"Empty intermediate hop", []string{"10.0.0.5,,192.0.2.20"}, "", "unable to parse ip () from X-Forwarded-For header"},
+		{"Empty last field", []string{"10.0.0.5", ""}, "", "unable to parse ip () from X-Forwarded-For header"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			req := &http.Request{Header: http.Header{}}
+			for _, value := range test.headerValues {
+				req.Header.Add("X-Forwarded-For", value)
+			}
+
+			clientIP, err := GetClientIPFromTrustedProxy(parser, req, trustedProxies)
+			if test.errString != "" {
+				assert.EqualError(t, err, test.errString)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, net.ParseIP(test.expectedIP), clientIP)
+		})
+	}
+}
+
+func TestGetClientIPFromTrustedProxyConfiguration(t *testing.T) {
+	xff, err := GetRealClientIPParser("X-Forwarded-For")
+	require.NoError(t, err)
+	realIP, err := GetRealClientIPParser("X-Real-IP")
+	require.NoError(t, err)
+	trustAll, err := ParseNetSet([]string{"0.0.0.0/0", "::/0"})
+	require.NoError(t, err)
+
+	tests := []struct {
+		name           string
+		parser         ipapi.RealClientIPParser
+		trustedProxies *NetSet
+		expectedIP     string
+		errString      string
+	}{
+		{"Nil parser", nil, trustAll, "", "real client IP parser is required"},
+		{"Nil trusted proxies", xff, nil, "", "trusted proxy list is required to parse X-Forwarded-For"},
+		{"Empty trusted proxies", xff, NewNetSet(), "2001:db8::23", ""},
+		{"Trust all retains leftmost compatibility", xff, trustAll, "10.0.0.5", ""},
+		{"Single value header", realIP, trustAll, "198.51.100.23", ""},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			req := &http.Request{Header: http.Header{
+				"X-Forwarded-For": {"10.0.0.5, 2001:db8::23"},
+				"X-Real-Ip":       {"198.51.100.23"},
+			}}
+			clientIP, err := GetClientIPFromTrustedProxy(test.parser, req, test.trustedProxies)
+			if test.errString != "" {
+				assert.EqualError(t, err, test.errString)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, net.ParseIP(test.expectedIP), clientIP)
+		})
+	}
+}
+
 func TestGetRemoteIP(t *testing.T) {
 	tests := []struct {
 		remoteAddr string
@@ -147,6 +235,8 @@ func TestGetRemoteIP(t *testing.T) {
 
 func TestGetClientString(t *testing.T) {
 	p := &xForwardedForClientIPParser{header: http.CanonicalHeaderKey("X-Forwarded-For")}
+	trustedProxies, err := ParseNetSet([]string{"192.0.2.0/24", "2001:db8:1::/48"})
+	require.NoError(t, err)
 
 	tests := []struct {
 		parser             ipapi.RealClientIPParser
@@ -155,7 +245,7 @@ func TestGetClientString(t *testing.T) {
 		expectedClient     string
 		expectedClientFull string
 	}{
-		// Should fail quietly, only printing warnings to the log
+		// Preserve transport-only output when no client address is available.
 		{nil, "", "", "", ""},
 		// Unix domain socket — no IP available
 		{nil, "@", "", "", ""},
@@ -164,6 +254,13 @@ func TestGetClientString(t *testing.T) {
 		{nil, "10.254.244.165:62750", "", "10.254.244.165", "10.254.244.165"},
 		// Parser is nil, the contents of X-Forwarded-For should be ignored in all cases.
 		{nil, "[2001:470:26:307:a5a1:1177:2ae3:e9c3]:48290", "127.0.0.1", "2001:470:26:307:a5a1:1177:2ae3:e9c3", "2001:470:26:307:a5a1:1177:2ae3:e9c3"},
+		{p, "192.0.2.10:443", "10.0.0.5, 198.51.100.23, 192.0.2.20", "198.51.100.23", "192.0.2.10 (198.51.100.23)"},
+		{p, "[2001:db8:1::10]:443", "[2001:db8:2::23]:1234, 2001:db8:1::20", "2001:db8:2::23", "2001:db8:1::10 (2001:db8:2::23)"},
+		{p, "192.0.2.10:443", "10.0.0.5, invalid, 192.0.2.20", "192.0.2.10", "192.0.2.10"},
+		{p, "192.0.2.10:443", "invalid, 198.51.100.23", "198.51.100.23", "192.0.2.10 (198.51.100.23)"},
+		{p, "192.0.2.10:443", "192.0.2.30, 192.0.2.20", "192.0.2.30", "192.0.2.10 (192.0.2.30)"},
+		{p, "@", "198.51.100.23, 192.0.2.20", "198.51.100.23", " (198.51.100.23)"},
+		{p, "@", "invalid", "", ""},
 	}
 
 	for _, test := range tests {
@@ -174,10 +271,10 @@ func TestGetClientString(t *testing.T) {
 			RemoteAddr: test.remoteAddr,
 		}
 
-		client := GetClientString(test.parser, req, false)
+		client := GetClientString(test.parser, req, trustedProxies, false)
 		assert.Equal(t, test.expectedClient, client)
 
-		clientFull := GetClientString(test.parser, req, true)
+		clientFull := GetClientString(test.parser, req, trustedProxies, true)
 		assert.Equal(t, test.expectedClientFull, clientFull)
 	}
 }

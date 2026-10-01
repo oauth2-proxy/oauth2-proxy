@@ -2,6 +2,7 @@ package providers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 
@@ -10,7 +11,6 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
-	k8serrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
 const (
@@ -142,7 +142,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 	errs = append(errs, p.compileLoginParams(providerConfig.LoginURLParameters)...)
 
 	if len(errs) > 0 {
-		return nil, k8serrors.NewAggregate(errs)
+		return nil, errors.Join(errs...)
 	}
 
 	// Make the OIDC options available to all providers that support it

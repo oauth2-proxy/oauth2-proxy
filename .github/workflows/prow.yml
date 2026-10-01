@@ -1,0 +1,52 @@
+name: Prow
+
+on:
+  issue_comment:
+    types: [created]
+  issues:
+    types: [opened, reopened, labeled, unlabeled]
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review, labeled, unlabeled]
+  push:
+    branches: [master]
+    paths: [.github/prow.yaml, .github/workflows/prow.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Keep every comment command; never interrupt a run while it is updating labels.
+concurrency:
+  group: prow-${{ github.event_name }}-${{ github.event.action }}-${{ github.event.comment.id || github.event.pull_request.number || github.event.issue.number || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  prow:
+    if: github.event_name != 'workflow_dispatch' && github.event_name != 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+      statuses: write
+    steps:
+    # Never check out or execute PR code in this privileged workflow.
+    - uses: cncf/prow-github-actions@187c5e3cd95a329c43448e1bdb3b1f5249232e44 # v3.0.1
+      with:
+        prow-commands: /assign /unassign /area /kind /provider /help ${{ github.event.issue.pull_request != null && '/lgtm' || '' }}
+        jobs: lgtm
+        github-token: ${{ github.token }}
+
+  label-sync:
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+    - uses: cncf/prow-github-actions@187c5e3cd95a329c43448e1bdb3b1f5249232e44 # v3.0.1
+      with:
+        jobs: label-sync
+        github-token: ${{ github.token }}
