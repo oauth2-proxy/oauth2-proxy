@@ -17,11 +17,12 @@ The Bitbucket provider `--bitbucket-team` flag got deprecated and we added `--bi
 
 Additionally refer to OAuth client configuration for Bitbucket provider in the [documentation](https://oauth2-proxy.github.io/oauth2-proxy/configuration/providers/bitbucket/). for changes in the scopes (Account>Read) is now required if you restrict by workspace.
 
-## Breaking Changes
+## Critical Fixes
 
+For a small subset of deployments these fixes might be breaking change for the sake of fixing trust/security boundaries.
 
 ### (Critical) [GHSA-63jm-59jj-478j](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-63jm-59jj-478j) Authentication bypass via inconsistent skip-auth path interpretation
-**Skip-auth path matching is now stricter.** `--skip-auth-route` and
+**Skip-auth path matching is now stricter**: `--skip-auth-route` and
 `--skip-auth-regex` no longer grant exemptions for invalid or ambiguous paths,
 even when a positive or negated rule would otherwise match. This includes dot
 segments, repeated slashes (including leading `//`), semicolons, backslashes,
@@ -40,6 +41,26 @@ trailing-slash distinctions, and unambiguous escaped characters retain their
 matching behavior. The fix does not rewrite upstream request targets or
 unconditionally reject authenticated requests; existing router behavior and
 separately configured exemptions remain unchanged.
+
+### (Critical) [GHSA-wr5q-7wxw-x568](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-wr5q-7wxw-x568) Authentication bypass via spoofed client-IP headers in OAuth2 Proxy
+**Trusted client-IP resolution now enforces trusted proxy boundaries**: When
+`--reverse-proxy` is enabled, client-IP headers configured via
+`--real-client-ip-header` are accepted only from direct peers that match
+`--trusted-proxy-ip`. If the direct peer is not trusted, the transport peer
+address is evaluated instead.
+
+For `X-Forwarded-For`, the chain is traversed from right to left, skipping
+intermediate proxies in `--trusted-proxy-ip` and treating the first untrusted
+address as the client. Leftmost entries cannot be spoofed past the trusted proxy
+boundary. If `--trusted-proxy-ip` is left unset, OAuth2 Proxy preserves backwards
+compatibility by trusting all source addresses and retaining the leftmost
+behavior, which does not protect against spoofed XFF headers. To secure
+`--trusted-ip` exemptions behind a reverse proxy, configure explicit, narrowly
+scoped `--trusted-proxy-ip` CIDR ranges and ensure the proxy sanitizes client-IP
+headers. Missing or malformed client-IP headers from a trusted proxy will no
+longer fall back to granting exemptions based on the proxy's own IP.
+
+## Breaking Changes
 
 ## Changes since v7.15.4
 
