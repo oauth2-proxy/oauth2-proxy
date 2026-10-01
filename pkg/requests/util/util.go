@@ -1,6 +1,7 @@
 package util
 
 import (
+	"errors"
 	"net/http"
 	"net/url"
 	"strings"
@@ -45,35 +46,35 @@ func GetRequestURI(req *http.Request) string {
 	return uri
 }
 
-// GetRequestPath returns the request URI or X-Forwarded-Uri if present and the
-// request came from a trusted reverse proxy but always strips the query
-// parameters and fragment suffixes and only returns the pure path.
-func GetRequestPath(req *http.Request) string {
-	uri := stripRequestFragment(GetRequestURI(req))
-
-	// Parse URI and return only the path component
-	if parsedURL, err := url.Parse(uri); err == nil {
-		return stripRequestFragment(parsedURL.Path)
+// GetRequestPath returns a decoded path suitable for skip-auth matching, using
+// X-Forwarded-Uri only for a trusted reverse proxy. An error means the path must
+// not grant an authentication exemption. It does not modify the request URL.
+func GetRequestPath(req *http.Request) (string, error) {
+	uri := GetRequestURI(req)
+	if !strings.HasPrefix(uri, "/") || strings.ContainsAny(uri, "# \t\r\n") {
+		return "", errors.New("request target is not an unambiguous origin-form URI")
 	}
 
-	// Fallback: strip query parameters manually
-	return stripRequestQuery(uri)
-}
-
-func stripRequestFragment(uri string) string {
-	if idx := strings.Index(uri, "#"); idx != -1 {
-		return uri[:idx]
+	// Unlike url.Parse, ParseRequestURI keeps a leading // in the path.
+	parsedURL, err := url.ParseRequestURI(uri)
+	if err != nil {
+		return "", errors.New("invalid request target")
 	}
-
-	return uri
-}
-
-func stripRequestQuery(uri string) string {
-	if idx := strings.Index(uri, "?"); idx != -1 {
-		return uri[:idx]
+	requestPath := parsedURL.Path
+	if strings.ContainsAny(requestPath, ";\\#?") || strings.Contains(requestPath, "//") {
+		return "", errors.New("request path contains ambiguous separators")
 	}
-
-	return uri
+	for _, char := range requestPath {
+		if char < 0x20 || char == 0x7f {
+			return "", errors.New("request path contains a control character")
+		}
+	}
+	for _, segment := range strings.Split(requestPath, "/") {
+		if segment == "." || segment == ".." {
+			return "", errors.New("request path contains a dot segment")
+		}
+	}
+	return requestPath, nil
 }
 
 // CanTrustForwardedHeaders determines if forwarded headers should be processed

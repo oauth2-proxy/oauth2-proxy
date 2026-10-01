@@ -1,16 +1,24 @@
 package validation
 
 import (
+	"bytes"
 	"crypto"
+	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"os"
 	"strings"
 	"testing"
 	"time"
 
+	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
+	"github.com/onsi/ginkgo/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -222,6 +230,65 @@ func TestRealClientIPHeader(t *testing.T) {
 	})
 	assert.Equal(t, expected, err.Error())
 	assert.Nil(t, o.GetRealClientIPParser())
+}
+
+func TestRealClientIPLogging(t *testing.T) {
+	t.Cleanup(func() {
+		logger.SetOutput(ginkgo.GinkgoWriter)
+		logger.SetAuthTemplate(logger.DefaultAuthLoggingFormat)
+		logger.SetReqTemplate(logger.DefaultRequestLoggingFormat)
+		logger.SetGetClientFunc(func(r *http.Request) string { return r.RemoteAddr })
+	})
+	tests := []struct {
+		name         string
+		remoteAddr   string
+		headerValues []string
+		reverseProxy bool
+		nilParser    bool
+		expected     string
+	}{
+		{"Untrusted peer", "198.51.100.23:1234", []string{"10.0.0.5"}, true, false, "198.51.100.23"},
+		{"Appending trusted proxy", "192.0.2.10:1234", []string{"10.0.0.5, 198.51.100.23"}, true, false, "198.51.100.23"},
+		{"Repeated fields and multiple proxies", "192.0.2.10:1234", []string{"10.0.0.5", "198.51.100.23, 192.0.2.20", "192.0.2.21"}, true, false, "198.51.100.23"},
+		{"Legitimate client", "192.0.2.10:1234", []string{"10.0.0.5, 192.0.2.20"}, true, false, "10.0.0.5"},
+		{"Missing header", "192.0.2.10:1234", nil, true, false, "192.0.2.10"},
+		{"Malformed relevant hop", "192.0.2.10:1234", []string{"10.0.0.5, invalid, 192.0.2.20"}, true, false, "192.0.2.10"},
+		{"Nil parser", "192.0.2.10:1234", []string{"10.0.0.5"}, true, true, "192.0.2.10"},
+		{"Reverse proxy disabled in scope", "192.0.2.10:1234", []string{"10.0.0.5"}, false, false, "192.0.2.10"},
+		{"IPv6", "[2001:db8:1::10]:1234", []string{"10.0.0.5", " [2001:db8:2::23]:443 , 2001:db8:1::20"}, true, false, "2001:db8:2::23"},
+		{"Unix socket", "@", []string{"10.0.0.5, 198.51.100.23"}, true, false, "198.51.100.23"},
+		{"Entire chain trusted", "192.0.2.10:1234", []string{"192.0.2.30, 192.0.2.20"}, true, false, "192.0.2.30"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			o := testOptions()
+			o.ReverseProxy = true
+			o.RealClientIPHeader = "X-Forwarded-For"
+			o.TrustedProxyIPs = []string{"192.0.2.0/24", "2001:db8:1::/48"}
+			o.Logging.AuthFormat = "{{.Client}}"
+			o.Logging.RequestFormat = "{{.Client}}"
+			require.NoError(t, Validate(o))
+			if test.nilParser {
+				o.SetRealClientIPParser(nil)
+			}
+			trustedProxies, err := ip.ParseNetSet(o.TrustedProxyIPs)
+			require.NoError(t, err)
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req.RemoteAddr = test.remoteAddr
+			for _, value := range test.headerValues {
+				req.Header.Add("X-Forwarded-For", value)
+			}
+			req = middlewareapi.AddRequestScope(req, &middlewareapi.RequestScope{
+				ReverseProxy:   test.reverseProxy,
+				TrustedProxies: trustedProxies,
+			})
+			var output bytes.Buffer
+			logger.SetOutput(&output)
+			logger.PrintAuthf("", req, logger.AuthFailure, "denied")
+			logger.PrintReq("", "", req, *req.URL, time.Now(), http.StatusForbidden, 0)
+			assert.Equal(t, test.expected+"\n"+test.expected+"\n", output.String())
+		})
+	}
 }
 
 func TestProviderCAFilesError(t *testing.T) {
