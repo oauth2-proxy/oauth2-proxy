@@ -361,7 +361,7 @@ Logging of requests to the `/ping` endpoint (or using `--ping-user-agent`) and t
 
 ## Auth Log Format
 
-Authentication logs are logs which are guaranteed to contain a username or email address of a user attempting to authenticate. These logs are output by default in the below format:
+Authentication logs describe authentication attempts. They include the user's username or email address when known, or `-` otherwise. OAuth callback diagnostics for missing or invalid CSRF cookies are authentication logs, controlled by `--auth-logging`, and include cookie names but not cookie values. These logs are output by default in the below format:
 
 ```
 <REMOTE_ADDRESS> - <REQUEST ID> - <user@domain.com> [2015/03/19 17:20:19] [<STATUS>] <MESSAGE>
@@ -392,7 +392,7 @@ Available variables for auth logging:
 | RequestMethod | GET                                  | The request method.                                                                                      |
 | Timestamp     | 2015/03/19 17:20:19                  | The date and time of the logging event.                                                                  |
 | UserAgent     | -                                    | The full user agent as reported by the requesting client.                                                |
-| Username      | username@email.com                   | The email or username of the auth request.                                                               |
+| Username      | username@email.com                   | The email or username of the auth request, or `-` if not yet known.                                       |
 | Status        | AuthSuccess                          | The status of the auth request. See above for details.                                                   |
 
 ## Request Log Format

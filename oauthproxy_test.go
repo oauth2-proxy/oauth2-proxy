@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto"
 	"encoding/base64"
@@ -20,6 +21,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/authentication/hmacauth"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/cookies"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
 	sessionscookie "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/cookie"
@@ -27,6 +29,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
+	"github.com/onsi/ginkgo/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -437,6 +440,136 @@ func (patTest *PassAccessTokenTest) getCallbackEndpoint() (httpCode int, cookie 
 	}
 
 	return rw.Code, cookie
+}
+
+func TestOAuthCallbackCSRFCookieLogging(t *testing.T) {
+	opts := baseTestOptions()
+	require.NoError(t, validation.Validate(opts))
+	proxy, err := NewOAuthProxy(opts, func(string) bool { return true })
+	require.NoError(t, err)
+
+	csrf, err := cookies.NewCSRF(proxy.CookieOptions, "synthetic-pkce-verifier")
+	require.NoError(t, err)
+	csrfCookie, err := csrf.SetCookie(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
+	require.NoError(t, err)
+	secret, err := proxy.CookieOptions.GetSecret()
+	require.NoError(t, err)
+	value, _, valid := encryption.Validate(csrfCookie, secret, proxy.CookieOptions.CSRFExpire)
+	require.True(t, valid)
+	expiredValue, err := encryption.SignedValue(secret, csrfCookie.Name, value, time.Now().Add(-proxy.CookieOptions.CSRFExpire-time.Hour))
+	require.NoError(t, err)
+
+	sessionCookie := &http.Cookie{Name: proxy.CookieOptions.Name, Value: "synthetic-session-credential"}
+	invalidCookie := &http.Cookie{Name: csrfCookie.Name, Value: "synthetic-invalid-csrf-credential"}
+	expiredCookie := &http.Cookie{Name: csrfCookie.Name, Value: expiredValue}
+	otherCookie := &http.Cookie{Name: "_other_csrf", Value: "synthetic-other-csrf-credential"}
+	testCases := []struct {
+		name       string
+		cookies    []*http.Cookie
+		diagnostic string
+	}{
+		{
+			name:       "no cookies",
+			diagnostic: "No cookies were found in OAuth callback.",
+		},
+		{
+			name:       "missing CSRF cookie",
+			cookies:    []*http.Cookie{sessionCookie},
+			diagnostic: "Cookies were found in OAuth callback, but none was a CSRF cookie.",
+		},
+		{
+			name:       "invalid expected CSRF cookie",
+			cookies:    []*http.Cookie{sessionCookie, invalidCookie},
+			diagnostic: fmt.Sprintf("CSRF cookie %s was found in OAuth callback.", csrfCookie.Name),
+		},
+		{
+			name:       "expired expected CSRF cookie",
+			cookies:    []*http.Cookie{sessionCookie, expiredCookie},
+			diagnostic: fmt.Sprintf("CSRF cookie %s was found in OAuth callback.", csrfCookie.Name),
+		},
+		{
+			name:       "other CSRF cookie",
+			cookies:    []*http.Cookie{sessionCookie, otherCookie},
+			diagnostic: fmt.Sprintf("CSRF cookie %s was found in OAuth callback, but it is not the expected one (%s).", otherCookie.Name, csrfCookie.Name),
+		},
+	}
+	loggingCases := []struct {
+		name     string
+		standard bool
+		auth     bool
+		request  bool
+	}{
+		{name: "all enabled", standard: true, auth: true, request: true},
+		{name: "auth disabled", standard: true, request: true},
+		{name: "only auth enabled", auth: true},
+		{name: "all disabled"},
+	}
+	for _, tc := range testCases {
+		for _, logging := range loggingCases {
+			for _, authScheme := range []string{"Basic", "Bearer"} {
+				t.Run(tc.name+"/"+logging.name+"/"+authScheme, func(t *testing.T) {
+					var output, errors bytes.Buffer
+					logger.SetOutput(&output)
+					logger.SetErrOutput(&errors)
+					logger.SetStandardEnabled(logging.standard)
+					logger.SetAuthEnabled(logging.auth)
+					logger.SetReqEnabled(logging.request)
+					logger.SetAuthTemplate("AUTH {{.RequestID}} {{.Username}} {{.Status}} {{.Message}}")
+					logger.SetReqTemplate("REQUEST " + logger.DefaultRequestLoggingFormat)
+					t.Cleanup(func() {
+						logger.SetOutput(ginkgo.GinkgoWriter)
+						logger.SetErrOutput(ginkgo.GinkgoWriter)
+						logger.SetStandardEnabled(true)
+						logger.SetAuthEnabled(true)
+						logger.SetReqEnabled(true)
+						logger.SetAuthTemplate(logger.DefaultAuthLoggingFormat)
+						logger.SetReqTemplate(logger.DefaultRequestLoggingFormat)
+					})
+
+					query := url.Values{
+						"code":  {"synthetic-callback-code"},
+						"state": {encodeState(csrf.HashOAuthState(), "/", false)},
+					}
+					req := httptest.NewRequest(http.MethodGet, "/oauth2/callback?"+query.Encode(), nil)
+					req.Header.Set("X-Request-Id", "callback-log-test")
+					credential := "synthetic-bearer-credential"
+					if authScheme == "Basic" {
+						credential = base64.StdEncoding.EncodeToString([]byte("synthetic-user:synthetic-password"))
+					}
+					req.Header.Set("Authorization", authScheme+" "+credential)
+					req.Header.Set("X-Synthetic-Secret", "synthetic-header-credential")
+					for _, cookie := range tc.cookies {
+						req.AddCookie(cookie)
+					}
+
+					rw := httptest.NewRecorder()
+					proxy.ServeHTTP(rw, req)
+
+					assert.Equal(t, http.StatusForbidden, rw.Code)
+					assert.Contains(t, rw.Body.String(), "Unable to find a valid CSRF token")
+					assert.Empty(t, rw.Result().Cookies())
+					assert.Empty(t, errors.String())
+					logs := output.String() + errors.String()
+					assert.NotContains(t, logs, credential)
+					assert.NotContains(t, logs, "synthetic-header-credential")
+					for _, cookie := range tc.cookies {
+						assert.NotContains(t, logs, cookie.Value)
+					}
+					expectedAuth := "AUTH callback-log-test - AuthFailure " + tc.diagnostic + "\n" +
+						fmt.Sprintf("AUTH callback-log-test - AuthFailure Invalid authentication via OAuth2: unable to obtain CSRF cookie: CSRF cookie with name '%s' was not found\n", csrfCookie.Name)
+					if !logging.auth {
+						expectedAuth = ""
+					}
+					if logging.request {
+						assert.True(t, strings.HasPrefix(output.String(), expectedAuth+"REQUEST "), "unexpected logs: %s", output.String())
+						assert.Equal(t, strings.Count(expectedAuth, "\n")+1, strings.Count(output.String(), "\n"))
+					} else {
+						assert.Equal(t, expectedAuth, output.String())
+					}
+				})
+			}
+		}
+	}
 }
 
 // getEndpointWithCookie makes a requests againt the oauthproxy with passed requestPath
