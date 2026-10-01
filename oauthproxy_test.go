@@ -3218,11 +3218,12 @@ func TestSkipAuthPathRouting(t *testing.T) {
 					for _, config := range configs {
 						t.Run(config, func(t *testing.T) {
 							opts.SkipAuthRegex, opts.SkipAuthRoutes = nil, nil
-							if config == "regex" {
+							switch config {
+							case "regex":
 								opts.SkipAuthRegex = []string{pattern}
-							} else if config == "negated route" {
+							case "negated route":
 								opts.SkipAuthRoutes = []string{"POST!=^/protected"}
-							} else {
+							default:
 								opts.SkipAuthRoutes = []string{"POST=" + pattern}
 							}
 							testProxy, err := NewOAuthProxy(opts, func(string) bool { return true })
