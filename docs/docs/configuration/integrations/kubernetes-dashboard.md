@@ -58,9 +58,10 @@ alphaConfig:
           issuerURL: https://login.microsoftonline.com/YOUR_TENANT_ID/v2.0
           audienceClaims:
             - aud
-          emailClaim: email
+          # Entra ID does not include `email` in the ID token for every account,
+          # whereas `oid` is always present
+          emailClaim: oid
           groupsClaim: groups
-          userIDClaim: oid
         scope: openid email profile
 
     upstreamConfig:

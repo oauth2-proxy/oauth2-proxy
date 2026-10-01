@@ -78,7 +78,36 @@ func validateProvider(provider options.Provider, providerIDs map[string]struct{}
 
 	msgs = append(msgs, validateOIDCSigningAlgorithms(provider)...)
 
+	msgs = append(msgs, validateOIDCUserIDClaim(provider)...)
+
 	return msgs
+}
+
+// validateOIDCUserIDClaim rejects the removed user-id-claim option. It used to
+// silently override the email claim whenever oidc-email-claim was "email",
+// which meant an explicit oidc-email-claim=email could not be honoured. Rather
+// than change what a session's email resolves to behind the user's back,
+// refuse to start and name the replacement.
+func validateOIDCUserIDClaim(provider options.Provider) []string {
+	// Reading the deprecated field is the point here: it exists only so that a
+	// configuration still setting it can be detected and rejected.
+	claim := provider.OIDCConfig.UserIDClaim //nolint:staticcheck
+	emailClaim := provider.OIDCConfig.EmailClaim
+	if emailClaim == "" {
+		emailClaim = options.OIDCEmailClaim
+	}
+	switch {
+	case claim == "":
+		return nil
+	case emailClaim != options.OIDCEmailClaim:
+		// The override never applied to a non-default email claim, so pointing
+		// at oidc-email-claim=<claim> here would change the session's email.
+		return []string{fmt.Sprintf("provider %s: user-id-claim has been removed and must be unset; it had no effect as oidc-email-claim is set to %q (in alpha config: remove userIDClaim)", provider.ID, emailClaim)}
+	case claim == options.OIDCEmailClaim:
+		return []string{fmt.Sprintf("provider %s: user-id-claim has been removed and must be unset; it had no effect as oidc-email-claim already defaults to %q (in alpha config: remove userIDClaim)", provider.ID, options.OIDCEmailClaim)}
+	default:
+		return []string{fmt.Sprintf("provider %s: user-id-claim has been removed; use oidc-email-claim=%s instead (in alpha config: replace userIDClaim with emailClaim)", provider.ID, claim)}
+	}
 }
 
 func validateOIDCSigningAlgorithms(provider options.Provider) []string {
