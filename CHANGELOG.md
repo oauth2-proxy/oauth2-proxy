@@ -11,14 +11,20 @@
   `OAUTH2_PROXY_USER_ID_CLAIM` environment variable, or the alpha config `userIDClaim` field.
 
   The option was deprecated in favour of `--oidc-email-claim` in v7.0.0. Until now it silently
-  overwrote the email claim whenever it was set to anything other than `email`, which meant an
-  explicit `--oidc-email-claim` could not be honoured and `session.Email` (and with it
-  `--email-domain` validation, the `email` access-log field and `X-Auth-Request-Email`) was
-  populated from the wrong claim.
+  overwrote the email claim whenever it was set to anything other than `email` and
+  `--oidc-email-claim` was `email`, which meant an explicit `--oidc-email-claim=email` could not
+  be honoured and `session.Email` (and with it `--email-domain` validation, the `email`
+  access-log field and `X-Auth-Request-Email`) was populated from the wrong claim.
 
-  To migrate, replace `--user-id-claim=<claim>` with `--oidc-email-claim=<claim>`, or simply
-  remove it if it was set to `email` — `--oidc-email-claim` already defaults to `email`. Use
-  `--config-test` to check a configuration before upgrading.
+  To migrate:
+  - If `--oidc-email-claim` is unset or `email`, replace `--user-id-claim=<claim>` with
+    `--oidc-email-claim=<claim>` to keep the current behaviour, or simply remove it if it was
+    set to `email` — `--oidc-email-claim` already defaults to `email`.
+  - If `--oidc-email-claim` is set to anything else, `--user-id-claim` was already being
+    ignored; simply remove it.
+
+  Use `--config-test` to check a configuration before upgrading; the error names the right
+  change for each provider.
 
 ## Changes since v7.15.5
 
