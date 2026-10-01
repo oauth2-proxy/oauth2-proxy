@@ -19,9 +19,30 @@ Additionally refer to OAuth client configuration for Bitbucket provider in the [
 
 ## Breaking Changes
 
+
+### (Critical) [GHSA-63jm-59jj-478j](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-63jm-59jj-478j) Authentication bypass via inconsistent skip-auth path interpretation
+**Skip-auth path matching is now stricter.** `--skip-auth-route` and
+`--skip-auth-regex` no longer grant exemptions for invalid or ambiguous paths,
+even when a positive or negated rule would otherwise match. This includes dot
+segments, repeated slashes (including leading `//`), semicolons, backslashes,
+fragment-like content, decoded question marks, and control characters, including
+encoded forms. For example, previously public `/public/file;version=1` and
+`/public//file` now follow normal authentication and authorization. `#` and `%23`
+are no longer silently stripped before matching.
+
+Trusted `X-Forwarded-Uri` metadata must use origin form (`/path?query`), not a full
+URL. Before upgrading, review public-route exemptions and external-auth header
+configuration. If unusual paths must remain public, expose them separately from
+the protected routing boundary rather than broadening skip-auth rules.
+
+Flag names and configuration syntax are unchanged. Ordinary query strings,
+trailing-slash distinctions, and unambiguous escaped characters retain their
+matching behavior. The fix does not rewrite upstream request targets or
+unconditionally reject authenticated requests; existing router behavior and
+separately configured exemptions remain unchanged.
+
 ## Changes since v7.15.4
 
-<<<<<<< HEAD
 - [#3546](https://github.com/oauth2-proxy/oauth2-proxy/pull/3546) fix: strip the port from the request host when matching cookie domains @kirilju
 - [#3547](https://github.com/oauth2-proxy/oauth2-proxy/pull/3547) fix: refresh additional claims for OIDC and MS Entra ID providers and properly populate additional claims during login (@Apollo3zehn)
 - [#3477](https://github.com/oauth2-proxy/oauth2-proxy/pull/3477) fix(bitbucket): auth failure due to Bitbucket OAuth 2.0 [changes on May 4th 2026](https://developer.atlassian.com/cloud/bitbucket/changelog/#CHANGE-3052) @mfouad

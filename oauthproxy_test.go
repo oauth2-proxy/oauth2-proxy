@@ -9,9 +9,12 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/http/httputil"
 	"net/url"
+	"path"
 	"regexp"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -2785,6 +2788,278 @@ func TestApiRoutes(t *testing.T) {
 				assert.Equal(t, 302, rw.Code)
 			} else {
 				assert.Equal(t, 401, rw.Code)
+			}
+		})
+	}
+}
+
+func TestSkipAuthPathRouting(t *testing.T) {
+	for _, mode := range []string{"default proxy", "raw proxy", "external auth"} {
+		t.Run(mode, func(t *testing.T) {
+			var hits, mutations atomic.Int32
+			backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				hits.Add(1)
+				// Model the reported servlet ordering: strip literal matrix parameters,
+				// then decode and resolve dot segments.
+				segments := strings.Split(r.URL.EscapedPath(), "/")
+				for i, segment := range segments {
+					segments[i], _, _ = strings.Cut(segment, ";")
+				}
+				decodedPath, err := url.PathUnescape(strings.Join(segments, "/"))
+				if err != nil {
+					http.Error(w, "invalid fixture path", http.StatusBadRequest)
+					return
+				}
+				routedPath := path.Clean(decodedPath)
+				if strings.HasPrefix(routedPath, "/protected/") && r.Method == http.MethodPost {
+					mutations.Add(1)
+				}
+				_, _ = io.WriteString(w, r.RequestURI)
+			}))
+			t.Cleanup(backend.Close)
+
+			opts := baseTestOptions()
+			opts.ForceJSONErrors = true
+			if mode == "external auth" {
+				opts.ReverseProxy = true
+				opts.TrustedProxyIPs = []string{"127.0.0.1/32"}
+			}
+			opts.SkipAuthRoutes = []string{"POST=^/public/"}
+			opts.UpstreamServers = options.UpstreamConfig{
+				ProxyRawPath: ptr.To(mode == "raw proxy"),
+				Upstreams: []options.Upstream{{
+					ID: "backend", Path: "/", URI: backend.URL,
+				}},
+			}
+			require.NoError(t, validation.Validate(opts))
+			proxy, err := NewOAuthProxy(opts, func(string) bool { return true })
+			require.NoError(t, err)
+
+			newFrontend := func(t *testing.T, proxy *OAuthProxy) *httptest.Server {
+				t.Helper()
+				var handler http.Handler = proxy
+				if mode == "external auth" {
+					backendURL, err := url.Parse(backend.URL)
+					require.NoError(t, err)
+					forward := httputil.NewSingleHostReverseProxy(backendURL)
+					handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						authReq := httptest.NewRequest(r.Method, "/oauth2/auth", nil)
+						authReq.RemoteAddr = "127.0.0.1:4180"
+						authReq.Header = r.Header.Clone()
+						authReq.Header.Set("X-Forwarded-Uri", r.RequestURI)
+						authResponse := httptest.NewRecorder()
+						proxy.ServeHTTP(authResponse, authReq)
+						if authResponse.Code != http.StatusAccepted {
+							w.WriteHeader(authResponse.Code)
+							return
+						}
+						forward.ServeHTTP(w, r)
+					})
+				}
+				return httptest.NewServer(handler)
+			}
+			client := &http.Client{
+				CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
+			}
+
+			send := func(t *testing.T, server, target string, cookies []*http.Cookie) (int, string) {
+				t.Helper()
+				req, err := http.NewRequest(http.MethodPost, server+target, nil)
+				require.NoError(t, err)
+				for _, cookie := range cookies {
+					req.AddCookie(cookie)
+				}
+				resp, err := client.Do(req)
+				require.NoError(t, err)
+				defer resp.Body.Close()
+				body, err := io.ReadAll(resp.Body)
+				require.NoError(t, err)
+				return resp.StatusCode, string(body)
+			}
+
+			created, expires := time.Now(), time.Now().Add(time.Hour)
+			cookieResponse := httptest.NewRecorder()
+			require.NoError(t, proxy.SaveSession(cookieResponse, httptest.NewRequest(http.MethodGet, "/", nil), &sessions.SessionState{
+				User: "user", Email: "user@example.com", CreatedAt: &created, ExpiresOn: &expires,
+			}))
+			for _, tc := range []struct {
+				name            string
+				target          string
+				pattern         string
+				public          bool
+				protected       bool
+				routerRedirect  bool
+				decodedRedirect bool
+			}{
+				{name: "encoded parent", target: "/public/%2e%2e/protected/change", protected: true, decodedRedirect: true},
+				{name: "mixed encoded parent", target: "/public/.%2E/protected/change", protected: true, decodedRedirect: true},
+				{name: "encoded separators", target: "/public%2f..%2fprotected/change", protected: true, decodedRedirect: true},
+				{name: "literal parent", target: "/public/../protected/change", protected: true, routerRedirect: true},
+				{name: "current segment", target: "/public/./file", routerRedirect: true},
+				{name: "matrix parent", target: "/public/..;/protected/change", protected: true},
+				{name: "encoded matrix parent", target: "/public/%2e%2e;/protected/change", protected: true},
+				{name: "encoded matrix semicolon control", target: "/public/%2e%2e%3b/protected/change"},
+				{name: "matrix value", target: "/public/..;version=1/protected/change", protected: true},
+				{name: "matrix current and parent", target: "/public/.;/..;/protected/change", protected: true},
+				{name: "nested matrix parents", target: "/public/a/..;/..;/protected/change", protected: true},
+				{name: "leading double slash", target: "//protected/public", pattern: "^/public$", protected: true, routerRedirect: true},
+				{name: "encoded leading slash", target: "/%2fprotected/public", pattern: "^/public$", protected: true, decodedRedirect: true},
+				{name: "repeated slash", target: "/public//file", routerRedirect: true},
+				{name: "encoded repeated slash", target: "/public/%2ffile", decodedRedirect: true},
+				{name: "valid semicolon", target: "/public/file;version=1"},
+				{name: "encoded semicolon", target: "/public/file%3bversion=1"},
+				{name: "fragment suffix", target: "/public/file%23suffix"},
+				{name: "ordinary public", target: "/public/file", public: true},
+				{name: "public query", target: "/public/file?next=/../protected;v=1&tag=%23", public: true},
+				{name: "public trailing slash", target: "/public/", pattern: "^/public/$", public: true},
+				{name: "trailing slash is significant", target: "/public/file/", pattern: "^/public/file$"},
+				{name: "escaped space", target: "/public/a%20b", pattern: "^/public/a b$", public: true},
+				{name: "escaped letter", target: "/public/%66ile", pattern: "^/public/file$", public: true},
+				{name: "ordinary protected", target: "/protected/change", protected: true},
+			} {
+				t.Run(tc.name, func(t *testing.T) {
+					// Prove each original target reaches the intended downstream fixture.
+					status, body := send(t, backend.URL, tc.target, nil)
+					require.Equal(t, http.StatusOK, status)
+					require.Equal(t, tc.target, body)
+					require.EqualValues(t, 1, hits.Swap(0))
+					var wantMutations int32
+					if tc.protected {
+						wantMutations = 1
+					}
+					require.Equal(t, wantMutations, mutations.Swap(0))
+
+					pattern := tc.pattern
+					if pattern == "" {
+						pattern = "^/public/"
+					}
+					configs := []string{"regex", "route"}
+					if tc.pattern == "" || tc.protected {
+						configs = append(configs, "negated route")
+					}
+					for _, config := range configs {
+						t.Run(config, func(t *testing.T) {
+							opts.SkipAuthRegex, opts.SkipAuthRoutes = nil, nil
+							if config == "regex" {
+								opts.SkipAuthRegex = []string{pattern}
+							} else if config == "negated route" {
+								opts.SkipAuthRoutes = []string{"POST!=^/protected"}
+							} else {
+								opts.SkipAuthRoutes = []string{"POST=" + pattern}
+							}
+							testProxy, err := NewOAuthProxy(opts, func(string) bool { return true })
+							require.NoError(t, err)
+							frontend := newFrontend(t, testProxy)
+							t.Cleanup(frontend.Close)
+
+							wantStatus := http.StatusUnauthorized
+							if tc.public {
+								wantStatus = http.StatusOK
+							} else if tc.routerRedirect && mode != "external auth" {
+								wantStatus = http.StatusMovedPermanently
+							}
+							status, _ := send(t, frontend.URL, tc.target, nil)
+							assert.Equal(t, wantStatus, status)
+							var wantHits int32
+							if tc.public {
+								wantHits = 1
+							}
+							assert.Equal(t, wantHits, hits.Swap(0))
+							assert.Zero(t, mutations.Swap(0))
+
+							wantStatus = http.StatusOK
+							wantHits = 1
+							redirects := (tc.routerRedirect && mode != "external auth") ||
+								(tc.decodedRedirect && mode == "default proxy")
+							if redirects {
+								wantStatus = http.StatusMovedPermanently
+								wantHits = 0
+							}
+							status, body := send(t, frontend.URL, tc.target, cookieResponse.Result().Cookies())
+							assert.Equal(t, wantStatus, status)
+							if !redirects {
+								assert.Equal(t, tc.target, body)
+							}
+							assert.Equal(t, wantHits, hits.Swap(0))
+							assert.Equal(t, wantMutations*wantHits, mutations.Swap(0))
+						})
+					}
+				})
+			}
+		})
+	}
+}
+
+func TestSkipAuthForwardedTargets(t *testing.T) {
+	for _, config := range []string{"regex", "route", "negated route", "empty path"} {
+		t.Run(config, func(t *testing.T) {
+			opts := baseTestOptions()
+			opts.ReverseProxy = true
+			opts.TrustedProxyIPs = []string{"127.0.0.1/32"}
+			switch config {
+			case "regex":
+				opts.SkipAuthRegex = []string{".*"}
+			case "route":
+				opts.SkipAuthRoutes = []string{"GET=.*"}
+			case "negated route":
+				opts.SkipAuthRoutes = []string{"GET!=^/protected"}
+			case "empty path":
+				opts.SkipAuthRoutes = []string{"GET=^$"}
+			}
+			require.NoError(t, validation.Validate(opts))
+			proxy, err := NewOAuthProxy(opts, func(string) bool { return true })
+			require.NoError(t, err)
+			created, expires := time.Now(), time.Now().Add(time.Hour)
+			cookieResponse := httptest.NewRecorder()
+			require.NoError(t, proxy.SaveSession(cookieResponse, httptest.NewRequest(http.MethodGet, "/", nil), &sessions.SessionState{
+				User: "user", Email: "user@example.com", CreatedAt: &created, ExpiresOn: &expires,
+			}))
+
+			for _, target := range []string{
+				"/public/../protected", "/public/%2e%2e/protected",
+				"//protected/public", "/public//file",
+				"/public/..;/protected", "/public/%2e%2e%3b/protected",
+				"/public/file;version=1", "/public/%zz", "/public/%",
+				"public/file", "https://example.com/public", "example.com:443", "*",
+				"/public#fragment", "/public%23fragment", "/public%3fquery",
+				"/public\\file", "/public/%00",
+			} {
+				t.Run(target, func(t *testing.T) {
+					for _, authenticated := range []bool{false, true} {
+						req := httptest.NewRequest(http.MethodGet, "/oauth2/auth", nil)
+						req.RemoteAddr = "127.0.0.1:4180"
+						req.Header.Set("X-Forwarded-Uri", target)
+						if authenticated {
+							for _, cookie := range cookieResponse.Result().Cookies() {
+								req.AddCookie(cookie)
+							}
+						}
+						rw := httptest.NewRecorder()
+						proxy.ServeHTTP(rw, req)
+						wantStatus := http.StatusUnauthorized
+						if authenticated {
+							wantStatus = http.StatusAccepted
+						}
+						assert.Equal(t, wantStatus, rw.Code)
+						assert.Equal(t, target, req.Header.Get("X-Forwarded-Uri"))
+						assert.Equal(t, "/oauth2/auth", req.RequestURI)
+					}
+				})
+			}
+
+			for _, method := range []string{http.MethodGet, http.MethodPost} {
+				t.Run("ordinary public "+method, func(t *testing.T) {
+					req := httptest.NewRequest(method, "/oauth2/auth", nil)
+					req.RemoteAddr = "127.0.0.1:4180"
+					req.Header.Set("X-Forwarded-Uri", "/public/file?query=value")
+					rw := httptest.NewRecorder()
+					proxy.ServeHTTP(rw, req)
+					wantStatus := http.StatusUnauthorized
+					if config != "empty path" && (config == "regex" || method == http.MethodGet) {
+						wantStatus = http.StatusAccepted
+					}
+					assert.Equal(t, wantStatus, rw.Code)
+				})
 			}
 		})
 	}

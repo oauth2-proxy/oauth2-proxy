@@ -595,8 +595,8 @@ func isAllowedMethod(req *http.Request, route allowedRoute) bool {
 	return route.method == "" || req.Method == route.method
 }
 
-func isAllowedPath(req *http.Request, route allowedRoute) bool {
-	matches := route.pathRegex.MatchString(requestutil.GetRequestPath(req))
+func isAllowedPath(requestPath string, route allowedRoute) bool {
+	matches := route.pathRegex.MatchString(requestPath)
 
 	if route.negate {
 		return !matches
@@ -607,8 +607,16 @@ func isAllowedPath(req *http.Request, route allowedRoute) bool {
 
 // IsAllowedRoute is used to check if the request method & path is allowed without auth
 func (p *OAuthProxy) isAllowedRoute(req *http.Request) bool {
+	if len(p.allowedRoutes) == 0 {
+		return false
+	}
+	requestPath, err := requestutil.GetRequestPath(req)
+	if err != nil {
+		logger.Errorf("Skipping path-based authentication exemption: %v", err)
+		return false
+	}
 	for _, route := range p.allowedRoutes {
-		if isAllowedMethod(req, route) && isAllowedPath(req, route) {
+		if isAllowedMethod(req, route) && isAllowedPath(requestPath, route) {
 			return true
 		}
 	}

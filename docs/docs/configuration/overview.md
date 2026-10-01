@@ -218,8 +218,8 @@ When `--reverse-proxy` is enabled, configure `--trusted-proxy-ip` to the IPs or 
 | flag: `--trusted-proxy-ip`<br/>toml: `trusted_proxy_ips`                      | string \| list | list of IPs or CIDR ranges allowed to supply `X-Forwarded-*` headers when `--reverse-proxy` is enabled. If not set, OAuth2 Proxy preserves backwards compatibility by trusting all source IPs (`0.0.0.0/0`, `::/0`) and logs a warning at startup. Configure this to your reverse proxy addresses to prevent forwarded header spoofing.                                                                                                                                                              | `"0.0.0.0/0", "::/0"` |
 | flag: `--signature-key`<br/>toml: `signature_key`                             | string         | GAP-Signature request signature key (algorithm:secretkey)                                                                                                                                                                                                                                                                                                                                                                                                                                                             |             |
 | flag: `--skip-auth-preflight`<br/>toml: `skip_auth_preflight`                 | bool           | will skip authentication for OPTIONS requests                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | false       |
-| flag: `--skip-auth-regex`<br/>toml: `skip_auth_regex`                         | string \| list | (DEPRECATED for `--skip-auth-route`) bypass authentication for requests paths that match (may be given multiple times). Path matching is performed against the normalized path only; fragment identifiers (`#`) and their URL-encoded form (`%23`) are stripped before evaluation.                                                                                                                                                                                                                                    |             |
-| flag: `--skip-auth-route`<br/>toml: `skip_auth_routes`                        | string \| list | bypass authentication for requests that match the method & path. Format: method=path_regex OR method!=path_regex. For all methods: path_regex OR !=path_regex. Path matching is performed against the normalized path only; fragment identifiers (`#`) and their URL-encoded form (`%23`) are stripped before evaluation.                                                                                                                                                                                             |             |
+| flag: `--skip-auth-regex`<br/>toml: `skip_auth_regex`                         | string \| list | (DEPRECATED for `--skip-auth-route`) bypass authentication for requests whose paths match (may be given multiple times). Matching uses the decoded path without query parameters; invalid or ambiguous paths cannot grant a path exemption. See [Skip-auth path matching](#skip-auth-path-matching). |             |
+| flag: `--skip-auth-route`<br/>toml: `skip_auth_routes`                        | string \| list | bypass authentication for requests that match the method & path. Format: method=path_regex OR method!=path_regex. For all methods: path_regex OR !=path_regex. Matching uses the decoded path without query parameters; invalid or ambiguous paths cannot grant a path exemption, including with negated rules. See [Skip-auth path matching](#skip-auth-path-matching). |             |
 | flag: `--skip-jwt-bearer-tokens`<br/>toml: `skip_jwt_bearer_tokens`           | bool           | will skip requests that have verified JWT bearer tokens (the token must have [`aud`](https://en.wikipedia.org/wiki/JSON_Web_Token#Standard_fields) that matches this client id or one of the extras from `extra-jwt-issuers`)                                                                                                                                                                                                                                                                                         | false       |
 | flag: `--skip-provider-button`<br/>toml: `skip_provider_button`               | bool           | will skip sign-in-page to directly reach the next step: oauth/start                                                                                                                                                                                                                                                                                                                                                                                                                                                   | false       |
 | flag: `--ssl-insecure-skip-verify`<br/>toml: `ssl_insecure_skip_verify`       | bool           | skip validation of certificates presented when using HTTPS providers                                                                                                                                                                                                                                                                                                                                                                                                                                                  | false       |
@@ -272,6 +272,34 @@ When `--reverse-proxy` is enabled, configure `--trusted-proxy-ip` to the IPs or 
 | flag: `--disable-keep-alives`<br/>toml: `disable_keep_alives`                             | bool           | disable HTTP keep-alive connections to the upstream server                                                                                             | false   |
 | flag: `--upstream-timeout`<br/>toml: `upstream_timeout`                                   | duration       | maximum amount of time the server will wait for a response from the upstream                                                                           | 30s     |
 | flag: `--upstream`<br/>toml: `upstreams`                                                  | string \| list | the http url(s) of the upstream endpoint, file:// paths for static files or `static://<status_code>` for static response. Routing is based on the path |         |
+
+### Skip-auth path matching
+
+Both `--skip-auth-route` and the deprecated `--skip-auth-regex` match the
+percent-decoded path, excluding query parameters. In reverse-proxy mode,
+`X-Forwarded-Uri` is used only when the existing forwarded-header trust checks
+permit it. Original-URI metadata must use origin form (`/path?query`), not an
+absolute URL, authority, or relative path.
+
+Invalid or ambiguous targets do not grant a path-based authentication exemption.
+This check happens before any regular expression or its negation is evaluated.
+In particular, exemptions are declined for malformed path escapes, `.` or `..`
+path segments, repeated slashes (including leading `//`), semicolons, backslashes,
+fragment-like `#` content, decoded `?` characters, and control characters.
+Encoded forms are checked after a single decoding pass; paths are not recursively
+decoded.
+
+This intentionally also requires normal authentication for valid semicolon paths
+such as `/public/file;version=1` and repeated-slash paths such as `/public//file`.
+Fragments are no longer silently stripped. Ordinary query strings do not affect
+matching. Unambiguous escaped characters remain supported, and trailing slashes
+remain significant: `/public` and `/public/` are distinct matching paths.
+
+These checks do not normalize or rewrite the upstream request target. A declined
+path exemption follows normal authentication and authorization; it is not an
+unconditional rejection of authenticated requests using unusual paths. Existing
+router redirects and separately configured exemptions, such as trusted client
+IPs or skipped preflight requests, are unchanged.
 
 ## Configuration Validation
 
