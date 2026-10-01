@@ -3,6 +3,16 @@
 ## Release Highlights
 
 ## Important Notes
+
+## Breaking Changes
+
+## Changes since v7.15.5
+
+# V7.15.5
+
+## Release Highlights
+
+## Important Notes
 The Bitbucket provider `--bitbucket-team` flag got deprecated and we added `--bitbucket-workspace` flag to restrict logins to members of a specific workspace instead of a team. The `--bitbucket-team` flag is still supported and will act like workspace but will be removed in a future release. Please update your configuration to use the new `--bitbucket-workspace` flag. For more information, refer to [Bitbucket teams API deprecation](https://developer.atlassian.com/cloud/bitbucket/bitbucket-api-teams-deprecation/). 
 
 Additionally refer to OAuth client configuration for Bitbucket provider in the [documentation](https://oauth2-proxy.github.io/oauth2-proxy/configuration/providers/bitbucket/). for changes in the scopes (Account>Read) is now required if you restrict by workspace.
