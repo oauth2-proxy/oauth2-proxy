@@ -12,16 +12,32 @@
 
 ## Release Highlights
 
+- 🔵 Golang version upgrade to v1.26.8
+    - Upgrade of all dependencies to their latest versions
+- 🕵️‍♀️ Vulnerabilities have been addressed
+    - [CVE-2026-56855](https://nvd.nist.gov/vuln/detail/CVE-2026-56855)
+    - [CVE-2026-78662](https://nvd.nist.gov/vuln/detail/CVE-2026-78662)
+    - [CVE-2026-84304](https://nvd.nist.gov/vuln/detail/CVE-2026-84304)
+    - [CVE-2026-84445](https://nvd.nist.gov/vuln/detail/CVE-2026-84445)
+
 ## Important Notes
 The Bitbucket provider `--bitbucket-team` flag got deprecated and we added `--bitbucket-workspace` flag to restrict logins to members of a specific workspace instead of a team. The `--bitbucket-team` flag is still supported and will act like workspace but will be removed in a future release. Please update your configuration to use the new `--bitbucket-workspace` flag. For more information, refer to [Bitbucket teams API deprecation](https://developer.atlassian.com/cloud/bitbucket/bitbucket-api-teams-deprecation/). 
 
 Additionally refer to OAuth client configuration for Bitbucket provider in the [documentation](https://oauth2-proxy.github.io/oauth2-proxy/configuration/providers/bitbucket/). for changes in the scopes (Account>Read) is now required if you restrict by workspace.
 
+Security Advisories:
+
+- (Critical) [GHSA-63jm-59jj-478j](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-63jm-59jj-478j) Authentication bypass via inconsistent skip-auth path interpretation
+- (Critical) [GHSA-wr5q-7wxw-x568](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-wr5q-7wxw-x568) Authentication bypass via spoofed client-IP headers in OAuth2 Proxy
+- (Moderate) [GHSA-hhqp-vx7f-5c6m](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-hhqp-vx7f-5c6m) Credential disclosure through OAuth callback error logging
+
+Read more below
+
 ## Critical Fixes
 
 For a small subset of deployments these fixes might be breaking change for the sake of fixing trust/security boundaries.
 
-### (Critical) [GHSA-63jm-59jj-478j](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-63jm-59jj-478j) Authentication bypass via inconsistent skip-auth path interpretation
+### [GHSA-63jm-59jj-478j](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-63jm-59jj-478j) Authentication bypass via inconsistent skip-auth path interpretation
 **Skip-auth path matching is now stricter**: `--skip-auth-route` and
 `--skip-auth-regex` no longer grant exemptions for invalid or ambiguous paths,
 even when a positive or negated rule would otherwise match. This includes dot
@@ -42,7 +58,7 @@ matching behavior. The fix does not rewrite upstream request targets or
 unconditionally reject authenticated requests; existing router behavior and
 separately configured exemptions remain unchanged.
 
-### (Critical) [GHSA-wr5q-7wxw-x568](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-wr5q-7wxw-x568) Authentication bypass via spoofed client-IP headers in OAuth2 Proxy
+### [GHSA-wr5q-7wxw-x568](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-wr5q-7wxw-x568) Authentication bypass via spoofed client-IP headers in OAuth2 Proxy
 **Trusted client-IP resolution now enforces trusted proxy boundaries**: When
 `--reverse-proxy` is enabled, client-IP headers configured via
 `--real-client-ip-header` are accepted only from direct peers that match
