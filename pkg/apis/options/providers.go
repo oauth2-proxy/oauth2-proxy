@@ -236,7 +236,7 @@ type ADFSOptions struct {
 }
 
 type BitbucketOptions struct {
-	// Team sets restrict logins to members of this team - Bitbucket has deprecated the teams, it will act as workspace instead
+	// Team sets restrict logins to members of this team - Bitbucket has deprecated teams, it will act as workspace instead
 	Team string `yaml:"team,omitempty"`
 	// Workspace sets restrict logins to members of this workspace, use workspace slug
 	Workspace string `yaml:"workspace,omitempty"`
