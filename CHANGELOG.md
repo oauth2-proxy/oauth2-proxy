@@ -79,6 +79,7 @@ longer fall back to granting exemptions based on the proxy's own IP.
 ## Breaking Changes
 
 ## Changes since v7.15.4
+- [#3482](https://github.com/oauth2-proxy/oauth2-proxy/issues/3482) Make GitHub support auth without read:org scope
 
 - [#3546](https://github.com/oauth2-proxy/oauth2-proxy/pull/3546) fix: strip the port from the request host when matching cookie domains @kirilju
 - [#3547](https://github.com/oauth2-proxy/oauth2-proxy/pull/3547) fix: refresh additional claims for OIDC and MS Entra ID providers and properly populate additional claims during login (@Apollo3zehn)

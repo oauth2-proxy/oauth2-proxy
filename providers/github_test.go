@@ -620,3 +620,101 @@ func TestGitHubProvider_ValidateSessionWithUserEmails(t *testing.T) {
 	valid := p.ValidateSession(context.Background(), session)
 	assert.True(t, valid)
 }
+
+func TestGitHubProvider_EnrichSessionWithDefaultScope(t *testing.T) {
+	b := testGitHubBackend(map[string][]string{
+		"/user":        {`{"email": "michael.bland@gsa.gov", "login": "mbland"}`},
+		"/user/emails": {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
+		"/user/orgs": {
+			`[ { "login": "test-org-1" } ]`,
+			`[ ]`,
+		},
+		"/user/teams": {
+			`[ { "name": "test-team-1", "slug": "test-team-1", "organization": { "login": "test-org-1" } } ]`,
+			`[ ]`,
+		},
+	})
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testGitHubProvider(bURL.Host, options.GitHubOptions{})
+
+	session := CreateAuthorizedSession()
+	err := p.EnrichSession(context.Background(), session)
+	assert.NoError(t, err)
+	assert.Equal(t, "mbland", session.User)
+	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
+	assert.ElementsMatch(t, []string{"test-org-1", "test-org-1:test-team-1"}, session.Groups)
+}
+
+func TestGitHubProvider_EnrichSessionWithoutReadOrgScope(t *testing.T) {
+	b := testGitHubBackend(map[string][]string{
+		"/user":        {`{"email": "michael.bland@gsa.gov", "login": "mbland"}`},
+		"/user/emails": {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
+	})
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testGitHubProvider(bURL.Host, options.GitHubOptions{})
+	p.Scope = "user:email"
+
+	session := CreateAuthorizedSession()
+	err := p.EnrichSession(context.Background(), session)
+	assert.NoError(t, err)
+	assert.Equal(t, "mbland", session.User)
+	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
+	assert.Empty(t, session.Groups)
+}
+
+func TestNewGitHubProvider_OrgTeamAddsReadOrgScope(t *testing.T) {
+	testCases := []struct {
+		name          string
+		configured    options.GitHubOptions
+		initialScope  string
+		expectedScope string
+	}{
+		{
+			name:          "org only adds read:org",
+			configured:    options.GitHubOptions{Org: "test-org"},
+			initialScope:  "user:email",
+			expectedScope: "user:email read:org",
+		},
+		{
+			name:          "team only adds read:org",
+			configured:    options.GitHubOptions{Team: "test-team"},
+			initialScope:  "user:email",
+			expectedScope: "user:email read:org",
+		},
+		{
+			name:          "org and team add read:org once",
+			configured:    options.GitHubOptions{Org: "test-org", Team: "test-team"},
+			initialScope:  "user:email",
+			expectedScope: "user:email read:org",
+		},
+		{
+			name:          "read:org already present is not duplicated",
+			configured:    options.GitHubOptions{Org: "test-org", Team: "test-team"},
+			initialScope:  "user:email read:org",
+			expectedScope: "user:email read:org",
+		},
+		{
+			name:          "no org or team leaves scope unchanged",
+			configured:    options.GitHubOptions{},
+			initialScope:  "user:email",
+			expectedScope: "user:email",
+		},
+		{
+			name:          "default scope is unchanged",
+			configured:    options.GitHubOptions{Org: "test-org"},
+			initialScope:  "",
+			expectedScope: "user:email read:org",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			p := NewGitHubProvider(&ProviderData{Scope: tc.initialScope}, tc.configured)
+			assert.Equal(t, tc.expectedScope, p.Scope)
+		})
+	}
+}
