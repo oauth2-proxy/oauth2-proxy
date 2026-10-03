@@ -30,7 +30,7 @@ This will be transformed into a flat list of groups:
 
 ```json
 {
-  "groups": ["group1:role1", "group2:role2", "group2:role3"]
+  "groups": ["group1:role1", "group1:role2", "group2:role3"]
 }
 ```
 
