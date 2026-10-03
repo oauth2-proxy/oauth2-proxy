@@ -11,7 +11,7 @@ OAuth2 Proxy can be integrated with popular reverse proxies and ingress controll
 
 - [Nginx](nginx.md)
 - [Traefik](traefik.md)
-- [caddy](caddy.md)
+- [Caddy](caddy.md)
 
 ## Kubernetes Web UIs
 
@@ -23,7 +23,7 @@ OAuth2 Proxy can also be used to add authentication to Kubernetes web user inter
 :::tip
 When integrating with Kubernetes web UIs, make sure to:
 1. Configure the Ingress to pass the Authorization header with the bearer token
-2. Increase buffer sizes for large OIDC tokens (especially with Azure Entra ID)
+2. Increase buffer sizes for large OIDC tokens (especially with Microsoft Entra ID)
 3. Set up appropriate Kubernetes RBAC permissions for your users or groups
 :::
 

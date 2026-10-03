@@ -4,7 +4,7 @@ title: Azure (Deprecated)
 ---
 
 :::note
-This is the legacy and deprecated provider for Azure, use [Microsoft Entra ID](ms_entra_id.md) if possible.
+This is the legacy and deprecated provider for Azure. Use [Microsoft Entra ID](ms_entra_id.md) for new deployments. Keep this provider only for existing installations that cannot migrate yet.
 :::
 
 ## Config Options
@@ -20,7 +20,7 @@ This is the legacy and deprecated provider for Azure, use [Microsoft Entra ID](m
    **App registrations** and then click on **New registration**.
 2. Pick a name, check the supported account type(single-tenant, multi-tenant, etc). In the **Redirect URI** section create a new
    **Web** platform entry for each app that you want to protect by the oauth2 proxy(e.g.
-   https://internal.yourcompanycom/oauth2/callback). Click **Register**.
+   https://internal.yourcompany.com/oauth2/callback). Click **Register**.
 3. Next we need to add group read permissions for the app registration, on the **API Permissions** page of the app, click on
    **Add a permission**, select **Microsoft Graph**, then select **Application permissions**, then click on **Group** and select
    **Group.Read.All**. Hit **Add permissions** and then on **Grant admin consent** (you might need an admin to do this).

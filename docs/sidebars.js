@@ -46,7 +46,6 @@ const sidebars = {
           },
           items: [
             "configuration/providers/adfs",
-            "configuration/providers/azure",
             "configuration/providers/bitbucket",
             "configuration/providers/cidaas",
             "configuration/providers/cisco_duo",
@@ -56,11 +55,12 @@ const sidebars = {
             "configuration/providers/github",
             "configuration/providers/gitlab",
             "configuration/providers/google",
-            "configuration/providers/keycloak",
             "configuration/providers/keycloak_oidc",
+            "configuration/providers/keycloak",
             "configuration/providers/linkedin",
             "configuration/providers/login_gov",
             "configuration/providers/ms_entra_id",
+            "configuration/providers/azure",
             "configuration/providers/nextcloud",
             "configuration/providers/openid_connect",
             "configuration/providers/sourcehut"

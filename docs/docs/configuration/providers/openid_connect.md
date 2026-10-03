@@ -61,6 +61,42 @@ To configure the OIDC provider for Dex, perform the following steps:
 
 See also [our local testing environment](https://github.com/oauth2-proxy/oauth2-proxy/blob/master/contrib/local-environment) for a self-contained example using Docker and etcd as storage for Dex.
 
+#### Amazon Cognito user pools
+
+Amazon Cognito user pools are OIDC-compatible and can be configured with the generic `oidc` provider.
+
+Create a Cognito user pool app client for a server-side web application:
+
+- Enable the authorization code grant.
+- Configure the OAuth2 Proxy callback URL, for example `https://oauth2-proxy.example.com/oauth2/callback`.
+- Use a confidential app client with a client secret; OAuth2 Proxy requires `client_secret` or `client_secret_file` for the generic OIDC provider.
+- Request the scopes your app needs, commonly `openid`, `email`, and `profile`.
+
+Example configuration:
+
+```toml
+provider = "oidc"
+provider_display_name = "Amazon Cognito"
+oidc_issuer_url = "https://cognito-idp.<region>.amazonaws.com/<user-pool-id>"
+redirect_url = "https://oauth2-proxy.example.com/oauth2/callback"
+client_id = "<app-client-id>"
+client_secret = "<app-client-secret>"
+scope = "openid email profile"
+email_domains = ["*"]
+```
+
+##### EKS workload identity and Cognito client secrets
+
+AWS has workload identity features for Kubernetes, including [IAM roles for service accounts (IRSA)](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html) and [EKS Pod Identity](https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html). They let a pod obtain AWS IAM credentials for AWS API calls without storing AWS access keys.
+
+These features are not the same as Microsoft Entra ID Workload Identity client authentication. OAuth2 Proxy's `entra-id` provider can exchange the authorization code at the token endpoint with a projected Kubernetes service account token instead of a client secret. Amazon Cognito user pool app clients do not provide an equivalent OAuth2 token endpoint flow for OAuth2 Proxy to replace `client_secret` with IRSA or EKS Pod Identity credentials.
+
+For Cognito-backed OAuth2 Proxy deployments on EKS:
+
+- use `client_secret_file` with a Kubernetes Secret or an external secret sync mechanism if you need secret rotation,
+- use IRSA or EKS Pod Identity only for separate AWS API access by the pod,
+- do not expect IRSA or EKS Pod Identity to authenticate OAuth2 Proxy as a Cognito app client.
+
 #### Okta
 
 To configure the OIDC provider for Okta, perform the following steps:
