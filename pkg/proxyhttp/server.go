@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -39,6 +41,11 @@ type Opts struct {
 	// TLS is the TLS configuration for the server.
 	TLS *options.TLS
 
+	// HTTP2 enables HTTP/2 support.
+	// For insecure (HTTP) servers, this enables h2c (HTTP/2 Cleartext).
+	// For secure (HTTPS) servers, this adds "h2" to TLS ALPN negotiation.
+	HTTP2 bool
+
 	// Let testing infrastructure circumvent parsing file descriptors
 	fdFiles []*os.File
 }
@@ -47,6 +54,7 @@ type Opts struct {
 func NewServer(opts Opts) (Server, error) {
 	s := &server{
 		handler: opts.Handler,
+		http2:   opts.HTTP2,
 	}
 
 	if len(opts.fdFiles) > 0 {
@@ -69,6 +77,9 @@ type server struct {
 
 	listener    net.Listener
 	tlsListener net.Listener
+
+	// http2 enables HTTP/2 support
+	http2 bool
 
 	// ensure activation.Files are called once
 	fdFiles []*os.File
@@ -182,10 +193,15 @@ func (s *server) setupTLSListener(opts Opts) error {
 		return nil
 	}
 
+	nextProtos := []string{"http/1.1"}
+	if opts.HTTP2 {
+		nextProtos = []string{"h2", "http/1.1"}
+	}
+
 	config := &tls.Config{
 		MinVersion: tls.VersionTLS12, // default, override below
 		MaxVersion: tls.VersionTLS13,
-		NextProtos: []string{"http/1.1"},
+		NextProtos: nextProtos,
 	}
 	if opts.TLS == nil {
 		return errors.New("no TLS config provided")
@@ -234,7 +250,7 @@ func (s *server) Start(ctx context.Context) error {
 
 	if s.listener != nil {
 		g.Go(func() error {
-			if err := s.startServer(groupCtx, s.listener); err != nil {
+			if err := s.startServer(groupCtx, s.listener, s.http2, false); err != nil {
 				return fmt.Errorf("error starting insecure server: %v", err)
 			}
 			return nil
@@ -243,7 +259,7 @@ func (s *server) Start(ctx context.Context) error {
 
 	if s.tlsListener != nil {
 		g.Go(func() error {
-			if err := s.startServer(groupCtx, s.tlsListener); err != nil {
+			if err := s.startServer(groupCtx, s.tlsListener, s.http2, true); err != nil {
 				return fmt.Errorf("error starting secure server: %v", err)
 			}
 			return nil
@@ -256,8 +272,27 @@ func (s *server) Start(ctx context.Context) error {
 // startServer creates and starts a new server with the given listener.
 // When the given context is cancelled the server will be shutdown.
 // If any errors occur, only the first error will be returned.
-func (s *server) startServer(ctx context.Context, listener net.Listener) error {
-	srv := &http.Server{Handler: s.handler, ReadHeaderTimeout: time.Minute}
+// If enableHTTP2 is true and isTLS is false, the handler is wrapped
+// with h2c to support HTTP/2 Cleartext (required for gRPC without TLS).
+// If enableHTTP2 is true and isTLS is true, HTTP/2 is configured on the server.
+func (s *server) startServer(ctx context.Context, listener net.Listener, enableHTTP2 bool, isTLS bool) error {
+	handler := s.handler
+
+	if enableHTTP2 && !isTLS {
+		// Wrap handler with h2c for HTTP/2 Cleartext support
+		h2s := &http2.Server{}
+		handler = h2c.NewHandler(handler, h2s)
+	}
+
+	srv := &http.Server{Handler: handler, ReadHeaderTimeout: time.Minute}
+
+	if enableHTTP2 && isTLS {
+		// Configure HTTP/2 for TLS server
+		if err := http2.ConfigureServer(srv, &http2.Server{}); err != nil {
+			return fmt.Errorf("error configuring HTTP/2: %v", err)
+		}
+	}
+
 	g, groupCtx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
