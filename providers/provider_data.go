@@ -36,7 +36,9 @@ type ProviderData struct {
 	ClientID          string
 	ClientSecret      string
 	ClientSecretFile  string
-	Scope             string
+	// ClientAssertionFile contains a JWT client assertion for token requests.
+	ClientAssertionFile string
+	Scope               string
 	// The response mode requested from the provider or empty for default ("query")
 	AuthRequestResponseMode string
 	// The picked CodeChallenge Method or empty if none.

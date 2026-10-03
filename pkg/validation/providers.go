@@ -68,6 +68,8 @@ func validateProvider(provider options.Provider, providerIDs map[string]struct{}
 		msgs = append(msgs, validateClientSecret(provider)...)
 	}
 
+	msgs = append(msgs, validateClientAssertion(provider)...)
+
 	if provider.Type == "google" {
 		msgs = append(msgs, validateGoogleConfig(provider)...)
 	}
@@ -98,6 +100,10 @@ func validateOIDCSigningAlgorithms(provider options.Provider) []string {
 // providerRequiresClientSecret checks if provider requires client secret to be set
 // or it can be omitted in favor of JWT token to authenticate oAuth client
 func providerRequiresClientSecret(provider options.Provider) bool {
+	if provider.ClientAssertionFile != "" {
+		return false
+	}
+
 	if provider.Type == "entra-id" && ptr.Deref(provider.MicrosoftEntraIDConfig.FederatedTokenAuth, options.DefaultMicrosoftEntraIDUseFederatedToken) {
 		return false
 	}
@@ -107,6 +113,37 @@ func providerRequiresClientSecret(provider options.Provider) bool {
 	}
 
 	return true
+}
+
+// clientAssertionSupportedProviders use the OIDC token request implementation
+// and are known to work against a provider that accepts externally issued
+// assertions.
+var clientAssertionSupportedProviders = map[options.ProviderType]struct{}{
+	options.OIDCProvider:         {},
+	options.KeycloakOIDCProvider: {},
+}
+
+// validateClientAssertion checks JWT client assertion settings.
+func validateClientAssertion(provider options.Provider) []string {
+	if provider.ClientAssertionFile == "" {
+		return nil
+	}
+
+	msgs := []string{}
+
+	if _, ok := clientAssertionSupportedProviders[provider.Type]; !ok {
+		msgs = append(msgs, fmt.Sprintf("provider %s: client-assertion-file is not supported by the %q provider", provider.ID, provider.Type))
+	}
+
+	if provider.ClientSecret != "" || provider.ClientSecretFile != "" {
+		msgs = append(msgs, fmt.Sprintf("provider %s: client-assertion-file is mutually exclusive with client-secret and client-secret-file", provider.ID))
+	}
+
+	if _, err := os.Stat(provider.ClientAssertionFile); err != nil { // #nosec G304
+		msgs = append(msgs, "could not read client assertion file: "+provider.ClientAssertionFile)
+	}
+
+	return msgs
 }
 
 func validateClientSecret(provider options.Provider) []string {

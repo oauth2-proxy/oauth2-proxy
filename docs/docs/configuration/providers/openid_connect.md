@@ -144,3 +144,11 @@ Then you can start the oauth2-proxy with `./oauth2-proxy --config /etc/example.c
     # http_address = "0.0.0.0:4180"
     ```
 7. Then you can start the oauth2-proxy with `./oauth2-proxy --config /etc/localhost.cfg`
+
+#### Client authentication with a JWT assertion
+
+Instead of a client secret, oauth2-proxy can authenticate at the token endpoint
+with a JWT sent as the `client_assertion` parameter, as described in
+[RFC 7523](https://datatracker.ietf.org/doc/html/rfc7523), using
+`--client-assertion-file`. See [Keycloak OIDC](keycloak_oidc.md#usage) for a
+worked example using a Kubernetes projected service account token.

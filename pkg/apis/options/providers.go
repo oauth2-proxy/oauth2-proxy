@@ -71,6 +71,11 @@ type Provider struct {
 	// ClientSecretFile is the name of the file
 	// containing the OAuth Client Secret, it will be used if ClientSecret is not set.
 	ClientSecretFile string `yaml:"clientSecretFile,omitempty"`
+	// ClientAssertionFile is the path to a JWT client assertion (RFC 7523) used
+	// at the token endpoint instead of a client secret. It is re-read on every
+	// token request, so it can hold a credential rotated in place. It is
+	// mutually exclusive with ClientSecret and ClientSecretFile.
+	ClientAssertionFile string `yaml:"clientAssertionFile,omitempty"`
 
 	// KeycloakConfig holds all configurations for Keycloak provider.
 	KeycloakConfig KeycloakOptions `yaml:"keycloakConfig,omitempty"`
