@@ -10,6 +10,7 @@ import (
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 )
 
@@ -132,6 +133,8 @@ func (p *ProviderData) Authorize(_ context.Context, s *sessions.SessionState) (b
 			return true, nil
 		}
 	}
+
+	logger.Println("session groups do not match any allowed groups")
 
 	return false, nil
 }
