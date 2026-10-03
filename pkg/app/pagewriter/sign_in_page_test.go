@@ -131,6 +131,11 @@ var _ = Describe("SignIn Page", func() {
 				expectedErr:  nil,
 				expectedData: "<img src=\"https://raw.githubusercontent.com/oauth2-proxy/oauth2-proxy/master/docs/static/img/logos/OAuth2_Proxy_icon.png\" alt=\"Logo\" />",
 			}),
+			Entry("with HTTP URL", loadCustomLogoTableInput{
+				logoPath:     "http://example.com/logo.png",
+				expectedErr:  nil,
+				expectedData: "<img src=\"http://example.com/logo.png\" alt=\"Logo\" />",
+			}),
 			Entry("with an svg custom logo", loadCustomLogoTableInput{
 				logoPath:     "customDir/logo.svg",
 				expectedErr:  nil,
