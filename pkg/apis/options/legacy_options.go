@@ -514,6 +514,7 @@ type LegacyProvider struct {
 	BitbucketTeam                          string   `flag:"bitbucket-team" cfg:"bitbucket_team"`
 	BitbucketWorkspace                     string   `flag:"bitbucket-workspace" cfg:"bitbucket_workspace"`
 	BitbucketRepository                    string   `flag:"bitbucket-repository" cfg:"bitbucket_repository"`
+	BitbucketDataCenterURL                 string   `flag:"bitbucket-datacenter-url" cfg:"bitbucket_datacenter_url"`
 	GitHubOrg                              string   `flag:"github-org" cfg:"github_org"`
 	GitHubTeam                             string   `flag:"github-team" cfg:"github_team"`
 	GitHubRepo                             string   `flag:"github-repo" cfg:"github_repo"`
@@ -584,6 +585,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("bitbucket-team", "", "[deprecated, use bitbucket-workspace instead] restrict logins to members of this team")
 	flagSet.String("bitbucket-workspace", "", "restrict logins to members of this workspace, use workspace slug (eg. `myworkspace`) instead of workspace name (eg. `My Workspace`)")
 	flagSet.String("bitbucket-repository", "", "restrict logins to user with access to this repository")
+	flagSet.String("bitbucket-datacenter-url", "", "base URL of a self-hosted Bitbucket Data Center instance (eg. `https://bitbucket.example.com`); enables Data Center mode")
 	flagSet.String("github-org", "", "restrict logins to members of this organisation")
 	flagSet.String("github-team", "", "restrict logins to members of this team")
 	flagSet.String("github-repo", "", "restrict logins to collaborators of this repository")
@@ -778,9 +780,10 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		}
 	case "bitbucket":
 		provider.BitbucketConfig = BitbucketOptions{
-			Team:       l.BitbucketTeam,
-			Workspace:  l.BitbucketWorkspace,
-			Repository: l.BitbucketRepository,
+			Team:          l.BitbucketTeam,
+			Workspace:     l.BitbucketWorkspace,
+			Repository:    l.BitbucketRepository,
+			DataCenterURL: l.BitbucketDataCenterURL,
 		}
 	case "google":
 		if len(l.GoogleGroupsLegacy) != 0 && !reflect.DeepEqual(l.GoogleGroupsLegacy, l.GoogleGroups) {

@@ -2,7 +2,9 @@ package validation
 
 import (
 	"fmt"
+	"net/url"
 	"os"
+	"strings"
 
 	jose "github.com/go-jose/go-jose/v4"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -74,6 +76,10 @@ func validateProvider(provider options.Provider, providerIDs map[string]struct{}
 
 	if provider.Type == "entra-id" {
 		msgs = append(msgs, validateEntraConfig(provider)...)
+	}
+
+	if provider.Type == "bitbucket" {
+		msgs = append(msgs, validateBitbucketConfig(provider)...)
 	}
 
 	msgs = append(msgs, validateOIDCSigningAlgorithms(provider)...)
@@ -169,6 +175,31 @@ func validateEntraConfig(provider options.Provider) []string {
 		_, err := os.Stat(federatedTokenPath)
 		if err != nil {
 			msgs = append(msgs, "could not read entra federated token file")
+		}
+	}
+
+	return msgs
+}
+
+// validateBitbucketConfig checks the Data Center settings of the Bitbucket provider.
+// Cloud (no bitbucket-datacenter-url) needs no extra validation.
+func validateBitbucketConfig(provider options.Provider) []string {
+	msgs := []string{}
+	cfg := provider.BitbucketConfig
+
+	if cfg.DataCenterURL == "" {
+		return msgs
+	}
+
+	u, err := url.Parse(cfg.DataCenterURL)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		msgs = append(msgs, fmt.Sprintf("invalid setting: bitbucket-datacenter-url %q must be an absolute http(s) URL", cfg.DataCenterURL))
+	}
+
+	if cfg.Repository != "" {
+		parts := strings.Split(cfg.Repository, "/")
+		if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+			msgs = append(msgs, fmt.Sprintf("invalid setting: bitbucket-repository %q must be PROJECTKEY/repo-slug when bitbucket-datacenter-url is set", cfg.Repository))
 		}
 	}
 
