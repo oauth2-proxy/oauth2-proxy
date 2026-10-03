@@ -242,6 +242,11 @@ type BitbucketOptions struct {
 	Workspace string `yaml:"workspace,omitempty"`
 	// Repository sets restrict logins to user with access to this repository
 	Repository string `yaml:"repository,omitempty"`
+	// DataCenterURL is the base URL of a self-hosted Bitbucket Data Center / Server
+	// instance (e.g. https://bitbucket.example.com). Setting it switches the provider
+	// from Bitbucket Cloud to Data Center; Workspace is then a project key and
+	// Repository is PROJECTKEY/repo-slug.
+	DataCenterURL string `yaml:"dataCenterURL,omitempty"`
 }
 
 type GitHubOptions struct {

@@ -290,3 +290,177 @@ func TestBitbucketProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) 
 	assert.Equal(t, "", email)
 	assert.Equal(t, nil, err)
 }
+
+// ****************************************************************************
+// Bitbucket Data Center (--bitbucket-datacenter-url)
+// ****************************************************************************
+
+const (
+	bbdcTestToken    = "valid-token"
+	bbdcTestUsername = "jdoe"
+)
+
+// testBitbucketDataCenterBackend fakes the subset of the Bitbucket Data Center
+// REST / OAuth API the provider uses. contextPath simulates an instance served
+// under a sub-path (e.g. /bitbucket). Only project PROJ and PROJ/repo are visible.
+func testBitbucketDataCenterBackend(contextPath string) *httptest.Server {
+	mux := http.NewServeMux()
+	authed := func(r *http.Request) bool {
+		return r.Header.Get("Authorization") == "Bearer "+bbdcTestToken
+	}
+
+	mux.HandleFunc(contextPath+"/rest/api/latest/application-properties", func(w http.ResponseWriter, r *http.Request) {
+		// Anonymous access succeeds but carries no X-AUSERNAME, like the real thing.
+		if authed(r) {
+			w.Header().Set("X-AUSERNAME", bbdcTestUsername)
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"version":"9.4.0"}`))
+	})
+	mux.HandleFunc(contextPath+"/rest/api/latest/users/"+bbdcTestUsername, func(w http.ResponseWriter, r *http.Request) {
+		if !authed(r) {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		_, _ = w.Write([]byte(`{"name":"jdoe","slug":"jdoe","emailAddress":"jdoe@example.com","displayName":"J Doe","active":true}`))
+	})
+	mux.HandleFunc(contextPath+"/rest/api/latest/projects/", func(w http.ResponseWriter, r *http.Request) {
+		path := strings.TrimPrefix(r.URL.Path, contextPath+"/rest/api/latest/projects/")
+		if !authed(r) {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		if path == "PROJ" || path == "PROJ/repos/repo" {
+			_, _ = w.Write([]byte(`{}`))
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	})
+	mux.HandleFunc(contextPath+"/rest/oauth2/latest/token", func(w http.ResponseWriter, r *http.Request) {
+		_ = r.ParseForm()
+		if r.Method != http.MethodPost || r.Form.Get("client_id") != "cid" || r.Form.Get("client_secret") != "secret" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		switch r.Form.Get("grant_type") {
+		case "authorization_code":
+			if r.Form.Get("code") != "the-code" {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+		case "refresh_token":
+			if r.Form.Get("refresh_token") != "refresh-1" {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+		default:
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"access_token":"` + bbdcTestToken + `","refresh_token":"refresh-1","expires_in":3600,"token_type":"bearer"}`))
+	})
+	return httptest.NewServer(mux)
+}
+
+func testBitbucketDataCenterProvider(opts options.BitbucketOptions) *BitbucketProvider {
+	return NewBitbucketProvider(&ProviderData{ClientID: "cid", ClientSecret: "secret"}, opts)
+}
+
+func TestBitbucketDataCenterDefaults(t *testing.T) {
+	p := testBitbucketDataCenterProvider(options.BitbucketOptions{DataCenterURL: "https://git.example.com/bitbucket/"})
+	assert.Equal(t, "Bitbucket Data Center", p.Data().ProviderName)
+	assert.Equal(t, "https://git.example.com/bitbucket/rest/oauth2/latest/authorize", p.Data().LoginURL.String())
+	assert.Equal(t, "https://git.example.com/bitbucket/rest/oauth2/latest/token", p.Data().RedeemURL.String())
+	assert.Equal(t, "https://git.example.com/bitbucket/rest/api/latest/application-properties", p.Data().ValidateURL.String())
+	assert.Equal(t, "PUBLIC_REPOS", p.Data().Scope)
+}
+
+func TestBitbucketDataCenterScopeAdjust(t *testing.T) {
+	p := testBitbucketDataCenterProvider(options.BitbucketOptions{
+		DataCenterURL: "https://bitbucket.example.com",
+		Workspace:     "PROJ",
+		Repository:    "PROJ/repo",
+	})
+	// REPO_READ added once; Cloud scopes (account/repository) must not leak in.
+	assert.Equal(t, "PUBLIC_REPOS REPO_READ", p.Data().Scope)
+}
+
+func TestBitbucketDataCenterGetEmailAddressNotImplemented(t *testing.T) {
+	p := testBitbucketDataCenterProvider(options.BitbucketOptions{DataCenterURL: "https://bitbucket.example.com"})
+	_, err := p.GetEmailAddress(context.Background(), &sessions.SessionState{AccessToken: bbdcTestToken})
+	assert.Equal(t, ErrNotImplemented, err)
+}
+
+func TestBitbucketDataCenterRedeemAndRefresh(t *testing.T) {
+	b := testBitbucketDataCenterBackend("")
+	defer b.Close()
+	p := testBitbucketDataCenterProvider(options.BitbucketOptions{DataCenterURL: b.URL})
+
+	s, err := p.Redeem(context.Background(), "https://proxy/oauth2/callback", "the-code", "")
+	assert.NoError(t, err)
+	assert.Equal(t, bbdcTestToken, s.AccessToken)
+	assert.Equal(t, "refresh-1", s.RefreshToken)
+	assert.NotNil(t, s.ExpiresOn)
+
+	refreshed, err := p.RefreshSession(context.Background(), s)
+	assert.NoError(t, err)
+	assert.True(t, refreshed)
+
+	_, err = p.Redeem(context.Background(), "https://proxy/oauth2/callback", "bad-code", "")
+	assert.Error(t, err)
+}
+
+func TestBitbucketDataCenterEnrichSession(t *testing.T) {
+	b := testBitbucketDataCenterBackend("/bitbucket")
+	defer b.Close()
+
+	cases := map[string]struct {
+		opts    options.BitbucketOptions
+		token   string
+		wantErr bool
+	}{
+		"no restrictions":            {token: bbdcTestToken},
+		"allowed project":            {opts: options.BitbucketOptions{Workspace: "PROJ"}, token: bbdcTestToken},
+		"denied project":             {opts: options.BitbucketOptions{Workspace: "NOPE"}, token: bbdcTestToken, wantErr: true},
+		"allowed repository":         {opts: options.BitbucketOptions{Repository: "PROJ/repo"}, token: bbdcTestToken},
+		"denied repository":          {opts: options.BitbucketOptions{Repository: "PROJ/other"}, token: bbdcTestToken, wantErr: true},
+		"project and repository":     {opts: options.BitbucketOptions{Workspace: "PROJ", Repository: "PROJ/repo"}, token: bbdcTestToken},
+		"project ok, repo denied":    {opts: options.BitbucketOptions{Workspace: "PROJ", Repository: "PROJ/other"}, token: bbdcTestToken, wantErr: true},
+		"deprecated team as project": {opts: options.BitbucketOptions{Team: "PROJ"}, token: bbdcTestToken},
+		"invalid token":              {token: "bad", wantErr: true},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			tc.opts.DataCenterURL = b.URL + "/bitbucket"
+			p := testBitbucketDataCenterProvider(tc.opts)
+			s := &sessions.SessionState{AccessToken: tc.token}
+			err := p.EnrichSession(context.Background(), s)
+			if tc.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, "jdoe", s.User)
+			assert.Equal(t, "jdoe", s.PreferredUsername)
+			assert.Equal(t, "jdoe@example.com", s.Email)
+		})
+	}
+}
+
+func TestBitbucketDataCenterValidateSession(t *testing.T) {
+	b := testBitbucketDataCenterBackend("")
+	defer b.Close()
+	p := testBitbucketDataCenterProvider(options.BitbucketOptions{DataCenterURL: b.URL})
+
+	assert.True(t, p.ValidateSession(context.Background(), &sessions.SessionState{AccessToken: bbdcTestToken}))
+	assert.False(t, p.ValidateSession(context.Background(), &sessions.SessionState{AccessToken: "bad"}))
+}
+
+func TestBitbucketCloudEnrichSessionIsNoop(t *testing.T) {
+	p := testBitbucketProvider("", "", "")
+	s := &sessions.SessionState{AccessToken: "imaginary_access_token"}
+	assert.NoError(t, p.EnrichSession(context.Background(), s))
+	assert.Equal(t, "", s.User)
+}

@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.5
 
+- feat(bitbucket): support self-hosted Bitbucket Data Center / Server 7.20+ via `--bitbucket-datacenter-url`; `--bitbucket-workspace` and `--bitbucket-repository` map to project key and `PROJECTKEY/repo-slug` (@NickTheDevOpsGuy)
+
 # V7.15.5
 
 ## Release Highlights

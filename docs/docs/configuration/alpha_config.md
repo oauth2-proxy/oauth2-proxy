@@ -345,6 +345,7 @@ They may change between releases without notice.
 | `team` | _string_ | Team sets restrict logins to members of this team - Bitbucket has deprecated teams, it will act as workspace instead |
 | `workspace` | _string_ | Workspace sets restrict logins to members of this workspace, use workspace slug |
 | `repository` | _string_ | Repository sets restrict logins to user with access to this repository |
+| `dataCenterURL` | _string_ | DataCenterURL is the base URL of a self-hosted Bitbucket Data Center / Server<br/>instance (e.g. https://bitbucket.example.com). Setting it switches the provider<br/>from Bitbucket Cloud to Data Center; Workspace is then a project key and<br/>Repository is PROJECTKEY/repo-slug. |
 
 ### ClaimSource
 

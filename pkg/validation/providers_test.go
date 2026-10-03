@@ -52,6 +52,29 @@ var _ = Describe("Providers", func() {
 		ClientSecret: "ClientSecret",
 	}
 
+	validBitbucketDataCenterProvider := options.Provider{
+		Type:         "bitbucket",
+		ID:           "ProviderIDBitbucketDC",
+		ClientID:     "ClientID",
+		ClientSecret: "ClientSecret",
+		BitbucketConfig: options.BitbucketOptions{
+			DataCenterURL: "https://bitbucket.example.com/bitbucket",
+			Workspace:     "PROJ",
+			Repository:    "PROJ/repo",
+		},
+	}
+
+	invalidBitbucketDataCenterProvider := options.Provider{
+		Type:         "bitbucket",
+		ID:           "ProviderIDBitbucketDCInvalid",
+		ClientID:     "ClientID",
+		ClientSecret: "ClientSecret",
+		BitbucketConfig: options.BitbucketOptions{
+			DataCenterURL: "bitbucket.example.com",
+			Repository:    "repo",
+		},
+	}
+
 	missingIDProvider := options.Provider{
 		ClientID:     "ClientID",
 		ClientSecret: "ClientSecret",
@@ -62,6 +85,8 @@ var _ = Describe("Providers", func() {
 	duplicateProviderIDMsg := "multiple providers found with id ProviderID: provider ids must be unique"
 	skipButtonAndMultipleProvidersMsg := "SkipProviderButton and multiple providers are mutually exclusive"
 	invalidOIDCSigningAlgorithmMsg := "provider ProviderIDInvalidOIDCSigningAlgorithms has invalid EnabledSigningAlgs entry \"invalid\""
+	invalidBitbucketDataCenterURLMsg := "invalid setting: bitbucket-datacenter-url \"bitbucket.example.com\" must be an absolute http(s) URL"
+	invalidBitbucketDataCenterRepoMsg := "invalid setting: bitbucket-repository \"repo\" must be PROJECTKEY/repo-slug when bitbucket-datacenter-url is set"
 	invalidOIDCSigningAlgorithmCaseMsg := "provider ProviderIDInvalidOIDCSigningAlgorithmCase has invalid EnabledSigningAlgs entry \"rs256\""
 
 	DescribeTable("validateProviders",
@@ -131,6 +156,22 @@ var _ = Describe("Providers", func() {
 				},
 			},
 			errStrings: []string{invalidOIDCSigningAlgorithmCaseMsg},
+		}),
+		Entry("with a valid Bitbucket Data Center config", &validateProvidersTableInput{
+			options: &options.Options{
+				Providers: options.Providers{
+					validBitbucketDataCenterProvider,
+				},
+			},
+			errStrings: []string{},
+		}),
+		Entry("with an invalid Bitbucket Data Center config", &validateProvidersTableInput{
+			options: &options.Options{
+				Providers: options.Providers{
+					invalidBitbucketDataCenterProvider,
+				},
+			},
+			errStrings: []string{invalidBitbucketDataCenterURLMsg, invalidBitbucketDataCenterRepoMsg},
 		}),
 	)
 })
