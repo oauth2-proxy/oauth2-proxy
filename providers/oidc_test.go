@@ -2,6 +2,9 @@ package providers
 
 import (
 	"context"
+	"crypto"
+	"crypto/rand"
+	"crypto/rsa"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -9,13 +12,16 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type redeemTokenResponse struct {
@@ -197,6 +203,7 @@ func TestOIDCProviderRefreshSessionIfNeededWithIdToken(t *testing.T) {
 	existingSession := &sessions.SessionState{
 		AccessToken:  "changeit",
 		IDToken:      "changeit",
+		Nonce:        []byte(oidcNonce),
 		CreatedAt:    nil,
 		ExpiresOn:    nil,
 		RefreshToken: refreshToken,
@@ -234,12 +241,137 @@ func TestOIDCProviderRefreshSessionIfNeededWithIdTokenUpdatesAdditionalClaims(t 
 		AdditionalClaims: map[string]interface{}{
 			"phone_number": "stale",
 		},
+		Nonce: []byte(oidcNonce),
 	}
 
 	refreshed, err := provider.RefreshSession(context.Background(), existingSession)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, refreshed, true)
 	assert.Equal(t, defaultIDToken.Phone, existingSession.AdditionalClaims["phone_number"])
+}
+
+func TestOIDCProviderRefreshSessionNonce(t *testing.T) {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+	untrustedKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+	for _, providerName := range []string{"oidc", "keycloak"} {
+		for _, tc := range []struct {
+			name                string
+			nonce               any
+			skipNonce           bool
+			omitIDToken         bool
+			expired             bool
+			missingSessionNonce bool
+			invalidSignature    bool
+			wantError           string
+		}{
+			{name: "missing nonce"},
+			{name: "matching nonce", nonce: defaultIDToken.Nonce},
+			{name: "mismatched nonce", nonce: "wrong", wantError: "nonce claim does not match"},
+			{name: "empty nonce", nonce: "", wantError: "nonce claim does not match"},
+			{name: "null nonce", nonce: (*string)(nil), wantError: "nonce claim does not match"},
+			{name: "empty nonce without session nonce", nonce: "", missingSessionNonce: true, wantError: "nonce claim does not match"},
+			{name: "null nonce without session nonce", nonce: (*string)(nil), missingSessionNonce: true, wantError: "nonce claim does not match"},
+			{name: "non-string nonce", nonce: 42, wantError: "could not verify id_token"},
+			{name: "nonce check disabled", nonce: "wrong", skipNonce: true},
+			{name: "missing ID token", omitIDToken: true},
+			{name: "expired ID token", expired: true, wantError: "token is expired"},
+			{name: "invalid signature", nonce: defaultIDToken.Nonce, invalidSignature: true, wantError: "failed to verify signature"},
+			{name: "invalid signature with nonce check disabled", skipNonce: true, invalidSignature: true, wantError: "failed to verify signature"},
+		} {
+			t.Run(providerName+"/"+tc.name, func(t *testing.T) {
+				claims := struct {
+					idTokenClaims
+					Nonce any `json:"nonce,omitempty"`
+				}{idTokenClaims: defaultIDToken, Nonce: tc.nonce}
+				if tc.expired {
+					claims.ExpiresAt = jwt.NewNumericDate(time.Now().Add(-time.Hour))
+				}
+				signingKey := key
+				if tc.invalidSignature {
+					signingKey = untrustedKey
+				}
+				rawIDToken, err := jwt.NewWithClaims(jwt.SigningMethodRS256, claims).SignedString(signingKey)
+				require.NoError(t, err)
+				if tc.omitIDToken {
+					rawIDToken = ""
+				}
+				refreshedAccessToken := makeAccessToken()
+				body, err := json.Marshal(redeemTokenResponse{
+					AccessToken: refreshedAccessToken, RefreshToken: refreshToken,
+					ExpiresIn: 3600, TokenType: "Bearer", IDToken: rawIDToken,
+				})
+				require.NoError(t, err)
+				server, provider := newTestOIDCSetup(body)
+				defer server.Close()
+				provider.SkipNonce = tc.skipNonce
+				provider.Verifier = internaloidc.NewVerifier(oidc.NewVerifier(
+					oidcIssuer, &oidc.StaticKeySet{PublicKeys: []crypto.PublicKey{key.Public()}},
+					&oidc.Config{ClientID: oidcClientID},
+				), internaloidc.IDTokenVerificationOptions{ClientID: oidcClientID, AudienceClaims: []string{"aud"}})
+				provider.ValidateURL = nil
+				var refreshProvider Provider = provider
+				if providerName == "keycloak" {
+					refreshProvider = &KeycloakOIDCProvider{OIDCProvider: provider}
+				}
+
+				originalIDToken, err := jwt.NewWithClaims(jwt.SigningMethodRS256, defaultIDToken).SignedString(key)
+				require.NoError(t, err)
+				session := &sessions.SessionState{
+					AccessToken: "original-access-token", IDToken: originalIDToken,
+					RefreshToken: refreshToken, Nonce: []byte(oidcNonce),
+				}
+				if tc.missingSessionNonce {
+					session.Nonce = nil
+				}
+				original := *session
+				refreshed, err := refreshProvider.RefreshSession(context.Background(), session)
+				if tc.wantError != "" {
+					require.ErrorContains(t, err, tc.wantError)
+					assert.False(t, refreshed)
+					assert.Equal(t, original, *session, "invalid tokens must not replace the stored session")
+					return
+				}
+				require.NoError(t, err)
+				assert.True(t, refreshed)
+				assert.Equal(t, refreshedAccessToken, session.AccessToken)
+				assert.Equal(t, original.Nonce, session.Nonce)
+				if tc.omitIDToken {
+					assert.Equal(t, originalIDToken, session.IDToken)
+				} else {
+					assert.Equal(t, rawIDToken, session.IDToken)
+				}
+				assert.True(t, provider.ValidateSession(context.Background(), session))
+			})
+		}
+	}
+}
+
+func TestOIDCProviderValidateSessionNonce(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		nonce     string
+		skipNonce bool
+		valid     bool
+	}{
+		{name: "matching nonce", nonce: defaultIDToken.Nonce, valid: true},
+		{name: "missing nonce"},
+		{name: "mismatched nonce", nonce: "wrong"},
+		{name: "nonce check disabled", skipNonce: true, valid: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			claims := defaultIDToken
+			claims.Nonce = tc.nonce
+			rawIDToken, err := newSignedTestIDToken(claims)
+			require.NoError(t, err)
+			server, provider := newTestOIDCSetup([]byte(`{}`))
+			defer server.Close()
+			provider.SkipNonce = tc.skipNonce
+			session := &sessions.SessionState{IDToken: rawIDToken, Nonce: []byte(oidcNonce)}
+			assert.Equal(t, tc.valid, provider.ValidateSession(context.Background(), session))
+		})
+	}
 }
 
 func TestOIDCProviderCreateSessionFromToken(t *testing.T) {

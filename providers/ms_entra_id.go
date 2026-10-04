@@ -136,7 +136,7 @@ func (p *MicrosoftEntraIDProvider) redeemWithFederatedToken(ctx context.Context,
 		return nil, fmt.Errorf("error fetching token: %w", err)
 	}
 
-	return p.OIDCProvider.createSession(ctx, token, false)
+	return p.OIDCProvider.createSession(ctx, token, nil)
 }
 
 // RefreshSession uses the RefreshToken to fetch new Access and ID Tokens
@@ -183,7 +183,7 @@ func (p *MicrosoftEntraIDProvider) redeemRefreshTokenWithFederatedToken(ctx cont
 		return fmt.Errorf("error fetching token: %w", err)
 	}
 
-	newSession, err := p.OIDCProvider.createSession(ctx, token, true)
+	newSession, err := p.OIDCProvider.createSession(ctx, token, s)
 	if err != nil {
 		return fmt.Errorf("unable create new session state from response: %v", err)
 	}

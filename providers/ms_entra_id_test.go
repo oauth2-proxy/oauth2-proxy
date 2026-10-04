@@ -4,20 +4,73 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	. "github.com/onsi/gomega"
 )
+
+func TestMicrosoftEntraIDProviderFederatedRefreshNonce(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "federated-token")
+	require.NoError(t, os.WriteFile(path, []byte("test-client-assertion"), 0600))
+	t.Setenv("AZURE_FEDERATED_TOKEN_FILE", path)
+
+	for _, tc := range []struct {
+		name      string
+		nonce     string
+		wantError bool
+	}{
+		{name: "matching nonce", nonce: defaultIDToken.Nonce},
+		{name: "missing nonce"},
+		{name: "mismatched nonce", nonce: "wrong", wantError: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			claims := defaultIDToken
+			claims.Nonce = tc.nonce
+			rawIDToken, err := newSignedTestIDToken(claims)
+			require.NoError(t, err)
+			body, err := json.Marshal(redeemTokenResponse{
+				AccessToken: accessToken, RefreshToken: refreshToken,
+				ExpiresIn: 3600, TokenType: "Bearer", IDToken: rawIDToken,
+			})
+			require.NoError(t, err)
+			server, oidcProvider := newTestOIDCSetup(body)
+			defer server.Close()
+			provider := &MicrosoftEntraIDProvider{OIDCProvider: oidcProvider, federatedTokenAuth: true}
+			session := &sessions.SessionState{
+				IDToken: "original-id-token", AccessToken: "original-access-token",
+				RefreshToken: refreshToken, Nonce: []byte(oidcNonce),
+			}
+			original := *session
+			refreshed, err := provider.RefreshSession(context.Background(), session)
+			if tc.wantError {
+				require.ErrorContains(t, err, "nonce claim does not match")
+				assert.False(t, refreshed)
+				assert.Equal(t, original, *session)
+				return
+			}
+			require.NoError(t, err)
+			assert.True(t, refreshed)
+			assert.Equal(t, rawIDToken, session.IDToken)
+			assert.Equal(t, accessToken, session.AccessToken)
+			assert.Equal(t, original.Nonce, session.Nonce)
+		})
+	}
+}
 
 func TestAzureEntraOIDCProviderNewMultiTenant(t *testing.T) {
 	g := NewWithT(t)

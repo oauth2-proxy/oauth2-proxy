@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.5
 
+- Validate the nonce in refreshed OIDC ID tokens when present, while allowing refresh responses without a nonce.
+
 # V7.15.5
 
 ## Release Highlights
