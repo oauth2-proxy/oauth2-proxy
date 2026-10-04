@@ -2,6 +2,7 @@ package providers
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -98,7 +99,7 @@ func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code, codeVerifi
 		return nil, fmt.Errorf("token exchange failed: %v", err)
 	}
 
-	return p.createSession(ctx, token, false)
+	return p.createSession(ctx, token, nil)
 }
 
 // EnrichSession is called after Redeem to allow providers to enrich session fields
@@ -183,7 +184,7 @@ func (p *OIDCProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sessi
 		return fmt.Errorf("failed to get token: %v", err)
 	}
 
-	newSession, err := p.createSession(ctx, token, true)
+	newSession, err := p.createSession(ctx, token, s)
 	if err != nil {
 		return fmt.Errorf("unable create new session state from response: %v", err)
 	}
@@ -237,9 +238,10 @@ func (p *OIDCProvider) CreateSessionFromToken(ctx context.Context, token string)
 }
 
 // createSession takes an oauth2.Token and creates a SessionState from it.
-// It alters behavior if called from Redeem vs Refresh
-func (p *OIDCProvider) createSession(ctx context.Context, token *oauth2.Token, refresh bool) (*sessions.SessionState, error) {
-	_, err := p.verifyIDToken(ctx, token)
+// previousSession is nil for Redeem and holds the original nonce for Refresh.
+func (p *OIDCProvider) createSession(ctx context.Context, token *oauth2.Token, previousSession *sessions.SessionState) (*sessions.SessionState, error) {
+	refresh := previousSession != nil
+	idToken, err := p.verifyIDToken(ctx, token)
 	if err != nil {
 		switch err {
 		case ErrMissingIDToken:
@@ -249,6 +251,20 @@ func (p *OIDCProvider) createSession(ctx context.Context, token *oauth2.Token, r
 			}
 		default:
 			return nil, fmt.Errorf("could not verify id_token: %v", err)
+		}
+	}
+
+	if refresh && !p.SkipNonce && idToken != nil {
+		// A refreshed ID Token may omit nonce, but a nonce that is present must
+		// match the original authentication (OIDC Core section 12.2).
+		var claims struct {
+			Nonce json.RawMessage `json:"nonce"`
+		}
+		if err := idToken.Claims(&claims); err != nil {
+			return nil, fmt.Errorf("could not extract nonce from ID Token: %v", err)
+		}
+		if claims.Nonce != nil && (idToken.Nonce == "" || !previousSession.CheckNonce(idToken.Nonce)) {
+			return nil, errors.New("id_token nonce claim does not match the session nonce")
 		}
 	}
 
