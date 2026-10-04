@@ -216,9 +216,15 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 	}
 
 	redirectValidator := redirect.NewValidator(opts.WhitelistDomains)
+	scheme := ""
+	if opts.Cookie.Secure {
+		scheme = schemeHTTPS
+	}
 	appDirector := redirect.NewAppDirector(redirect.AppDirectorOpts{
 		ProxyPrefix: opts.ProxyPrefix,
 		Validator:   redirectValidator,
+		IncludeHost: len(opts.WhitelistDomains) > 0,
+		Scheme:      scheme,
 	})
 
 	p := &OAuthProxy{

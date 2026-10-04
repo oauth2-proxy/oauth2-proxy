@@ -18,6 +18,8 @@ type AppDirector interface {
 type AppDirectorOpts struct {
 	ProxyPrefix string
 	Validator   Validator
+	IncludeHost bool
+	Scheme string
 }
 
 // NewAppDirector constructs a new AppDirector for getting the application
@@ -31,6 +33,8 @@ func NewAppDirector(opts AppDirectorOpts) AppDirector {
 	return &appDirector{
 		proxyPrefix: prefix,
 		validator:   opts.Validator,
+		includeHost: opts.IncludeHost,
+		scheme:      opts.Scheme,
 	}
 }
 
@@ -38,6 +42,8 @@ func NewAppDirector(opts AppDirectorOpts) AppDirector {
 type appDirector struct {
 	proxyPrefix string
 	validator   Validator
+	includeHost bool
+	scheme      string
 }
 
 // GetRedirect determines the full URL or URI path to redirect clients to once
@@ -48,6 +54,7 @@ type appDirector struct {
 // - `X-Forwarded-(Proto|Host|Uri)` headers (when ReverseProxy mode is enabled)
 // - `X-Forwarded-(Proto|Host)` if `Uri` has the ProxyPath (i.e. /oauth2/*)
 // - `X-Forwarded-Uri` direct URI path (when ReverseProxy mode is enabled)
+// - Full request URL if the request host is whitelisted and not under the ProxyPath (i.e. /oauth2/*)
 // - `req.URL.RequestURI` if not under the ProxyPath (i.e. /oauth2/*)
 // - `/`
 func (a *appDirector) GetRedirect(req *http.Request) (string, error) {
