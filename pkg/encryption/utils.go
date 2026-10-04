@@ -22,14 +22,17 @@ const (
 
 // SecretBytes attempts to base64 decode the secret, if that fails it treats the secret as binary
 func SecretBytes(secret string) []byte {
-	b, err := base64.RawURLEncoding.DecodeString(strings.TrimRight(secret, "="))
-	if err == nil {
-		// Only return decoded form if a valid AES length
-		// Don't want unintentional decoding resulting in invalid lengths confusing a user
-		// that thought they used a 16, 24, 32 length string
-		for _, i := range []int{16, 24, 32} {
-			if len(b) == i {
-				return b
+	trimmed := strings.TrimRight(secret, "=")
+	for _, enc := range []*base64.Encoding{base64.RawURLEncoding, base64.RawStdEncoding} {
+		b, err := enc.DecodeString(trimmed)
+		if err == nil {
+			// Only return decoded form if a valid AES length
+			// Don't want unintentional decoding resulting in invalid lengths confusing a user
+			// that thought they used a 16, 24, 32 length string
+			for _, i := range []int{16, 24, 32} {
+				if len(b) == i {
+					return b
+				}
 			}
 		}
 	}

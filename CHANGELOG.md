@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.5
 
+- fix(encryption): fallback to standard base64 decoding for cookie secrets (@sudeepchalla)
+
 # V7.15.5
 
 ## Release Highlights

@@ -26,6 +26,8 @@ func TestSecretBytesEncoded(t *testing.T) {
 
 			// We test both padded & raw Base64 to ensure we handle both
 			// potential user input routes for Base64
+
+			// Base64 (URL Encoding)
 			base64Padded := base64.URLEncoding.EncodeToString(secret)
 			sb := SecretBytes(base64Padded)
 			assert.Equal(t, secret, sb)
@@ -33,6 +35,17 @@ func TestSecretBytesEncoded(t *testing.T) {
 
 			base64Raw := base64.RawURLEncoding.EncodeToString(secret)
 			sb = SecretBytes(base64Raw)
+			assert.Equal(t, secret, sb)
+			assert.Equal(t, len(sb), secretSize)
+
+			// Base64 (Standard Encoding)
+			base64StdPadded := base64.StdEncoding.EncodeToString(secret)
+			sb = SecretBytes(base64StdPadded)
+			assert.Equal(t, secret, sb)
+			assert.Equal(t, len(sb), secretSize)
+
+			base64StdRaw := base64.RawStdEncoding.EncodeToString(secret)
+			sb = SecretBytes(base64StdRaw)
 			assert.Equal(t, secret, sb)
 			assert.Equal(t, len(sb), secretSize)
 		})
@@ -50,6 +63,8 @@ func TestSecretBytesEncodedWrongSize(t *testing.T) {
 
 			// We test both padded & raw Base64 to ensure we handle both
 			// potential user input routes for Base64
+
+			// Base64 (URL Encoding)
 			base64Padded := base64.URLEncoding.EncodeToString(secret)
 			sb := SecretBytes(base64Padded)
 			assert.NotEqual(t, secret, sb)
@@ -63,6 +78,19 @@ func TestSecretBytesEncodedWrongSize(t *testing.T) {
 			assert.NotEqual(t, len(sb), secretSize)
 			// The given secret is returned as []byte
 			assert.Equal(t, base64Raw, string(sb))
+
+			// Base64 (Standard Encoding)
+			base64StdPadded := base64.StdEncoding.EncodeToString(secret)
+			sb = SecretBytes(base64StdPadded)
+			assert.NotEqual(t, secret, sb)
+			assert.NotEqual(t, len(sb), secretSize)
+			assert.Equal(t, base64StdPadded, string(sb))
+
+			base64StdRaw := base64.RawStdEncoding.EncodeToString(secret)
+			sb = SecretBytes(base64StdRaw)
+			assert.NotEqual(t, secret, sb)
+			assert.NotEqual(t, len(sb), secretSize)
+			assert.Equal(t, base64StdRaw, string(sb))
 		})
 	}
 }
