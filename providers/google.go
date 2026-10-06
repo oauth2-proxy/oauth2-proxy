@@ -22,6 +22,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
+	"golang.org/x/sync/errgroup"
 	admin "google.golang.org/api/admin/directory/v1"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/impersonate"
@@ -266,14 +267,40 @@ func (p *GoogleProvider) setGroupRestriction(groups []string, adminService *admi
 	return func(s *sessions.SessionState) bool {
 		// Reset our saved Groups in case membership changed
 		// This is used by `Authorize` on every request
-		s.Groups = make([]string, 0, len(groups))
-		for _, group := range groups {
-			if userInGroup(adminService, group, s.Email) {
-				s.Groups = append(s.Groups, group)
-			}
-		}
+		s.Groups = userGroupsIn(adminService, groups, s.Email)
 		return len(s.Groups) > 0
 	}
+}
+
+// maxConcurrentGroupLookups bounds the number of in-flight Admin SDK
+// membership checks made for a single session.
+const maxConcurrentGroupLookups = 10
+
+// userGroupsIn checks the user's membership in each of the given groups
+// concurrently and returns the groups the user belongs to, in the order they
+// were given. Checking the groups one by one makes login and refresh latency
+// grow linearly with the number of configured groups.
+func userGroupsIn(service *admin.Service, groups []string, email string) []string {
+	isMember := make([]bool, len(groups))
+
+	var g errgroup.Group
+	g.SetLimit(maxConcurrentGroupLookups)
+	for i, group := range groups {
+		g.Go(func() error {
+			isMember[i] = userInGroup(service, group, email)
+			return nil
+		})
+	}
+	// userInGroup logs and swallows its own errors, so Wait never returns one.
+	_ = g.Wait()
+
+	matched := make([]string, 0, len(groups))
+	for i, group := range groups {
+		if isMember[i] {
+			matched = append(matched, group)
+		}
+	}
+	return matched
 }
 
 // populateAllGroups configures the GoogleProvider to allow access with all

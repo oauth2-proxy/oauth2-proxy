@@ -8,7 +8,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"slices"
+	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
@@ -288,6 +293,65 @@ func TestGoogleProvider_userInGroup(t *testing.T) {
 
 	result = userInGroup(service, "group@example.com", "non-member-out-of-domain@otherexample.com")
 	assert.False(t, result)
+}
+
+func TestGoogleProvider_setGroupRestrictionChecksGroupsConcurrently(t *testing.T) {
+	const email = "member@example.com"
+	groups := make([]string, 25)
+	var expected []string
+	for i := range groups {
+		groups[i] = fmt.Sprintf("group%02d@example.com", i)
+		if i%3 == 0 {
+			expected = append(expected, groups[i])
+		}
+	}
+
+	var inFlight, peak atomic.Int32
+	release := make(chan struct{})
+	var releaseOnce sync.Once
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := inFlight.Add(1)
+		defer inFlight.Add(-1)
+		for {
+			p := peak.Load()
+			if n <= p || peak.CompareAndSwap(p, n) {
+				break
+			}
+		}
+		// Hold every request until the concurrency limit is reached, so the
+		// lookups only complete quickly if they are actually made in parallel.
+		if n >= maxConcurrentGroupLookups {
+			releaseOnce.Do(func() { close(release) })
+		}
+		select {
+		case <-release:
+		case <-time.After(2 * time.Second):
+		}
+
+		// Path: /admin/directory/v1/groups/<group>/hasMember/<email>
+		parts := strings.Split(r.URL.Path, "/")
+		if len(parts) != 8 || parts[6] != "hasMember" {
+			http.NotFound(w, r)
+			return
+		}
+		fmt.Fprintf(w, `{"isMember":%t}`, parts[7] == email && slices.Contains(expected, parts[5]))
+	}))
+	defer ts.Close()
+
+	service, err := admin.NewService(context.Background(), option.WithHTTPClient(ts.Client()))
+	assert.NoError(t, err)
+	service.BasePath = ts.URL
+
+	p := newGoogleProvider(t)
+	session := &sessions.SessionState{Email: email}
+
+	assert.True(t, p.setGroupRestriction(groups, service)(session))
+	assert.Equal(t, expected, session.Groups)
+	assert.Equal(t, int32(maxConcurrentGroupLookups), peak.Load())
+
+	session = &sessions.SessionState{Email: "outsider@example.com"}
+	assert.False(t, p.setGroupRestriction(groups, service)(session))
+	assert.Empty(t, session.Groups)
 }
 
 func TestGoogleProvider_getUserGroups(t *testing.T) {

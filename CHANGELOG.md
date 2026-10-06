@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.5
 
+- [#XXXX](https://github.com/oauth2-proxy/oauth2-proxy/pull/XXXX) perf: check Google group membership concurrently so login and session refresh latency no longer grows linearly with the number of `--google-group` entries (@KKamJi98)
+
 # V7.15.5
 
 ## Release Highlights
