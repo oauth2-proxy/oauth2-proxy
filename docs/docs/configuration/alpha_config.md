@@ -391,6 +391,7 @@ ClaimSource allows loading a header value from a claim within the session
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
+| `groupMembershipConcurrency` | _int_ |  |
 | `group` | _[]string_ | Groups sets restrict logins to members of this Google group |
 | `adminEmail` | _string_ | AdminEmail is the Google admin to impersonate for api calls |
 | `serviceAccountJson` | _string_ | ServiceAccountJSON is the path to the service account json credentials |

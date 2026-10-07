@@ -60,6 +60,14 @@ func TestNewGoogleProvider(t *testing.T) {
 	g.Expect(providerData.ProfileURL.String()).To(Equal(""))
 	g.Expect(providerData.ValidateURL.String()).To(Equal("https://www.googleapis.com/oauth2/v1/tokeninfo"))
 	g.Expect(providerData.Scope).To(Equal("profile email"))
+	g.Expect(provider.groupMembershipConcurrency).To(Equal(5))
+}
+
+func TestNewGoogleProviderInvalidGroupMembershipConcurrency(t *testing.T) {
+	for _, concurrency := range []int{-1, 0, 11} {
+		_, err := NewGoogleProvider(&ProviderData{}, options.GoogleOptions{GroupMembershipConcurrency: &concurrency})
+		assert.Error(t, err)
+	}
 }
 
 func TestGoogleProviderOverrides(t *testing.T) {
@@ -296,6 +304,14 @@ func TestGoogleProvider_userInGroup(t *testing.T) {
 }
 
 func TestGoogleProvider_setGroupRestrictionChecksGroupsConcurrently(t *testing.T) {
+	for _, concurrency := range []int{1, 5, 10} {
+		t.Run(fmt.Sprint(concurrency), func(t *testing.T) {
+			checkGoogleGroupMembershipConcurrency(t, concurrency)
+		})
+	}
+}
+
+func checkGoogleGroupMembershipConcurrency(t *testing.T, concurrency int) {
 	const email = "member@example.com"
 	groups := make([]string, 25)
 	var expected []string
@@ -320,7 +336,7 @@ func TestGoogleProvider_setGroupRestrictionChecksGroupsConcurrently(t *testing.T
 		}
 		// Hold every request until the concurrency limit is reached, so the
 		// lookups only complete quickly if they are actually made in parallel.
-		if n >= maxConcurrentGroupLookups {
+		if n >= int32(concurrency) {
 			releaseOnce.Do(func() { close(release) })
 		}
 		select {
@@ -342,12 +358,13 @@ func TestGoogleProvider_setGroupRestrictionChecksGroupsConcurrently(t *testing.T
 	assert.NoError(t, err)
 	service.BasePath = ts.URL
 
-	p := newGoogleProvider(t)
+	p, err := NewGoogleProvider(&ProviderData{}, options.GoogleOptions{GroupMembershipConcurrency: &concurrency})
+	assert.NoError(t, err)
 	session := &sessions.SessionState{Email: email}
 
 	assert.True(t, p.setGroupRestriction(groups, service)(session))
 	assert.Equal(t, expected, session.Groups)
-	assert.Equal(t, int32(maxConcurrentGroupLookups), peak.Load())
+	assert.Equal(t, int32(concurrency), peak.Load())
 
 	session = &sessions.SessionState{Email: "outsider@example.com"}
 	assert.False(t, p.setGroupRestriction(groups, service)(session))

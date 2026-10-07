@@ -15,6 +15,12 @@ title: Google (default)
 | `--google-use-organization-id`                  | `google_use_organization_id`                 | bool   | use organization id as preferred username                                                                                                                                                   | false                                               |
 | `--google-admin-api-user-scope`                 | `google_admin_api_user_scope`                | string | the OAuth scope to use when querying the Google Admin SDK for organization id, can be 'readonly', 'user' or 'cloud'<br/>                                                                    | `readonly`                                          |
 
+`--google-group-membership-concurrency` (`google_group_membership_concurrency` in TOML,
+`OAUTH2_PROXY_GOOGLE_GROUP_MEMBERSHIP_CONCURRENCY` in the environment) limits membership
+checks to 1-10 concurrent requests per session. The default is 5; use 1 for sequential
+checks. In alpha YAML, set `googleConfig.groupMembershipConcurrency`. This does not limit
+requests across sessions or replicas and does not guarantee Google API quota compliance.
+
 ## Usage
 
 For Google, the registration steps are:

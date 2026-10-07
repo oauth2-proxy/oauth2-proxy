@@ -7,6 +7,7 @@ import (
 	"time"
 
 	. "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options/testutil"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/spf13/pflag"
@@ -36,14 +37,15 @@ var _ = Describe("Load", func() {
 		},
 
 		LegacyProvider: LegacyProvider{
-			ProviderType:          "google",
-			AzureTenant:           "common",
-			ApprovalPrompt:        "force",
-			UserIDClaim:           "email",
-			OIDCEmailClaim:        "email",
-			OIDCGroupsClaim:       "groups",
-			OIDCAudienceClaims:    []string{"aud"},
-			InsecureOIDCSkipNonce: true,
+			ProviderType:                     "google",
+			GoogleGroupMembershipConcurrency: ptr.To(5),
+			AzureTenant:                      "common",
+			ApprovalPrompt:                   "force",
+			UserIDClaim:                      "email",
+			OIDCEmailClaim:                   "email",
+			OIDCGroupsClaim:                  "groups",
+			OIDCAudienceClaims:               []string{"aud"},
+			InsecureOIDCSkipNonce:            true,
 		},
 
 		Options: Options{

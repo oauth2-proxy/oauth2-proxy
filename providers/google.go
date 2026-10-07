@@ -43,7 +43,8 @@ type GoogleProvider struct {
 	// Since it is called on every request.
 	groupValidator func(*sessions.SessionState) bool
 
-	setPreferredUsername func(s *sessions.SessionState) error
+	setPreferredUsername       func(s *sessions.SessionState) error
+	groupMembershipConcurrency int
 }
 
 var _ Provider = (*GoogleProvider)(nil)
@@ -89,6 +90,10 @@ var (
 
 // NewGoogleProvider initiates a new GoogleProvider
 func NewGoogleProvider(p *ProviderData, opts options.GoogleOptions) (*GoogleProvider, error) {
+	concurrency := ptr.Deref(opts.GroupMembershipConcurrency, options.DefaultGoogleGroupMembershipConcurrency)
+	if concurrency < 1 || concurrency > options.MaxGoogleGroupMembershipConcurrency {
+		return nil, fmt.Errorf("google-group-membership-concurrency must be between 1 and 10")
+	}
 	p.setProviderDefaults(providerDefaults{
 		name:        googleProviderName,
 		loginURL:    googleDefaultLoginURL,
@@ -98,7 +103,8 @@ func NewGoogleProvider(p *ProviderData, opts options.GoogleOptions) (*GoogleProv
 		scope:       googleDefaultScope,
 	})
 	provider := &GoogleProvider{
-		ProviderData: p,
+		ProviderData:               p,
+		groupMembershipConcurrency: concurrency,
 		// Set a default groupValidator to just always return valid (true), it will
 		// be overwritten if we configured a Google group restriction.
 		groupValidator: func(*sessions.SessionState) bool {
@@ -267,24 +273,20 @@ func (p *GoogleProvider) setGroupRestriction(groups []string, adminService *admi
 	return func(s *sessions.SessionState) bool {
 		// Reset our saved Groups in case membership changed
 		// This is used by `Authorize` on every request
-		s.Groups = userGroupsIn(adminService, groups, s.Email)
+		s.Groups = userGroupsIn(adminService, groups, s.Email, p.groupMembershipConcurrency)
 		return len(s.Groups) > 0
 	}
 }
-
-// maxConcurrentGroupLookups bounds the number of in-flight Admin SDK
-// membership checks made for a single session.
-const maxConcurrentGroupLookups = 10
 
 // userGroupsIn checks the user's membership in each of the given groups
 // concurrently and returns the groups the user belongs to, in the order they
 // were given. Checking the groups one by one makes login and refresh latency
 // grow linearly with the number of configured groups.
-func userGroupsIn(service *admin.Service, groups []string, email string) []string {
+func userGroupsIn(service *admin.Service, groups []string, email string, concurrency int) []string {
 	isMember := make([]bool, len(groups))
 
 	var g errgroup.Group
-	g.SetLimit(maxConcurrentGroupLookups)
+	g.SetLimit(concurrency)
 	for i, group := range groups {
 		g.Go(func() error {
 			isMember[i] = userInGroup(service, group, email)
