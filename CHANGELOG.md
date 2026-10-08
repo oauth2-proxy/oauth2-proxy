@@ -80,6 +80,7 @@ longer fall back to granting exemptions based on the proxy's own IP.
 
 ## Changes since v7.15.4
 
+- [#3540](https://github.com/oauth2-proxy/oauth2-proxy/pull/3540) fix: honor `--oidc-groups-claim` for tokens verified via `--extra-jwt-issuers` (#3539) (@jaewak)
 - [#3546](https://github.com/oauth2-proxy/oauth2-proxy/pull/3546) fix: strip the port from the request host when matching cookie domains @kirilju
 - [#3547](https://github.com/oauth2-proxy/oauth2-proxy/pull/3547) fix: refresh additional claims for OIDC and MS Entra ID providers and properly populate additional claims during login (@Apollo3zehn)
 - [#3477](https://github.com/oauth2-proxy/oauth2-proxy/pull/3477) fix(bitbucket): auth failure due to Bitbucket OAuth 2.0 [changes on May 4th 2026](https://developer.atlassian.com/cloud/bitbucket/changelog/#CHANGE-3052) @mfouad
