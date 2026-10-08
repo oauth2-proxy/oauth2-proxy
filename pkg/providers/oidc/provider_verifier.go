@@ -11,7 +11,6 @@ import (
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
-	k8serrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
 // ProviderVerifier represents the OIDC discovery and verification process
@@ -76,7 +75,7 @@ func (p ProviderVerifierOptions) validate() error {
 	}
 
 	if len(errs) > 0 {
-		return k8serrors.NewAggregate(errs)
+		return errors.Join(errs...)
 	}
 	return nil
 }

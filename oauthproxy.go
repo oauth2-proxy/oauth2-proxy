@@ -595,8 +595,8 @@ func isAllowedMethod(req *http.Request, route allowedRoute) bool {
 	return route.method == "" || req.Method == route.method
 }
 
-func isAllowedPath(req *http.Request, route allowedRoute) bool {
-	matches := route.pathRegex.MatchString(requestutil.GetRequestPath(req))
+func isAllowedPath(requestPath string, route allowedRoute) bool {
+	matches := route.pathRegex.MatchString(requestPath)
 
 	if route.negate {
 		return !matches
@@ -607,8 +607,16 @@ func isAllowedPath(req *http.Request, route allowedRoute) bool {
 
 // IsAllowedRoute is used to check if the request method & path is allowed without auth
 func (p *OAuthProxy) isAllowedRoute(req *http.Request) bool {
+	if len(p.allowedRoutes) == 0 {
+		return false
+	}
+	requestPath, err := requestutil.GetRequestPath(req)
+	if err != nil {
+		logger.Errorf("Skipping path-based authentication exemption: %v", err)
+		return false
+	}
 	for _, route := range p.allowedRoutes {
-		if isAllowedMethod(req, route) && isAllowedPath(req, route) {
+		if isAllowedMethod(req, route) && isAllowedPath(requestPath, route) {
 			return true
 		}
 	}
@@ -630,10 +638,16 @@ func (p *OAuthProxy) isTrustedIP(req *http.Request) bool {
 		return false
 	}
 
-	remoteAddr, err := ip.GetClientIP(p.realClientIPParser, req)
+	var remoteAddr net.IP
+	var err error
+	scope := middlewareapi.GetRequestScope(req)
+	if scope != nil && scope.CanTrustForwardedHeaders(req) {
+		remoteAddr, err = ip.GetClientIPFromTrustedProxy(p.realClientIPParser, req, scope.TrustedProxies)
+	} else {
+		remoteAddr, err = ip.GetClientIP(nil, req)
+	}
 	if err != nil {
 		logger.Errorf("Error obtaining real IP for trusted IP list: %v", err)
-		// Possibly spoofed X-Real-IP header
 		return false
 	}
 
@@ -883,7 +897,15 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 // OAuthCallback is the OAuth2 authentication flow callback that finishes the
 // OAuth2 authentication flow
 func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
-	remoteAddr := ip.GetClientString(p.realClientIPParser, req, true)
+	realClientIPParser := p.realClientIPParser
+	var trustedProxies *ip.NetSet
+	scope := middlewareapi.GetRequestScope(req)
+	if scope != nil && scope.CanTrustForwardedHeaders(req) {
+		trustedProxies = scope.TrustedProxies
+	} else {
+		realClientIPParser = nil
+	}
+	remoteAddr := ip.GetClientString(realClientIPParser, req, trustedProxies, true)
 
 	// finish the oauth cycle
 	// #nosec G120 -- The default max size in Go is already capped at 10MB so this would be the absolute max and is
@@ -918,7 +940,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		// There are a lot of issues opened complaining about missing CSRF cookies.
 		// Try to log the INs and OUTs of OAuthProxy, to be easier to analyse these issues.
 		LoggingCSRFCookiesInOAuthCallback(req, cookieName)
-		logger.Println(req, logger.AuthFailure, "Invalid authentication via OAuth2: unable to obtain CSRF cookie: %s (state=%s)", err, nonce)
+		logger.PrintAuthf("", req, logger.AuthFailure, "Invalid authentication via OAuth2: unable to obtain CSRF cookie: %s", err)
 		p.ErrorPage(rw, req, http.StatusForbidden, err.Error(), "Login Failed: Unable to find a valid CSRF token. Please try again.")
 		return
 	}
@@ -1344,26 +1366,26 @@ func (p *OAuthProxy) errorJSON(rw http.ResponseWriter, code int) {
 	rw.Write([]byte("{}"))
 }
 
-// LoggingCSRFCookiesInOAuthCallback Log all CSRF cookies found in HTTP request OAuth callback,
-// which were successfully parsed
+// LoggingCSRFCookiesInOAuthCallback logs CSRF cookie names, never values, to
+// diagnose a missing or invalid CSRF cookie in an OAuth callback.
 func LoggingCSRFCookiesInOAuthCallback(req *http.Request, cookieName string) {
 	cookies := req.Cookies()
 	if len(cookies) == 0 {
-		logger.Println(req, logger.AuthFailure, "No cookies were found in OAuth callback.")
+		logger.PrintAuthf("", req, logger.AuthFailure, "No cookies were found in OAuth callback.")
 		return
 	}
 
 	for _, c := range cookies {
 		if cookieName == c.Name {
-			logger.Println(req, logger.AuthFailure, "CSRF cookie %s was found in OAuth callback.", c.Name)
+			logger.PrintAuthf("", req, logger.AuthFailure, "CSRF cookie %s was found in OAuth callback.", c.Name)
 			return
 		}
 
 		if strings.HasSuffix(c.Name, "_csrf") {
-			logger.Println(req, logger.AuthFailure, "CSRF cookie %s was found in OAuth callback, but it is not the expected one (%s).", c.Name, cookieName)
+			logger.PrintAuthf("", req, logger.AuthFailure, "CSRF cookie %s was found in OAuth callback, but it is not the expected one (%s).", c.Name, cookieName)
 			return
 		}
 	}
 
-	logger.Println(req, logger.AuthFailure, "Cookies were found in OAuth callback, but none was a CSRF cookie.")
+	logger.PrintAuthf("", req, logger.AuthFailure, "Cookies were found in OAuth callback, but none was a CSRF cookie.")
 }

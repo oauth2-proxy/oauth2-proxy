@@ -50,4 +50,5 @@ require_matching_label:
     missing_comment: "Please add a kind label with /kind <value>."
 
 tide:
+  # Scheduled sweep/lgtm jobs ignore this setting; do not enable them.
   merge_on_events: false

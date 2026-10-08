@@ -1,16 +1,21 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/http/httputil"
 	"net/url"
+	"path"
 	"regexp"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -20,6 +25,8 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/authentication/hmacauth"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/cookies"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
 	sessionscookie "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/cookie"
@@ -27,6 +34,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
+	"github.com/onsi/ginkgo/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -437,6 +445,191 @@ func (patTest *PassAccessTokenTest) getCallbackEndpoint() (httpCode int, cookie 
 	}
 
 	return rw.Code, cookie
+}
+
+func TestOAuthCallbackCSRFCookieLogging(t *testing.T) {
+	opts := baseTestOptions()
+	require.NoError(t, validation.Validate(opts))
+	proxy, err := NewOAuthProxy(opts, func(string) bool { return true })
+	require.NoError(t, err)
+
+	csrf, err := cookies.NewCSRF(proxy.CookieOptions, "synthetic-pkce-verifier")
+	require.NoError(t, err)
+	csrfCookie, err := csrf.SetCookie(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
+	require.NoError(t, err)
+	secret, err := proxy.CookieOptions.GetSecret()
+	require.NoError(t, err)
+	value, _, valid := encryption.Validate(csrfCookie, secret, proxy.CookieOptions.CSRFExpire)
+	require.True(t, valid)
+	expiredValue, err := encryption.SignedValue(secret, csrfCookie.Name, value, time.Now().Add(-proxy.CookieOptions.CSRFExpire-time.Hour))
+	require.NoError(t, err)
+
+	sessionCookie := &http.Cookie{Name: proxy.CookieOptions.Name, Value: "synthetic-session-credential"}
+	invalidCookie := &http.Cookie{Name: csrfCookie.Name, Value: "synthetic-invalid-csrf-credential"}
+	expiredCookie := &http.Cookie{Name: csrfCookie.Name, Value: expiredValue}
+	otherCookie := &http.Cookie{Name: "_other_csrf", Value: "synthetic-other-csrf-credential"}
+	testCases := []struct {
+		name       string
+		cookies    []*http.Cookie
+		diagnostic string
+	}{
+		{
+			name:       "no cookies",
+			diagnostic: "No cookies were found in OAuth callback.",
+		},
+		{
+			name:       "missing CSRF cookie",
+			cookies:    []*http.Cookie{sessionCookie},
+			diagnostic: "Cookies were found in OAuth callback, but none was a CSRF cookie.",
+		},
+		{
+			name:       "invalid expected CSRF cookie",
+			cookies:    []*http.Cookie{sessionCookie, invalidCookie},
+			diagnostic: fmt.Sprintf("CSRF cookie %s was found in OAuth callback.", csrfCookie.Name),
+		},
+		{
+			name:       "expired expected CSRF cookie",
+			cookies:    []*http.Cookie{sessionCookie, expiredCookie},
+			diagnostic: fmt.Sprintf("CSRF cookie %s was found in OAuth callback.", csrfCookie.Name),
+		},
+		{
+			name:       "other CSRF cookie",
+			cookies:    []*http.Cookie{sessionCookie, otherCookie},
+			diagnostic: fmt.Sprintf("CSRF cookie %s was found in OAuth callback, but it is not the expected one (%s).", otherCookie.Name, csrfCookie.Name),
+		},
+	}
+	loggingCases := []struct {
+		name     string
+		standard bool
+		auth     bool
+		request  bool
+	}{
+		{name: "all enabled", standard: true, auth: true, request: true},
+		{name: "auth disabled", standard: true, request: true},
+		{name: "only auth enabled", auth: true},
+		{name: "all disabled"},
+	}
+	for _, tc := range testCases {
+		for _, logging := range loggingCases {
+			for _, authScheme := range []string{"Basic", "Bearer"} {
+				t.Run(tc.name+"/"+logging.name+"/"+authScheme, func(t *testing.T) {
+					var output, errors bytes.Buffer
+					logger.SetOutput(&output)
+					logger.SetErrOutput(&errors)
+					logger.SetStandardEnabled(logging.standard)
+					logger.SetAuthEnabled(logging.auth)
+					logger.SetReqEnabled(logging.request)
+					logger.SetAuthTemplate("AUTH {{.RequestID}} {{.Username}} {{.Status}} {{.Message}}")
+					logger.SetReqTemplate("REQUEST " + logger.DefaultRequestLoggingFormat)
+					t.Cleanup(func() {
+						logger.SetOutput(ginkgo.GinkgoWriter)
+						logger.SetErrOutput(ginkgo.GinkgoWriter)
+						logger.SetStandardEnabled(true)
+						logger.SetAuthEnabled(true)
+						logger.SetReqEnabled(true)
+						logger.SetAuthTemplate(logger.DefaultAuthLoggingFormat)
+						logger.SetReqTemplate(logger.DefaultRequestLoggingFormat)
+					})
+
+					query := url.Values{
+						"code":  {"synthetic-callback-code"},
+						"state": {encodeState(csrf.HashOAuthState(), "/", false)},
+					}
+					req := httptest.NewRequest(http.MethodGet, "/oauth2/callback?"+query.Encode(), nil)
+					req.Header.Set("X-Request-Id", "callback-log-test")
+					credential := "synthetic-bearer-credential"
+					if authScheme == "Basic" {
+						credential = base64.StdEncoding.EncodeToString([]byte("synthetic-user:synthetic-password"))
+					}
+					req.Header.Set("Authorization", authScheme+" "+credential)
+					req.Header.Set("X-Synthetic-Secret", "synthetic-header-credential")
+					for _, cookie := range tc.cookies {
+						req.AddCookie(cookie)
+					}
+
+					rw := httptest.NewRecorder()
+					proxy.ServeHTTP(rw, req)
+
+					assert.Equal(t, http.StatusForbidden, rw.Code)
+					assert.Contains(t, rw.Body.String(), "Unable to find a valid CSRF token")
+					assert.Empty(t, rw.Result().Cookies())
+					assert.Empty(t, errors.String())
+					logs := output.String() + errors.String()
+					assert.NotContains(t, logs, credential)
+					assert.NotContains(t, logs, "synthetic-header-credential")
+					for _, cookie := range tc.cookies {
+						assert.NotContains(t, logs, cookie.Value)
+					}
+					expectedAuth := "AUTH callback-log-test - AuthFailure " + tc.diagnostic + "\n" +
+						fmt.Sprintf("AUTH callback-log-test - AuthFailure Invalid authentication via OAuth2: unable to obtain CSRF cookie: CSRF cookie with name '%s' was not found\n", csrfCookie.Name)
+					if !logging.auth {
+						expectedAuth = ""
+					}
+					if logging.request {
+						assert.True(t, strings.HasPrefix(output.String(), expectedAuth+"REQUEST "), "unexpected logs: %s", output.String())
+						assert.Equal(t, strings.Count(expectedAuth, "\n")+1, strings.Count(output.String(), "\n"))
+					} else {
+						assert.Equal(t, expectedAuth, output.String())
+					}
+				})
+			}
+		}
+	}
+}
+
+type failingSaveSessionStore struct {
+	sessions.SessionStore
+}
+
+func (failingSaveSessionStore) Save(http.ResponseWriter, *http.Request, *sessions.SessionState) error {
+	return errors.New("session save failed")
+}
+
+func TestOAuthCallbackClientIPLogging(t *testing.T) {
+	test, err := NewPassAccessTokenTest(PassAccessTokenTestOptions{ValidToken: true})
+	require.NoError(t, err)
+	t.Cleanup(test.Close)
+	t.Cleanup(func() { logger.SetErrOutput(ginkgo.GinkgoWriter) })
+	test.proxy.sessionStore = failingSaveSessionStore{test.proxy.sessionStore}
+	test.proxy.realClientIPParser, err = ip.GetRealClientIPParser("X-Forwarded-For")
+	require.NoError(t, err)
+	trustedProxies, err := ip.ParseNetSet([]string{"192.0.2.0/24"})
+	require.NoError(t, err)
+
+	for _, tc := range []struct {
+		name         string
+		remoteAddr   string
+		headerValues []string
+		expected     string
+	}{
+		{"Untrusted peer", "198.51.100.23:1234", []string{"10.0.0.5"}, "198.51.100.23"},
+		{"Appending trusted proxy", "192.0.2.10:1234", []string{"10.0.0.5", "198.51.100.23, 192.0.2.20"}, "192.0.2.10 (198.51.100.23)"},
+		{"Malformed relevant hop", "192.0.2.10:1234", []string{"10.0.0.5, invalid, 192.0.2.20"}, "192.0.2.10"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			csrf, err := cookies.NewCSRF(test.proxy.CookieOptions, "")
+			require.NoError(t, err)
+			req := httptest.NewRequest(http.MethodGet, "/oauth2/callback?code=callback_code&state="+encodeState(csrf.HashOAuthState(), "%2F", false), nil)
+			req.RemoteAddr = tc.remoteAddr
+			for _, value := range tc.headerValues {
+				req.Header.Add("X-Forwarded-For", value)
+			}
+			req = middlewareapi.AddRequestScope(req, &middlewareapi.RequestScope{
+				ReverseProxy:   true,
+				TrustedProxies: trustedProxies,
+			})
+			csrfCookie, err := csrf.SetCookie(httptest.NewRecorder(), req)
+			require.NoError(t, err)
+			req.AddCookie(csrfCookie)
+			var output bytes.Buffer
+			logger.SetErrOutput(&output)
+			rw := httptest.NewRecorder()
+			test.proxy.OAuthCallback(rw, req)
+			assert.Equal(t, http.StatusInternalServerError, rw.Code)
+			assert.Contains(t, output.String(), "Error saving session state for "+tc.expected+": session save failed")
+			assert.NotContains(t, output.String(), "10.0.0.5")
+		})
+	}
 }
 
 // getEndpointWithCookie makes a requests againt the oauthproxy with passed requestPath
@@ -2174,9 +2367,18 @@ func baseTestOptions() *options.Options {
 }
 
 func TestTrustedIPs(t *testing.T) {
+	xffRequest := func(remoteAddr string, values ...string) *http.Request {
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		req.RemoteAddr = remoteAddr
+		for _, value := range values {
+			req.Header.Add("X-Forwarded-For", value)
+		}
+		return req
+	}
 	tests := []struct {
 		name               string
 		trustedIPs         []string
+		trustedProxyIPs    []string
 		reverseProxy       bool
 		realClientIPHeader string
 		req                *http.Request
@@ -2250,11 +2452,13 @@ func TestTrustedIPs(t *testing.T) {
 		{
 			name:               "TrustsLocalhostInReverseProxyMode",
 			trustedIPs:         []string{"127.0.0.0/8", "::1"},
+			trustedProxyIPs:    []string{"192.0.2.10"},
 			reverseProxy:       true,
 			realClientIPHeader: "X-Forwarded-For",
 			req: func() *http.Request {
 				req, _ := http.NewRequest(http.MethodGet, "/", nil)
 				req.Header.Add("X-Forwarded-For", "127.0.0.1")
+				req.RemoteAddr = "192.0.2.10:1234"
 				return req
 			}(),
 			expectTrusted: true,
@@ -2263,11 +2467,13 @@ func TestTrustedIPs(t *testing.T) {
 		{
 			name:               "TrustsIP6LocalostInReverseProxyMode",
 			trustedIPs:         []string{"127.0.0.0/8", "::1"},
+			trustedProxyIPs:    []string{"192.0.2.10"},
 			reverseProxy:       true,
 			realClientIPHeader: "X-Forwarded-For",
 			req: func() *http.Request {
 				req, _ := http.NewRequest(http.MethodGet, "/", nil)
 				req.Header.Add("X-Forwarded-For", "::1")
+				req.RemoteAddr = "192.0.2.10:1234"
 				return req
 			}(),
 			expectTrusted: true,
@@ -2276,11 +2482,13 @@ func TestTrustedIPs(t *testing.T) {
 		{
 			name:               "DoesNotTrustRandomIP4Address",
 			trustedIPs:         []string{"127.0.0.0/8", "::1"},
+			trustedProxyIPs:    []string{"192.0.2.10"},
 			reverseProxy:       true,
 			realClientIPHeader: "X-Forwarded-For",
 			req: func() *http.Request {
 				req, _ := http.NewRequest(http.MethodGet, "/", nil)
 				req.Header.Add("X-Forwarded-For", "12.34.56.78")
+				req.RemoteAddr = "192.0.2.10:1234"
 				return req
 			}(),
 			expectTrusted: false,
@@ -2289,11 +2497,13 @@ func TestTrustedIPs(t *testing.T) {
 		{
 			name:               "DoesNotTrustRandomIP6Address",
 			trustedIPs:         []string{"127.0.0.0/8", "::1"},
+			trustedProxyIPs:    []string{"192.0.2.10"},
 			reverseProxy:       true,
 			realClientIPHeader: "X-Forwarded-For",
 			req: func() *http.Request {
 				req, _ := http.NewRequest(http.MethodGet, "/", nil)
 				req.Header.Add("X-Forwarded-For", "::2")
+				req.RemoteAddr = "192.0.2.10:1234"
 				return req
 			}(),
 			expectTrusted: false,
@@ -2302,11 +2512,13 @@ func TestTrustedIPs(t *testing.T) {
 		{
 			name:               "RespectsCorrectHeaderInReverseProxyMode",
 			trustedIPs:         []string{"127.0.0.0/8", "::1"},
+			trustedProxyIPs:    []string{"192.0.2.10"},
 			reverseProxy:       true,
 			realClientIPHeader: "X-Forwarded-For",
 			req: func() *http.Request {
 				req, _ := http.NewRequest(http.MethodGet, "/", nil)
 				req.Header.Add("X-Real-IP", "::1")
+				req.RemoteAddr = "192.0.2.10:1234"
 				return req
 			}(),
 			expectTrusted: false,
@@ -2315,14 +2527,163 @@ func TestTrustedIPs(t *testing.T) {
 		{
 			name:               "DoesNotTrustGarbageInReverseProxyMode",
 			trustedIPs:         []string{"127.0.0.0/8", "::1"},
+			trustedProxyIPs:    []string{"192.0.2.10"},
 			reverseProxy:       true,
 			realClientIPHeader: "X-Forwarded-For",
 			req: func() *http.Request {
 				req, _ := http.NewRequest(http.MethodGet, "/", nil)
 				req.Header.Add("X-Forwarded-For", "adsfljk29242as!!")
+				req.RemoteAddr = "192.0.2.10:1234"
 				return req
 			}(),
 			expectTrusted: false,
+		},
+		{
+			name:               "IgnoresRealClientHeaderFromUntrustedPeer",
+			trustedIPs:         []string{"10.0.0.0/8"},
+			trustedProxyIPs:    []string{"192.0.2.10"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Real-IP",
+			req: func() *http.Request {
+				req, _ := http.NewRequest(http.MethodGet, "/", nil)
+				req.Header.Set("X-Real-IP", "10.0.0.5")
+				req.RemoteAddr = "198.51.100.23:1234"
+				return req
+			}(),
+			expectTrusted: false,
+		},
+		{
+			name:               "UsesTransportAddressForUntrustedPeer",
+			trustedIPs:         []string{"198.51.100.23"},
+			trustedProxyIPs:    []string{"192.0.2.10"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Real-IP",
+			req: func() *http.Request {
+				req, _ := http.NewRequest(http.MethodGet, "/", nil)
+				req.Header.Set("X-Real-IP", "10.0.0.5")
+				req.RemoteAddr = "198.51.100.23:1234"
+				return req
+			}(),
+			expectTrusted: true,
+		},
+		{
+			name:               "UsesRealClientHeaderFromTrustedPeer",
+			trustedIPs:         []string{"10.0.0.0/8"},
+			trustedProxyIPs:    []string{"192.0.2.10"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Real-IP",
+			req: func() *http.Request {
+				req, _ := http.NewRequest(http.MethodGet, "/", nil)
+				req.Header.Set("X-Real-IP", "10.0.0.5")
+				req.RemoteAddr = "192.0.2.10:1234"
+				return req
+			}(),
+			expectTrusted: true,
+		},
+		{
+			name:               "RejectsSpoofedLeftmostXFFEntry",
+			trustedIPs:         []string{"10.0.0.0/8"},
+			trustedProxyIPs:    []string{"192.0.2.10"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Forwarded-For",
+			req: func() *http.Request {
+				req, _ := http.NewRequest(http.MethodGet, "/", nil)
+				req.Header.Set("X-Forwarded-For", "10.0.0.5, 198.51.100.23")
+				req.RemoteAddr = "192.0.2.10:1234"
+				return req
+			}(),
+			expectTrusted: false,
+		},
+		{
+			name:               "IgnoresXFFFromUntrustedPeer",
+			trustedIPs:         []string{"10.0.0.0/8"},
+			trustedProxyIPs:    []string{"192.0.2.0/24"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Forwarded-For",
+			req:                xffRequest("198.51.100.23:1234", "10.0.0.5"),
+		},
+		{
+			name:               "RejectsSpoofedRepeatedXFF",
+			trustedIPs:         []string{"10.0.0.0/8"},
+			trustedProxyIPs:    []string{"192.0.2.0/24"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Forwarded-For",
+			req:                xffRequest("192.0.2.10:1234", "10.0.0.5", "198.51.100.23, 192.0.2.20"),
+		},
+		{
+			name:               "TrustsClientThroughMultipleProxies",
+			trustedIPs:         []string{"10.0.0.0/8"},
+			trustedProxyIPs:    []string{"192.0.2.0/24"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Forwarded-For",
+			req:                xffRequest("192.0.2.10:1234", " 10.0.0.5:1234 , 192.0.2.20", "192.0.2.21:443"),
+			expectTrusted:      true,
+		},
+		{
+			name:               "TrustsIPv6ClientThroughIPv6Proxy",
+			trustedIPs:         []string{"2001:db8:2::/48"},
+			trustedProxyIPs:    []string{"2001:db8:1::/48"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Forwarded-For",
+			req:                xffRequest("[2001:db8:1::10]:1234", "[2001:db8:2::23]:1234, 2001:db8:1::20"),
+			expectTrusted:      true,
+		},
+		{
+			name:               "MalformedRelevantHopIsNotExempt",
+			trustedIPs:         []string{"10.0.0.0/8", "192.0.2.0/24"},
+			trustedProxyIPs:    []string{"192.0.2.0/24"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Forwarded-For",
+			req:                xffRequest("192.0.2.10:1234", "10.0.0.5, invalid, 192.0.2.20"),
+		},
+		{
+			name:               "MissingXFFDoesNotFallBackToExemptPeer",
+			trustedIPs:         []string{"192.0.2.0/24"},
+			trustedProxyIPs:    []string{"192.0.2.0/24"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Forwarded-For",
+			req:                xffRequest("192.0.2.10:1234"),
+		},
+		{
+			name:               "EntireChainTrustedUsesLeftmost",
+			trustedIPs:         []string{"192.0.2.30"},
+			trustedProxyIPs:    []string{"192.0.2.0/24"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Forwarded-For",
+			req:                xffRequest("192.0.2.10:1234", "192.0.2.30, 192.0.2.20"),
+			expectTrusted:      true,
+		},
+		{
+			name:               "TrustAllDefaultRetainsLeftmostCompatibility",
+			trustedIPs:         []string{"10.0.0.0/8"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Forwarded-For",
+			req:                xffRequest("192.0.2.10:1234", "10.0.0.5, 198.51.100.23"),
+			expectTrusted:      true,
+		},
+		{
+			name:               "ReverseProxyOffIgnoresXFF",
+			trustedIPs:         []string{"10.0.0.0/8"},
+			trustedProxyIPs:    []string{"192.0.2.0/24"},
+			realClientIPHeader: "X-Forwarded-For",
+			req:                xffRequest("192.0.2.10:1234", "10.0.0.5"),
+		},
+		{
+			name:               "UnixSocketUsesTrustedProxyChain",
+			trustedIPs:         []string{"10.0.0.0/8"},
+			trustedProxyIPs:    []string{"192.0.2.0/24"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Forwarded-For",
+			req:                xffRequest("@", "10.0.0.5, 192.0.2.20"),
+			expectTrusted:      true,
+		},
+		{
+			name:               "UnixSocketRejectsSpoofedChain",
+			trustedIPs:         []string{"10.0.0.0/8"},
+			trustedProxyIPs:    []string{"192.0.2.0/24"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Forwarded-For",
+			req:                xffRequest("@", "10.0.0.5, 198.51.100.23"),
 		},
 		// Check doesn't trust if garbage is provided (no reverse-proxy).
 		{
@@ -2352,21 +2713,74 @@ func TestTrustedIPs(t *testing.T) {
 				},
 			}
 			opts.TrustedIPs = tt.trustedIPs
+			opts.TrustedProxyIPs = tt.trustedProxyIPs
 			opts.ReverseProxy = tt.reverseProxy
 			opts.RealClientIPHeader = tt.realClientIPHeader
 			err := validation.Validate(opts)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			proxy, err := NewOAuthProxy(opts, func(string) bool { return true })
-			assert.NoError(t, err)
-			rw := httptest.NewRecorder()
+			require.NoError(t, err)
 
-			proxy.ServeHTTP(rw, tt.req)
-			if tt.expectTrusted {
-				assert.Equal(t, 200, rw.Code)
-			} else {
-				assert.Equal(t, 403, rw.Code)
+			for _, endpoint := range []struct {
+				name          string
+				path          string
+				trustedStatus int
+				deniedStatus  int
+			}{
+				{"Proxy", "/", http.StatusOK, http.StatusForbidden},
+				{"AuthOnly", "/oauth2/auth", http.StatusAccepted, http.StatusUnauthorized},
+			} {
+				t.Run(endpoint.name, func(t *testing.T) {
+					req := tt.req.Clone(tt.req.Context())
+					req.URL.Path = endpoint.path
+					rw := httptest.NewRecorder()
+					proxy.ServeHTTP(rw, req)
+					if tt.expectTrusted {
+						assert.Equal(t, endpoint.trustedStatus, rw.Code)
+					} else {
+						assert.Equal(t, endpoint.deniedStatus, rw.Code)
+					}
+				})
 			}
+		})
+	}
+}
+
+func TestTrustedIPsMissingRequestConfiguration(t *testing.T) {
+	trustedIPs, err := ip.ParseNetSet([]string{"10.0.0.0/8", "192.0.2.0/24"})
+	require.NoError(t, err)
+	trustedProxies, err := ip.ParseNetSet([]string{"192.0.2.0/24"})
+	require.NoError(t, err)
+	parser, err := ip.GetRealClientIPParser("X-Forwarded-For")
+	require.NoError(t, err)
+
+	tests := []struct {
+		name          string
+		scope         *middlewareapi.RequestScope
+		remoteAddr    string
+		nilParser     bool
+		expectTrusted bool
+	}{
+		{"Missing scope ignores header", nil, "198.51.100.23:1234", false, false},
+		{"Missing scope permits direct trusted client", nil, "10.0.0.5:1234", false, true},
+		{"Missing trusted proxies ignores header", &middlewareapi.RequestScope{ReverseProxy: true}, "198.51.100.23:1234", false, false},
+		{"Missing parser does not fall back to exempt peer", &middlewareapi.RequestScope{ReverseProxy: true, TrustedProxies: trustedProxies}, "192.0.2.10:1234", true, false},
+		{"Missing parser permits direct trusted client", &middlewareapi.RequestScope{ReverseProxy: true, TrustedProxies: trustedProxies}, "10.0.0.5:1234", true, true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			proxy := &OAuthProxy{trustedIPs: trustedIPs, realClientIPParser: parser}
+			if test.nilParser {
+				proxy.realClientIPParser = nil
+			}
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req.RemoteAddr = test.remoteAddr
+			req.Header.Set("X-Forwarded-For", "10.0.0.5")
+			if test.scope != nil {
+				req = middlewareapi.AddRequestScope(req, test.scope)
+			}
+			assert.Equal(t, test.expectTrusted, proxy.isTrustedIP(req))
 		})
 	}
 }
@@ -2652,6 +3066,279 @@ func TestApiRoutes(t *testing.T) {
 				assert.Equal(t, 302, rw.Code)
 			} else {
 				assert.Equal(t, 401, rw.Code)
+			}
+		})
+	}
+}
+
+func TestSkipAuthPathRouting(t *testing.T) {
+	for _, mode := range []string{"default proxy", "raw proxy", "external auth"} {
+		t.Run(mode, func(t *testing.T) {
+			var hits, mutations atomic.Int32
+			backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				hits.Add(1)
+				// Model the reported servlet ordering: strip literal matrix parameters,
+				// then decode and resolve dot segments.
+				segments := strings.Split(r.URL.EscapedPath(), "/")
+				for i, segment := range segments {
+					segments[i], _, _ = strings.Cut(segment, ";")
+				}
+				decodedPath, err := url.PathUnescape(strings.Join(segments, "/"))
+				if err != nil {
+					http.Error(w, "invalid fixture path", http.StatusBadRequest)
+					return
+				}
+				routedPath := path.Clean(decodedPath)
+				if strings.HasPrefix(routedPath, "/protected/") && r.Method == http.MethodPost {
+					mutations.Add(1)
+				}
+				_, _ = io.WriteString(w, r.RequestURI)
+			}))
+			t.Cleanup(backend.Close)
+
+			opts := baseTestOptions()
+			opts.ForceJSONErrors = true
+			if mode == "external auth" {
+				opts.ReverseProxy = true
+				opts.TrustedProxyIPs = []string{"127.0.0.1/32"}
+			}
+			opts.SkipAuthRoutes = []string{"POST=^/public/"}
+			opts.UpstreamServers = options.UpstreamConfig{
+				ProxyRawPath: ptr.To(mode == "raw proxy"),
+				Upstreams: []options.Upstream{{
+					ID: "backend", Path: "/", URI: backend.URL,
+				}},
+			}
+			require.NoError(t, validation.Validate(opts))
+			proxy, err := NewOAuthProxy(opts, func(string) bool { return true })
+			require.NoError(t, err)
+
+			newFrontend := func(t *testing.T, proxy *OAuthProxy) *httptest.Server {
+				t.Helper()
+				var handler http.Handler = proxy
+				if mode == "external auth" {
+					backendURL, err := url.Parse(backend.URL)
+					require.NoError(t, err)
+					forward := httputil.NewSingleHostReverseProxy(backendURL)
+					handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						authReq := httptest.NewRequest(r.Method, "/oauth2/auth", nil)
+						authReq.RemoteAddr = "127.0.0.1:4180"
+						authReq.Header = r.Header.Clone()
+						authReq.Header.Set("X-Forwarded-Uri", r.RequestURI)
+						authResponse := httptest.NewRecorder()
+						proxy.ServeHTTP(authResponse, authReq)
+						if authResponse.Code != http.StatusAccepted {
+							w.WriteHeader(authResponse.Code)
+							return
+						}
+						forward.ServeHTTP(w, r)
+					})
+				}
+				return httptest.NewServer(handler)
+			}
+			client := &http.Client{
+				CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
+			}
+
+			send := func(t *testing.T, server, target string, cookies []*http.Cookie) (int, string) {
+				t.Helper()
+				req, err := http.NewRequest(http.MethodPost, server+target, nil)
+				require.NoError(t, err)
+				for _, cookie := range cookies {
+					req.AddCookie(cookie)
+				}
+				resp, err := client.Do(req)
+				require.NoError(t, err)
+				defer resp.Body.Close()
+				body, err := io.ReadAll(resp.Body)
+				require.NoError(t, err)
+				return resp.StatusCode, string(body)
+			}
+
+			created, expires := time.Now(), time.Now().Add(time.Hour)
+			cookieResponse := httptest.NewRecorder()
+			require.NoError(t, proxy.SaveSession(cookieResponse, httptest.NewRequest(http.MethodGet, "/", nil), &sessions.SessionState{
+				User: "user", Email: "user@example.com", CreatedAt: &created, ExpiresOn: &expires,
+			}))
+			for _, tc := range []struct {
+				name            string
+				target          string
+				pattern         string
+				public          bool
+				protected       bool
+				routerRedirect  bool
+				decodedRedirect bool
+			}{
+				{name: "encoded parent", target: "/public/%2e%2e/protected/change", protected: true, decodedRedirect: true},
+				{name: "mixed encoded parent", target: "/public/.%2E/protected/change", protected: true, decodedRedirect: true},
+				{name: "encoded separators", target: "/public%2f..%2fprotected/change", protected: true, decodedRedirect: true},
+				{name: "literal parent", target: "/public/../protected/change", protected: true, routerRedirect: true},
+				{name: "current segment", target: "/public/./file", routerRedirect: true},
+				{name: "matrix parent", target: "/public/..;/protected/change", protected: true},
+				{name: "encoded matrix parent", target: "/public/%2e%2e;/protected/change", protected: true},
+				{name: "encoded matrix semicolon control", target: "/public/%2e%2e%3b/protected/change"},
+				{name: "matrix value", target: "/public/..;version=1/protected/change", protected: true},
+				{name: "matrix current and parent", target: "/public/.;/..;/protected/change", protected: true},
+				{name: "nested matrix parents", target: "/public/a/..;/..;/protected/change", protected: true},
+				{name: "leading double slash", target: "//protected/public", pattern: "^/public$", protected: true, routerRedirect: true},
+				{name: "encoded leading slash", target: "/%2fprotected/public", pattern: "^/public$", protected: true, decodedRedirect: true},
+				{name: "repeated slash", target: "/public//file", routerRedirect: true},
+				{name: "encoded repeated slash", target: "/public/%2ffile", decodedRedirect: true},
+				{name: "valid semicolon", target: "/public/file;version=1"},
+				{name: "encoded semicolon", target: "/public/file%3bversion=1"},
+				{name: "fragment suffix", target: "/public/file%23suffix"},
+				{name: "ordinary public", target: "/public/file", public: true},
+				{name: "public query", target: "/public/file?next=/../protected;v=1&tag=%23", public: true},
+				{name: "public trailing slash", target: "/public/", pattern: "^/public/$", public: true},
+				{name: "trailing slash is significant", target: "/public/file/", pattern: "^/public/file$"},
+				{name: "escaped space", target: "/public/a%20b", pattern: "^/public/a b$", public: true},
+				{name: "escaped letter", target: "/public/%66ile", pattern: "^/public/file$", public: true},
+				{name: "ordinary protected", target: "/protected/change", protected: true},
+			} {
+				t.Run(tc.name, func(t *testing.T) {
+					// Prove each original target reaches the intended downstream fixture.
+					status, body := send(t, backend.URL, tc.target, nil)
+					require.Equal(t, http.StatusOK, status)
+					require.Equal(t, tc.target, body)
+					require.EqualValues(t, 1, hits.Swap(0))
+					var wantMutations int32
+					if tc.protected {
+						wantMutations = 1
+					}
+					require.Equal(t, wantMutations, mutations.Swap(0))
+
+					pattern := tc.pattern
+					if pattern == "" {
+						pattern = "^/public/"
+					}
+					configs := []string{"regex", "route"}
+					if tc.pattern == "" || tc.protected {
+						configs = append(configs, "negated route")
+					}
+					for _, config := range configs {
+						t.Run(config, func(t *testing.T) {
+							opts.SkipAuthRegex, opts.SkipAuthRoutes = nil, nil
+							switch config {
+							case "regex":
+								opts.SkipAuthRegex = []string{pattern}
+							case "negated route":
+								opts.SkipAuthRoutes = []string{"POST!=^/protected"}
+							default:
+								opts.SkipAuthRoutes = []string{"POST=" + pattern}
+							}
+							testProxy, err := NewOAuthProxy(opts, func(string) bool { return true })
+							require.NoError(t, err)
+							frontend := newFrontend(t, testProxy)
+							t.Cleanup(frontend.Close)
+
+							wantStatus := http.StatusUnauthorized
+							if tc.public {
+								wantStatus = http.StatusOK
+							} else if tc.routerRedirect && mode != "external auth" {
+								wantStatus = http.StatusMovedPermanently
+							}
+							status, _ := send(t, frontend.URL, tc.target, nil)
+							assert.Equal(t, wantStatus, status)
+							var wantHits int32
+							if tc.public {
+								wantHits = 1
+							}
+							assert.Equal(t, wantHits, hits.Swap(0))
+							assert.Zero(t, mutations.Swap(0))
+
+							wantStatus = http.StatusOK
+							wantHits = 1
+							redirects := (tc.routerRedirect && mode != "external auth") ||
+								(tc.decodedRedirect && mode == "default proxy")
+							if redirects {
+								wantStatus = http.StatusMovedPermanently
+								wantHits = 0
+							}
+							status, body := send(t, frontend.URL, tc.target, cookieResponse.Result().Cookies())
+							assert.Equal(t, wantStatus, status)
+							if !redirects {
+								assert.Equal(t, tc.target, body)
+							}
+							assert.Equal(t, wantHits, hits.Swap(0))
+							assert.Equal(t, wantMutations*wantHits, mutations.Swap(0))
+						})
+					}
+				})
+			}
+		})
+	}
+}
+
+func TestSkipAuthForwardedTargets(t *testing.T) {
+	for _, config := range []string{"regex", "route", "negated route", "empty path"} {
+		t.Run(config, func(t *testing.T) {
+			opts := baseTestOptions()
+			opts.ReverseProxy = true
+			opts.TrustedProxyIPs = []string{"127.0.0.1/32"}
+			switch config {
+			case "regex":
+				opts.SkipAuthRegex = []string{".*"}
+			case "route":
+				opts.SkipAuthRoutes = []string{"GET=.*"}
+			case "negated route":
+				opts.SkipAuthRoutes = []string{"GET!=^/protected"}
+			case "empty path":
+				opts.SkipAuthRoutes = []string{"GET=^$"}
+			}
+			require.NoError(t, validation.Validate(opts))
+			proxy, err := NewOAuthProxy(opts, func(string) bool { return true })
+			require.NoError(t, err)
+			created, expires := time.Now(), time.Now().Add(time.Hour)
+			cookieResponse := httptest.NewRecorder()
+			require.NoError(t, proxy.SaveSession(cookieResponse, httptest.NewRequest(http.MethodGet, "/", nil), &sessions.SessionState{
+				User: "user", Email: "user@example.com", CreatedAt: &created, ExpiresOn: &expires,
+			}))
+
+			for _, target := range []string{
+				"/public/../protected", "/public/%2e%2e/protected",
+				"//protected/public", "/public//file",
+				"/public/..;/protected", "/public/%2e%2e%3b/protected",
+				"/public/file;version=1", "/public/%zz", "/public/%",
+				"public/file", "https://example.com/public", "example.com:443", "*",
+				"/public#fragment", "/public%23fragment", "/public%3fquery",
+				"/public\\file", "/public/%00",
+			} {
+				t.Run(target, func(t *testing.T) {
+					for _, authenticated := range []bool{false, true} {
+						req := httptest.NewRequest(http.MethodGet, "/oauth2/auth", nil)
+						req.RemoteAddr = "127.0.0.1:4180"
+						req.Header.Set("X-Forwarded-Uri", target)
+						if authenticated {
+							for _, cookie := range cookieResponse.Result().Cookies() {
+								req.AddCookie(cookie)
+							}
+						}
+						rw := httptest.NewRecorder()
+						proxy.ServeHTTP(rw, req)
+						wantStatus := http.StatusUnauthorized
+						if authenticated {
+							wantStatus = http.StatusAccepted
+						}
+						assert.Equal(t, wantStatus, rw.Code)
+						assert.Equal(t, target, req.Header.Get("X-Forwarded-Uri"))
+						assert.Equal(t, "/oauth2/auth", req.RequestURI)
+					}
+				})
+			}
+
+			for _, method := range []string{http.MethodGet, http.MethodPost} {
+				t.Run("ordinary public "+method, func(t *testing.T) {
+					req := httptest.NewRequest(method, "/oauth2/auth", nil)
+					req.RemoteAddr = "127.0.0.1:4180"
+					req.Header.Set("X-Forwarded-Uri", "/public/file?query=value")
+					rw := httptest.NewRecorder()
+					proxy.ServeHTTP(rw, req)
+					wantStatus := http.StatusUnauthorized
+					if config != "empty path" && (config == "regex" || method == http.MethodGet) {
+						wantStatus = http.StatusAccepted
+					}
+					assert.Equal(t, wantStatus, rw.Code)
+				})
 			}
 		})
 	}
