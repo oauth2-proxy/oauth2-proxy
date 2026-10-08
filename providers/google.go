@@ -278,10 +278,7 @@ func (p *GoogleProvider) setGroupRestriction(groups []string, adminService *admi
 	}
 }
 
-// userGroupsIn checks the user's membership in each of the given groups
-// concurrently and returns the groups the user belongs to, in the order they
-// were given. Checking the groups one by one makes login and refresh latency
-// grow linearly with the number of configured groups.
+// userGroupsIn returns matching groups in their configured order.
 func userGroupsIn(service *admin.Service, groups []string, email string, concurrency int) []string {
 	isMember := make([]bool, len(groups))
 

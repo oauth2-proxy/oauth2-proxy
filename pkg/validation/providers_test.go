@@ -2,6 +2,7 @@ package validation
 
 import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -134,3 +135,21 @@ var _ = Describe("Providers", func() {
 		}),
 	)
 })
+
+var _ = DescribeTable("Google group membership concurrency",
+	func(concurrency *int, valid bool) {
+		provider := options.Provider{GoogleConfig: options.GoogleOptions{GroupMembershipConcurrency: concurrency}}
+		if valid {
+			Expect(validateGoogleConfig(provider)).To(BeEmpty())
+		} else {
+			Expect(validateGoogleConfig(provider)).To(ConsistOf("google-group-membership-concurrency must be between 1 and 10"))
+		}
+	},
+	Entry("unset", (*int)(nil), true),
+	Entry("negative", ptr.To(-1), false),
+	Entry("zero", ptr.To(0), false),
+	Entry("minimum", ptr.To(1), true),
+	Entry("default", ptr.To(5), true),
+	Entry("maximum", ptr.To(10), true),
+	Entry("above maximum", ptr.To(11), false),
+)
