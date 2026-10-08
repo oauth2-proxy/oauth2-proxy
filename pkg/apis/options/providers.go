@@ -45,6 +45,12 @@ const (
 	// for GoogleOptions.UseApplicationDefaultCredentials
 	DefaultUseApplicationDefaultCredentials bool = false
 
+	// DefaultGoogleGroupMembershipConcurrency is the default value for GoogleOptions.GroupMembershipConcurrency.
+	DefaultGoogleGroupMembershipConcurrency int = 5
+
+	// MaxGoogleGroupMembershipConcurrency is the maximum number of concurrent membership checks per session.
+	MaxGoogleGroupMembershipConcurrency int = 10
+
 	// DefaultUseSystemTrustStore is the default value
 	// for Provider.UseSystemTrustStore
 	DefaultUseSystemTrustStore bool = false
@@ -269,6 +275,8 @@ type GitLabOptions struct {
 type GoogleOptions struct {
 	// Groups sets restrict logins to members of this Google group
 	Groups []string `yaml:"group,omitempty"`
+	// GroupMembershipConcurrency limits concurrent membership checks per session (1-10, default 5).
+	GroupMembershipConcurrency *int `yaml:"groupMembershipConcurrency,omitempty"`
 	// AdminEmail is the Google admin to impersonate for api calls
 	AdminEmail string `yaml:"adminEmail,omitempty"`
 	// ServiceAccountJSON is the path to the service account json credentials
@@ -426,6 +434,10 @@ func (a *ADFSOptions) EnsureDefaults() {
 
 // EnsureDefaults sets any default values for GoogleOptions fields.
 func (g *GoogleOptions) EnsureDefaults() {
+	if g.GroupMembershipConcurrency == nil {
+		g.GroupMembershipConcurrency = ptr.To(DefaultGoogleGroupMembershipConcurrency)
+	}
+
 	if g.UseOrganizationID == nil {
 		g.UseOrganizationID = ptr.To(DefaultGoogleUseOrganizationID)
 	}

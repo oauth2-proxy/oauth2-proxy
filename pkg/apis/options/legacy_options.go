@@ -523,6 +523,7 @@ type LegacyProvider struct {
 	GitLabProjects                         []string `flag:"gitlab-project" cfg:"gitlab_projects"`
 	GoogleGroupsLegacy                     []string `flag:"google-group" cfg:"google_group"`
 	GoogleGroups                           []string `flag:"google-group" cfg:"google_groups"`
+	GoogleGroupMembershipConcurrency       *int     `flag:"google-group-membership-concurrency" cfg:"google_group_membership_concurrency"`
 	GoogleAdminEmail                       string   `flag:"google-admin-email" cfg:"google_admin_email"`
 	GoogleServiceAccountJSON               string   `flag:"google-service-account-json" cfg:"google_service_account_json"`
 	GoogleUseApplicationDefaultCredentials bool     `flag:"google-use-application-default-credentials" cfg:"google_use_application_default_credentials"`
@@ -640,6 +641,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 func legacyGoogleFlagSet() *pflag.FlagSet {
 	flagSet := pflag.NewFlagSet("google", pflag.ExitOnError)
 
+	flagSet.Int("google-group-membership-concurrency", DefaultGoogleGroupMembershipConcurrency, "maximum concurrent Google group membership checks per session (1-10)")
 	flagSet.StringSlice("google-group", []string{}, "restrict logins to members of this google group (may be given multiple times).")
 	flagSet.String("google-admin-email", "", "the google admin to impersonate for api calls")
 	flagSet.String("google-service-account-json", "", "the path to the service account json credentials")
@@ -792,6 +794,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		}
 		provider.GoogleConfig = GoogleOptions{
 			Groups:                           l.GoogleGroups,
+			GroupMembershipConcurrency:       l.GoogleGroupMembershipConcurrency,
 			AdminEmail:                       l.GoogleAdminEmail,
 			ServiceAccountJSON:               l.GoogleServiceAccountJSON,
 			UseApplicationDefaultCredentials: &l.GoogleUseApplicationDefaultCredentials,
