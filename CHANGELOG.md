@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.5
 
+- [#3567](https://github.com/oauth2-proxy/oauth2-proxy/pull/3567) feat: add `--session-cookie-strip-id-token` to keep cookie sessions within a single cookie while preserving refresh @Bappi369
+
 # V7.15.5
 
 ## Release Highlights

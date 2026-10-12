@@ -31,6 +31,7 @@ type SessionStore struct {
 	Cookie       *options.Cookie
 	CookieCipher encryption.Cipher
 	Minimal      bool
+	StripIDToken bool
 }
 
 // Save takes a sessions.SessionState and stores the information from it
@@ -112,6 +113,13 @@ func (s *SessionStore) cookieForSession(ss *sessions.SessionState) ([]byte, erro
 		return minimal.EncodeSessionState(s.CookieCipher, true)
 	}
 
+	if s.StripIDToken && ss.IDToken != "" {
+		stripped := *ss
+		stripped.IDToken = ""
+
+		return stripped.EncodeSessionState(s.CookieCipher, true)
+	}
+
 	return ss.EncodeSessionState(s.CookieCipher, true)
 }
 
@@ -175,6 +183,7 @@ func NewCookieSessionStore(opts *options.SessionOptions, cookieOpts *options.Coo
 		CookieCipher: cipher,
 		Cookie:       cookieOpts,
 		Minimal:      opts.Cookie.Minimal,
+		StripIDToken: opts.Cookie.StripIDToken,
 	}, nil
 }
 

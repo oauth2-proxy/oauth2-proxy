@@ -17,7 +17,8 @@ var RedisSessionStoreType = "redis"
 
 // CookieStoreOptions contains configuration options for the CookieSessionStore.
 type CookieStoreOptions struct {
-	Minimal bool `flag:"session-cookie-minimal" cfg:"session_cookie_minimal"`
+	Minimal      bool `flag:"session-cookie-minimal" cfg:"session_cookie_minimal"`
+	StripIDToken bool `flag:"session-cookie-strip-id-token" cfg:"session_cookie_strip_id_token"`
 }
 
 // RedisStoreOptions contains configuration options for the RedisSessionStore.

@@ -183,6 +183,38 @@ var _ = Describe("Sessions", func() {
 		}),
 	)
 
+	const stripIDTokenConflictMsg = "id_token claim for header \"X-ID-Token\" requires the id_token in sessions. session_cookie_strip_id_token cannot be set"
+
+	idTokenHeader := []options.Header{
+		{
+			Name: "X-ID-Token",
+			Values: []options.HeaderValue{
+				{ClaimSource: &options.ClaimSource{Claim: "id_token"}},
+			},
+		},
+	}
+
+	DescribeTable("validateSessionCookieStripIDToken",
+		func(o *options.Options, errStrings []string) {
+			Expect(validateSessionCookieStripIDToken(o)).To(ConsistOf(errStrings))
+		},
+		Entry("Disabled with id_token header", &options.Options{
+			InjectRequestHeaders: idTokenHeader,
+		}, []string{}),
+		Entry("Enabled with refresh and no conflicts", &options.Options{
+			Cookie:  options.Cookie{Refresh: time.Hour},
+			Session: options.SessionOptions{Cookie: options.CookieStoreOptions{StripIDToken: true}},
+		}, []string{}),
+		Entry("Enabled with request header id_token conflict", &options.Options{
+			Session:              options.SessionOptions{Cookie: options.CookieStoreOptions{StripIDToken: true}},
+			InjectRequestHeaders: idTokenHeader,
+		}, []string{stripIDTokenConflictMsg}),
+		Entry("Enabled with response header id_token conflict", &options.Options{
+			Session:               options.SessionOptions{Cookie: options.CookieStoreOptions{StripIDToken: true}},
+			InjectResponseHeaders: idTokenHeader,
+		}, []string{stripIDTokenConflictMsg}),
+	)
+
 	const (
 		clusterAndSentinelMsg     = "unable to initialize a redis client: options redis-use-sentinel and redis-use-cluster are mutually exclusive"
 		parseWrongSchemeMsg       = "unable to initialize a redis client: unable to parse redis url: redis: invalid URL scheme: https"

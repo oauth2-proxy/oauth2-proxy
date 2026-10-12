@@ -24,6 +24,7 @@ import (
 func Validate(o *options.Options) error {
 	msgs := validateCookie(o.Cookie)
 	msgs = append(msgs, validateSessionCookieMinimal(o)...)
+	msgs = append(msgs, validateSessionCookieStripIDToken(o)...)
 	msgs = append(msgs, validateRedisSessionStore(o)...)
 	msgs = append(msgs, prefixValues("injectRequestHeaders: ", validateHeaders(o.InjectRequestHeaders)...)...)
 	msgs = append(msgs, prefixValues("injectResponseHeaders: ", validateHeaders(o.InjectResponseHeaders)...)...)
