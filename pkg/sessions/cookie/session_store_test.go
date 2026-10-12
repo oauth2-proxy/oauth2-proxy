@@ -34,6 +34,40 @@ var _ = Describe("Cookie SessionStore Tests", func() {
 		}, nil)
 })
 
+func Test_cookieForSession_StripIDToken(t *testing.T) {
+	ss := &sessionsapi.SessionState{
+		Email:        "user@example.com",
+		AccessToken:  "access",
+		IDToken:      "id",
+		RefreshToken: "refresh",
+	}
+
+	for _, strip := range []bool{false, true} {
+		store, err := NewCookieSessionStore(
+			&options.SessionOptions{Cookie: options.CookieStoreOptions{StripIDToken: strip}},
+			&options.Cookie{Secret: "0123456789abcdef0123456789abcdef"},
+		)
+		assert.NoError(t, err)
+		cs := store.(*SessionStore)
+
+		value, err := cs.cookieForSession(ss)
+		assert.NoError(t, err)
+		decoded, err := sessionsapi.DecodeSessionState(value, cs.CookieCipher, true)
+		assert.NoError(t, err)
+
+		assert.Equal(t, "access", decoded.AccessToken)
+		assert.Equal(t, "refresh", decoded.RefreshToken)
+		assert.Equal(t, "user@example.com", decoded.Email)
+		if strip {
+			assert.Empty(t, decoded.IDToken)
+		} else {
+			assert.Equal(t, "id", decoded.IDToken)
+		}
+		// The in-memory session must not be modified.
+		assert.Equal(t, "id", ss.IDToken)
+	}
+}
+
 func Test_copyCookie(t *testing.T) {
 	expire, _ := time.Parse(time.RFC3339, "2020-03-17T00:00:00Z")
 	c := &http.Cookie{

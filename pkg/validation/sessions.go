@@ -39,6 +39,23 @@ func validateSessionCookieMinimal(o *options.Options) []string {
 	return msgs
 }
 
+func validateSessionCookieStripIDToken(o *options.Options) []string {
+	if !o.Session.Cookie.StripIDToken {
+		return []string{}
+	}
+
+	msgs := []string{}
+	for _, header := range append(o.InjectRequestHeaders, o.InjectResponseHeaders...) {
+		for _, value := range header.Values {
+			if value.ClaimSource != nil && value.ClaimSource.Claim == "id_token" {
+				msgs = append(msgs,
+					fmt.Sprintf("id_token claim for header %q requires the id_token in sessions. session_cookie_strip_id_token cannot be set", header.Name))
+			}
+		}
+	}
+	return msgs
+}
+
 // validateRedisSessionStore builds a Redis Client from the options and
 // attempts to connect, Set, Get and Del a random health check key
 func validateRedisSessionStore(o *options.Options) []string {

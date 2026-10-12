@@ -149,6 +149,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.String("ready-path", "/ready", "the ready endpoint that can be used for deep health checks")
 	flagSet.String("session-store-type", "cookie", "the session storage provider to use")
 	flagSet.Bool("session-cookie-minimal", false, "strip OAuth tokens from cookie session stores if they aren't needed (cookie session store only)")
+	flagSet.Bool("session-cookie-strip-id-token", false, "do not store the id_token in the session cookie to keep it under the 4kb single-cookie limit; refresh keeps working (cookie session store only)")
 	flagSet.String("redis-connection-url", "", "URL of redis server for redis session storage (eg: redis://[USER[:PASSWORD]@]HOST[:PORT])")
 	flagSet.String("redis-username", "", "Redis username. Applicable for Redis configurations where ACL has been configured. Will override any username set in `--redis-connection-url`")
 	flagSet.String("redis-password", "", "Redis password. Applicable for all Redis configurations. Will override any password set in `--redis-connection-url`")
