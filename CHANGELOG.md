@@ -4,6 +4,8 @@
 
 ## Important Notes
 
+- Extra JWT issuers now honor configured OIDC signing algorithms. If discovery advertises no algorithms in common with the configuration, validation fails instead of falling back to a guessed JWKS URL.
+
 ## Breaking Changes
 
 ## Changes since v7.15.4

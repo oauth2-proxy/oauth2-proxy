@@ -3,6 +3,7 @@ package validation
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -145,31 +146,27 @@ func parseJwtIssuers(issuers []string, msgs []string) ([]jwtIssuer, []string) {
 // newVerifierFromJwtIssuer takes in issuer information in jwtIssuer info and returns
 // a verifier for that issuer.
 func newVerifierFromJwtIssuer(audienceClaims []string, extraAudiences []string, supportedSigningAlgs []string, jwtIssuer jwtIssuer) (internaloidc.IDTokenVerifier, error) {
-	pvOpts := providerVerifierOptionsFromJwtIssuer(audienceClaims, extraAudiences, supportedSigningAlgs, jwtIssuer)
-
-	pv, err := internaloidc.NewProviderVerifier(context.TODO(), pvOpts)
-	if err != nil {
-		// If the discovery didn't work, try again without discovery
-		pvOpts.JWKsURL = strings.TrimSuffix(jwtIssuer.issuerURI, "/") + "/.well-known/jwks.json"
-		pvOpts.SkipDiscovery = true
-
-		pv, err = internaloidc.NewProviderVerifier(context.TODO(), pvOpts)
-		if err != nil {
-			return nil, fmt.Errorf("could not construct provider verifier for JWT Issuer: %v", err)
-		}
-	}
-
-	return pv.Verifier(), nil
-}
-
-func providerVerifierOptionsFromJwtIssuer(audienceClaims []string, extraAudiences []string, supportedSigningAlgs []string, jwtIssuer jwtIssuer) internaloidc.ProviderVerifierOptions {
-	return internaloidc.ProviderVerifierOptions{
+	pvOpts := internaloidc.ProviderVerifierOptions{
 		AudienceClaims:       audienceClaims,
 		ClientID:             jwtIssuer.audience,
 		ExtraAudiences:       extraAudiences,
 		IssuerURL:            jwtIssuer.issuerURI,
 		SupportedSigningAlgs: supportedSigningAlgs,
 	}
+
+	pv, err := internaloidc.NewProviderVerifier(context.TODO(), pvOpts)
+	if errors.Is(err, internaloidc.ErrDiscoveryFailed) {
+		// If the discovery didn't work, try again without discovery
+		pvOpts.JWKsURL = strings.TrimSuffix(jwtIssuer.issuerURI, "/") + "/.well-known/jwks.json"
+		pvOpts.SkipDiscovery = true
+
+		pv, err = internaloidc.NewProviderVerifier(context.TODO(), pvOpts)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("could not construct provider verifier for JWT Issuer: %w", err)
+	}
+
+	return pv.Verifier(), nil
 }
 
 // jwtIssuer hold parsed JWT issuer info that's used to construct a verifier.

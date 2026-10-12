@@ -14,6 +14,9 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
+// ErrDiscoveryFailed indicates that the provider's OIDC configuration could not be discovered.
+var ErrDiscoveryFailed = errors.New("error while discovery OIDC configuration")
+
 // ProviderVerifier represents the OIDC discovery and verification process
 type ProviderVerifier interface {
 	DiscoveryEnabled() bool
@@ -152,7 +155,7 @@ func getVerifierBuilder(ctx context.Context, opts ProviderVerifierOptions) (veri
 
 	provider, err := NewProvider(ctx, opts.IssuerURL, opts.SkipIssuerVerification)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error while discovery OIDC configuration: %w", err)
+		return nil, nil, fmt.Errorf("%w: %w", ErrDiscoveryFailed, err)
 	}
 
 	supportedSigningAlgs, err := intersectSigningAlgs(provider.SupportedSigningAlgs(), opts.SupportedSigningAlgs)
