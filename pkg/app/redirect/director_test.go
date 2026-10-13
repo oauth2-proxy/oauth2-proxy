@@ -63,6 +63,13 @@ var _ = Describe("Director Suite", func() {
 			validator:        testValidator(true),
 			expectedRedirect: "/foo?bar",
 		}),
+		Entry("Request with CRLF header injection in rd falls back to /", getRedirectTableInput{
+			requestURL:       "/oauth2/sign_out?rd=/%0d%0aSet-Cookie:%20pwned=1",
+			headers:          nil,
+			reverseProxy:     false,
+			validator:        NewValidator(nil),
+			expectedRedirect: "/",
+		}),
 		Entry("Request under the proxy prefix, redirects to root", getRedirectTableInput{
 			requestURL:       testProxyPrefix + fooBar,
 			headers:          nil,
