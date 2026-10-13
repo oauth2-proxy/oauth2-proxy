@@ -4,12 +4,20 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/redis"
 )
+
+func validateSQLiteSessionStore(o *options.Options) []string {
+	if o.Session.Type == options.SQLiteSessionStoreType && !filepath.IsAbs(o.Session.SQLite.Path) {
+		return []string{"sqlite-path must be an absolute local filesystem path when session-store-type=sqlite"}
+	}
+	return nil
+}
 
 func validateSessionCookieMinimal(o *options.Options) []string {
 	if !o.Session.Cookie.Minimal {
