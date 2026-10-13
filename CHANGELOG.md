@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.6
 
+- Add an optional SQLite session store using short, encrypted-session tickets, addressing the single-host storage use case in #482. Supports multiple instances on one host.
+
 # V7.15.6
 
 ## Release Highlights
