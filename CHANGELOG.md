@@ -7,6 +7,7 @@
 ## Breaking Changes
 
 ## Changes since v7.15.5
+- [#3570](https://github.com/oauth2-proxy/oauth2-proxy/pull/3570) fix(redirect): reject ASCII control characters in redirect URLs @choksi2212
 
 # V7.15.5
 
