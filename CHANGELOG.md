@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.5
 
+- [#3571](https://github.com/oauth2-proxy/oauth2-proxy/pull/3571) fix: consider query param overrides in proxied auth (with tests) (@flashpaper12 / @amanning9)
+
 # V7.15.5
 
 ## Release Highlights
@@ -21,7 +23,7 @@
     - [CVE-2026-84445](https://nvd.nist.gov/vuln/detail/CVE-2026-84445)
 
 ## Important Notes
-The Bitbucket provider `--bitbucket-team` flag got deprecated and we added `--bitbucket-workspace` flag to restrict logins to members of a specific workspace instead of a team. The `--bitbucket-team` flag is still supported and will act like workspace but will be removed in a future release. Please update your configuration to use the new `--bitbucket-workspace` flag. For more information, refer to [Bitbucket teams API deprecation](https://developer.atlassian.com/cloud/bitbucket/bitbucket-api-teams-deprecation/).
+The Bitbucket provider `--bitbucket-team` flag got deprecated and we added `--bitbucket-workspace` flag to restrict logins to members of a specific workspace instead of a team. The `--bitbucket-team` flag is still supported and will act like workspace but will be removed in a future release. Please update your configuration to use the new `--bitbucket-workspace` flag. For more information, refer to [Bitbucket teams API deprecation](https://developer.atlassian.com/cloud/bitbucket/bitbucket-api-teams-deprecation/). 
 
 Additionally refer to OAuth client configuration for Bitbucket provider in the [documentation](https://oauth2-proxy.github.io/oauth2-proxy/configuration/providers/bitbucket/). for changes in the scopes (Account>Read) is now required if you restrict by workspace.
 
@@ -161,22 +163,22 @@ We have had security audits performed on OAuth2 Proxy in the past couple of week
 several CRITICAL vulnerabilities.
 
 The security vulnerabilities include multiple authentication bypasses and a potential session fixation attack.
-For more details and to identify if you are effects, we urge all users of OAuth2 Proxy to read the security
+For more details and to identify if you are effects, we urge all users of OAuth2 Proxy to read the security 
 disclosures.
 
-- (Critical) [GHSA-5hvv-m4w4-gf6v](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-5hvv-m4w4-gf6v) fix: health check user-agent authentication bypass
+- (Critical) [GHSA-5hvv-m4w4-gf6v](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-5hvv-m4w4-gf6v) fix: health check user-agent authentication bypass 
 - (Critical) [GHSA-7x63-xv5r-3p2x](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-7x63-xv5r-3p2x) fix: authentication bypass via X-Forwarded-Uri header spoofing
 - (High) [GHSA-pxq7-h93f-9jrg](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-pxq7-h93f-9jrg) fix: fragment evaluation as part of the allowed routes
 - (Moderate) [GHSA-c5c4-8r6x-56w3](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-c5c4-8r6x-56w3) fix: email validation bypass via malformed multi-@ email claims
 
 Furthermore, for improving the security of OAuth2 Proxy we introduced a new flag `--trusted-proxy-ip` that allows users
-to explicitly specify trusted reverse proxy IPs for the `X-Forwarded-*` headers. This is an important step to prevent
+to explicitly specify trusted reverse proxy IPs for the `X-Forwarded-*` headers. This is an important step to prevent 
 potential header spoofing attacks and to ensure that OAuth2 Proxy only trusts headers from known and trusted sources.
-We highly recommend users to review their deployment architecture and consider using this flag to enhance the security
+We highly recommend users to review their deployment architecture and consider using this flag to enhance the security 
 of their OAuth2 Proxy instances. Check the docs for more details: https://oauth2-proxy.github.io/oauth2-proxy/configuration/overview#proxy-options
 
-Furthermore, we want to thank everyone who contributed to the audits and reported potential issues to make open source
-software like OAuth2 Proxy more secure for everyone.
+Furthermore, we want to thank everyone who contributed to the audits and reported potential issues to make open source 
+software like OAuth2 Proxy more secure for everyone. 
 
 ## Breaking Changes
 
@@ -315,7 +317,7 @@ We improved our supply chain security by added additional checks to prevent pote
 
 ## Important Notes
 
-This release introduces a breaking change for Alpha Config users and moves us significantly
+This release introduces a breaking change for Alpha Config users and moves us significantly 
 closer to removing legacy configuration parameters, making the codebase of OAuth2 Proxy more
 future proof and extensible.
 
@@ -392,7 +394,7 @@ the project for future maintainability and future improvements like structured l
 - [#3292](https://github.com/oauth2-proxy/oauth2-proxy/pull/3292) chore(deps): upgrade gomod and bump to golang v1.25.5 (@tuunit)
 - [#3304](https://github.com/oauth2-proxy/oauth2-proxy/pull/3304) fix: added conditional so default is not always set and env vars are honored fixes 3303 (@pixeldrew)
 - [#3264](https://github.com/oauth2-proxy/oauth2-proxy/pull/3264) fix: more aggressively truncate logged access_token (@MartinNowak / @tuunit)
-- [#3267](https://github.com/oauth2-proxy/oauth2-proxy/pull/3267) fix: Session refresh handling in OIDC provider (@gysel)
+- [#3267](https://github.com/oauth2-proxy/oauth2-proxy/pull/3267) fix: Session refresh handling in OIDC provider (@gysel) 
 - [#3290](https://github.com/oauth2-proxy/oauth2-proxy/pull/3290) fix: WebSocket proxy to respect PassHostHeader setting (@UnsignedLong)
 
 # V7.13.0
@@ -711,7 +713,6 @@ For detailed information, migration guidance, and security implications, see the
 - [#2357](https://github.com/oauth2-proxy/oauth2-proxy/pull/2357) Update ojg to latest release (@bitfehler)
 - [#1922](https://github.com/oauth2-proxy/oauth2-proxy/pull/1922) Added support for env variables in the alpha struct (@hevans-dglcom)
 - [#2235](https://github.com/oauth2-proxy/oauth2-proxy/pull/2235) Bump golang to 1.21 and min allowed version to 1.20 (@tuunit)
-- [#2316](https://github.com/oauth2-proxy/oauth2-proxy/pull/2316) Proxied auth will now also consider query param overrides (@flashpaper12)
 
 # V7.5.1
 
