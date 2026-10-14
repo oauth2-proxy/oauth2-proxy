@@ -1036,6 +1036,87 @@ func TestSignInPageSkipProviderDirect(t *testing.T) {
 	}
 }
 
+func TestSkipProviderLoginURLParameterOverrides(t *testing.T) {
+	opts := baseTestOptions()
+	opts.SkipProviderButton = true
+	opts.Providers[0].LoginURLParameters = []options.LoginURLParameter{
+		{
+			Name: "login_hint",
+			Allow: []options.URLParameterRule{
+				{Pattern: ptr.To(`^[a-z]+@example\.com$`)},
+			},
+		},
+		{
+			Name:    "prompt",
+			Default: []string{"login"},
+			Allow: []options.URLParameterRule{
+				{Value: ptr.To("consent")},
+			},
+		},
+	}
+	err := validation.Validate(opts)
+	require.NoError(t, err)
+
+	proxy, err := NewOAuthProxy(opts, func(_ string) bool { return true })
+	require.NoError(t, err)
+
+	testCases := []struct {
+		name           string
+		url            string
+		expectedParams map[string][]string
+	}{
+		{
+			name: "no query params uses defaults",
+			url:  "/some/random/endpoint",
+			expectedParams: map[string][]string{
+				"prompt":     {"login"},
+				"login_hint": nil,
+			},
+		},
+		{
+			name: "allowed query params override defaults",
+			url:  "/some/random/endpoint?login_hint=user@example.com&prompt=consent",
+			expectedParams: map[string][]string{
+				"prompt":     {"consent"},
+				"login_hint": {"user@example.com"},
+			},
+		},
+		{
+			name: "disallowed query params are ignored",
+			url:  "/some/random/endpoint?login_hint=user@evil.com&prompt=none",
+			expectedParams: map[string][]string{
+				"prompt":     {"login"},
+				"login_hint": nil,
+			},
+		},
+		{
+			name: "unconfigured query params are not forwarded",
+			url:  "/some/random/endpoint?foo=bar",
+			expectedParams: map[string][]string{
+				"prompt": {"login"},
+				"foo":    nil,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			rw := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodGet, tc.url, nil)
+			proxy.ServeHTTP(rw, req)
+
+			assert.Equal(t, http.StatusFound, rw.Code)
+			loginURL, err := url.Parse(rw.Header().Get("Location"))
+			require.NoError(t, err)
+
+			query := loginURL.Query()
+			for name, expected := range tc.expectedParams {
+				assert.Equal(t, expected, query[name], "unexpected value for login URL parameter %q", name)
+			}
+		})
+	}
+}
+
 type ProcessCookieTest struct {
 	opts         *options.Options
 	proxy        *OAuthProxy
