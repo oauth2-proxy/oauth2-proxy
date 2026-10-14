@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.5
 
+- [#3571](https://github.com/oauth2-proxy/oauth2-proxy/pull/3571) fix: consider query param overrides in proxied auth (with tests) (@flashpaper12 / @amanning9)
+
 # V7.15.5
 
 ## Release Highlights
