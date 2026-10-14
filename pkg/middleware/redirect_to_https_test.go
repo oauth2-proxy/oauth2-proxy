@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -39,6 +39,10 @@ var _ = Describe("RedirectToHTTPS suite", func() {
 			}
 			scope := &middlewareapi.RequestScope{
 				ReverseProxy: in.reverseProxy,
+			}
+			if in.reverseProxy {
+				req.RemoteAddr = "127.0.0.1:4180"
+				scope.TrustedProxies = newRedirectTrustedProxySet("127.0.0.1")
 			}
 			req = middlewareapi.AddRequestScope(req, scope)
 
@@ -208,3 +212,13 @@ var _ = Describe("RedirectToHTTPS suite", func() {
 		}),
 	)
 })
+
+func newRedirectTrustedProxySet(cidrs ...string) *ip.NetSet {
+	set := ip.NewNetSet()
+	for _, cidr := range cidrs {
+		ipNet := ip.ParseIPNet(cidr)
+		Expect(ipNet).ToNot(BeNil())
+		set.AddIPNet(*ipNet)
+	}
+	return set
+}

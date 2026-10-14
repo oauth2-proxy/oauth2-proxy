@@ -1,44 +1,68 @@
 # This docker-compose file can be used to bring up an example instance of oauth2-proxy
 # for manual testing and exploration of features.
 # Alongside OAuth2-Proxy, this file also starts Dex to act as the identity provider,
-# etcd for storage for Dex, nginx as a reverse proxy and other http services for upstreams
+# nginx as a reverse proxy and other HTTP services for upstreams.
 #
 # This file is an extension of the main compose file and must be used with it
 #    docker-compose -f docker-compose.yaml -f docker-compose-nginx.yaml <command>
 # Alternatively:
 #    make nginx-<command> (eg make nginx-up, make nginx-down)
 #
-# Access one of the following URLs to initiate a login flow:
-#    - http://oauth2-proxy.localhost
-#    - http://httpbin.oauth2-proxy.localhost
-#
-# The OAuth2 Proxy itself is hosted at http://oauth2-proxy.oauth2-proxy.localhost
-#
-# Note, the above URLs should work with Chrome, but you may need to add hosts
-# entries for other browsers
-#    127.0.0.1 oauth2-proxy.localhost
-#    127.0.0.1 httpbin.oauth2-proxy.localhost
-#    127.0.0.1 oauth2-proxy.oauth2-proxy.localhost
-version: '3.0'
+# Access http://oauth2-proxy.localtest.me:8080 to initiate a login flow.
+version: "3.0"
 services:
   oauth2-proxy:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.5
     ports: []
     hostname: oauth2-proxy
+    container_name: oauth2-proxy
+    command: --config /oauth2-proxy.cfg
+    restart: unless-stopped
     volumes:
       - "./oauth2-proxy-nginx.cfg:/oauth2-proxy.cfg"
     networks:
       oauth2-proxy: {}
+      dex: {}
+      httpbin: {}
+    depends_on:
+      - dex
+      - httpbin
   nginx:
+    depends_on:
+      - oauth2-proxy
     container_name: nginx
-    image: nginx:1.18
+    image: nginx:1.31
     restart: unless-stopped
     ports:
-      - 80:80/tcp
+      - 8080:8080/tcp
     hostname: nginx
     volumes:
       - "./nginx.conf:/etc/nginx/conf.d/default.conf"
     networks:
       oauth2-proxy: {}
+      dex: {}
+      httpbin: {}
+  dex:
+    container_name: dex
+    image: ghcr.io/dexidp/dex:v2.45.1
+    command: dex serve /dex.yaml
+    hostname: dex
+    volumes:
+      - "./dex.yaml:/dex.yaml"
+    restart: unless-stopped
+    ports:
+      - 5556:5556/tcp
+    networks:
+      dex:
+        aliases:
+          - dex.localtest.me
+  httpbin:
+    container_name: httpbin
+    image: kennethreitz/httpbin
+    ports: []
+    networks:
       httpbin: {}
 networks:
+  dex: {}
+  httpbin: {}
   oauth2-proxy: {}

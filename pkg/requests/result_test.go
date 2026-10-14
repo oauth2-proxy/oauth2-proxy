@@ -4,8 +4,7 @@ import (
 	"errors"
 	"net/http"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -105,8 +104,8 @@ var _ = Describe("Result suite", func() {
 
 	Context("UnmarshalInto", func() {
 		type testStruct struct {
-			A string `json:"a"`
-			B int    `json:"b"`
+			A string `yaml:"a"`
+			B int    `yaml:"b"`
 		}
 
 		type unmarshalIntoTableInput struct {

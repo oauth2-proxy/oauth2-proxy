@@ -14,6 +14,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/app/pagewriter"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 )
 
 // ProxyErrorHandler is a function that will be used to render error pages when
@@ -27,12 +28,12 @@ func NewProxy(upstreams options.UpstreamConfig, sigData *options.SignatureData, 
 		serveMux: mux.NewRouter(),
 	}
 
-	if upstreams.ProxyRawPath {
+	if ptr.Deref(upstreams.ProxyRawPath, options.DefaultUpstreamProxyRawPath) {
 		m.serveMux.UseEncodedPath()
 	}
 
 	for _, upstream := range sortByPathLongest(upstreams.Upstreams) {
-		if upstream.Static {
+		if ptr.Deref(upstream.Static, options.DefaultUpstreamStatic) {
 			if err := m.registerStaticResponseHandler(upstream, writer); err != nil {
 				return nil, fmt.Errorf("could not register static upstream %q: %v", upstream.ID, err)
 			}
@@ -57,7 +58,9 @@ func NewProxy(upstreams options.UpstreamConfig, sigData *options.SignatureData, 
 		}
 	}
 
-	registerTrailingSlashHandler(m.serveMux)
+	if err := registerTrailingSlashHandler(m.serveMux); err != nil {
+		return nil, fmt.Errorf("could not register trailing slash handler: %w", err)
+	}
 	return m, nil
 }
 
@@ -74,14 +77,14 @@ func (m *multiUpstreamProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request
 
 // registerStaticResponseHandler registers a static response handler with at the given path.
 func (m *multiUpstreamProxy) registerStaticResponseHandler(upstream options.Upstream, writer pagewriter.Writer) error {
-	logger.Printf("mapping path %q => static response %d", upstream.Path, derefStaticCode(upstream.StaticCode))
+	logger.Printf("mapping path %q => static response %d", upstream.Path, ptr.Deref(upstream.StaticCode, options.DefaultUpstreamStaticCode))
 	return m.registerHandler(upstream, newStaticResponseHandler(upstream.ID, upstream.StaticCode), writer)
 }
 
 // registerFileServer registers a new fileServer based on the configuration given.
 func (m *multiUpstreamProxy) registerFileServer(upstream options.Upstream, u *url.URL, writer pagewriter.Writer) error {
 	logger.Printf("mapping path %q => file system %q", upstream.Path, u.Path)
-	return m.registerHandler(upstream, newFileServer(upstream.ID, upstream.Path, u.Path), writer)
+	return m.registerHandler(upstream, newFileServer(upstream, u.Path), writer)
 }
 
 // registerHTTPUpstreamProxy registers a new httpUpstreamProxy based on the configuration given.
@@ -93,8 +96,7 @@ func (m *multiUpstreamProxy) registerHTTPUpstreamProxy(upstream options.Upstream
 // registerHandler ensures the given handler is regiestered with the serveMux.
 func (m *multiUpstreamProxy) registerHandler(upstream options.Upstream, handler http.Handler, writer pagewriter.Writer) error {
 	if upstream.RewriteTarget == "" {
-		m.registerSimpleHandler(upstream.Path, handler)
-		return nil
+		return m.registerSimpleHandler(upstream.Path, handler)
 	}
 
 	return m.registerRewriteHandler(upstream, handler, writer)
@@ -102,12 +104,12 @@ func (m *multiUpstreamProxy) registerHandler(upstream options.Upstream, handler 
 
 // registerSimpleHandler maintains the behaviour of the go standard serveMux
 // by ensuring any path with a trailing `/` matches all paths under that prefix.
-func (m *multiUpstreamProxy) registerSimpleHandler(path string, handler http.Handler) {
+func (m *multiUpstreamProxy) registerSimpleHandler(path string, handler http.Handler) error {
 	if strings.HasSuffix(path, "/") {
-		m.serveMux.PathPrefix(path).Handler(handler)
-	} else {
-		m.serveMux.Path(path).Handler(handler)
+		return m.serveMux.PathPrefix(path).Handler(handler).GetError()
 	}
+
+	return m.serveMux.Path(path).Handler(handler).GetError()
 }
 
 // registerRewriteHandler ensures the handler is registered for all paths
@@ -122,19 +124,18 @@ func (m *multiUpstreamProxy) registerRewriteHandler(upstream options.Upstream, h
 
 	rewrite := newRewritePath(rewriteRegExp, upstream.RewriteTarget, writer)
 	h := alice.New(rewrite).Then(handler)
-	m.serveMux.MatcherFunc(func(req *http.Request, match *mux.RouteMatch) bool {
-		return rewriteRegExp.MatchString(req.URL.Path)
-	}).Handler(h)
 
-	return nil
+	return m.serveMux.MatcherFunc(func(req *http.Request, _ *mux.RouteMatch) bool {
+		return rewriteRegExp.MatchString(req.URL.Path)
+	}).Handler(h).GetError()
 }
 
 // registerTrailingSlashHandler creates a new matcher that will check if the
 // requested path would match if it had a trailing slash appended.
 // If the path matches with a trailing slash, we send back a redirect.
 // This allows us to be consistent with the built in go servemux implementation.
-func registerTrailingSlashHandler(serveMux *mux.Router) {
-	serveMux.MatcherFunc(func(req *http.Request, _ *mux.RouteMatch) bool {
+func registerTrailingSlashHandler(serveMux *mux.Router) error {
+	return serveMux.MatcherFunc(func(req *http.Request, _ *mux.RouteMatch) bool {
 		if strings.HasSuffix(req.URL.Path, "/") {
 			return false
 		}
@@ -148,7 +149,7 @@ func registerTrailingSlashHandler(serveMux *mux.Router) {
 		return serveMux.Match(slashReq, m)
 	}).Handler(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		http.Redirect(rw, req, req.URL.String()+"/", http.StatusMovedPermanently)
-	}))
+	})).GetError()
 }
 
 // sortByPathLongest ensures that the upstreams are sorted by longest path.

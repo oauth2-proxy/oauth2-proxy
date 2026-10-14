@@ -1,61 +1,105 @@
-![OAuth2 Proxy](/docs/static/img/logos/OAuth2_Proxy_horizontal.svg)
-
-[![Continuous Integration](https://github.com/oauth2-proxy/oauth2-proxy/actions/workflows/ci.yaml/badge.svg)](https://github.com/oauth2-proxy/oauth2-proxy/actions/workflows/ci.yaml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/oauth2-proxy/oauth2-proxy)](https://goreportcard.com/report/github.com/oauth2-proxy/oauth2-proxy)
-[![GoDoc](https://godoc.org/github.com/oauth2-proxy/oauth2-proxy?status.svg)](https://godoc.org/github.com/oauth2-proxy/oauth2-proxy)
+[![Continuous Integration](https://github.com/oauth2-proxy/oauth2-proxy/actions/workflows/ci.yml/badge.svg)](https://github.com/oauth2-proxy/oauth2-proxy/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/oauth2-proxy/oauth2-proxy)](https://goreportcard.com/report/github.com/oauth2-proxy/oauth2-proxy/v7)
+[![GoDoc](https://godoc.org/github.com/oauth2-proxy/oauth2-proxy?status.svg)](https://godoc.org/github.com/oauth2-proxy/oauth2-proxy/v7)
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
-[![Maintainability](https://api.codeclimate.com/v1/badges/a58ff79407212e2beacb/maintainability)](https://codeclimate.com/github/oauth2-proxy/oauth2-proxy/maintainability)
-[![Test Coverage](https://api.codeclimate.com/v1/badges/a58ff79407212e2beacb/test_coverage)](https://codeclimate.com/github/oauth2-proxy/oauth2-proxy/test_coverage)
+[![Maintainability](https://qlty.sh/gh/oauth2-proxy/projects/oauth2-proxy/maintainability.svg)](https://qlty.sh/gh/oauth2-proxy/projects/oauth2-proxy)
+[![Code Coverage](https://qlty.sh/gh/oauth2-proxy/projects/oauth2-proxy/coverage.svg)](https://qlty.sh/gh/oauth2-proxy/projects/oauth2-proxy)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/oauth2-proxy/oauth2-proxy/badge)](https://scorecard.dev/viewer/?uri=github.com/oauth2-proxy/oauth2-proxy)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/11223/badge)](https://www.bestpractices.dev/projects/11223)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Foauth2-proxy%2Foauth2-proxy.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Foauth2-proxy%2Foauth2-proxy?ref=badge_shield)
 
-A reverse proxy and static file server that provides authentication using Providers (Google, GitHub, and others)
-to validate accounts by email, domain or group.
+![OAuth2 Proxy](docs/static/img/logos/OAuth2_Proxy_horizontal.svg)
 
-**Note:** This repository was forked from [bitly/OAuth2_Proxy](https://github.com/bitly/oauth2_proxy) on 27/11/2018.
-Versions v3.0.0 and up are from this fork and will have diverged from any changes in the original fork.
-A list of changes can be seen in the [CHANGELOG](CHANGELOG.md).
+OAuth2 Proxy is a flexible, open-source tool that can act as either a standalone reverse proxy or a middleware component integrated into existing reverse proxy or load balancer setups. It provides a simple and secure way to protect your web applications with OAuth2 / OIDC authentication. As a reverse proxy, it intercepts requests to your application and redirects users to an OAuth2 provider for authentication. As a middleware, it can be seamlessly integrated into your existing infrastructure to handle authentication for multiple applications.
 
-**Note:** This project was formerly hosted as `pusher/oauth2_proxy` but has been renamed as of 29/03/2020 to `oauth2-proxy/oauth2-proxy`.
-Going forward, all images shall be available at `quay.io/oauth2-proxy/oauth2-proxy` and binaries will be named `oauth2-proxy`.
+OAuth2 Proxy supports a lot of OAuth2 as well as OIDC providers. Either through a generic OIDC client or a specific implementation for Google, Microsoft Entra ID, GitHub, login.gov and others. Through specialised provider implementations OAuth2 Proxy can extract more details about the user like preferred usernames and groups. Those details can then be forwarded as HTTP headers to your upstream applications.
 
-![Sign In Page](https://cloud.githubusercontent.com/assets/45028/4970624/7feb7dd8-6886-11e4-93e0-c9904af44ea8.png)
+![Simplified Architecture](docs/static/img/simplified-architecture.svg)
 
-## Installation
+## Get Started
 
-1.  Choose how to deploy:
+OAuth2 Proxy's [Installation Docs](https://oauth2-proxy.github.io/oauth2-proxy/installation) cover how to install and configure your setup. Additionally you can take a further look at the [example setup files](https://github.com/oauth2-proxy/oauth2-proxy/tree/master/contrib/local-environment).
 
-    a. Download [Prebuilt Binary](https://github.com/oauth2-proxy/oauth2-proxy/releases) (current release is `v7.5.0`)
+## Releases
 
-    b. Build with `$ go install github.com/oauth2-proxy/oauth2-proxy/v7@latest` which will put the binary in `$GOROOT/bin`
+### Binaries
+We publish OAuth2 Proxy as compiled binaries on GitHub for all major architectures as well as more exotic ones like `ppc64le` as well as `s390x`.
 
-    c. Using the prebuilt docker image [quay.io/oauth2-proxy/oauth2-proxy](https://quay.io/oauth2-proxy/oauth2-proxy) (AMD64, PPC64LE, ARMv6, ARMv7, and ARM64 available)
+Check out the [latest release](https://github.com/oauth2-proxy/oauth2-proxy/releases/latest).
 
-    Prebuilt binaries can be validated by extracting the file and verifying it against the `sha256sum.txt` checksum file provided for each release starting with version `v3.0.0`.
+### Images
 
-    ```
-    sha256sum -c sha256sum.txt 2>&1 | grep OK
-    oauth2-proxy-x.y.z.linux-amd64: OK
-    ```
+From `v7.6.0` and up the base image has been changed from Alpine to [GoogleContainerTools/distroless](https://github.com/GoogleContainerTools/distroless).
+This image comes with even fewer installed dependencies and thus should improve security. The image therefore is also slightly smaller than Alpine.
+For debugging purposes (and those who really need it. e.g. `armv6`) we still provide images based on Alpine. The tags of these images are suffixed with `-alpine`.
 
-2.  [Select a Provider and Register an OAuth Application with a Provider](https://oauth2-proxy.github.io/oauth2-proxy/docs/configuration/oauth_provider)
-3.  [Configure OAuth2 Proxy using config file, command line options, or environment variables](https://oauth2-proxy.github.io/oauth2-proxy/docs/configuration/overview)
-4.  [Configure SSL or Deploy behind a SSL endpoint](https://oauth2-proxy.github.io/oauth2-proxy/docs/configuration/tls) (example provided for Nginx)
+Since 2023-11-18 we build nightly images directly from the `master` branch and provide them at `quay.io/oauth2-proxy/oauth2-proxy-nightly`.
+These images are considered unstable and therefore should **NOT** be used for production purposes unless you know what you're doing.
 
+## Sponsors
+Would you like to sponsor the project then please contact us at [sponsors@oauth2-proxy.dev](mailto:sponsors@oauth2-proxy.dev)
+
+![SAP](https://avatars.githubusercontent.com/u/2531208?s=300&v=4)
+
+SAP Open Source Program
+
+## Former Sponsors
+![Microsoft](https://avatars.githubusercontent.com/u/6154722?s=100&v=4)
+
+Microsoft Azure credits for open source projects
+
+## Getting Involved
+[![Slack](https://img.shields.io/badge/slack-CNCF_%23oauth2--proxy-blue?logo=slack)](https://cloud-native.slack.com/archives/C098Y5URZ2N)
+
+Join the #oauth2-proxy [Slack channel](https://cloud-native.slack.com/archives/C098Y5URZ2N) to chat with other users of OAuth2 Proxy or reach out to the maintainers directly. Use the [public invite link](https://slack.cncf.io/) to get an invite for the CNCF space.
+
+OAuth2 Proxy is a community-driven project. We rely on the contribut️ions of our users to continually improve it. While review times can vary, we appreciate your patience and understanding. As a volunteer-driven project, we strive to keep this project stable and might take longer to merge changes.
+
+If you want to contribute to the project. Please see our [Contributing](https://oauth2-proxy.github.io/oauth2-proxy/community/contribution) guide.
+
+Thanks to all the people who already contributed ❤
+
+<a href="https://github.com/oauth2-proxy/oauth2-proxy/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=oauth2-proxy/oauth2-proxy&columns=15&max=75" />
+  <img src="https://img.shields.io/github/contributors/oauth2-proxy/oauth2-proxy" />
+</a>
+
+Made with [contrib.rocks](https://contrib.rocks).
 
 ## Security
 
-If you are running a version older than v6.0.0 we **strongly recommend you please update** to a current version.
+If you believe you have found a vulnerability within OAuth2 Proxy or any of its dependencies, please do **NOT** open an issue or PR on GitHub, please do **NOT** post any details publicly.
+
+Security disclosures **MUST** be done in private. If you have found an issue that you would like to bring to the attention of the maintainers, please compose an email and send it to the list of people listed in our [MAINTAINERS.md](MAINTAINERS.md) file.
+
+For more details read our full [Security Docs](https://oauth2-proxy.github.io/oauth2-proxy/community/security#security-disclosures)
+
+### Security Notice for v6.0.0 and older
+
+If you are running a version older than v6.0.0 we **strongly recommend** to the current version.
+
 See [open redirect vulnerability](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-5m6c-jp6f-2vcv) for details.
 
-## Docs
+## Repository History
 
-Read the docs on our [Docs site](https://oauth2-proxy.github.io/oauth2-proxy/docs/).
+**2018-11-27:** This repository was forked from [bitly/OAuth2_Proxy](https://github.com/bitly/oauth2_proxy). Versions v3.0.0 and up are from this fork and will have diverged from any changes in the original fork. A list of changes can be seen in the [CHANGELOG](CHANGELOG.md).
 
-![OAuth2 Proxy Architecture](https://cloud.githubusercontent.com/assets/45028/8027702/bd040b7a-0d6a-11e5-85b9-f8d953d04f39.png)
+**2020-03-29:** This project was formerly hosted as `pusher/oauth2_proxy` but has been renamed to `oauth2-proxy/oauth2-proxy`. Going forward, all images shall be available at `quay.io/oauth2-proxy/oauth2-proxy` and binaries will be named `oauth2-proxy`.
 
-## Getting Involved
+## Code of Conduct
+Participation in the OAuth2 Proxy project is governed by the [CNCF Code of Conduct](CODE_OF_CONDUCT.md).
 
-If you would like to reach out to the maintainers, come talk to us in the `#oauth2-proxy` channel in the [Gophers slack](http://gophers.slack.com/).
+## License
 
-## Contributing
+OAuth2 Proxy is distributed under [The MIT License](LICENSE).
 
-Please see our [Contributing](CONTRIBUTING.md) guidelines. For releasing see our [release creation guide](RELEASE.md).
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Foauth2-proxy%2Foauth2-proxy.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Foauth2-proxy%2Foauth2-proxy?ref=badge_large)
+
+## Trademarks
+
+OAuth2 Proxy is a [Cloud Native Computing Foundation](https://cncf.io) Sandbox project.
+
+![CNCF](https://www.cncf.io/wp-content/uploads/2023/04/cncf-main-site-logo.svg)
+
+The Linux Foundation® (TLF) has registered trademarks and uses trademarks. For a list of TLF trademarks, see [Trademark Usage](https://www.linuxfoundation.org/legal/trademark-usage).

@@ -17,8 +17,10 @@ c.out
 # Folders
 _obj
 _test
+.DS_Store
 .idea/
-.vscode/
+.vscode/*
+!/.vscode/tasks.json
 
 # Architecture specific extensions/prefixes
 *.[568vq]

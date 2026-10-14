@@ -9,12 +9,11 @@ import (
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
-func testGitLabProvider(hostname, scope string, opts options.GitLabOptions) (*GitLabProvider, error) {
+func testGitLabProvider(hostname, scope string, opts options.Provider) (*GitLabProvider, error) {
 	p, err := NewGitLabProvider(
 		&ProviderData{
 			ProviderName: "",
@@ -162,7 +161,7 @@ var _ = Describe("Gitlab Provider Tests", func() {
 		bURL, err := url.Parse(b.URL)
 		Expect(err).To(BeNil())
 
-		p, err = testGitLabProvider(bURL.Host, "", options.GitLabOptions{})
+		p, err = testGitLabProvider(bURL.Host, "", options.Provider{})
 		Expect(err).ToNot(HaveOccurred())
 	})
 
@@ -237,9 +236,11 @@ var _ = Describe("Gitlab Provider Tests", func() {
 				bURL, err := url.Parse(b.URL)
 				Expect(err).To(BeNil())
 
-				p, err := testGitLabProvider(bURL.Host, in.scope, options.GitLabOptions{
-					Group:    in.allowedGroups,
-					Projects: in.allowedProjects,
+				p, err := testGitLabProvider(bURL.Host, in.scope, options.Provider{
+					GitLabConfig: options.GitLabOptions{
+						Group:    in.allowedGroups,
+						Projects: in.allowedProjects,
+					},
 				})
 				if in.expectedError == nil {
 					Expect(err).To(BeNil())

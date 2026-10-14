@@ -2,6 +2,7 @@ package providers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 
@@ -9,7 +10,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
-	k8serrors "k8s.io/apimachinery/pkg/util/errors"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 )
 
 const (
@@ -38,11 +39,15 @@ func NewProvider(providerConfig options.Provider) (Provider, error) {
 	}
 	switch providerConfig.Type {
 	case options.ADFSProvider:
-		return NewADFSProvider(providerData, providerConfig.ADFSConfig), nil
+		return NewADFSProvider(providerData, providerConfig), nil
 	case options.AzureProvider:
 		return NewAzureProvider(providerData, providerConfig.AzureConfig), nil
+	case options.MicrosoftEntraIDProvider:
+		return NewMicrosoftEntraIDProvider(providerData, providerConfig), nil
 	case options.BitbucketProvider:
 		return NewBitbucketProvider(providerData, providerConfig.BitbucketConfig), nil
+	case options.CidaasProvider:
+		return NewCIDAASProvider(providerData, providerConfig), nil
 	case options.DigitalOceanProvider:
 		return NewDigitalOceanProvider(providerData), nil
 	case options.FacebookProvider:
@@ -50,13 +55,13 @@ func NewProvider(providerConfig options.Provider) (Provider, error) {
 	case options.GitHubProvider:
 		return NewGitHubProvider(providerData, providerConfig.GitHubConfig), nil
 	case options.GitLabProvider:
-		return NewGitLabProvider(providerData, providerConfig.GitLabConfig)
+		return NewGitLabProvider(providerData, providerConfig)
 	case options.GoogleProvider:
 		return NewGoogleProvider(providerData, providerConfig.GoogleConfig)
 	case options.KeycloakProvider:
 		return NewKeycloakProvider(providerData, providerConfig.KeycloakConfig), nil
 	case options.KeycloakOIDCProvider:
-		return NewKeycloakOIDCProvider(providerData, providerConfig.KeycloakConfig), nil
+		return NewKeycloakOIDCProvider(providerData, providerConfig), nil
 	case options.LinkedInProvider:
 		return NewLinkedInProvider(providerData), nil
 	case options.LoginGovProvider:
@@ -65,6 +70,8 @@ func NewProvider(providerConfig options.Provider) (Provider, error) {
 		return NewNextcloudProvider(providerData), nil
 	case options.OIDCProvider:
 		return NewOIDCProvider(providerData, providerConfig.OIDCConfig), nil
+	case options.SourceHutProvider:
+		return NewSourceHutProvider(providerData), nil
 	default:
 		return nil, fmt.Errorf("unknown provider type %q", providerConfig.Type)
 	}
@@ -72,10 +79,12 @@ func NewProvider(providerConfig options.Provider) (Provider, error) {
 
 func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, error) {
 	p := &ProviderData{
-		Scope:            providerConfig.Scope,
-		ClientID:         providerConfig.ClientID,
-		ClientSecret:     providerConfig.ClientSecret,
-		ClientSecretFile: providerConfig.ClientSecretFile,
+		Scope:                   providerConfig.Scope,
+		ClientID:                providerConfig.ClientID,
+		ClientSecret:            providerConfig.ClientSecret,
+		ClientSecretFile:        providerConfig.ClientSecretFile,
+		AuthRequestResponseMode: providerConfig.AuthRequestResponseMode,
+		AdditionalClaims:        providerConfig.AdditionalClaims,
 	}
 
 	needsVerifier, err := providerRequiresOIDCProviderVerifier(providerConfig.Type)
@@ -90,8 +99,10 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 			ExtraAudiences:         providerConfig.OIDCConfig.ExtraAudiences,
 			IssuerURL:              providerConfig.OIDCConfig.IssuerURL,
 			JWKsURL:                providerConfig.OIDCConfig.JwksURL,
-			SkipDiscovery:          providerConfig.OIDCConfig.SkipDiscovery,
-			SkipIssuerVerification: providerConfig.OIDCConfig.InsecureSkipIssuerVerification,
+			PublicKeyFiles:         providerConfig.OIDCConfig.PublicKeyFiles,
+			SupportedSigningAlgs:   providerConfig.OIDCConfig.EnabledSigningAlgs,
+			SkipDiscovery:          ptr.Deref(providerConfig.OIDCConfig.SkipDiscovery, options.DefaultSkipDiscovery),
+			SkipIssuerVerification: ptr.Deref(providerConfig.OIDCConfig.InsecureSkipIssuerVerification, options.DefaultInsecureSkipIssuerVerification),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("error building OIDC ProviderVerifier: %v", err)
@@ -131,13 +142,14 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 	errs = append(errs, p.compileLoginParams(providerConfig.LoginURLParameters)...)
 
 	if len(errs) > 0 {
-		return nil, k8serrors.NewAggregate(errs)
+		return nil, errors.Join(errs...)
 	}
 
 	// Make the OIDC options available to all providers that support it
-	p.AllowUnverifiedEmail = providerConfig.OIDCConfig.InsecureAllowUnverifiedEmail
+	p.AllowUnverifiedEmail = ptr.Deref(providerConfig.OIDCConfig.InsecureAllowUnverifiedEmail, options.DefaultInsecureAllowUnverifiedEmail)
 	p.EmailClaim = providerConfig.OIDCConfig.EmailClaim
 	p.GroupsClaim = providerConfig.OIDCConfig.GroupsClaim
+	p.SkipClaimsFromProfileURL = ptr.Deref(providerConfig.SkipClaimsFromProfileURL, options.DefaultSkipClaimsFromProfileURL)
 
 	// Set PKCE enabled or disabled based on discovery and force options
 	p.CodeChallengeMethod = parseCodeChallengeMethod(providerConfig)
@@ -158,6 +170,8 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 
 	p.setAllowedGroups(providerConfig.AllowedGroups)
 
+	p.BackendLogoutURL = providerConfig.BackendLogoutURL
+
 	return p, nil
 }
 
@@ -176,9 +190,11 @@ func parseCodeChallengeMethod(providerConfig options.Provider) string {
 func providerRequiresOIDCProviderVerifier(providerType options.ProviderType) (bool, error) {
 	switch providerType {
 	case options.BitbucketProvider, options.DigitalOceanProvider, options.FacebookProvider, options.GitHubProvider,
-		options.GoogleProvider, options.KeycloakProvider, options.LinkedInProvider, options.LoginGovProvider, options.NextCloudProvider:
+		options.GoogleProvider, options.KeycloakProvider, options.LinkedInProvider, options.LoginGovProvider,
+		options.NextCloudProvider, options.SourceHutProvider:
 		return false, nil
-	case options.ADFSProvider, options.AzureProvider, options.GitLabProvider, options.KeycloakOIDCProvider, options.OIDCProvider:
+	case options.OIDCProvider, options.ADFSProvider, options.AzureProvider, options.CidaasProvider,
+		options.GitLabProvider, options.KeycloakOIDCProvider, options.MicrosoftEntraIDProvider:
 		return true, nil
 	default:
 		return false, fmt.Errorf("unknown provider type: %s", providerType)

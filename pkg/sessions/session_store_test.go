@@ -1,8 +1,8 @@
 package sessions_test
 
 import (
+	"crypto/rand"
 	"encoding/base64"
-	"math/rand"
 	"testing"
 	"time"
 
@@ -12,7 +12,7 @@ import (
 	sessionscookie "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/cookie"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/persistence"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/redis"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 

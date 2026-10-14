@@ -87,7 +87,7 @@ func (h *htpasswdMap) loadHTPasswdFile(filename string) error {
 	return nil
 }
 
-// createHtasswdMap constructs an htpasswdMap from the given records
+// createHtpasswdMap constructs an htpasswdMap from the given records
 func createHtpasswdMap(records [][]string) (*htpasswdMap, error) {
 	h := &htpasswdMap{users: make(map[string]interface{})}
 	var invalidRecords, invalidEntries []string

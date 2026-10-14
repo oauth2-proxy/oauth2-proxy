@@ -63,7 +63,7 @@ func newOIDCProvider(serverURL *url.URL, skipNonce bool) *OIDCProvider {
 	}
 
 	p := NewOIDCProvider(providerData, options.OIDCOptions{
-		InsecureSkipNonce: skipNonce,
+		InsecureSkipNonce: &skipNonce,
 	})
 
 	return p
@@ -213,6 +213,35 @@ func TestOIDCProviderRefreshSessionIfNeededWithIdToken(t *testing.T) {
 	assert.Equal(t, refreshToken, existingSession.RefreshToken)
 }
 
+func TestOIDCProviderRefreshSessionIfNeededWithIdTokenUpdatesAdditionalClaims(t *testing.T) {
+	idToken, _ := newSignedTestIDToken(defaultIDToken)
+	body, _ := json.Marshal(redeemTokenResponse{
+		AccessToken:  accessToken,
+		ExpiresIn:    10,
+		TokenType:    "Bearer",
+		RefreshToken: refreshToken,
+		IDToken:      idToken,
+	})
+
+	server, provider := newTestOIDCSetup(body)
+	provider.AdditionalClaims = []string{"phone_number"}
+	defer server.Close()
+
+	existingSession := &sessions.SessionState{
+		AccessToken:  "changeit",
+		IDToken:      "changeit",
+		RefreshToken: refreshToken,
+		AdditionalClaims: map[string]interface{}{
+			"phone_number": "stale",
+		},
+	}
+
+	refreshed, err := provider.RefreshSession(context.Background(), existingSession)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, refreshed, true)
+	assert.Equal(t, defaultIDToken.Phone, existingSession.AdditionalClaims["phone_number"])
+}
+
 func TestOIDCProviderCreateSessionFromToken(t *testing.T) {
 	testCases := map[string]struct {
 		IDToken        idTokenClaims
@@ -274,4 +303,33 @@ func TestOIDCProviderCreateSessionFromToken(t *testing.T) {
 			assert.Equal(t, "", ss.RefreshToken)
 		})
 	}
+}
+
+func TestOIDCProviderResponseModeConfigured(t *testing.T) {
+	providerData := &ProviderData{
+		LoginURL: &url.URL{
+			Scheme: "http",
+			Host:   "my.test.idp",
+			Path:   "/oauth/authorize",
+		},
+		AuthRequestResponseMode: "form_post",
+	}
+	p := NewOIDCProvider(providerData, options.OIDCOptions{})
+
+	result := p.GetLoginURL("https://my.test.app/oauth", "", "", url.Values{})
+	assert.Contains(t, result, "response_mode=form_post")
+}
+
+func TestOIDCProviderResponseModeNotConfigured(t *testing.T) {
+	providerData := &ProviderData{
+		LoginURL: &url.URL{
+			Scheme: "http",
+			Host:   "my.test.idp",
+			Path:   "/oauth/authorize",
+		},
+	}
+	p := NewOIDCProvider(providerData, options.OIDCOptions{})
+
+	result := p.GetLoginURL("https://my.test.app/oauth", "", "", url.Values{})
+	assert.NotContains(t, result, "response_mode")
 }

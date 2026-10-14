@@ -6,10 +6,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
-
-	"golang.org/x/exp/slices"
 
 	"github.com/bitly/go-simplejson"
 
@@ -167,7 +166,7 @@ func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code, codeVerif
 
 	err = requests.New(p.RedeemURL.String()).
 		WithContext(ctx).
-		WithMethod("POST").
+		WithMethod(http.MethodPost).
 		WithBody(bytes.NewBufferString(params.Encode())).
 		SetHeader("Content-Type", "application/x-www-form-urlencoded").
 		Do().
@@ -335,7 +334,7 @@ func (p *AzureProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sess
 
 	err = requests.New(p.RedeemURL.String()).
 		WithContext(ctx).
-		WithMethod("POST").
+		WithMethod(http.MethodPost).
 		WithBody(bytes.NewBufferString(params.Encode())).
 		SetHeader("Content-Type", "application/x-www-form-urlencoded").
 		Do().
@@ -400,6 +399,7 @@ func (p *AzureProvider) getGroupsFromProfileAPI(ctx context.Context, s *sessions
 }
 
 func getGroupsFromJSON(json *simplejson.Json, graphGroupField string) []string {
+	//nolint:prealloc
 	groups := []string{}
 
 	for i := range json.Get("value").MustArray() {

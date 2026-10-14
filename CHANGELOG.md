@@ -6,17 +6,711 @@
 
 ## Breaking Changes
 
+## Changes since v7.15.5
+
+# V7.15.5
+
+## Release Highlights
+
+- 🔵 Golang version upgrade to v1.26.8
+    - Upgrade of all dependencies to their latest versions
+- 🕵️‍♀️ Vulnerabilities have been addressed
+    - [CVE-2026-56855](https://nvd.nist.gov/vuln/detail/CVE-2026-56855)
+    - [CVE-2026-78662](https://nvd.nist.gov/vuln/detail/CVE-2026-78662)
+    - [CVE-2026-84304](https://nvd.nist.gov/vuln/detail/CVE-2026-84304)
+    - [CVE-2026-84445](https://nvd.nist.gov/vuln/detail/CVE-2026-84445)
+
+## Important Notes
+The Bitbucket provider `--bitbucket-team` flag got deprecated and we added `--bitbucket-workspace` flag to restrict logins to members of a specific workspace instead of a team. The `--bitbucket-team` flag is still supported and will act like workspace but will be removed in a future release. Please update your configuration to use the new `--bitbucket-workspace` flag. For more information, refer to [Bitbucket teams API deprecation](https://developer.atlassian.com/cloud/bitbucket/bitbucket-api-teams-deprecation/).
+
+Additionally refer to OAuth client configuration for Bitbucket provider in the [documentation](https://oauth2-proxy.github.io/oauth2-proxy/configuration/providers/bitbucket/). for changes in the scopes (Account>Read) is now required if you restrict by workspace.
+
+Security Advisories:
+
+- (Critical) [GHSA-63jm-59jj-478j](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-63jm-59jj-478j) Authentication bypass via inconsistent skip-auth path interpretation
+- (Critical) [GHSA-wr5q-7wxw-x568](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-wr5q-7wxw-x568) Authentication bypass via spoofed client-IP headers in OAuth2 Proxy
+- (Moderate) [GHSA-hhqp-vx7f-5c6m](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-hhqp-vx7f-5c6m) Credential disclosure through OAuth callback error logging
+
+Read more below
+
+## Critical Fixes
+
+For a small subset of deployments these fixes might be breaking change for the sake of fixing trust/security boundaries.
+
+### [GHSA-63jm-59jj-478j](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-63jm-59jj-478j) Authentication bypass via inconsistent skip-auth path interpretation
+**Skip-auth path matching is now stricter**: `--skip-auth-route` and
+`--skip-auth-regex` no longer grant exemptions for invalid or ambiguous paths,
+even when a positive or negated rule would otherwise match. This includes dot
+segments, repeated slashes (including leading `//`), semicolons, backslashes,
+fragment-like content, decoded question marks, and control characters, including
+encoded forms. For example, previously public `/public/file;version=1` and
+`/public//file` now follow normal authentication and authorization. `#` and `%23`
+are no longer silently stripped before matching.
+
+Trusted `X-Forwarded-Uri` metadata must use origin form (`/path?query`), not a full
+URL. Before upgrading, review public-route exemptions and external-auth header
+configuration. If unusual paths must remain public, expose them separately from
+the protected routing boundary rather than broadening skip-auth rules.
+
+Flag names and configuration syntax are unchanged. Ordinary query strings,
+trailing-slash distinctions, and unambiguous escaped characters retain their
+matching behavior. The fix does not rewrite upstream request targets or
+unconditionally reject authenticated requests; existing router behavior and
+separately configured exemptions remain unchanged.
+
+### [GHSA-wr5q-7wxw-x568](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-wr5q-7wxw-x568) Authentication bypass via spoofed client-IP headers in OAuth2 Proxy
+**Trusted client-IP resolution now enforces trusted proxy boundaries**: When
+`--reverse-proxy` is enabled, client-IP headers configured via
+`--real-client-ip-header` are accepted only from direct peers that match
+`--trusted-proxy-ip`. If the direct peer is not trusted, the transport peer
+address is evaluated instead.
+
+For `X-Forwarded-For`, the chain is traversed from right to left, skipping
+intermediate proxies in `--trusted-proxy-ip` and treating the first untrusted
+address as the client. Leftmost entries cannot be spoofed past the trusted proxy
+boundary. If `--trusted-proxy-ip` is left unset, OAuth2 Proxy preserves backwards
+compatibility by trusting all source addresses and retaining the leftmost
+behavior, which does not protect against spoofed XFF headers. To secure
+`--trusted-ip` exemptions behind a reverse proxy, configure explicit, narrowly
+scoped `--trusted-proxy-ip` CIDR ranges and ensure the proxy sanitizes client-IP
+headers. Missing or malformed client-IP headers from a trusted proxy will no
+longer fall back to granting exemptions based on the proxy's own IP.
+
+## Breaking Changes
+
+## Changes since v7.15.4
+
+- [#3546](https://github.com/oauth2-proxy/oauth2-proxy/pull/3546) fix: strip the port from the request host when matching cookie domains @kirilju
+- [#3547](https://github.com/oauth2-proxy/oauth2-proxy/pull/3547) fix: refresh additional claims for OIDC and MS Entra ID providers and properly populate additional claims during login (@Apollo3zehn)
+- [#3477](https://github.com/oauth2-proxy/oauth2-proxy/pull/3477) fix(bitbucket): auth failure due to Bitbucket OAuth 2.0 [changes on May 4th 2026](https://developer.atlassian.com/cloud/bitbucket/changelog/#CHANGE-3052) @mfouad
+- [#3535](https://github.com/oauth2-proxy/oauth2-proxy/pull/3535) fix: surface Microsoft Graph errors during Entra group overage instead of logging in with an incomplete group set @no-hup
+- [#3527](https://github.com/oauth2-proxy/oauth2-proxy/pull/3527) fix(encryption): return an error instead of panicking on a short GCM ciphertext @winklemad
+
+# V7.15.4
+
+## Release Highlights
+
+- 🔵 Golang version upgrade to v1.26.7
+    - Upgrade of all dependencies to their latest versions
+- 🕵️‍♀️ Vulnerabilities have been addressed
+    - [CVE-2026-33818](https://nvd.nist.gov/vuln/detail/CVE-2026-33818)
+    - [CVE-2026-39821](https://nvd.nist.gov/vuln/detail/CVE-2026-39821)
+    - [CVE-2026-39822](https://nvd.nist.gov/vuln/detail/CVE-2026-39822)
+    - [CVE-2026-42505](https://nvd.nist.gov/vuln/detail/CVE-2026-42505)
+    - [CVE-2026-46600](https://nvd.nist.gov/vuln/detail/CVE-2026-46600)
+    - [CVE-2026-56852](https://nvd.nist.gov/vuln/detail/CVE-2026-56852)
+    - [CVE-2026-56853](https://nvd.nist.gov/vuln/detail/CVE-2026-56853)
+    - [CVE-2026-56858](https://nvd.nist.gov/vuln/detail/CVE-2026-56858)
+    - [CVE-2026-56859](https://nvd.nist.gov/vuln/detail/CVE-2026-56859)
+    - [CVE-2026-56860](https://nvd.nist.gov/vuln/detail/CVE-2026-56860)
+    - [CVE-2026-56862](https://nvd.nist.gov/vuln/detail/CVE-2026-56862)
+
+## Important Notes
+
+## Breaking Changes
+
+## Changes since v7.15.3
+
+- [#3493](https://github.com/oauth2-proxy/oauth2-proxy/pull/3493) chore(deps): update gomod @tuunit
+
+# V7.15.3
+
+## Release Highlights
+
+- 🔵 Golang version upgrade to v1.26.4
+    - Upgrade of all dependencies to their latest versions
+-  🕵️‍♀️ Vulnerabilities have ben addressed
+    - [CVE-2026-33811](https://nvd.nist.gov/vuln/detail/)
+    - [CVE-2026-33814](https://nvd.nist.gov/vuln/detail/)
+    - [CVE-2026-39820](https://nvd.nist.gov/vuln/detail/)
+    - [CVE-2026-39836](https://nvd.nist.gov/vuln/detail/)
+    - [CVE-2026-42499](https://nvd.nist.gov/vuln/detail/)
+    - [CVE-2026-42504](https://nvd.nist.gov/vuln/detail/)
+    - [CVE-2026-39823](https://nvd.nist.gov/vuln/detail/)
+    - [CVE-2026-39826](https://nvd.nist.gov/vuln/detail/)
+    - [CVE-2026-39825](https://nvd.nist.gov/vuln/detail/)
+    - [CVE-2026-27145](https://nvd.nist.gov/vuln/detail/)
+    - [CVE-2026-42507](https://nvd.nist.gov/vuln/detail/)
+
+## Important Notes
+
+## Breaking Changes
+
+## Changes since v7.15.2
+
+- [#3477](https://github.com/oauth2-proxy/oauth2-proxy/pull/3477) chore(dep): bump go to 1.26 and migrate of reverse proxy handling
+
+# V7.15.2
+
+## Release Highlights
+
+- 🔵 Golang version upgrade to v1.25.9
+    - Upgrade of all dependencies to their latest versions
+    - [CVE-2026-34986](https://nvd.nist.gov/vuln/detail/CVE-2026-34986)
+    - [CVE-2026-32281](https://nvd.nist.gov/vuln/detail/CVE-2026-32281)
+    - [CVE-2026-32289](https://nvd.nist.gov/vuln/detail/CVE-2026-32289)
+    - [CVE-2026-32288](https://nvd.nist.gov/vuln/detail/CVE-2026-32288)
+    - [CVE-2026-32280](https://nvd.nist.gov/vuln/detail/CVE-2026-32280)
+    - [CVE-2026-32282](https://nvd.nist.gov/vuln/detail/CVE-2026-32282)
+    - [CVE-2026-32283](https://nvd.nist.gov/vuln/detail/CVE-2026-32283)
+-  🕵️‍♀️ Vulnerabilities have been addressed
+
+## Important Notes
+
+We have had security audits performed on OAuth2 Proxy in the past couple of weeks and as a result we have fixed
+several CRITICAL vulnerabilities.
+
+The security vulnerabilities include multiple authentication bypasses and a potential session fixation attack.
+For more details and to identify if you are effects, we urge all users of OAuth2 Proxy to read the security
+disclosures.
+
+- (Critical) [GHSA-5hvv-m4w4-gf6v](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-5hvv-m4w4-gf6v) fix: health check user-agent authentication bypass
+- (Critical) [GHSA-7x63-xv5r-3p2x](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-7x63-xv5r-3p2x) fix: authentication bypass via X-Forwarded-Uri header spoofing
+- (High) [GHSA-pxq7-h93f-9jrg](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-pxq7-h93f-9jrg) fix: fragment evaluation as part of the allowed routes
+- (Moderate) [GHSA-c5c4-8r6x-56w3](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-c5c4-8r6x-56w3) fix: email validation bypass via malformed multi-@ email claims
+
+Furthermore, for improving the security of OAuth2 Proxy we introduced a new flag `--trusted-proxy-ip` that allows users
+to explicitly specify trusted reverse proxy IPs for the `X-Forwarded-*` headers. This is an important step to prevent
+potential header spoofing attacks and to ensure that OAuth2 Proxy only trusts headers from known and trusted sources.
+We highly recommend users to review their deployment architecture and consider using this flag to enhance the security
+of their OAuth2 Proxy instances. Check the docs for more details: https://oauth2-proxy.github.io/oauth2-proxy/configuration/overview#proxy-options
+
+Furthermore, we want to thank everyone who contributed to the audits and reported potential issues to make open source
+software like OAuth2 Proxy more secure for everyone.
+
+## Breaking Changes
+
+## Changes since v7.15.1
+
+- [#3411](https://github.com/oauth2-proxy/oauth2-proxy/pull/3411) chore(deps): update gomod dependencies (@tuunit)
+- [#3333](https://github.com/oauth2-proxy/oauth2-proxy/pull/3333) fix: invalidate session on fatal OAuth2 refresh errors (@frhack)
+- [GHSA-f24x-5g9q-753f](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-f24x-5g9q-753f) fix: clear session cookie at beginning of signinpage handler (@fnoehWM / @bella-WI / @tuunit)
+- [GHSA-5hvv-m4w4-gf6v](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-5hvv-m4w4-gf6v) fix: health check user-agent authentication bypass (@tuunit)
+- [GHSA-7x63-xv5r-3p2x](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-7x63-xv5r-3p2x) fix: authentication bypass via X-Forwarded-Uri header spoofing (@tuunit)
+- [GHSA-pxq7-h93f-9jrg](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-pxq7-h93f-9jrg) fix: fragment evaluation as part of the allowed routes (@tuunit)
+- [GHSA-c5c4-8r6x-56w3](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-c5c4-8r6x-56w3) fix: email validation bypass via malformed multi-@ email claims (@tuunit)
+
+# V7.15.1
+
+## Release Highlights
+
+- 🐛 Squashed some bugs
+-  🕵️‍♀️ Vulnerabilities have been addressed
+    - [CVE-2026-33186](https://nvd.nist.gov/vuln/detail/CVE-2026-33186)
+      OAuth2 Proxy was not impacted by this vulnerability as it isn't in the path of execution
+
+## Important Notes
+
+## Breaking Changes
+
+## Changes since v7.15.0
+
+- [#3382](https://github.com/oauth2-proxy/oauth2-proxy/pull/3382) chore(deps): update gomod and golangci/golangci-lint to v2.11.4 (@tuunit)
+- [#3374](https://github.com/oauth2-proxy/oauth2-proxy/pull/3374) fix: handle Unix socket RemoteAddr in IP resolution (@H1net)
+- [#3381](https://github.com/oauth2-proxy/oauth2-proxy/pull/3381) fix: do not log error for backend logout 204 (@artificiosus)
+- [#3327](https://github.com/oauth2-proxy/oauth2-proxy/pull/3327) fix: improve logging when session refresh token is missing (@yosri-brh)
+- [#2767](https://github.com/oauth2-proxy/oauth2-proxy/pull/2767) fix: propagate errors during route building (@sybereal)
+
+# V7.15.0
+
+## Release Highlights
+
+- 🔒 OIDC JWT signing algorithms can now be configured
+- 🍪 CSRF cookie improvements (SameSite option, proper expiration validation)
+- 🧪 Configuration validation flag: --config-test
+- 🔌 Unix socket file mode support
+- 👤 Session state can now be extend with arbitrary claims from ID Token and upstream IDP user profiles endpoint
+    - This opens the door for multiple features like:
+    - Additional arbitrary header values for any claims your IDP provides
+    - Extended OAuth2 Proxy UserInfo endpoint with all additional claims
+    - Read the docs [here](https://oauth2-proxy.github.io/oauth2-proxy/configuration/alpha-config#how-to-utilize-arbitrary-claims-provided-by-your-identity-provider)
+
+## Important Notes
+
+CSRF cookie validation now correctly uses `CSRFExpire` instead of `Expire`. If you relied on the previous behavior, review your session timeout configuration.
+Check the [documentation(https://oauth2-proxy.github.io/oauth2-proxy/configuration/overview#cookie-options) for `cookie-csrf-expire`.
+
+## Breaking Changes
+
+## Changes since v7.14.3
+
+- [#3352](https://github.com/oauth2-proxy/oauth2-proxy/pull/3352) fix: backend logout URL call on sign out (#3172)(@vsejpal)
+- [#3332](https://github.com/oauth2-proxy/oauth2-proxy/pull/3332) ci: distribute windows binary with .exe extension (@igitur)
+- [#2685](https://github.com/oauth2-proxy/oauth2-proxy/pull/2685) feat: allow arbitrary claims from the IDToken and IdentityProvider UserInfo endpoint to be added to the session state (@vegetablest)
+- [#3278](https://github.com/oauth2-proxy/oauth2-proxy/pull/3278) feat: possibility to inject id_token in redirect url during sign out (@albanf)
+- [#2851](https://github.com/oauth2-proxy/oauth2-proxy/pull/2851) feat: add support for specifying allowed OIDC JWT signing algorithms (#2753) (@andoks / @tuunit)
+- [#3369](https://github.com/oauth2-proxy/oauth2-proxy/pull/3369) fix: use CSRFExpire instead of Expire for CSRF cookie validation (@Br1an67)
+- [#3365](https://github.com/oauth2-proxy/oauth2-proxy/pull/3365) fix: filter empty strings from allowed groups (@Br1an67)
+- [#3338](https://github.com/oauth2-proxy/oauth2-proxy/pull/3338) feat: add --config-test flag for validating configuration (@MayorFaj)
+- [#3347](https://github.com/oauth2-proxy/oauth2-proxy/pull/3347) feat: add same site option for csrf cookies (@jvnoije)
+- [#3376](https://github.com/oauth2-proxy/oauth2-proxy/pull/3376) feat: allow setting unix socket file mode when declaring listener (@Tristan971 / @tuunit)
+
+# V7.14.3
+
+## Release Highlights
+
+- 🔵 Go1.25.7 and upgrade of dependencies to latest versions
+  - Fixes [CVE-2025-68121](https://nvd.nist.gov/vuln/detail/cve-2025-68121)
+- 🐛 Bug fixes
+  - Allow Redis URL parameters to configure username, password and max idle connection timeout if the matching configuration is empty.
+
+## Important Notes
+
+We improved our supply chain security by added additional checks to prevent potential command injection in the publish release workflow and to ensure that it can only be triggered from branches originating in the local repository. This potential issue was reported by automated systems as well as a couple of security researchers, and we want to thank everyone for their diligence in looking out for the security of the project. Especially Aastha Aggarwal for her detailed report and follow-up. @Aastha2602
+
+
+## Breaking Changes
+
+## Changes since v7.14.2
+
+- [#3183](https://github.com/oauth2-proxy/oauth2-proxy/pull/3183) fix: allow URL parameters to configure username, password and max idle connection timeout if the matching configuration is empty.
+
+# V7.14.2
+
+## Release Highlights
+
+- Revert AuthOnly endpoint change from v7.14.1 that caused issues when using `skip-provider-button` enabled
+
+## Important Notes
+
+- This release reverts the change made in v7.14.1 that caused issues when using the `skip-provider-button` enabled. Now, when a session does not exist, the AuthOnly endpoint will send a 401 status code as expected instead of a 302 redirect. And instead we extended the documentation to clarify the behavior when using `nginx` with `auth_request` and `skip-provider-button` and how to properly configure redirects for browser and API routes.
+
+## Breaking Changes
+
+## Changes since v7.14.1
+
+- [#3314](https://github.com/oauth2-proxy/oauth2-proxy/pull/3314) revert: fix: skip provider button auth only redirect (#3309) (@StefanMarkmann / @tuunit)
+- [#3315](https://github.com/oauth2-proxy/oauth2-proxy/pull/3315) docs: clarify browser vs API routes for nginx auth_request redirects (@StefanMarkmann)
+
+# V7.14.1
+
+## Release Highlights
+
+- 🔵 Go1.25.6 and upgrade of dependencies to latest versions
+- 🐛 Bug fixes
+  - AuthOnly now starts the auth flow and send status code 302 if no session exists and skip-provider-button is true
+  - Fixed static upstream validation issue due to incorrect defaults
+
+## Important Notes
+
+## Breaking Changes
+
+## Changes since v7.14.0
+
+- [#3309](https://github.com/oauth2-proxy/oauth2-proxy/pull/3309) fix: Return 302 redirect from AuthOnly endpoint when skip-provider-button is true (@StefanMarkmann)
+- [#3302](https://github.com/oauth2-proxy/oauth2-proxy/pull/3302) fix: static upstreams failing validation due to `passHostHeader` and `proxyWebSockets` defaults being set incorrectly (@sourava01 / @tuunit)
+- [#3312](https://github.com/oauth2-proxy/oauth2-proxy/pull/3312) chore(deps): upgrade to go1.25.6 and latest dependencies (@tuunit)
+
+# V7.14.0
+
+## Release Highlights
+
+- 🕵️‍♀️ Vulnerabilities have been addressed
+  - [CVE-2025-61729](https://access.redhat.com/security/cve/cve-2025-61729)
+  - [CVE-2025-61727](https://access.redhat.com/security/cve/cve-2025-61727)
+  - [CVE-2025-47914](https://access.redhat.com/security/cve/cve-2025-47914)
+  - [CVE-2025-58181](https://access.redhat.com/security/cve/cve-2025-58181)
+- 🗂️ AMajor Alpha Config YAML parsing revamped for better extensibility and preparing v8
+- 🐛 Squashed some bugs
+
+## Important Notes
+
+This release introduces a breaking change for Alpha Config users and moves us significantly
+closer to removing legacy configuration parameters, making the codebase of OAuth2 Proxy more
+future proof and extensible.
+
+From v7.14.0 onward, header injection sources must be explicitly nested. If you
+previously relied on squashed fields, update to the new structure before upgrading:
+
+```yaml
+# before v7.14.0
+injectRequestHeaders:
+- name: X-Forwarded-User
+  values:
+  - claim: user
+- name: X-Custom-Secret-header
+  values:
+  - value: my-super-secret
+
+# v7.14.0 and later
+injectRequestHeaders:
+- name: X-Forwarded-User
+  values:
+  - claimSource:
+      claim: user
+- name: X-Custom-Secret-header
+  values:
+  - secretSource:
+      value: my-super-secret
+```
+
+Furthermore, Alpha Config now fully supports configuring the `Server` struct using YAML.
+
+```yaml
+// Server represents the configuration for the Proxy HTTP(S) configuration.
+type Server struct {
+	// BindAddress is the address on which to serve traffic.
+	BindAddress string `yaml:"bindAddress,omitempty"`
+
+	// SecureBindAddress is the address on which to serve secure traffic.
+	SecureBindAddress string `yaml:"secureBindAddress,omitempty"`
+
+	// TLS contains the information for loading the certificate and key for the
+	// secure traffic and further configuration for the TLS server.
+	TLS *TLS `yaml:"tls,omitempty"`
+}
+
+// TLS contains the information for loading a TLS certificate and key
+// as well as an optional minimal TLS version that is acceptable.
+type TLS struct {
+    // Key is the TLS key data to use.
+	Key *SecretSource `yaml:"key,omitempty"`
+    // Cert is the TLS certificate data to use.
+	Cert *SecretSource `yaml:"cert,omitempty"`
+    // MinVersion is the minimal TLS version that is acceptable.
+	MinVersion string `yaml:"minVersion,omitempty"`
+    // CipherSuites is a list of TLS cipher suites that are allowed.
+	CipherSuites []string `yaml:"cipherSuites,omitempty"`
+}
+```
+
+More about how to use Alpha Config can be found in the [documentation](https://oauth2-proxy.github.io/oauth2-proxy/configuration/alpha-config#server).
+
+We are committed to Semantic Versioning and usually avoid breaking changes without a major version release.
+Advancing Alpha Config toward its Beta stage required this exception, and even for the Alpha Config we try
+to keep breaking changes in v7 to a minium. Thank you for understanding the need for this step to prepare
+the project for future maintainability and future improvements like structured logging.
+
+## Breaking Changes
+
+- Alpha Config: header injection no longer supports squashed claim/secret sources; they must now be set explicitly (see example above).
+
+## Changes since v7.13.0
+
+- [#2628](https://github.com/oauth2-proxy/oauth2-proxy/pull/2628) feat(structured config): revamp of yaml parsing using mapstructure decoder and custom decoders (@tuunit)
+- [#3197](https://github.com/oauth2-proxy/oauth2-proxy/pull/3197) fix: NewRemoteKeySet is not using DefaultHTTPClient (@rsrdesarrollo / @tuunit)
+- [#3292](https://github.com/oauth2-proxy/oauth2-proxy/pull/3292) chore(deps): upgrade gomod and bump to golang v1.25.5 (@tuunit)
+- [#3304](https://github.com/oauth2-proxy/oauth2-proxy/pull/3304) fix: added conditional so default is not always set and env vars are honored fixes 3303 (@pixeldrew)
+- [#3264](https://github.com/oauth2-proxy/oauth2-proxy/pull/3264) fix: more aggressively truncate logged access_token (@MartinNowak / @tuunit)
+- [#3267](https://github.com/oauth2-proxy/oauth2-proxy/pull/3267) fix: Session refresh handling in OIDC provider (@gysel)
+- [#3290](https://github.com/oauth2-proxy/oauth2-proxy/pull/3290) fix: WebSocket proxy to respect PassHostHeader setting (@UnsignedLong)
+
+# V7.13.0
+
+## Release Highlights
+
+- 🕵️‍♀️ Vulnerabilities have been addressd
+  - [CVE-2025-47912](https://nvd.nist.gov/vuln/detail/CVE-2025-47912)
+  - [CVE-2025-58183](https://nvd.nist.gov/vuln/detail/CVE-2025-58183)
+  - [CVE-2025-58186](https://nvd.nist.gov/vuln/detail/CVE-2025-58186)
+  - [CVE-2025-64484](https://nvd.nist.gov/vuln/detail/CVE-2025-64484)
+- 🐛 Squashed some bugs
+
+## Important Notes
+
+By default all specified headers will now be normalized, meaning that both capitalization and the use of underscores (_) versus dashes (-) will be ignored when matching headers to be stripped. For example, both `X-Forwarded-For` and `X_Forwarded-for` will now be treated as equivalent and stripped away.
+
+Please read our security advisory for CVE-2025-64484: [GHSA-vjrc-mh2v-45x6](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-vjrc-mh2v-45x6)
+
+Furthermore, we now use the access_token for validating refreshed sessions in OIDC providers instead of the id_token. This is to align with the [OIDC specification](https://openid.net/specs/openid-connect-core-1_0.html#RefreshTokens) which states that id_tokens are not guaranteed to be issued when using refresh tokens. In future releases we might remove the id_token validation for sessions completely.
+
+## Breaking Changes
+
+## Changes since v7.12.0
+
+- [#3228](https://github.com/oauth2-proxy/oauth2-proxy/pull/3228) fix: use GetSecret() in ticket.go makeCookie to respect cookie-secret-file (@stagswtf)
+- [#3244](https://github.com/oauth2-proxy/oauth2-proxy/pull/3244) chore(deps): upgrade to latest go1.25.3 (@tuunit)
+- [#3238](https://github.com/oauth2-proxy/oauth2-proxy/pull/3238) chore: Replace pkg/clock with narrowly targeted stub clocks (@dsymonds)
+- [#3237](https://github.com/oauth2-proxy/oauth2-proxy/pull/3237) - feat: add option to use organization id for preferred username in Google Provider (@pixeldrew)
+- [GHSA-vjrc-mh2v-45x6](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-vjrc-mh2v-45x6) fix: request header smuggling by stripping all normalized header variants (@tuunit)
+- [#1933](https://github.com/oauth2-proxy/oauth2-proxy/pull/1933) fix: validation of refreshed sessions using the access_token in the OIDC provider (@gysel / @tuunit)
+- [#2841](https://github.com/oauth2-proxy/oauth2-proxy/pull/2841) feat: add allowed_* constraint option to proxy endpoint query string (@jacobalberty)
+
+# V7.12.0
+
+## Release Highlights
+
+- 🕵️‍♀️ Vulnerabilities have been addressed
+  - [CVE-2025-47907](https://pkg.go.dev/vuln/GO-2025-3849)
+- 🦸 Support for Cidaas IDP
+- 🐛 Squashed some bugs
+
+
+## Important Notes
+
+## Breaking Changes
+
+## Changes since v7.11.0
+
+- [#2273](https://github.com/oauth2-proxy/oauth2-proxy/pull/2273) feat: add Cidaas provider (@Bibob7, @Teko012)
+- [#3166](https://github.com/oauth2-proxy/oauth2-proxy/pull/3166) chore(dep): upgrade to latest golang 1.24.6 (@tuunit)
+- [#3156](https://github.com/oauth2-proxy/oauth2-proxy/pull/3156) feat: allow disable-keep-alives configuration for upstream (@jet-go)
+- [#3150](https://github.com/oauth2-proxy/oauth2-proxy/pull/3150) fix: Gitea team membership (@MagicRB, @tuunit)
+
+# V7.11.0
+
+## Release Highlights
+
+- 🏢 Support for SourceHut (sr.ht) provider
+- 🔍️ Support for more fine-grained control over the google admin-sdk scopes and optional google groups
+- 🐛 Squashed some bugs
+
+
+## Important Notes
+
+Firstly, fixed critical vulnerability where `skip_auth_routes` regex patterns matched against the full request URI (path + query parameters) instead of just the path, allowing authentication bypass attacks.
+
+Secondly, fixed double-escaping of `$` in regexes for Alpha Config upstreams path and rewriteTargets:
+
+```yaml
+# Before
+upstreams:
+  - id: web
+    path: ^/(.*)$$
+    rewriteTarget: /$$1
+
+# After
+upstreams:
+  - id: web
+    path: ^/(.*)$
+    rewriteTarget: /$1
+```
+
+
+## Breaking Changes
+
+If your configuration relies on matching query parameters in `skip_auth_routes` patterns, you must update your regex patterns to match paths only. Review all `skip_auth_routes` entries for potential impact.
+
+**Example of affected configuration:**
+```yaml
+# This pattern previously matched both:
+# - /api/foo/status (intended)
+# - /api/private/sensitive?path=/status (bypass - now fixed)
+skip_auth_routes: ["^/api/.*/status"]
+```
+
+For detailed information, migration guidance, and security implications, see the [security advisory](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-7rh7-c77v-6434).
+
+## Changes since v7.10.0
+
+- [#2615](https://github.com/oauth2-proxy/oauth2-proxy/pull/2615) feat(cookies): add option to set a limit on the number of per-request CSRF cookies oauth2-proxy sets (@bh-tt)
+- [#2605](https://github.com/oauth2-proxy/oauth2-proxy/pull/2605) fix: show login page on broken cookie (@Primexz)
+- [#2743](https://github.com/oauth2-proxy/oauth2-proxy/pull/2743) feat: allow use more possible google admin-sdk api scopes (@BobDu)
+- [#2359](https://github.com/oauth2-proxy/oauth2-proxy/pull/2359) feat: add SourceHut (sr.ht) provider(@bitfehler)
+- [#2524](https://github.com/oauth2-proxy/oauth2-proxy/pull/2524) fix: regex substitution for $ signs in upstream path handling before running envsubst (@dashkan / @tuunit)
+- [#3104](https://github.com/oauth2-proxy/oauth2-proxy/pull/3104) feat(cookie): add feature support for cookie-secret-file (@sandy2008)
+- [#3055](https://github.com/oauth2-proxy/oauth2-proxy/pull/3055) feat: support non-default authorization request response mode also for OIDC providers (@stieler-it)
+- [#3138](https://github.com/oauth2-proxy/oauth2-proxy/pull/3138) feat: make google_groups argument optional when using google provider (@sourava01)
+- [#3093](https://github.com/oauth2-proxy/oauth2-proxy/pull/3093) feat: differentiate between "no available key" and error for redis sessions (@nobletrout)
+- [GHSA-7rh7-c77v-6434](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-7rh7-c77v-6434) fix: skip_auth_routes bypass through query parameter inclusion
+
+
+# V7.10.0
+
+## Release Highlights
+- 🏢 Support for multiple orgs using the GitHub / Gitea provider
+- 🔵 Golang version upgrade to v1.24.5
+- 🕵️‍♀️ Vulnerabilities have been addressed
+  - [CVE-2025-4673](https://access.redhat.com/security/cve/CVE-2025-4673)
+  - [CVE-2025-22872](https://access.redhat.com/security/cve/CVE-2025-22872)
+  - [CVE-2025-09130](https://nvd.nist.gov/vuln/detail/CVE-2025-09130)
+  - [CVE-2025-22871](https://access.redhat.com/security/cve/CVE-2025-22871)
+- 🐛 Squashed some bugs
+
+## Important Notes
+
+## Breaking Changes
+
+## Changes since v7.9.0
+
+- [#3072](https://github.com/oauth2-proxy/oauth2-proxy/pull/3072) feat: support for multiple github orgs #3072 (@daniel-mersch)
+- [#3116](https://github.com/oauth2-proxy/oauth2-proxy/pull/3116) feat: bump to go1.24.5 and full dependency update (@wardviaene / @dolmen)
+- [#3097](https://github.com/oauth2-proxy/oauth2-proxy/pull/3097) chore(deps): update alpine base image to v3.22.0
+- [#3101](https://github.com/oauth2-proxy/oauth2-proxy/pull/3101) fix: return error for empty Redis URL list (@dgivens)
+
+# V7.9.0
+
+## Release Highlights
+- 📨 OAuth 2.0 Multiple Response Type Encoding
+- 📦️ Support for JWT encoded profile claims
+- 🔵 Golang version upgrade to v1.23.8
+- 🕵️‍♀️ Vulnerabilities have been addressed
+  - [CVE-2025-22871](https://github.com/advisories/GHSA-g9pc-8g42-g6vq)
+- 🐛 Squashed some bugs
+
+## Important Notes
+
+## Breaking Changes
+
+## Changes since v7.8.2
+
+- [#3031](https://github.com/oauth2-proxy/oauth2-proxy/pull/3031) Fixes Refresh Token bug with Entra ID and Workload Identity (#3027)[https://github.com/oauth2-proxy/oauth2-proxy/issues/3028] by using client assertion when redeeming the token (@richard87)
+- [#3001](https://github.com/oauth2-proxy/oauth2-proxy/pull/3001) Allow to set non-default authorization request response mode (@stieler-it)
+- [#3041](https://github.com/oauth2-proxy/oauth2-proxy/pull/3041) chore(deps): upgrade to latest golang v1.23.x release (@TheImplementer)
+- [#1916](https://github.com/oauth2-proxy/oauth2-proxy/pull/1916) fix: role extraction from access token in keycloak oidc (@Elektordi / @tuunit)
+- [#3014](https://github.com/oauth2-proxy/oauth2-proxy/pull/3014) feat: ability to parse JWT encoded profile claims (@ikarius)
+
+# V7.8.2
+
+## Release Highlights
+- 🐛 Cookie Expiration bug has been squashed
+- 🔵 Golang version upgrade to v1.23.7
+- 🕵️‍♀️ Vulnerabilities have been addressed
+  - CVE-2025-30204
+  - CVE-2025-27144
+  - CVE-2024-45336
+  - CVE-2025-22866
+  - CVE-2025-22870
+  - CVE-2024-45341
+  - CVE-2025-29923
+  - CVE-2025-22866
+  - CVE-2024-34156
+
+## Important Notes
+
+## Breaking Changes
+
+## Changes since v7.8.1
+
+- [#2918](https://github.com/oauth2-proxy/oauth2-proxy/issues/2918) feat: add --bearer-token-login-fallback (@carillonator)
+- [#2927](https://github.com/oauth2-proxy/oauth2-proxy/pull/2927) chore(deps/build): bump golang to 1.23 and use go.mod as single point of truth for all build files (@tuunit)
+- [#2697](https://github.com/oauth2-proxy/oauth2-proxy/pull/2697) Use `Max-Age` instead of `Expires` for cookie expiration (@matpen-wi)
+- [#2969](https://github.com/oauth2-proxy/oauth2-proxy/pull/2969) Update golang.org/x/oauth2 to v0.27.0 to address CVE-2025-22868 (@dsymonds)
+- [#2977](https://github.com/oauth2-proxy/oauth2-proxy/pull/2977) Update golang.org/x/net to v0.36.0 to address CVE-2025-22870 (@dsymonds)
+- [#2982](https://github.com/oauth2-proxy/oauth2-proxy/pull/2982) chore(deps): remove go:generate tool from go.mod (@dolmen)
+- [#3011](https://github.com/oauth2-proxy/oauth2-proxy/pull/3011) chore(deps): update golang dependencies and pin to latest golang v1.23.x release (@tuunit)
+- [#2967](https://github.com/oauth2-proxy/oauth2-proxy/pull/2967) Update HashNonce to use crypto/sha256 (@egibs)
+
+# V7.8.1
+
+## Release Highlights
+
+- 🐛 Two bugs have been squashed
+
+## Important Notes
+
+## Breaking Changes
+
+## Changes since v7.8.0
+
+- [#2887](https://github.com/oauth2-proxy/oauth2-proxy/issues/2887) fix: jwt regex validation error during skip-jwt-bearer-tokens flow
+- [#2920](https://github.com/oauth2-proxy/oauth2-proxy/pull/2920) fix: missing oauth2-proxy version for docker builds
+
+# V7.8.0
+
+## Release Highlights
+
+- ☁️ Introducing support for Microsoft Entra ID
+  - Including Support for Azure Workload Identity as well
+  - Including full e2e testing using Azure Credits from MS sponsoring
+  - Deprecated old Azure AD provider
+- 🪪 Static local JWKS file support
+- Support for systemd sockets
+- 🐛 Several bugs have been squashed
+- 🕵️‍♀️ Vulnerabilities have been addressed
+  - CVE-2024-45338
+
+## Important Notes
+
+## Breaking Changes
+
+## Changes since v7.7.1
+
+- [#2390](https://github.com/oauth2-proxy/oauth2-proxy/pull/2390) feat: add Microsoft Entra ID provider (@jjlakis / @tuunit)
+- [#2902](https://github.com/oauth2-proxy/oauth2-proxy/pull/2902) feat(entra): add Workload Identity support for Entra ID (@jjlakis)
+- [#2800](https://github.com/oauth2-proxy/oauth2-proxy/pull/2800) doc: add some opencontainer labels to docker image (@halkeye)
+- [#2755](https://github.com/oauth2-proxy/oauth2-proxy/pull/2755) feat: add X-Envoy-External-Address as supported header (@bjencks)
+- [#1985](https://github.com/oauth2-proxy/oauth2-proxy/pull/1985) feat: add support for systemd socket (@isodude)
+- [#2916](https://github.com/oauth2-proxy/oauth2-proxy/pull/2916) fix: systemd socket support build handling for windows (@tuunit)
+- [#2300](https://github.com/oauth2-proxy/oauth2-proxy/pull/2300) fix: add fix for websocket path rewrite (@rekup)
+- [#2821](https://github.com/oauth2-proxy/oauth2-proxy/pull/2821) feat: add CF-Connecting-IP as supported real ip header (@ondrejsika)
+- [#2620](https://github.com/oauth2-proxy/oauth2-proxy/pull/2620) fix: update code_verifier to use recommended method (@vishvananda)
+- [#2376](https://github.com/oauth2-proxy/oauth2-proxy/pull/2376) feat: static public keys file support for oidc provider (@axel7083 / @jjlakis)
+- [#2392](https://github.com/oauth2-proxy/oauth2-proxy/pull/2392) chore: extend test cases for oidc provider and documentation regarding implicit setting of the groups scope when no scope was specified in the config (@jjlakis / @tuunit)
+
+# V7.7.1
+
+## Release Highlights
+
+- 🐛 Several bugs have been squashed
+
+## Important Notes
+
+## Breaking Changes
+
+## Changes since v7.7.0
+
+- [#2803](https://github.com/oauth2-proxy/oauth2-proxy/pull/2803) fix: self signed certificate handling in v7.7.0 (@tuunit)
+- [#2619](https://github.com/oauth2-proxy/oauth2-proxy/pull/2619) fix: unable to use hyphen in JSON path for oidc-groups-claim option (@rd-danny-fleer)
+- [#2311](https://github.com/oauth2-proxy/oauth2-proxy/pull/2311) fix: runtime error: index out of range (0) with length 0 (@miguelborges99 / @tuunit)
+
+# V7.7.0
+
+## Release Highlights
+
+- 🌐 Custom user agent "oauth2-proxy/<version>"
+- 💾 Added s390x architecture support
+- 🕵️‍♀️ Vulnerabilities have been addressed
+  - CVE-2024-24786
+  - CVE-2024-24791
+  - CVE-2024-24790
+  - CVE-2024-24784
+- 📖 Improved docs
+
+## Important Notes
+- Remove support of arm/v6 for distroless image runtime. Alpine tags still support arm/v6.
+
+## Breaking Changes
+
+## Changes since v7.6.0
+
+- [#2539](https://github.com/oauth2-proxy/oauth2-proxy/pull/2539) pkg/http: Fix leaky test (@isodude)
+- [#4917](https://github.com/oauth2-proxy/oauth2-proxy/pull/4917) Upgraded all modules to the latest version (@pierluigilenoci)
+- [#2570](https://github.com/oauth2-proxy/oauth2-proxy/pull/2570) Set default user agent to oauth2-proxy/$version (from default Golang one)
+- [#2674](https://github.com/oauth2-proxy/oauth2-proxy/pull/2674) docs: additional notes about available claims for HeaderValue (@vegetablest)
+- [#2459](https://github.com/oauth2-proxy/oauth2-proxy/pull/2459) chore(deps): Updated to ginkgo v2 (@kvanzuijlen, @tuunit)
+- [#2112](https://github.com/oauth2-proxy/oauth2-proxy/pull/2112) docs: update list of providers which support refresh tokens (@mikefab-msf)
+- [#2734](https://github.com/oauth2-proxy/oauth2-proxy/pull/2734) Added s390x architecture option support (@priby05)
+- [#2589](https://github.com/oauth2-proxy/oauth2-proxy/pull/2589) Added support for regex path matching and rewriting when using a static `file:` upstream (@ianroberts)
+- [#2790](https://github.com/oauth2-proxy/oauth2-proxy/pull/2790) chore(deps): update all golang dependencies (@tuunit)
+- [#2607](https://github.com/oauth2-proxy/oauth2-proxy/pull/2607) fix(csrf): fix possible infinite loop (@Primexz)
+
+# V7.6.0
+
+## Release Highlights
+
+## Important Notes
+
+## Breaking Changes
+
 ## Changes since v7.5.1
 
+- [#2381](https://github.com/oauth2-proxy/oauth2-proxy/pull/2381) Allow username authentication to Redis cluster (@rossigee)
+- [#2345](https://github.com/oauth2-proxy/oauth2-proxy/pull/2345) Log error details when failed loading CSRF cookie (@charvadzo)
 - [#2128](https://github.com/oauth2-proxy/oauth2-proxy/pull/2128) Update dependencies (@vllvll)
 - [#2269](https://github.com/oauth2-proxy/oauth2-proxy/pull/2269) Added Azure China (and other air gaped cloud) support (@mblaschke)
 - [#2237](https://github.com/oauth2-proxy/oauth2-proxy/pull/2237) adds an option to append CA certificates (@emsixteeen)
 - [#2128](https://github.com/oauth2-proxy/oauth2-proxy/pull/2128) Update dependencies (@vllvll)
+- [#2239](https://github.com/oauth2-proxy/oauth2-proxy/pull/2312) Add possibility to encode the state param as UrlEncodedBase64 (@brezinajn)
 - [#2274](https://github.com/oauth2-proxy/oauth2-proxy/pull/2274) Upgrade golang.org/x/net to v0.17.0 (@pierluigilenoci)
 - [#2278](https://github.com/oauth2-proxy/oauth2-proxy/pull/2278) Improve the Nginx auth_request example (@akunzai)
 - [#2282](https://github.com/oauth2-proxy/oauth2-proxy/pull/2282) Fixed checking Google Groups membership using Google Application Credentials (@kvanzuijlen)
-- [#2183](https://github.com/oauth2-proxy/oauth2-proxy/pull/2183) Allowing relative redirect url though an option
+- [#2183](https://github.com/oauth2-proxy/oauth2-proxy/pull/2183) Allowing relative redirect url though an option (@axel7083)
 - [#1866](https://github.com/oauth2-proxy/oauth2-proxy/pull/1866) Add support for unix socker as upstream (@babs)
+- [#1876](https://github.com/oauth2-proxy/oauth2-proxy/pull/1876) Add `--backend-logout-url` with `{id_token}` placeholder (@babs)
+- [#1949](https://github.com/oauth2-proxy/oauth2-proxy/pull/1949) Allow cookie names with dots in redis sessions (@miguelborges99)
+- [#2297](https://github.com/oauth2-proxy/oauth2-proxy/pull/2297) Add nightly build and push (@tuunit)
+- [#2329](https://github.com/oauth2-proxy/oauth2-proxy/pull/2329) Add an option to skip request to profile URL for resolving missing claims in id_token (@nilsgstrabo)
+- [#2299](https://github.com/oauth2-proxy/oauth2-proxy/pull/2299) bugfix: OIDCConfig based providers are not respecting flags and configs (@tuunit)
+- [#2343](https://github.com/oauth2-proxy/oauth2-proxy/pull/2343) chore: Added checksums for .tar.gz (@kvanzuijlen)
+- [#2248](https://github.com/oauth2-proxy/oauth2-proxy/pull/2248) Added support for semicolons in query strings. (@timwsuqld)
+- [#2196](https://github.com/oauth2-proxy/oauth2-proxy/pull/2196) Add GitHub groups (orgs/teams) support. Including `X-Forwarded-Groups` header (@tuunit)
+- [#2371](https://github.com/oauth2-proxy/oauth2-proxy/pull/2371) Remove nsswitch DNS resolution workaround (@tuunit)
+- [#2295](https://github.com/oauth2-proxy/oauth2-proxy/pull/2295) Change base-image to [GoogleContainerTools/distroless](https://github.com/GoogleContainerTools/distroless) (@kvanzuijlen)
+- [#2356](https://github.com/oauth2-proxy/oauth2-proxy/pull/2356) Update go-jose dependency (@dasvh)
+- [#2357](https://github.com/oauth2-proxy/oauth2-proxy/pull/2357) Update ojg to latest release (@bitfehler)
+- [#1922](https://github.com/oauth2-proxy/oauth2-proxy/pull/1922) Added support for env variables in the alpha struct (@hevans-dglcom)
+- [#2235](https://github.com/oauth2-proxy/oauth2-proxy/pull/2235) Bump golang to 1.21 and min allowed version to 1.20 (@tuunit)
 - [#2316](https://github.com/oauth2-proxy/oauth2-proxy/pull/2316) Proxied auth will now also consider query param overrides (@flashpaper12)
 
 # V7.5.1
@@ -61,12 +755,11 @@ N/A
 - This release introduced a bug with the Keycloak OIDC provider causing no scopes to be send along with the request. Use v7.5.1 instead.
 
 ## Breaking Changes
-
-N/A
+The following PR introduces a change to how auth routes are evaluated using the flags `skip-auth-route`/`skip-auth-regex`. The new behaviour uses the regex you specify to evaluate the full path including query parameters. For more details please read the detailed description [#2271](https://github.com/oauth2-proxy/oauth2-proxy/issues/2271)
+- [#2192](https://github.com/oauth2-proxy/oauth2-proxy/pull/2192) Use X-Forwarded-Uri if it exists for pathRegex match (@mzndr / @jawys)
 
 ## Changes since v7.4.0
 - [#2028](https://github.com/oauth2-proxy/oauth2-proxy/pull/2028) Update golang.org/x/net to v0.7.0 ato address GHSA-vvpx-j8f3-3w6h (@amrmahdi)
-- [#2133](https://github.com/oauth2-proxy/oauth2-proxy/pull/2133) Use X-Forwarded-Uri if it exists for pathRegex match (@mzndr)
 - [#1873](https://github.com/oauth2-proxy/oauth2-proxy/pull/1873) Fix empty users with some OIDC providers (@babs)
 - [#1882](https://github.com/oauth2-proxy/oauth2-proxy/pull/1882) Make `htpasswd.GetUsers` racecondition safe (@babs)
 - [#1883](https://github.com/oauth2-proxy/oauth2-proxy/pull/1883) Ensure v8 manifest variant is set on docker images (@braunsonm)

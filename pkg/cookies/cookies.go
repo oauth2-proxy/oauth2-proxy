@@ -7,14 +7,24 @@ import (
 	"strings"
 	"time"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	requestutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
 )
 
+type CookieOptions struct {
+	Name       string
+	Value      string
+	Domains    []string
+	Expiration time.Duration
+	SameSite   string
+	Path       string
+	HTTPOnly   bool
+	Secure     bool
+}
+
 // MakeCookieFromOptions constructs a cookie based on the given *options.CookieOptions,
 // value and creation time
-func MakeCookieFromOptions(req *http.Request, name string, value string, opts *options.Cookie, expiration time.Duration, now time.Time) *http.Cookie {
+func MakeCookieFromOptions(req *http.Request, opts *CookieOptions) *http.Cookie {
 	domain := GetCookieDomain(req, opts.Domains)
 	// If nothing matches, create the cookie with the shortest domain
 	if domain == "" && len(opts.Domains) > 0 {
@@ -26,8 +36,8 @@ func MakeCookieFromOptions(req *http.Request, name string, value string, opts *o
 	}
 
 	c := &http.Cookie{
-		Name:     name,
-		Value:    value,
+		Name:     opts.Name,
+		Value:    opts.Value,
 		Path:     opts.Path,
 		Domain:   domain,
 		HttpOnly: opts.HTTPOnly,
@@ -35,8 +45,10 @@ func MakeCookieFromOptions(req *http.Request, name string, value string, opts *o
 		SameSite: ParseSameSite(opts.SameSite),
 	}
 
-	if expiration != time.Duration(0) {
-		c.Expires = now.Add(expiration)
+	if opts.Expiration > time.Duration(0) {
+		c.MaxAge = int(opts.Expiration.Seconds())
+	} else if opts.Expiration < time.Duration(0) {
+		c.MaxAge = -1
 	}
 
 	warnInvalidDomain(c, req)
@@ -48,6 +60,14 @@ func MakeCookieFromOptions(req *http.Request, name string, value string, opts *o
 // by checking the X-Fowarded-Host and host header of an an http request
 func GetCookieDomain(req *http.Request, cookieDomains []string) string {
 	host := requestutil.GetRequestHost(req)
+	// Strip any port before matching. A reverse proxy that rewrites the Host
+	// header to the upstream's address (for example Traefik's Errors
+	// middleware pointing at a Service on port 443) sends "host:port", which
+	// would never suffix-match a configured domain. warnInvalidDomain below
+	// already normalises the host this way.
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		host = h
+	}
 	for _, domain := range cookieDomains {
 		if strings.HasSuffix(host, domain) {
 			return domain
@@ -56,7 +76,7 @@ func GetCookieDomain(req *http.Request, cookieDomains []string) string {
 	return ""
 }
 
-// Parse a valid http.SameSite value from a user supplied string for use of making cookies.
+// ParseSameSite a valid http.SameSite value from a user supplied string for use of making cookies.
 func ParseSameSite(v string) http.SameSite {
 	switch v {
 	case "lax":

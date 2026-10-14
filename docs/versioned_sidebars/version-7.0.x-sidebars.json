@@ -1,12 +1,12 @@
 {
-  "version-7.0.x/docs": [
+  "docs": [
     {
       "type": "doc",
-      "id": "version-7.0.x/installation"
+      "id": "installation"
     },
     {
       "type": "doc",
-      "id": "version-7.0.x/behaviour"
+      "id": "behaviour"
     },
     {
       "collapsed": false,
@@ -15,23 +15,23 @@
       "items": [
         {
           "type": "doc",
-          "id": "version-7.0.x/configuration/overview"
+          "id": "configuration/overview"
         },
         {
           "type": "doc",
-          "id": "version-7.0.x/configuration/oauth_provider"
+          "id": "configuration/oauth_provider"
         },
         {
           "type": "doc",
-          "id": "version-7.0.x/configuration/session_storage"
+          "id": "configuration/session_storage"
         },
         {
           "type": "doc",
-          "id": "version-7.0.x/configuration/tls"
+          "id": "configuration/tls"
         },
         {
           "type": "doc",
-          "id": "version-7.0.x/configuration/alpha-config"
+          "id": "configuration/alpha-config"
         }
       ]
     },
@@ -42,11 +42,11 @@
       "items": [
         {
           "type": "doc",
-          "id": "version-7.0.x/features/endpoints"
+          "id": "features/endpoints"
         },
         {
           "type": "doc",
-          "id": "version-7.0.x/features/request_signatures"
+          "id": "features/request_signatures"
         }
       ]
     },
@@ -57,7 +57,7 @@
       "items": [
         {
           "type": "doc",
-          "id": "version-7.0.x/community/security"
+          "id": "community/security"
         }
       ]
     }

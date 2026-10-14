@@ -15,17 +15,15 @@ import (
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/middleware"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"golang.org/x/net/websocket"
 )
 
 var _ = Describe("HTTP Upstream Suite", func() {
-	defaultFlushInterval := options.Duration(options.DefaultUpstreamFlushInterval)
-	defaultTimeout := options.Duration(options.DefaultUpstreamTimeout)
-	truth := true
-	falsum := false
+	defaultFlushInterval := options.DefaultUpstreamFlushInterval
+	defaultTimeout := options.DefaultUpstreamTimeout
 
 	type httpUpstreamTableInput struct {
 		id                     string
@@ -58,15 +56,15 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			req = middlewareapi.AddRequestScope(req, &middlewareapi.RequestScope{})
 			rw := httptest.NewRecorder()
 
-			flush := options.Duration(1 * time.Second)
+			flush := 1 * time.Second
 
-			timeout := options.Duration(options.DefaultUpstreamTimeout)
+			timeout := options.DefaultUpstreamTimeout
 
 			upstream := options.Upstream{
 				ID:                    in.id,
 				PassHostHeader:        &in.passUpstreamHostHeader,
-				ProxyWebSockets:       &falsum,
-				InsecureSkipTLSVerify: false,
+				ProxyWebSockets:       ptr.To(false),
+				InsecureSkipTLSVerify: ptr.To(false),
 				FlushInterval:         &flush,
 				Timeout:               &timeout,
 			}
@@ -344,9 +342,9 @@ var _ = Describe("HTTP Upstream Suite", func() {
 
 		upstream := options.Upstream{
 			ID:                    "noPassHost",
-			PassHostHeader:        &falsum,
-			ProxyWebSockets:       &falsum,
-			InsecureSkipTLSVerify: false,
+			PassHostHeader:        ptr.To(false),
+			ProxyWebSockets:       ptr.To(false),
+			InsecureSkipTLSVerify: ptr.To(false),
 			FlushInterval:         &defaultFlushInterval,
 			Timeout:               &defaultTimeout,
 		}
@@ -363,7 +361,12 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			return http.HandlerFunc(func(_ http.ResponseWriter, req *http.Request) {
 				proxy, ok := h.(*httputil.ReverseProxy)
 				Expect(ok).To(BeTrue())
-				proxy.Director(req)
+				outReq := req.Clone(req.Context())
+				proxy.Rewrite(&httputil.ProxyRequest{
+					In:  req,
+					Out: outReq,
+				})
+				req.Host = outReq.Host
 			})
 		}
 		httpUpstream.handler = requestInterceptor(httpUpstream.handler)
@@ -372,13 +375,62 @@ var _ = Describe("HTTP Upstream Suite", func() {
 		Expect(req.Host).To(Equal(strings.TrimPrefix(serverAddr, "http://")))
 	})
 
+	It("ServeHTTP preserves forwarding headers when using Rewrite", func() {
+		req := httptest.NewRequest("", "http://example.localhost/foo", nil)
+		req.RemoteAddr = "192.0.2.10:1234"
+		req.Header.Set("Forwarded", "for=192.0.2.1;proto=https;host=example.localhost")
+		req.Header.Set("X-Forwarded-Host", "forwarded.example.localhost")
+		req.Header.Set("X-Forwarded-Proto", "https")
+		req.Header.Set("X-Forwarded-For", "192.0.2.1")
+		req = middlewareapi.AddRequestScope(req, &middlewareapi.RequestScope{})
+		rw := httptest.NewRecorder()
+
+		upstream := options.Upstream{
+			ID:                    "preserveForwardedHeaders",
+			PassHostHeader:        ptr.To(true),
+			ProxyWebSockets:       ptr.To(false),
+			InsecureSkipTLSVerify: ptr.To(false),
+			FlushInterval:         &defaultFlushInterval,
+			Timeout:               &defaultTimeout,
+		}
+
+		u, err := url.Parse(serverAddr)
+		Expect(err).ToNot(HaveOccurred())
+
+		handler := newHTTPUpstreamProxy(upstream, u, nil, nil)
+		httpUpstream, ok := handler.(*httpUpstreamProxy)
+		Expect(ok).To(BeTrue())
+
+		requestInterceptor := func(h http.Handler) http.Handler {
+			return http.HandlerFunc(func(_ http.ResponseWriter, req *http.Request) {
+				proxy, ok := h.(*httputil.ReverseProxy)
+				Expect(ok).To(BeTrue())
+
+				outReq := req.Clone(req.Context())
+				proxy.Rewrite(&httputil.ProxyRequest{
+					In:  req,
+					Out: outReq,
+				})
+
+				Expect(outReq.Header.Values("Forwarded")).To(Equal([]string{"for=192.0.2.1;proto=https;host=example.localhost"}))
+				Expect(outReq.Header.Values("X-Forwarded-Host")).To(Equal([]string{"forwarded.example.localhost"}))
+				Expect(outReq.Header.Values("X-Forwarded-Proto")).To(Equal([]string{"https"}))
+				Expect(outReq.Header.Values("X-Forwarded-For")).To(Equal([]string{"192.0.2.1, 192.0.2.10"}))
+			})
+		}
+		httpUpstream.handler = requestInterceptor(httpUpstream.handler)
+
+		httpUpstream.ServeHTTP(rw, req)
+	})
+
 	type newUpstreamTableInput struct {
-		proxyWebSockets bool
-		flushInterval   options.Duration
-		skipVerify      bool
-		sigData         *options.SignatureData
-		errorHandler    func(http.ResponseWriter, *http.Request, error)
-		timeout         options.Duration
+		proxyWebSockets   bool
+		flushInterval     time.Duration
+		skipVerify        bool
+		sigData           *options.SignatureData
+		errorHandler      func(http.ResponseWriter, *http.Request, error)
+		timeout           time.Duration
+		disableKeepAlives bool
 	}
 
 	DescribeTable("newHTTPUpstreamProxy",
@@ -389,9 +441,10 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			upstream := options.Upstream{
 				ID:                    "foo123",
 				FlushInterval:         &in.flushInterval,
-				InsecureSkipTLSVerify: in.skipVerify,
+				InsecureSkipTLSVerify: &in.skipVerify,
 				ProxyWebSockets:       &in.proxyWebSockets,
 				Timeout:               &in.timeout,
+				DisableKeepAlives:     &in.disableKeepAlives,
 			}
 
 			handler := newHTTPUpstreamProxy(upstream, u, in.sigData, in.errorHandler)
@@ -405,13 +458,17 @@ var _ = Describe("HTTP Upstream Suite", func() {
 
 			proxy, ok := upstreamProxy.handler.(*httputil.ReverseProxy)
 			Expect(ok).To(BeTrue())
-			Expect(proxy.FlushInterval).To(Equal(in.flushInterval.Duration()))
+			Expect(proxy.Rewrite).ToNot(BeNil())
+			Expect(proxy.FlushInterval).To(Equal(in.flushInterval))
 			transport, ok := proxy.Transport.(*http.Transport)
 			Expect(ok).To(BeTrue())
-			Expect(transport.ResponseHeaderTimeout).To(Equal(in.timeout.Duration()))
+			Expect(transport.ResponseHeaderTimeout).To(Equal(in.timeout))
 			Expect(proxy.ErrorHandler != nil).To(Equal(in.errorHandler != nil))
 			if in.skipVerify {
 				Expect(transport.TLSClientConfig.InsecureSkipVerify).To(Equal(true))
+			}
+			if in.disableKeepAlives {
+				Expect(transport.DisableKeepAlives).To(Equal(true))
 			}
 		},
 		Entry("with proxy websockets", &newUpstreamTableInput{
@@ -424,7 +481,7 @@ var _ = Describe("HTTP Upstream Suite", func() {
 		}),
 		Entry("with a non standard flush interval", &newUpstreamTableInput{
 			proxyWebSockets: false,
-			flushInterval:   options.Duration(5 * time.Second),
+			flushInterval:   5 * time.Second,
 			skipVerify:      false,
 			sigData:         nil,
 			errorHandler:    nil,
@@ -462,7 +519,16 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			skipVerify:      false,
 			sigData:         nil,
 			errorHandler:    nil,
-			timeout:         options.Duration(5 * time.Second),
+			timeout:         5 * time.Second,
+		}),
+		Entry("with a DisableKeepAlives", &newUpstreamTableInput{
+			proxyWebSockets:   false,
+			flushInterval:     defaultFlushInterval,
+			skipVerify:        false,
+			sigData:           nil,
+			errorHandler:      nil,
+			timeout:           defaultTimeout,
+			disableKeepAlives: true,
 		}),
 	)
 
@@ -470,13 +536,13 @@ var _ = Describe("HTTP Upstream Suite", func() {
 		var proxyServer *httptest.Server
 
 		BeforeEach(func() {
-			flush := options.Duration(1 * time.Second)
-			timeout := options.Duration(options.DefaultUpstreamTimeout)
+			flush := 1 * time.Second
+			timeout := options.DefaultUpstreamTimeout
 			upstream := options.Upstream{
 				ID:                    "websocketProxy",
-				PassHostHeader:        &truth,
-				ProxyWebSockets:       &truth,
-				InsecureSkipTLSVerify: false,
+				PassHostHeader:        ptr.To(true),
+				ProxyWebSockets:       ptr.To(true),
+				InsecureSkipTLSVerify: ptr.To(false),
 				FlushInterval:         &flush,
 				Timeout:               &timeout,
 			}
@@ -486,7 +552,7 @@ var _ = Describe("HTTP Upstream Suite", func() {
 
 			handler := newHTTPUpstreamProxy(upstream, u, nil, nil)
 
-			proxyServer = httptest.NewServer(middleware.NewScope(false, "X-Request-Id")(handler))
+			proxyServer = httptest.NewServer(middleware.NewScope(false, "X-Request-Id", nil)(handler))
 		})
 
 		AfterEach(func() {
@@ -507,16 +573,57 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			Expect(websocket.Message.Send(ws, []byte(message))).To(Succeed())
 			var response testWebSocketResponse
 			Expect(websocket.JSON.Receive(ws, &response)).To(Succeed())
-			Expect(response).To(Equal(testWebSocketResponse{
-				Message: message,
-				Origin:  origin,
-			}))
+
+			// When PassHostHeader=true (default), the Host should be the client's original request host
+			Expect(response.Message).To(Equal(message))
+			Expect(response.Origin).To(Equal(origin))
+			Expect(response.Host).To(Equal(proxyURL.Host))
 		})
 
 		It("will proxy HTTP requests", func() {
 			response, err := http.Get(fmt.Sprintf("http://%s", proxyServer.Listener.Addr().String()))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(response.StatusCode).To(Equal(200))
+		})
+
+		It("will proxy websockets respecting PassHostHeader=false", func() {
+			// Create a new proxy server with PassHostHeader=false
+			flush := 1 * time.Second
+			timeout := options.DefaultUpstreamTimeout
+			upstream := options.Upstream{
+				ID:                    "websocketProxyNoPassHost",
+				PassHostHeader:        ptr.To(false),
+				ProxyWebSockets:       ptr.To(true),
+				InsecureSkipTLSVerify: ptr.To(false),
+				FlushInterval:         &flush,
+				Timeout:               &timeout,
+			}
+
+			u, err := url.Parse(serverAddr)
+			Expect(err).ToNot(HaveOccurred())
+
+			handler := newHTTPUpstreamProxy(upstream, u, nil, nil)
+			noPassHostServer := httptest.NewServer(middleware.NewScope(false, "X-Request-Id", nil)(handler))
+			defer noPassHostServer.Close()
+
+			origin := "http://example.localhost"
+			message := "Hello, world!"
+
+			proxyURL, err := url.Parse(fmt.Sprintf("http://%s", noPassHostServer.Listener.Addr().String()))
+			Expect(err).ToNot(HaveOccurred())
+
+			wsAddr := fmt.Sprintf("ws://%s/", proxyURL.Host)
+			ws, err := websocket.Dial(wsAddr, "", origin)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(websocket.Message.Send(ws, []byte(message))).To(Succeed())
+			var response testWebSocketResponse
+			Expect(websocket.JSON.Receive(ws, &response)).To(Succeed())
+
+			// When PassHostHeader=false, the Host should be the upstream server address
+			Expect(response.Host).To(Equal(u.Host))
+			Expect(response.Message).To(Equal(message))
+			Expect(response.Origin).To(Equal(origin))
 		})
 	})
 })

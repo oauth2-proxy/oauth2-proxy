@@ -39,22 +39,22 @@ To configure the OIDC provider for Dex, perform the following steps:
 
 4. In a second terminal, run the oauth2-proxy with the following args:
 
-    ```
-    -provider oidc
-    -provider-display-name "My OIDC Provider"
-    -client-id oauth2-proxy
-    -client-secret proxy
-    -redirect-url http://127.0.0.1:4180/oauth2/callback
-    -oidc-issuer-url http://127.0.0.1:5556/dex
-    -cookie-secure=false
-    -cookie-secret=secret
-    -email-domain kilgore.trout
+    ```shell
+    --provider oidc
+    --provider-display-name "My OIDC Provider"
+    --client-id oauth2-proxy
+    --client-secret proxy
+    --redirect-url http://127.0.0.1:4180/oauth2/callback
+    --oidc-issuer-url http://127.0.0.1:5556/dex
+    --cookie-secure=false
+    --cookie-secret=secret
+    --email-domain kilgore.trout
     ```
 
    To serve the current working directory as a website under the `/static` endpoint, add:
 
-    ```
-    -upstream file://$PWD/#/static/
+    ```shell
+    --upstream file://$PWD/#/static/
     ```
 
 5. Test the setup by visiting http://127.0.0.1:4180 or http://127.0.0.1:4180/static .
@@ -113,7 +113,7 @@ Then you can start the oauth2-proxy with `./oauth2-proxy --config /etc/example.c
 #### Okta - localhost
 
 1. Signup for developer account: https://developer.okta.com/signup/
-2. Create New `Web` Application: https://${your-okta-domain}/dev/console/apps/new
+2. Create New `Web` Application: https://$\{your-okta-domain\}/dev/console/apps/new
 3. Example Application Settings for localhost:
     * **Name:** My Web App
     * **Base URIs:** http://localhost:4180/
@@ -122,12 +122,12 @@ Then you can start the oauth2-proxy with `./oauth2-proxy --config /etc/example.c
     * **Group assignments:** `Everyone`
     * **Grant type allowed:** `Authorization Code` and `Refresh Token`
 4. Make note of the `Client ID` and `Client secret`, they are needed in a future step
-5. Make note of the **default** Authorization Server Issuer URI from: https://${your-okta-domain}/admin/oauth2/as
+5. Make note of the **default** Authorization Server Issuer URI from: https://$\{your-okta-domain\}/admin/oauth2/as
 6. Example config file `/etc/localhost.cfg`
-    ```
+    ```shell
     provider = "oidc"
     redirect_url = "http://localhost:4180/oauth2/callback"
-    oidc_issuer_url = "https://${your-okta-domain}/oauth2/default"
+    oidc_issuer_url = "https://$\{your-okta-domain\}/oauth2/default"
     upstreams = [
         "http://0.0.0.0:8080"
     ]

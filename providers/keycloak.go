@@ -75,7 +75,7 @@ func (p *KeycloakProvider) EnrichSession(ctx context.Context, s *sessions.Sessio
 
 	json, err := requests.New(profileURL).
 		WithContext(ctx).
-		SetHeader("Authorization", "Bearer "+s.AccessToken).
+		SetHeader("Authorization", tokenTypeBearer+" "+s.AccessToken).
 		Do().
 		UnmarshalSimpleJSON()
 	if err != nil {

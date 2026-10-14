@@ -2,16 +2,15 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
 	"os"
 	"runtime"
-	"time"
 
-	"github.com/ghodss/yaml"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/version"
 	"github.com/spf13/pflag"
+	"go.yaml.in/yaml/v3"
 )
 
 func main() {
@@ -21,16 +20,17 @@ func main() {
 
 	// Because we parse early to determine alpha vs legacy config, we have to
 	// ignore any unknown flags for now
-	configFlagSet.ParseErrorsWhitelist.UnknownFlags = true
+	configFlagSet.ParseErrorsAllowlist.UnknownFlags = true
 
 	config := configFlagSet.String("config", "", "path to config file")
 	alphaConfig := configFlagSet.String("alpha-config", "", "path to alpha config file (use at your own risk - the structure in this config file may change between minor releases)")
 	convertConfig := configFlagSet.Bool("convert-config-to-alpha", false, "if true, the proxy will load configuration as normal and convert existing configuration to the alpha config structure, and print it to stdout")
 	showVersion := configFlagSet.Bool("version", false, "print version string")
+	configTest := configFlagSet.Bool("config-test", false, "test the configuration and exit")
 	configFlagSet.Parse(os.Args[1:])
 
 	if *showVersion {
-		fmt.Printf("oauth2-proxy %s (built with %s)\n", VERSION, runtime.Version())
+		fmt.Printf("oauth2-proxy %s (built with %s)\n", version.VERSION, runtime.Version())
 		return
 	}
 
@@ -38,9 +38,22 @@ func main() {
 		logger.Fatal("cannot use alpha-config and convert-config-to-alpha together")
 	}
 
+	if *configTest && *convertConfig {
+		logger.Fatal("cannot use config-test and convert-config-to-alpha together")
+	}
+
 	opts, err := loadConfiguration(*config, *alphaConfig, configFlagSet, os.Args[1:])
 	if err != nil {
 		logger.Fatalf("ERROR: %v", err)
+	}
+
+	if *configTest {
+		if err = validation.Validate(opts); err != nil {
+			logger.Errorf("%s", err)
+			os.Exit(1)
+		}
+		fmt.Println("configuration is valid")
+		return
 	}
 
 	if *convertConfig {
@@ -60,8 +73,6 @@ func main() {
 		logger.Fatalf("ERROR: Failed to initialise OAuth2 Proxy: %v", err)
 	}
 
-	rand.Seed(time.Now().UnixNano())
-
 	if err := oauthproxy.Start(); err != nil {
 		logger.Fatalf("ERROR: Failed to start OAuth2 Proxy: %v", err)
 	}
@@ -70,12 +81,23 @@ func main() {
 // loadConfiguration will load in the user's configuration.
 // It will either load the alpha configuration (if alphaConfig is given)
 // or the legacy configuration.
-func loadConfiguration(config, alphaConfig string, extraFlags *pflag.FlagSet, args []string) (*options.Options, error) {
-	if alphaConfig != "" {
-		logger.Printf("WARNING: You are using alpha configuration. The structure in this configuration file may change without notice. You MUST remove conflicting options from your existing configuration.")
-		return loadAlphaOptions(config, alphaConfig, extraFlags, args)
+func loadConfiguration(config, yamlConfig string, extraFlags *pflag.FlagSet, args []string) (*options.Options, error) {
+	opts, err := loadLegacyOptions(config, extraFlags, args)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load legacy options: %w", err)
 	}
-	return loadLegacyOptions(config, extraFlags, args)
+
+	if yamlConfig != "" {
+		logger.Printf("WARNING: You are using alpha configuration. The structure in this configuration file may change without notice. You MUST remove conflicting options from your existing configuration.")
+		opts, err = loadYamlOptions(yamlConfig, config, extraFlags, args)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load yaml options: %w", err)
+		}
+	}
+
+	// Ensure defaults after loading configuration
+	opts.EnsureDefaults()
+	return opts, nil
 }
 
 // loadLegacyOptions loads the old toml options using the legacy flagset
@@ -100,21 +122,21 @@ func loadLegacyOptions(config string, extraFlags *pflag.FlagSet, args []string) 
 	return opts, nil
 }
 
-// loadAlphaOptions loads the old style config excluding options converted to
+// loadYamlOptions loads the old style config excluding options converted to
 // the new alpha format, then merges the alpha options, loaded from YAML,
 // into the core configuration.
-func loadAlphaOptions(config, alphaConfig string, extraFlags *pflag.FlagSet, args []string) (*options.Options, error) {
+func loadYamlOptions(yamlConfig, config string, extraFlags *pflag.FlagSet, args []string) (*options.Options, error) {
 	opts, err := loadOptions(config, extraFlags, args)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load core options: %v", err)
 	}
 
-	alphaOpts := &options.AlphaOptions{}
-	if err := options.LoadYAML(alphaConfig, alphaOpts); err != nil {
+	alphaOpts := options.NewAlphaOptions(opts)
+	if err := options.LoadYAML(yamlConfig, alphaOpts); err != nil {
 		return nil, fmt.Errorf("failed to load alpha options: %v", err)
 	}
 
-	alphaOpts.MergeInto(opts)
+	alphaOpts.MergeOptionsWithDefaults(opts)
 	return opts, nil
 }
 
@@ -140,10 +162,16 @@ func loadOptions(config string, extraFlags *pflag.FlagSet, args []string) (*opti
 // printConvertedConfig extracts alpha options from the loaded configuration
 // and renders these to stdout in YAML format.
 func printConvertedConfig(opts *options.Options) error {
-	alphaConfig := &options.AlphaOptions{}
-	alphaConfig.ExtractFrom(opts)
+	alphaConfig := options.NewAlphaOptions(opts)
 
-	data, err := yaml.Marshal(alphaConfig)
+	// Generic interface for loading arbitrary yaml structure
+	var buffer map[string]interface{}
+
+	if err := options.Decode(alphaConfig, &buffer); err != nil {
+		return fmt.Errorf("unable to decode alpha config into interface: %w", err)
+	}
+
+	data, err := yaml.Marshal(buffer)
 	if err != nil {
 		return fmt.Errorf("unable to marshal config: %v", err)
 	}

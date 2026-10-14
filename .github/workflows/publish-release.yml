@@ -1,0 +1,129 @@
+name: Publish Release
+run-name: ${{ github.event.pull_request.head.ref }}
+
+on:
+  pull_request_target:
+    branches:
+      - master
+    types:
+      - closed
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  publish:
+    if: github.event.pull_request.merged && startsWith(github.event.pull_request.head.ref, 'release/') && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.version }}
+    steps:
+    - name: Check out code
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        ref: ${{ github.event.pull_request.merge_commit_sha }}
+        fetch-depth: 0
+        fetch-tags: true
+
+    - name: Tag release
+      env:
+        BRANCH: ${{ github.event.pull_request.head.ref }}
+      run: |
+        # Set up github-actions[bot] user
+        git config --local user.name "github-actions[bot]"
+        git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+        # Get the version from the branch name
+        version="${BRANCH#release/}"
+        echo ${version}
+
+        # Tag and create release
+        git tag -a "${version}" -m "Release ${version}"
+        echo "version=${version}" >> $GITHUB_OUTPUT
+      id: tag
+
+    - name: Get Go version
+      run: |
+        version=$(grep "^go " go.mod | cut -d' ' -f2 | cut -d. -f1,2)
+        echo "version=${version}" >> "$GITHUB_OUTPUT"
+      id: go-version
+
+    - name: Set up Go
+      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      with:
+        go-version: ${{ steps.go-version.outputs.version }}
+        check-latest: true
+
+    - name: Get go dependencies
+      run: |
+        go mod download
+
+    - name: Build Artifacts
+      run: make release
+    
+    # Upload artifacts in case of workflow failure
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: oauth2-proxy-artifacts
+        path: |
+          release/*.tar.gz
+          release/*.txt
+
+    - name: Create release
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        # Get version from tag
+        version=$(git describe --tags --abbrev=0)
+
+        # Extract CHANGELOG
+        numericVersion="${version#v}"
+        notes=$(sed -E "/^# (v|V)$numericVersion$/,/^# (v|V)/!d;//d" CHANGELOG.md)
+
+        # Publish release tag
+        git push origin "${version}"
+
+        # Create github release
+        gh release create "${version}" \
+          --title "${version}" \
+          --notes "${notes}" \
+          --prerelease
+        
+        # Upload artifacts
+        gh release upload "${version}" release/*.tar.gz
+        gh release upload "${version}" release/*.txt
+  
+  docker:
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out code
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        ref: ${{ needs.publish.outputs.tag }}
+        fetch-depth: 0
+        fetch-tags: true
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
+    
+    - name: Set up Docker Buildx
+      id: buildx
+      uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+    - name: Login to quay.io
+      uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+      with:
+        registry: quay.io/oauth2-proxy
+        username: ${{ secrets.REGISTRY_USERNAME }}
+        password: ${{ secrets.REGISTRY_PASSWORD }}
+
+    - name: Build images
+      run: |
+        make build-docker-all
+    
+    - name: Push images
+      run: |
+        make push-docker-all

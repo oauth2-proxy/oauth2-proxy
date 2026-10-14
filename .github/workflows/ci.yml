@@ -1,0 +1,118 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  security-events: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out code
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        fetch-depth: 0
+
+    - name: Get Go version
+      run: |
+        version=$(grep "^go " go.mod | cut -d' ' -f2 | cut -d. -f1,2)
+        echo "version=${version}" >> "$GITHUB_OUTPUT"
+      id: go-version
+
+    - name: Set up Go
+      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      with:
+        go-version: ${{ steps.go-version.outputs.version }}
+        check-latest: true
+
+    - name: Verify Code Generation
+      run: |
+        make verify-generate
+
+    - name: Lint
+      run: |
+        make lint
+
+    - name: Build
+      if: (!startsWith(github.head_ref, 'release'))
+      run: |
+        make build
+
+    # For release testing
+    - name: Build All
+      if: github.base_ref == 'master' && startsWith(github.head_ref, 'release')
+      run: |
+        make release
+
+    - name: Test
+      env:
+        COVER: true
+      run: |
+        make test
+
+    - name: Generate Coverage Report
+      if: github.event_name == 'push'
+      run: |
+        go install github.com/jandelgado/gcov2lcov@25681830fb515e3d4c117e136b4f049e21efb4d0
+        gcov2lcov -infile=c.out -outfile=lcov.info
+
+    - name: Upload Coverage Report
+      if: github.event_name == 'push'
+      uses: qltysh/qlty-action/coverage@c9b09987143d1e4ac955f4803c7bea742102feb5 # v2.4.0
+      with:
+        oidc: true
+        files: lcov.info
+
+    - name: Run Trivy vulnerability scanner
+      if: (!startsWith(github.head_ref, 'release'))
+      uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+      with:
+        scan-type: 'rootfs'
+        scan-ref: './oauth2-proxy'
+        severity: 'CRITICAL,HIGH'
+        hide-progress: true
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        exit-code: '0'
+
+    - name: Upload Trivy scan results
+      if: (!startsWith(github.head_ref, 'release'))
+      uses: github/codeql-action/upload-sarif@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v4.37.7
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out code
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        fetch-depth: 0
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
+    
+    - name: Set up Docker Buildx
+      id: buildx
+      uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+    - name: Docker Build
+      if: (!startsWith(github.head_ref, 'release'))
+      run: |
+        make build-docker
+
+    # For release testing
+    - name: Docker Build All
+      if: github.base_ref == 'master' && startsWith(github.head_ref, 'release')
+      run: |
+        make build-docker-all

@@ -13,7 +13,12 @@ func GetRealClientIPParser(headerKey string) (ipapi.RealClientIPParser, error) {
 	headerKey = http.CanonicalHeaderKey(headerKey)
 
 	switch headerKey {
-	case http.CanonicalHeaderKey("X-Forwarded-For"), http.CanonicalHeaderKey("X-Real-IP"), http.CanonicalHeaderKey("X-ProxyUser-IP"):
+	case http.CanonicalHeaderKey("X-Forwarded-For"),
+		http.CanonicalHeaderKey("X-Real-IP"),
+		http.CanonicalHeaderKey("X-ProxyUser-IP"),
+		http.CanonicalHeaderKey("X-Envoy-External-Address"),
+		// Cloudflare specific Real-IP header
+		http.CanonicalHeaderKey("CF-Connecting-IP"):
 		return &xForwardedForClientIPParser{header: headerKey}, nil
 	}
 
@@ -44,18 +49,58 @@ func (p xForwardedForClientIPParser) GetRealClientIP(h http.Header) (net.IP, err
 	if commaIndex := strings.IndexRune(ipStr, ','); commaIndex != -1 {
 		ipStr = ipStr[:commaIndex]
 	}
-	ipStr = strings.TrimSpace(ipStr)
 
+	return parseClientIP(ipStr, p.header)
+}
+
+// GetClientIPFromTrustedProxy obtains the client IP from a header supplied by
+// a caller that has already been verified as a trusted proxy.
+func GetClientIPFromTrustedProxy(p ipapi.RealClientIPParser, req *http.Request, trustedProxies *NetSet) (net.IP, error) {
+	if p == nil {
+		return nil, fmt.Errorf("real client IP parser is required")
+	}
+
+	xffParser, ok := p.(*xForwardedForClientIPParser)
+	if !ok || xffParser.header != http.CanonicalHeaderKey("X-Forwarded-For") {
+		return p.GetRealClientIP(req.Header)
+	}
+
+	if trustedProxies == nil {
+		return nil, fmt.Errorf("trusted proxy list is required to parse X-Forwarded-For")
+	}
+
+	xff := strings.Join(req.Header.Values(xffParser.header), ",")
+	if xff == "" {
+		return nil, nil
+	}
+
+	chain := strings.Split(xff, ",")
+	for i := len(chain) - 1; i >= 0; i-- {
+		clientIP, err := parseClientIP(chain[i], xffParser.header)
+		if err != nil {
+			return nil, err
+		}
+
+		if i == 0 || !trustedProxies.Has(clientIP) {
+			return clientIP, nil
+		}
+	}
+
+	return nil, nil
+}
+
+func parseClientIP(ipStr string, header string) (net.IP, error) {
+	ipStr = strings.TrimSpace(ipStr)
 	if ipHost, _, err := net.SplitHostPort(ipStr); err == nil {
 		ipStr = ipHost
 	}
 
-	ip := net.ParseIP(ipStr)
-	if ip == nil {
-		return nil, fmt.Errorf("unable to parse ip (%s) from %s header", ipStr, http.CanonicalHeaderKey(p.header))
+	clientIP := net.ParseIP(ipStr)
+	if clientIP == nil {
+		return nil, fmt.Errorf("unable to parse ip (%s) from %s header", ipStr, http.CanonicalHeaderKey(header))
 	}
 
-	return ip, nil
+	return clientIP, nil
 }
 
 // GetClientIP obtains the perceived end-user IP address from headers if p != nil else from req.RemoteAddr.
@@ -68,6 +113,13 @@ func GetClientIP(p ipapi.RealClientIPParser, req *http.Request) (net.IP, error) 
 
 // getRemoteIP obtains the IP of the low-level connected network host
 func getRemoteIP(req *http.Request) (net.IP, error) {
+	// Unix domain sockets set RemoteAddr to "@" which has no meaningful IP.
+	// https://github.com/golang/go/blob/0fa53e41f122b1661d0678a6d36d71b7b5ad031d/src/syscall/syscall_linux.go#L506-L511
+	if req.RemoteAddr == "@" {
+		return nil, nil
+	}
+
+	//revive:disable:indent-error-flow
 	if ipStr, _, err := net.SplitHostPort(req.RemoteAddr); err != nil {
 		return nil, fmt.Errorf("unable to get ip and port from http.RemoteAddr (%s)", req.RemoteAddr)
 	} else if ip := net.ParseIP(ipStr); ip != nil {
@@ -75,19 +127,22 @@ func getRemoteIP(req *http.Request) (net.IP, error) {
 	} else {
 		return nil, fmt.Errorf("unable to parse ip (%s)", ipStr)
 	}
+	//revive:enable:indent-error-flow
 }
 
-// GetClientString obtains the human readable string of the remote IP and optionally the real client IP if available
-func GetClientString(p ipapi.RealClientIPParser, req *http.Request, full bool) (s string) {
+// GetClientString obtains the human readable string of the remote IP and optionally
+// the real client IP. Callers must pass a nil parser unless the peer is trusted.
+// Missing or invalid client headers leave only the transport IP in the output.
+func GetClientString(p ipapi.RealClientIPParser, req *http.Request, trustedProxies *NetSet, full bool) (s string) {
 	var realClientIPStr string
 	if p != nil {
-		if realClientIP, err := p.GetRealClientIP(req.Header); err == nil && realClientIP != nil {
+		if realClientIP, err := GetClientIPFromTrustedProxy(p, req, trustedProxies); err == nil && realClientIP != nil {
 			realClientIPStr = realClientIP.String()
 		}
 	}
 
 	var remoteIPStr string
-	if remoteIP, err := getRemoteIP(req); err == nil {
+	if remoteIP, err := getRemoteIP(req); err == nil && remoteIP != nil {
 		remoteIPStr = remoteIP.String()
 	}
 

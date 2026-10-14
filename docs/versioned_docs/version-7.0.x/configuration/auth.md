@@ -89,7 +89,7 @@ Note: When using the Azure Auth provider with nginx and the cookie session store
 
 ### Facebook Auth Provider
 
-1.  Create a new FB App from <https://developers.facebook.com/>
+1.  Create a new FB App from https://developers.facebook.com/
 2.  Under FB Login, set your Valid OAuth redirect URIs to `https://internal.yourcompany.com/oauth2/callback`
 
 ### GitHub Auth Provider
@@ -103,29 +103,41 @@ NOTE: When `--github-user` is set, the specified users are allowed to login even
 
 To restrict by organization only, include the following flag:
 
-    -github-org="": restrict logins to members of this organisation
+```
+    --github-org="": restrict logins to members of this organisation
+```
 
 To restrict within an organization to specific teams, include the following flag in addition to `-github-org`:
 
-    -github-team="": restrict logins to members of any of these teams (slug), separated by a comma
+```
+    --github-team="": restrict logins to members of any of these teams (slug), separated by a comma
+```
 
 If you would rather restrict access to collaborators of a repository, those users must either have push access to a public repository or any access to a private repository:
 
-    -github-repo="": restrict logins to collaborators of this repository formatted as orgname/repo
+```
+    --github-repo="": restrict logins to collaborators of this repository formatted as orgname/repo
+```
 
 If you'd like to allow access to users with **read only** access to a **public** repository you will need to provide a [token](https://github.com/settings/tokens) for a user that has write access to the repository. The token must be created with at least the `public_repo` scope:
 
-    -github-token="": the token to use when verifying repository collaborators
+```
+    --github-token="": the token to use when verifying repository collaborators
+```
 
 To allow a user to login with their username even if they do not belong to the specified org and team or collaborators, separated by a comma
 
-    -github-user="": allow logins by username, separated by a comma
+```
+    --github-user="": allow logins by username, separated by a comma
+```
 
 If you are using GitHub enterprise, make sure you set the following to the appropriate url:
 
-    -login-url="http(s)://<enterprise github host>/login/oauth/authorize"
-    -redeem-url="http(s)://<enterprise github host>/login/oauth/access_token"
-    -validate-url="http(s)://<enterprise github host>/api/v3"
+```
+    --login-url="http(s)://<enterprise github host>/login/oauth/authorize"
+    --redeem-url="http(s)://<enterprise github host>/login/oauth/access_token"
+    --validate-url="http(s)://<enterprise github host>/api/v3"
+```
 
 ### Keycloak Auth Provider
 
@@ -135,6 +147,7 @@ If you are using GitHub enterprise, make sure you set the following to the appro
 
 Make sure you set the following to the appropriate url:
 
+```
     --provider=keycloak
     --client-id=<client you have created>
     --client-secret=<your client's secret>
@@ -144,6 +157,7 @@ Make sure you set the following to the appropriate url:
     --validate-url="http(s)://<keycloak host>/auth/realms/<your realm>/protocol/openid-connect/userinfo"
     --keycloak-group=<first_allowed_user_group>
     --keycloak-group=<second_allowed_user_group>
+```
     
 For group based authorization, the optional `--keycloak-group` (legacy) or `--allowed-group` (global standard)
 flags can be used to specify which groups to limit access to.
@@ -175,11 +189,15 @@ The following config should be set to ensure that the oauth will work properly. 
 
 Restricting by group membership is possible with the following option:
 
+```
     --gitlab-group="mygroup,myothergroup": restrict logins to members of any of these groups (slug), separated by a comma
+```
 
 If you are using self-hosted GitLab, make sure you set the following to the appropriate URL:
 
+```
     --oidc-issuer-url="<your gitlab url>"
+```
 
 ### LinkedIn Auth Provider
 
@@ -308,7 +326,7 @@ Then you can start the oauth2-proxy with `./oauth2-proxy --config /etc/example.c
 #### Okta - localhost
 
 1. Signup for developer account: https://developer.okta.com/signup/
-2. Create New `Web` Application: https://${your-okta-domain}/dev/console/apps/new
+2. Create New `Web` Application: https://$\{your-okta-domain\}/dev/console/apps/new
 3. Example Application Settings for localhost:
    * **Name:** My Web App
    * **Base URIs:** http://localhost:4180/
@@ -317,12 +335,12 @@ Then you can start the oauth2-proxy with `./oauth2-proxy --config /etc/example.c
    * **Group assignments:** `Everyone`
    * **Grant type allowed:** `Authorization Code` and `Refresh Token`
 4. Make note of the `Client ID` and `Client secret`, they are needed in a future step
-5. Make note of the **default** Authorization Server Issuer URI from: https://${your-okta-domain}/admin/oauth2/as
+5. Make note of the **default** Authorization Server Issuer URI from: https://$\{your-okta-domain\}/admin/oauth2/as
 6. Example config file `/etc/localhost.cfg`
     ```
     provider = "oidc"
     redirect_url = "http://localhost:4180/oauth2/callback"
-    oidc_issuer_url = "https://${your-okta-domain}/oauth2/default"
+    oidc_issuer_url = "https://$\{your-okta-domain\}/oauth2/default"
     upstreams = [
         "http://0.0.0.0:8080"
     ]

@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
@@ -311,9 +311,9 @@ func TestAzureProviderRedeem(t *testing.T) {
 			if testCase.EmailFromIDToken != "" {
 				var err error
 				token := idTokenClaims{
-					StandardClaims: jwt.StandardClaims{Audience: "cd6d4fae-f6a6-4a34-8454-2c6b598e9532"},
-					Email:          testCase.EmailFromIDToken,
-					Groups:         []string{"aa", "bb"},
+					RegisteredClaims: jwt.RegisteredClaims{Audience: jwt.ClaimStrings{"cd6d4fae-f6a6-4a34-8454-2c6b598e9532"}},
+					Email:            testCase.EmailFromIDToken,
+					Groups:           []string{"aa", "bb"},
 				}
 				idTokenString, err = newSignedTestIDToken(token)
 				assert.NoError(t, err)
@@ -321,9 +321,9 @@ func TestAzureProviderRedeem(t *testing.T) {
 			if testCase.EmailFromAccessToken != "" {
 				var err error
 				token := idTokenClaims{
-					StandardClaims: jwt.StandardClaims{Audience: "cd6d4fae-f6a6-4a34-8454-2c6b598e9532"},
-					Email:          testCase.EmailFromAccessToken,
-					Groups:         []string{"aa", "bb"},
+					RegisteredClaims: jwt.RegisteredClaims{Audience: jwt.ClaimStrings{"cd6d4fae-f6a6-4a34-8454-2c6b598e9532"}},
+					Email:            testCase.EmailFromAccessToken,
+					Groups:           []string{"aa", "bb"},
 				}
 				accessTokenString, err = newSignedTestIDToken(token)
 				assert.NoError(t, err)
@@ -390,8 +390,8 @@ func TestAzureProviderRefresh(t *testing.T) {
 	subject := "foo"
 	idToken := idTokenClaims{
 		Email: email,
-		StandardClaims: jwt.StandardClaims{
-			Audience: "cd6d4fae-f6a6-4a34-8454-2c6b598e9532",
+		RegisteredClaims: jwt.RegisteredClaims{
+			Audience: jwt.ClaimStrings{"cd6d4fae-f6a6-4a34-8454-2c6b598e9532"},
 			Subject:  subject,
 		},
 	}

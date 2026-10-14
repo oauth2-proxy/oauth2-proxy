@@ -1,12 +1,10 @@
 package cookies
 
 import (
-	"net/http"
 	"testing"
-	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -19,6 +17,10 @@ const (
 	cookieDomain = "o2p.cookies.test"
 	cookiePath   = "/cookie-tests"
 
+	sameSiteLax    = "lax"
+	sameSiteStrict = "strict"
+	sameSiteNone   = "none"
+
 	nowEpoch = 1609366421
 )
 
@@ -27,9 +29,4 @@ func TestProviderSuite(t *testing.T) {
 
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Cookies")
-}
-
-func testCookieExpires(exp time.Time) string {
-	var buf [len(http.TimeFormat)]byte
-	return string(exp.UTC().AppendFormat(buf[:0], http.TimeFormat))
 }

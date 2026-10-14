@@ -4,8 +4,8 @@ import (
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -15,9 +15,8 @@ var _ = Describe("Upstreams", func() {
 		errStrings []string
 	}
 
-	flushInterval := options.Duration(5 * time.Second)
+	flushInterval := 5 * time.Second
 	staticCode200 := 200
-	truth := true
 
 	validHTTPUpstream := options.Upstream{
 		ID:   "validHTTPUpstream",
@@ -27,7 +26,7 @@ var _ = Describe("Upstreams", func() {
 	validStaticUpstream := options.Upstream{
 		ID:     "validStaticUpstream",
 		Path:   "/validStaticUpstream",
-		Static: true,
+		Static: ptr.To(true),
 	}
 	validFileUpstream := options.Upstream{
 		ID:   "validFileUpstream",
@@ -139,18 +138,18 @@ var _ = Describe("Upstreams", func() {
 			},
 			errStrings: []string{invalidURISchemeMsg},
 		}),
-		Entry("with a static upstream and invalid optons", &validateUpstreamTableInput{
+		Entry("with a static upstream and invalid options", &validateUpstreamTableInput{
 			upstreams: options.UpstreamConfig{
 				Upstreams: []options.Upstream{
 					{
 						ID:                    "foo",
 						Path:                  "/foo",
 						URI:                   "ftp://foo",
-						Static:                true,
+						Static:                ptr.To(true),
 						FlushInterval:         &flushInterval,
-						PassHostHeader:        &truth,
-						ProxyWebSockets:       &truth,
-						InsecureSkipTLSVerify: true,
+						PassHostHeader:        ptr.To(true),
+						ProxyWebSockets:       ptr.To(true),
+						InsecureSkipTLSVerify: ptr.To(true),
 					},
 				},
 			},
@@ -160,6 +159,24 @@ var _ = Describe("Upstreams", func() {
 				staticWithFlushIntervalMsg,
 				staticWithPassHostHeaderMsg,
 				staticWithProxyWebSocketsMsg,
+			},
+		}),
+		Entry("with a static upstream and sane default options", &validateUpstreamTableInput{
+			upstreams: options.UpstreamConfig{
+				Upstreams: []options.Upstream{
+					{
+						ID:                    "foo",
+						Path:                  "/foo",
+						URI:                   "ftp://foo",
+						Static:                ptr.To(true),
+						PassHostHeader:        ptr.To(false),
+						ProxyWebSockets:       ptr.To(false),
+						InsecureSkipTLSVerify: ptr.To(false),
+					},
+				},
+			},
+			errStrings: []string{
+				staticWithURIMsg,
 			},
 		}),
 		Entry("with duplicate IDs", &validateUpstreamTableInput{

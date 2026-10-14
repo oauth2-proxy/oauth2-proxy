@@ -7,8 +7,8 @@ import (
 	"io"
 	"time"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/clock"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
 	"github.com/pierrec/lz4/v4"
 	"github.com/vmihailenco/msgpack/v5"
 )
@@ -29,9 +29,20 @@ type SessionState struct {
 	Groups            []string `msgpack:"g,omitempty"`
 	PreferredUsername string   `msgpack:"pu,omitempty"`
 
+	// Additional claims
+	AdditionalClaims map[string]interface{} `msgpack:"ac,omitempty"`
+
 	// Internal helpers, not serialized
-	Clock clock.Clock `msgpack:"-"`
-	Lock  Lock        `msgpack:"-"`
+	Clock     func() time.Time `msgpack:"-"` // override for time.Now, for testing
+	Lock      Lock             `msgpack:"-"`
+	Refreshed bool             `msgpack:"-"` // indicates whether the session was refreshed
+}
+
+func (s *SessionState) now() time.Time {
+	if s.Clock != nil {
+		return s.Clock()
+	}
+	return time.Now()
 }
 
 func (s *SessionState) ObtainLock(ctx context.Context, expiration time.Duration) error {
@@ -64,7 +75,7 @@ func (s *SessionState) PeekLock(ctx context.Context) (bool, error) {
 
 // CreatedAtNow sets a SessionState's CreatedAt to now
 func (s *SessionState) CreatedAtNow() {
-	now := s.Clock.Now()
+	now := s.now()
 	s.CreatedAt = &now
 }
 
@@ -85,7 +96,7 @@ func (s *SessionState) ExpiresIn(d time.Duration) {
 
 // IsExpired checks whether the session has expired
 func (s *SessionState) IsExpired() bool {
-	if s.ExpiresOn != nil && !s.ExpiresOn.IsZero() && s.ExpiresOn.Before(s.Clock.Now()) {
+	if s.ExpiresOn != nil && !s.ExpiresOn.IsZero() && s.ExpiresOn.Before(s.now()) {
 		return true
 	}
 	return false
@@ -94,7 +105,7 @@ func (s *SessionState) IsExpired() bool {
 // Age returns the age of a session
 func (s *SessionState) Age() time.Duration {
 	if s.CreatedAt != nil && !s.CreatedAt.IsZero() {
-		return s.Clock.Now().Truncate(time.Second).Sub(*s.CreatedAt)
+		return s.now().Truncate(time.Second).Sub(*s.CreatedAt)
 	}
 	return 0
 }
@@ -116,6 +127,8 @@ func (s *SessionState) String() string {
 	}
 	if s.RefreshToken != "" {
 		o += " refresh_token:true"
+	} else {
+		o += " refresh_token:false"
 	}
 	if len(s.Groups) > 0 {
 		o += fmt.Sprintf(" groups:%v", s.Groups)
@@ -149,8 +162,18 @@ func (s *SessionState) GetClaim(claim string) []string {
 	case "preferred_username":
 		return []string{s.PreferredUsername}
 	default:
-		return []string{}
+		return s.getAdditionalClaim(claim)
 	}
+}
+
+func (s *SessionState) getAdditionalClaim(claim string) []string {
+	if value, ok := s.AdditionalClaims[claim]; ok {
+		var result []string
+		if err := util.CoerceClaim(value, &result); err == nil {
+			return result
+		}
+	}
+	return []string{}
 }
 
 // CheckNonce compares the Nonce against a potential hash of it

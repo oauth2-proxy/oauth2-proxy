@@ -6,14 +6,16 @@ import (
 	"github.com/google/uuid"
 	"github.com/justinas/alice"
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
 )
 
-func NewScope(reverseProxy bool, idHeader string) alice.Constructor {
+func NewScope(reverseProxy bool, idHeader string, trustedProxies *ip.NetSet) alice.Constructor {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			scope := &middlewareapi.RequestScope{
-				ReverseProxy: reverseProxy,
-				RequestID:    genRequestID(req, idHeader),
+				ReverseProxy:   reverseProxy,
+				TrustedProxies: trustedProxies,
+				RequestID:      genRequestID(req, idHeader),
 			}
 			req = middlewareapi.AddRequestScope(req, scope)
 			next.ServeHTTP(rw, req)

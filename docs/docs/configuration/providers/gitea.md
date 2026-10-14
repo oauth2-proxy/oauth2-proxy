@@ -1,7 +1,11 @@
 ---
 id: gitea
-title: Gitea
+title: Gitea / Forgejo
 ---
+
+:::note
+This is not actually a fully serparate provider. For more details and options please refer to the [GitHub Provider Options](github.md)
+:::
 
 1. Create a new application: `https://< your gitea host >/user/settings/applications`
 2. Under `Redirect URI` enter the correct URL i.e. `https://<proxied host>/oauth2/callback`

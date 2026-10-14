@@ -13,7 +13,7 @@ import (
 	"testing"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"golang.org/x/net/websocket"
 )
@@ -24,7 +24,7 @@ var (
 	serverAddr     string
 	unixServer     *httptest.Server
 	unixServerAddr string
-	invalidServer  = "http://::1"
+	invalidServer  = "http://127.0.0.1:1"
 )
 
 func TestUpstreamSuite(t *testing.T) {
@@ -96,6 +96,7 @@ type testHTTPRequest struct {
 type testWebSocketResponse struct {
 	Message string
 	Origin  string
+	Host    string
 }
 
 type testHTTPUpstream struct{}
@@ -138,6 +139,7 @@ func (t *testHTTPUpstream) websocketHandler() http.Handler {
 		wsResponse := testWebSocketResponse{
 			Message: string(data),
 			Origin:  ws.Request().Header.Get("Origin"),
+			Host:    ws.Request().Host,
 		}
 		err = websocket.JSON.Send(ws, wsResponse)
 		if err != nil {

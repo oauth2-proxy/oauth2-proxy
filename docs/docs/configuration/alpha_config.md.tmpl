@@ -24,16 +24,55 @@ When using alpha configuration, your config file will look something like below:
 upstreams:
   - id: ...
     ...: ...
+providers:
+  - id: ...
+    ...: ...
+cookie:
+  secret: ...
+  ...: ...
 injectRequestHeaders:
-  - name: ...
-    ...: ...
+  - secretSource:
+      ...: ...
 injectResponseHeaders:
-  - name: ...
-    ...: ...
+  - claimSource:
+      ...: ...
 ```
 
 Please browse the [reference](#configuration-reference) below for the structure
 of the new configuration format.
+
+# Migration Guide
+
+This section details breaking changes and migration steps for moving to the new
+alpha configuration format.
+
+## Migrating header injections in v7.14.0
+
+From v7.14.0 onward, header injection sources must be explicitly nested. If you
+previously relied on squashed fields, update to the new structure before
+upgrading:
+
+```yaml
+# before v7.14.0
+injectRequestHeaders:
+- name: X-Forwarded-User
+  values:
+  - claim: user
+- name: X-Custom-Secret-header
+  values:
+  - value: my-super-secret
+
+# v7.14.0 and later
+injectRequestHeaders:
+- name: X-Forwarded-User
+  values:
+  - claimSource:
+      claim: user
+- name: X-Custom-Secret-header
+  values:
+  - secretSource:
+      value: my-super-secret
+```
 
 ## Using Alpha Configuration
 
@@ -66,6 +105,134 @@ the new config.
 ```bash
 oauth2-proxy --alpha-config ./path/to/new/config.yaml --config ./path/to/existing/config.cfg
 ```
+
+### Validating Alpha Configuration
+
+Use `--config-test` to validate your alpha configuration without starting the proxy:
+
+```bash
+oauth2-proxy --config core.cfg --alpha-config alpha.yaml --config-test
+```
+
+This is useful for CI/CD pipelines to catch configuration errors before deployment.
+See the [Configuration Validation](./overview.md#configuration-validation) section for more details.
+
+### How to use environment variables
+
+The alpha package supports the use of environment variables in place of yaml values, allowing sensitive data to be pulled from somewhere other than the yaml file.
+When using environment variables, your yaml will look like this:
+
+```yaml
+    providers:
+    - provider: azure
+      clientSecret: ${CLIENT_SECRET}
+      ...
+```
+Where CLIENT_SECRET is an environment variable.
+More information and available patterns can be found [here](https://github.com/a8m/envsubst#docs)
+
+### How to inject custom headers
+
+Configure `injectRequestHeaders` and `injectResponseHeaders` in alpha config YAML.
+
+```yaml
+injectRequestHeaders:
+  - name: "X-User-Email"
+    values:
+      - claimSource:
+          claim: "email" # extract the email claim contents from the id token
+  - name: "X-Static-Secret"
+    values:
+      # secrets need to be encoded with base64 when directly in the yaml config but will be send decoded
+      - secretSource:
+          value: "c3VwZXItc2VjcmV0"
+  - name: "X-Static-File-Secret"
+      - secretSource:
+          fromFile: "/path/to/my/secret"
+  - name: "X-Static-Env-Secret"
+      - secretSource:
+          value: "${MY_SECRET_ENV}" # content still needs to be base64 encoded
+injectResponseHeaders:
+  # Following will result in a header "Authorization: Basic <user:password> (encoded)"
+  - name: "Authorization"
+    values:
+    - claimSource:
+        claim: user
+        prefix: "Basic "
+        basicAuthPassword:
+          value: c3VwZXItc2VjcmV0LXBhc3N3b3Jk # base64 encoded password
+```
+
+**Value sources:** 
+* `claimSource` - `claim` (session claims either from id token or from profile URL)
+* `secretSource` - `value` (base64), `fromFile` (file path)
+
+#### Claim value serialization
+
+`claimSource` converts the selected claim into one or more string header values. Scalars
+produce one value, while arrays produce one value per element. Values that cannot be
+converted directly to strings, such as objects, are JSON-encoded individually.
+
+Each non-empty value is added separately under the configured header name. An array of
+objects therefore produces multiple header values containing one JSON object each, not a
+single JSON array. HTTP libraries and intermediaries may expose repeated values as a
+comma-joined string, so consumers should retrieve and parse each header value separately.
+
+**Request option:** `preserveRequestValue: true` retains existing header values
+
+**Incompatibility:** Remove legacy flags `pass-user-headers`, `set-xauthrequest`
+
+### How to utilize arbitrary claims provided by your Identity Provider
+
+With the additionalClaims attribute you can specify which claims you want to extract
+from the ID Token or userinfo (ProfileURL) endpoint.
+
+Configure these on the relevant provider entry:
+
+```yaml
+providers:
+  - id: my-oidc-provider
+    provider: oidc
+    clientID: ${OAUTH_CLIENT_ID}
+    clientSecret: ${OAUTH_CLIENT_SECRET}
+    oidcConfig:
+      issuerURL: https://issuer.example.com
+    profileURL: https://issuer.example.com/oauth2/userinfo
+    additionalClaims:
+      - department
+      - employee_id
+      - organization.name
+```
+
+OAuth2 Proxy resolves each configured claim using the following order:
+
+1. The raw ID token is checked first.
+2. If the claim is not present there and `profileURL` is configured, the userinfo endpoint is queried.
+3. If `skipClaimsFromProfileURL: true` is set, only the ID token is used.
+
+Claims that are not found are ignored rather than causing authentication to fail.
+
+You can use dot-separated paths for nested JSON objects, for example `organization.name`.
+Array indexes are not supported.
+
+Once loaded, these claims are stored in the session as `additionalClaims`. They can then be
+used anywhere session claims are accepted, including header injection:
+
+```yaml
+injectRequestHeaders:
+  - name: X-Department
+    values:
+      - claimSource:
+          claim: department
+  - name: X-Organization
+    values:
+      - claimSource:
+          claim: organization.name
+```
+
+This is useful when your IdP exposes application-specific attributes such as department,
+tenant, employee ID, entitlement, or other custom claims that are not part of the default
+OAuth2 Proxy session fields.
 
 ## Removed options
 

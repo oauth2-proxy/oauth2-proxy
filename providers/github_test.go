@@ -39,6 +39,7 @@ func testGitHubBackend(payloads map[string][]string) *httptest.Server {
 		"/repos/oauth2-proxy/oauth2-proxy/collaborators/mbland": {""},
 		"/user":        {""},
 		"/user/emails": {""},
+		"/user/teams":  {"page=1&per_page=100", "page=2&per_page=100", "page=3&per_page=100"},
 		"/user/orgs":   {"page=1&per_page=100", "page=2&per_page=100", "page=3&per_page=100"},
 		// GitHub Enterprise Server API
 		"/api/v3":             {""},
@@ -82,8 +83,8 @@ func TestNewGitHubProvider(t *testing.T) {
 	g.Expect(providerData.LoginURL.String()).To(Equal(githubDefaultLoginURL.String()))
 	g.Expect(providerData.RedeemURL.String()).To(Equal(githubDefaultRedeemURL.String()))
 	g.Expect(providerData.ProfileURL.String()).To(Equal(""))
-	g.Expect(providerData.ValidateURL.String()).To(Equal(githubDefaultValidateURL.String()))
-	g.Expect(providerData.Scope).To(Equal("user:email"))
+	g.Expect(providerData.ValidateURL.String()).To(Equal("https://api.github.com/"))
+	g.Expect(providerData.Scope).To(Equal("user:email read:org"))
 }
 
 func TestGitHubProviderOverrides(t *testing.T) {
@@ -168,6 +169,134 @@ func TestGitHubProvider_getEmailWithOrg(t *testing.T) {
 	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
 }
 
+func TestGitHubProvider_checkRestrictionsOrg(t *testing.T) {
+	b := testGitHubBackend(map[string][]string{
+		"/user/emails": {`[ {"email": "john.doe@example", "verified": true, "primary": true} ]`},
+		"/user/orgs": {
+			`[ { "login": "test-org-1" } ]`,
+			`[ { "login": "test-org-2" } ]`,
+			`[ ]`,
+		},
+		"/user/teams": {
+			`[ { "name":"test-team-1", "slug":"test-team-1", "organization": { "login": "test-org-1" } } ]`,
+			`[ { "name":"test-team-2", "slug":"test-team-2", "organization": { "login": "test-org-2" } } ]`,
+			`[ ]`,
+		},
+	})
+	defer b.Close()
+
+	// This test should succeed, because of the valid organization.
+	bURL, _ := url.Parse(b.URL)
+	p := testGitHubProvider(bURL.Host,
+		options.GitHubOptions{
+			Org: "test-org-1",
+		},
+	)
+
+	var err error
+	session := CreateAuthorizedSession()
+	err = p.getOrgAndTeam(context.Background(), session)
+	assert.NoError(t, err)
+	err = p.checkRestrictions(context.Background(), session)
+	assert.NoError(t, err)
+
+	// This part should fail, because user is not part of the organization
+	p = testGitHubProvider(bURL.Host,
+		options.GitHubOptions{
+			Org: "test-org-1-fail",
+		},
+	)
+
+	err = p.checkRestrictions(context.Background(), session)
+	assert.Error(t, err)
+}
+
+func TestGitHubProvider_checkRestrictionsOrgTeam(t *testing.T) {
+	b := testGitHubBackend(map[string][]string{
+		"/user/emails": {`[ {"email": "john.doe@example", "verified": true, "primary": true} ]`},
+		"/user/orgs": {
+			`[ { "login": "test-org-1" } ]`,
+			`[ { "login": "test-org-2" } ]`,
+			`[ ]`,
+		},
+		"/user/teams": {
+			`[ { "name":"test-team-1", "slug":"test-team-1", "organization": { "login": "test-org-1" } } ]`,
+			`[ { "name":"test-team-2", "slug":"test-team-2", "organization": { "login": "test-org-2" } } ]`,
+			`[ ]`,
+		},
+	})
+	defer b.Close()
+
+	// This test should succeed, because of the valid Org and Team combination.
+	bURL, _ := url.Parse(b.URL)
+	p := testGitHubProvider(bURL.Host,
+		options.GitHubOptions{
+			Org:  "test-org-1",
+			Team: "test-team-1",
+		},
+	)
+
+	var err error
+	session := CreateAuthorizedSession()
+	err = p.getOrgAndTeam(context.Background(), session)
+	assert.NoError(t, err)
+	err = p.checkRestrictions(context.Background(), session)
+	assert.NoError(t, err)
+
+	// This part should fail, because user is not part of the organization and the team
+	p = testGitHubProvider(bURL.Host,
+		options.GitHubOptions{
+			Org:  "test-org-1-fail",
+			Team: "test-team-1-fail",
+		},
+	)
+
+	err = p.checkRestrictions(context.Background(), session)
+	assert.Error(t, err)
+}
+
+func TestGitHubProvider_checkRestrictionsTeam(t *testing.T) {
+	b := testGitHubBackend(map[string][]string{
+		"/user/emails": {`[ {"email": "john.doe@example", "verified": true, "primary": true} ]`},
+		"/user/orgs": {
+			`[ { "login": "test-org-1" } ]`,
+			`[ { "login": "test-org-2" } ]`,
+			`[ ]`,
+		},
+		"/user/teams": {
+			`[ { "name":"test-team-1", "slug":"test-team-1", "organization": { "login": "test-org-1" } } ]`,
+			`[ { "name":"test-team-2", "slug":"test-team-2", "organization": { "login": "test-org-2" } } ]`,
+			`[ ]`,
+		},
+	})
+	defer b.Close()
+
+	// This test should succeed, because of the valid org:slug combination.
+	bURL, _ := url.Parse(b.URL)
+	p := testGitHubProvider(bURL.Host,
+		options.GitHubOptions{
+			Team: "test-org-1:test-team-1, test-org-2:test-team-2-fail",
+		},
+	)
+
+	var err error
+	session := CreateAuthorizedSession()
+	err = p.getOrgAndTeam(context.Background(), session)
+	assert.NoError(t, err)
+	err = p.checkRestrictions(context.Background(), session)
+	assert.NoError(t, err)
+
+	// This part should fail, because user is not part of the organization:team combination
+	p = testGitHubProvider(bURL.Host,
+		options.GitHubOptions{
+			Team: "test-org-1-fail:test-team-1-fail, test-org-2-fail:test-team-2-fail",
+		},
+	)
+
+	err = p.checkRestrictions(context.Background(), session)
+	assert.Error(t, err)
+}
+
 func TestGitHubProvider_getEmailWithWriteAccessToPublicRepo(t *testing.T) {
 	b := testGitHubBackend(map[string][]string{
 		"/repo/oauth2-proxy/oauth2-proxy": {`{"permissions": {"pull": true, "push": true}, "private": false}`},
@@ -231,7 +360,7 @@ func TestGitHubProvider_getEmailWithWriteAccessToPrivateRepo(t *testing.T) {
 	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
 }
 
-func TestGitHubProvider_getEmailWithNoAccessToPrivateRepo(t *testing.T) {
+func TestGitHubProvider_checkRestrictionsWithNoAccessToPrivateRepo(t *testing.T) {
 	b := testGitHubBackend(map[string][]string{
 		"/repos/oauth2-proxy/oauth2-proxy": {`{}`},
 	})
@@ -245,8 +374,8 @@ func TestGitHubProvider_getEmailWithNoAccessToPrivateRepo(t *testing.T) {
 	)
 
 	session := CreateAuthorizedSession()
-	err := p.getEmail(context.Background(), session)
-	assert.NoError(t, err)
+	err := p.checkRestrictions(context.Background(), session)
+	assert.Error(t, err)
 	assert.Empty(t, session.Email)
 }
 
@@ -377,7 +506,7 @@ func TestGitHubProvider_getEmailWithUsername(t *testing.T) {
 	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
 }
 
-func TestGitHubProvider_getEmailWithNotAllowedUsername(t *testing.T) {
+func TestGitHubProvider_checkRestrictionsWithNotAllowedUsername(t *testing.T) {
 	b := testGitHubBackend(map[string][]string{
 		"/user":        {`{"email": "michael.bland@gsa.gov", "login": "mbland"}`},
 		"/user/emails": {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
@@ -392,7 +521,7 @@ func TestGitHubProvider_getEmailWithNotAllowedUsername(t *testing.T) {
 	)
 
 	session := CreateAuthorizedSession()
-	err := p.getEmail(context.Background(), session)
+	err := p.checkRestrictions(context.Background(), session)
 	assert.Error(t, err)
 	assert.Empty(t, session.Email)
 }

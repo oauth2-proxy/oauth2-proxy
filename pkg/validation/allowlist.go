@@ -11,19 +11,32 @@ import (
 )
 
 func validateAllowlists(o *options.Options) []string {
+	//nolint:prealloc
 	msgs := []string{}
 
 	msgs = append(msgs, validateAuthRoutes(o)...)
 	msgs = append(msgs, validateAuthRegexes(o)...)
+	msgs = append(msgs, validateTrustedProxyIPs(o)...)
 	msgs = append(msgs, validateTrustedIPs(o)...)
 
 	if len(o.TrustedIPs) > 0 && o.ReverseProxy {
-		_, err := fmt.Fprintln(os.Stderr, "WARNING: mixing --trusted-ip with --reverse-proxy is a potential security vulnerability. An attacker can inject a trusted IP into an X-Real-IP or X-Forwarded-For header if they aren't properly protected outside of oauth2-proxy")
+		_, err := fmt.Fprintln(os.Stderr, "WARNING: --trusted-ip bypasses authentication. When using it with --reverse-proxy, configure --trusted-proxy-ip and ensure the proxy overwrites the selected real-client-IP header (or safely appends X-Forwarded-For).")
 		if err != nil {
 			panic(err)
 		}
 	}
 
+	return msgs
+}
+
+// validateTrustedProxyIPs validates IP/CIDRs for trusted reverse proxies.
+func validateTrustedProxyIPs(o *options.Options) []string {
+	msgs := []string{}
+	for i, ipStr := range o.TrustedProxyIPs {
+		if ip.ParseIPNet(ipStr) == nil {
+			msgs = append(msgs, fmt.Sprintf("trusted_proxy_ips[%d] (%s) could not be recognized", i, ipStr))
+		}
+	}
 	return msgs
 }
 
@@ -46,7 +59,7 @@ func validateAuthRoutes(o *options.Options) []string {
 	return msgs
 }
 
-// validateRegex validates regex paths passed with options.SkipAuthRegex
+// validateAuthRegexes validates regex paths passed with options.SkipAuthRegex
 func validateAuthRegexes(o *options.Options) []string {
 	return validateRegexes(o.SkipAuthRegex)
 }

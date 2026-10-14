@@ -8,6 +8,7 @@ import (
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 )
 
 // ADFSProvider represents an ADFS based Identity Provider
@@ -29,7 +30,7 @@ const (
 )
 
 // NewADFSProvider initiates a new ADFSProvider
-func NewADFSProvider(p *ProviderData, opts options.ADFSOptions) *ADFSProvider {
+func NewADFSProvider(p *ProviderData, opts options.Provider) *ADFSProvider {
 	p.setProviderDefaults(providerDefaults{
 		name:  adfsProviderName,
 		scope: adfsDefaultScope,
@@ -46,11 +47,11 @@ func NewADFSProvider(p *ProviderData, opts options.ADFSOptions) *ADFSProvider {
 		}
 	}
 
-	oidcProvider := NewOIDCProvider(p, options.OIDCOptions{InsecureSkipNonce: false})
+	oidcProvider := NewOIDCProvider(p, opts.OIDCConfig)
 
 	return &ADFSProvider{
 		OIDCProvider:    oidcProvider,
-		skipScope:       opts.SkipScope,
+		skipScope:       ptr.Deref(opts.ADFSConfig.SkipScope, options.DefaultADFSSkipScope),
 		oidcEnrichFunc:  oidcProvider.EnrichSession,
 		oidcRefreshFunc: oidcProvider.RefreshSession,
 	}

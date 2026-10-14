@@ -1,9 +1,12 @@
 package providers
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"testing"
 
+	"github.com/oauth2-proxy/mockoidc"
 	. "github.com/onsi/gomega"
 	"golang.org/x/oauth2"
 )
@@ -108,6 +111,36 @@ func Test_formatGroup(t *testing.T) {
 			formattedGroup, err := formatGroup(tc.rawGroup)
 			g.Expect(err).ToNot(HaveOccurred())
 			g.Expect(formattedGroup).To(Equal(tc.expected))
+		})
+	}
+}
+
+func newSigningAlgsIssuerMiddleware(m *mockoidc.MockOIDC, supportedSigningAlgs []string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+			provider := struct {
+				Issuer               string   `json:"issuer"`
+				AuthURL              string   `json:"authorization_endpoint"`
+				TokenURL             string   `json:"token_endpoint"`
+				JWKsURL              string   `json:"jwks_uri"`
+				UserInfoURL          string   `json:"userinfo_endpoint"`
+				SupportedSigningAlgs []string `json:"id_token_signing_alg_values_supported"`
+			}{
+				Issuer:               m.Issuer(),
+				AuthURL:              m.AuthorizationEndpoint(),
+				TokenURL:             m.TokenEndpoint(),
+				JWKsURL:              m.JWKSEndpoint(),
+				UserInfoURL:          m.UserinfoEndpoint(),
+				SupportedSigningAlgs: supportedSigningAlgs,
+			}
+
+			data, err := json.Marshal(provider)
+			if err != nil {
+				rw.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
+			_, _ = rw.Write(data)
 		})
 	}
 }

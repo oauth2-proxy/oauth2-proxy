@@ -10,8 +10,7 @@ import (
 	"net/url"
 	"sync/atomic"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -26,6 +25,12 @@ const (
         "idTokenGroup1",
         "idTokenGroup2"
       ],
+	  "nested-groups-claim-containing-hyphen": {
+			"groups": [
+				"nestedClaimContainingHypenGroup1",
+				"nestedClaimContainingHypenGroup2"
+			]
+	  },
       "https://groups.test": [
         "fqdnGroup1",
         "fqdnGroup2"
@@ -71,7 +76,7 @@ var _ = Describe("Claim Extractor Suite", func() {
 			func(in newClaimExtractorTableInput) {
 				_, err := NewClaimExtractor(context.Background(), in.idToken, nil, nil)
 				if in.expectedError != nil {
-					Expect(err).To(MatchError(in.expectedError))
+					Expect(err).To(MatchError(in.expectedError.Error()))
 				} else {
 					Expect(err).ToNot(HaveOccurred())
 				}
@@ -240,6 +245,18 @@ var _ = Describe("Claim Extractor Suite", func() {
 				expectedValue: []interface{}{"fqdnGroup1", "fqdnGroup2"},
 				expectedError: nil,
 			}),
+			Entry("retrieves claim with nested groups claim containing hyphen", getClaimTableInput{
+				testClaimExtractorOpts: testClaimExtractorOpts{
+					idTokenPayload:        basicIDTokenPayload,
+					setProfileURL:         true,
+					profileRequestHeaders: newAuthorizedHeader(),
+					profileRequestHandler: shouldNotBeRequestedProfileHandler,
+				},
+				claim:         "nested-groups-claim-containing-hyphen.groups",
+				expectExists:  true,
+				expectedValue: []interface{}{"nestedClaimContainingHypenGroup1", "nestedClaimContainingHypenGroup2"},
+				expectedError: nil,
+			}),
 		)
 	})
 
@@ -388,7 +405,7 @@ var _ = Describe("Claim Extractor Suite", func() {
 			into:          "",
 			expectExists:  false,
 			expectedValue: "",
-			expectedError: errors.New("could no coerce claim: unknown type for destination: string"),
+			expectedError: errors.New("could not coerce claim: unknown type for destination: string"),
 		}),
 		Entry("flattens a complex claim value into a JSON string", getClaimIntoTableInput{
 			testClaimExtractorOpts: testClaimExtractorOpts{
@@ -434,52 +451,53 @@ var _ = Describe("Claim Extractor Suite", func() {
 		}),
 	)
 
-	type coerceClaimTableInput struct {
-		value         interface{}
-		dst           interface{}
-		expectedDst   interface{}
-		expectedError error
-	}
+	It("should extract claims from a JWT response", func() {
+		jwtResponsePayload := `{
+			"user": "jwtUser",
+			"email": "jwtEmail",
+			"groups": [
+				"jwtGroup1",
+				"jwtGroup2"
+			]
+		}`
 
-	DescribeTable("coerceClaim",
-		func(in coerceClaimTableInput) {
-			err := coerceClaim(in.value, in.dst)
-			if in.expectedError != nil {
-				Expect(err).To(MatchError(in.expectedError))
+		jwtResponseHandler := func(rw http.ResponseWriter, req *http.Request) {
+			if !hasAuthorizedHeader(req.Header) {
+				rw.WriteHeader(403)
+				rw.Write([]byte("Unauthorized"))
 				return
 			}
 
-			Expect(err).ToNot(HaveOccurred())
-			Expect(in.dst).To(Equal(in.expectedDst))
-		},
-		Entry("coerces a string to a string", coerceClaimTableInput{
-			value:       "some_string",
-			dst:         stringPointer(""),
-			expectedDst: stringPointer("some_string"),
-		}),
-		Entry("coerces a slice to a string slice", coerceClaimTableInput{
-			value:       []interface{}{"a", "b"},
-			dst:         stringSlicePointer([]string{}),
-			expectedDst: stringSlicePointer([]string{"a", "b"}),
-		}),
-		Entry("coerces a bool to a bool", coerceClaimTableInput{
-			value:       true,
-			dst:         boolPointer(false),
-			expectedDst: boolPointer(true),
-		}),
-		Entry("coerces a string to a bool", coerceClaimTableInput{
-			value:       "true",
-			dst:         boolPointer(false),
-			expectedDst: boolPointer(true),
-		}),
-		Entry("coerces a map to a string", coerceClaimTableInput{
-			value: map[string]interface{}{
-				"foo": []interface{}{"bar", "baz"},
-			},
-			dst:         stringPointer(""),
-			expectedDst: stringPointer("{\"foo\":[\"bar\",\"baz\"]}"),
-		}),
-	)
+			rw.Header().Set("Content-Type", "application/jwt; charset=utf-8")
+			rw.Write([]byte(createJWTFromPayload(jwtResponsePayload)))
+		}
+
+		claimExtractor, serverClose, err := newTestClaimExtractor(testClaimExtractorOpts{
+			idTokenPayload:        emptyJSON,
+			setProfileURL:         true,
+			profileRequestHeaders: newAuthorizedHeader(),
+			profileRequestHandler: jwtResponseHandler,
+		})
+		Expect(err).ToNot(HaveOccurred())
+		if serverClose != nil {
+			defer serverClose()
+		}
+
+		value, exists, err := claimExtractor.GetClaim("user")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(exists).To(BeTrue())
+		Expect(value).To(Equal("jwtUser"))
+
+		value, exists, err = claimExtractor.GetClaim("email")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(exists).To(BeTrue())
+		Expect(value).To(Equal("jwtEmail"))
+
+		value, exists, err = claimExtractor.GetClaim("groups")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(exists).To(BeTrue())
+		Expect(value).To(Equal([]interface{}{"jwtGroup1", "jwtGroup2"}))
+	})
 })
 
 // ******************************************
@@ -537,10 +555,6 @@ func stringPointer(in string) *string {
 }
 
 func stringSlicePointer(in []string) *[]string {
-	return &in
-}
-
-func boolPointer(in bool) *bool {
 	return &in
 }
 

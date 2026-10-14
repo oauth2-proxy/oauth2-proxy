@@ -1,7 +1,7 @@
 # This docker-compose file can be used to bring up an example instance of oauth2-proxy
 # for manual testing and exploration of features.
 # Alongside OAuth2-Proxy, this file also starts Dex to act as the identity provider,
-# etcd for storage for Dex  and HTTPBin as an example upstream.
+# HTTPBin as an example upstream.
 #
 # This can either be created using docker-compose
 #    docker-compose -f docker-compose.yaml <command>
@@ -9,11 +9,11 @@
 #    make <command> (eg. make up, make down)
 #
 # Access http://oauth2-proxy.localtest.me:4180 to initiate a login cycle
-version: '3.0'
+version: "3.0"
 services:
   oauth2-proxy:
     container_name: oauth2-proxy
-    image: quay.io/oauth2-proxy/oauth2-proxy:v7.5.1
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.5
     command: --config /oauth2-proxy.cfg
     hostname: oauth2-proxy
     volumes:
@@ -29,40 +29,24 @@ services:
       - httpbin
   dex:
     container_name: dex
-    image: ghcr.io/dexidp/dex:v2.30.3
+    image: ghcr.io/dexidp/dex:v2.45.1
     command: dex serve /dex.yaml
     hostname: dex
     volumes:
       - "./dex.yaml:/dex.yaml"
     restart: unless-stopped
     ports:
-      - 4190:4190/tcp
+      - 5556:5556/tcp
     networks:
       dex:
         aliases:
           - dex.localtest.me
-      etcd: {}
-    depends_on:
-      - etcd
   httpbin:
     container_name: httpbin
     image: kennethreitz/httpbin
-    ports:
-      - 8080:80/tcp
+    ports: []
     networks:
-      httpbin:
-        aliases:
-          - httpbin.localtest.me
-  etcd:
-    container_name: etcd
-    image: gcr.io/etcd-development/etcd:v3.4.7
-    entrypoint: /usr/local/bin/etcd
-    command:
-      - --listen-client-urls=http://0.0.0.0:2379
-      - --advertise-client-urls=http://etcd:2379
-    networks:
-      etcd: {}
+      httpbin: {}
 networks:
   dex: {}
-  etcd: {}
   httpbin: {}

@@ -7,7 +7,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"hash"
-	"math/big"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -83,17 +83,13 @@ func SignedValue(seed string, key string, value []byte, now time.Time) (string, 
 	return cookieVal, nil
 }
 
-func GenerateRandomASCIIString(length int) (string, error) {
-	b := make([]byte, length)
-	charsetLen := new(big.Int).SetInt64(int64(len(asciiCharset)))
-	for i := range b {
-		character, err := rand.Int(rand.Reader, charsetLen)
-		if err != nil {
-			return "", err
-		}
-		b[i] = asciiCharset[character.Int64()]
+// GenerateCodeVerifierString returns a base64 encoded string of n random bytes
+func GenerateCodeVerifierString(n int) (string, error) {
+	data := make([]byte, n)
+	if _, err := io.ReadFull(rand.Reader, data); err != nil {
+		return "", err
 	}
-	return string(b), nil
+	return base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString(data), nil
 }
 
 func GenerateCodeChallenge(method, codeVerifier string) (string, error) {

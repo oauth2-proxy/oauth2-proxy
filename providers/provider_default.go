@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
@@ -36,6 +37,11 @@ var (
 // codeChallenge and codeChallengeMethod are the PKCE challenge and method to append to the URL params.
 // they will be empty strings if no code challenge should be presented
 func (p *ProviderData) GetLoginURL(redirectURI, state, _ string, extraParams url.Values) string {
+	// Response mode should only be set if a non default mode is requested
+	if p.AuthRequestResponseMode != "" {
+		extraParams.Add("response_mode", p.AuthRequestResponseMode)
+	}
+
 	loginURL := makeLoginURL(p, redirectURI, state, extraParams)
 	return loginURL.String()
 }
@@ -66,7 +72,7 @@ func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code, codeVerifi
 
 	result := requests.New(p.RedeemURL.String()).
 		WithContext(ctx).
-		WithMethod("POST").
+		WithMethod(http.MethodPost).
 		WithBody(bytes.NewBufferString(params.Encode())).
 		SetHeader("Content-Type", "application/x-www-form-urlencoded").
 		Do()
@@ -102,6 +108,7 @@ func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code, codeVerifi
 }
 
 // GetEmailAddress returns the Account email address
+//
 // Deprecated: Migrate to EnrichSession
 func (p *ProviderData) GetEmailAddress(_ context.Context, _ *sessions.SessionState) (string, error) {
 	return "", ErrNotImplemented

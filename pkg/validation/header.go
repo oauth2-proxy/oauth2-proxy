@@ -7,6 +7,7 @@ import (
 )
 
 func validateHeaders(headers []options.Header) []string {
+	//nolint:prealloc
 	msgs := []string{}
 	names := make(map[string]struct{})
 

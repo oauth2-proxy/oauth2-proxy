@@ -1,22 +1,33 @@
-# Systemd service file for oauth2-proxy daemon
-#
-# Date: Feb 9, 2016
-# Author: Srdjan Grubor <sgnn7@sgnn7.org>
-
 [Unit]
 Description=oauth2-proxy daemon service
-After=syslog.target network.target
+After=network.target network-online.target nss-lookup.target basic.target
+Wants=network-online.target nss-lookup.target
+StartLimitIntervalSec=30
+StartLimitBurst=3
 
 [Service]
-# www-data group and user need to be created before using these lines
-User=www-data
-Group=www-data
-
-ExecStart=/usr/local/bin/oauth2-proxy --config=/etc/oauth2-proxy.cfg
+User=oauth2-proxy
+Group=oauth2-proxy
+Restart=on-failure
+RestartSec=30
+WorkingDirectory=/etc/oauth2-proxy
+ExecStart=/usr/bin/oauth2-proxy --config=/etc/oauth2-proxy/oauth2-proxy.cfg
 ExecReload=/bin/kill -HUP $MAINPID
-
-KillMode=process
-Restart=always
+LimitNOFILE=65535
+NoNewPrivileges=true
+ProtectHome=true
+ProtectSystem=full
+ProtectHostname=true
+ProtectControlGroups=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+LockPersonality=true
+RestrictRealtime=yes
+RestrictNamespaces=yes
+MemoryDenyWriteExecute=yes
+PrivateDevices=yes
+PrivateTmp=true
+CapabilityBoundingSet=
 
 [Install]
 WantedBy=multi-user.target

@@ -66,7 +66,7 @@ func (c *cfbCipher) Encrypt(value []byte) ([]byte, error) {
 		return nil, fmt.Errorf("failed to create initialization vector %s", err)
 	}
 
-	stream := cipher.NewCFBEncrypter(c.Block, iv)
+	stream := cipher.NewCFBEncrypter(c.Block, iv) //nolint:staticcheck
 	stream.XORKeyStream(ciphertext[aes.BlockSize:], value)
 	return ciphertext, nil
 }
@@ -79,7 +79,7 @@ func (c *cfbCipher) Decrypt(ciphertext []byte) ([]byte, error) {
 
 	iv, ciphertext := ciphertext[:aes.BlockSize], ciphertext[aes.BlockSize:]
 	plaintext := make([]byte, len(ciphertext))
-	stream := cipher.NewCFBDecrypter(c.Block, iv)
+	stream := cipher.NewCFBDecrypter(c.Block, iv) //nolint:staticcheck
 	stream.XORKeyStream(plaintext, ciphertext)
 
 	return plaintext, nil
@@ -122,6 +122,9 @@ func (c *gcmCipher) Decrypt(ciphertext []byte) ([]byte, error) {
 	}
 
 	nonceSize := gcm.NonceSize()
+	if len(ciphertext) < nonceSize {
+		return nil, fmt.Errorf("encrypted value should be at least %d bytes, but is only %d bytes", nonceSize, len(ciphertext))
+	}
 	nonce, ciphertext := ciphertext[:nonceSize], ciphertext[nonceSize:]
 
 	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
