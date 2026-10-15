@@ -4,6 +4,8 @@
 
 ## Important Notes
 
+- Extra JWT issuers now honor configured OIDC signing algorithms. If discovery advertises no algorithms in common with the configuration, validation fails instead of falling back to a guessed JWKS URL.
+
 ## Breaking Changes
 
 ## Changes since v7.15.5
@@ -112,6 +114,7 @@ longer fall back to granting exemptions based on the proxy's own IP.
 ## Changes since v7.15.3
 
 - [#3493](https://github.com/oauth2-proxy/oauth2-proxy/pull/3493) chore(deps): update gomod @tuunit
+- [#3472](https://github.com/oauth2-proxy/oauth2-proxy/pull/3472) fix: apply configured signing algorithms to extra JWT issuers (#3471) (@Bortlesboat)
 
 # V7.15.3
 
