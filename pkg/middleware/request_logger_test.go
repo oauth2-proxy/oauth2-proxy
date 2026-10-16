@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
@@ -12,7 +13,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-const RequestLoggingFormatWithoutTime = "{{.Client}} - {{.RequestID}} - {{.Username}} [TIMELESS] {{.Host}} {{.RequestMethod}} {{.Upstream}} {{.RequestURI}} {{.Protocol}} {{.UserAgent}} {{.StatusCode}} {{.ResponseSize}} {{.RequestDuration}}"
+// RequestLoggingFormatWithoutTime is the default request format with a fixed timestamp.
+var RequestLoggingFormatWithoutTime = strings.Replace(logger.DefaultRequestLoggingFormat, "{{.Timestamp}}", "TIMELESS", 1)
 
 var _ = Describe("Request logger suite", func() {
 	type requestLoggerTableInput struct {
