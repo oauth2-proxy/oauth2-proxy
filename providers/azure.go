@@ -268,7 +268,7 @@ func (p *AzureProvider) extractClaimsIntoSession(ctx context.Context, session *s
 		s, err = p.buildSessionFromClaims(session.AccessToken, session.AccessToken)
 	}
 	if err != nil {
-		return fmt.Errorf("unable to get claims from token: %v", err)
+		return fmt.Errorf("unable to get claims from token: %w", err)
 	}
 
 	session.Email = s.Email

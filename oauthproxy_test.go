@@ -632,6 +632,48 @@ func TestOAuthCallbackClientIPLogging(t *testing.T) {
 	}
 }
 
+type enrichSessionErrorProvider struct {
+	*TestProvider
+	err error
+}
+
+func (p *enrichSessionErrorProvider) EnrichSession(_ context.Context, _ *sessions.SessionState) error {
+	return p.err
+}
+
+func TestOAuthCallbackSessionErrorStatus(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		err      error
+		expected int
+	}{
+		{"Unverified email", fmt.Errorf("%w: user email is not verified", providers.ErrEmailNotVerified), http.StatusForbidden},
+		{"Other error", errors.New("upstream unavailable"), http.StatusInternalServerError},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			test, err := NewPassAccessTokenTest(PassAccessTokenTestOptions{ValidToken: true})
+			require.NoError(t, err)
+			t.Cleanup(test.Close)
+			test.proxy.provider = &enrichSessionErrorProvider{
+				TestProvider: test.proxy.provider.(*TestProvider),
+				err:          tc.err,
+			}
+
+			csrf, err := cookies.NewCSRF(test.proxy.CookieOptions, "")
+			require.NoError(t, err)
+			req := httptest.NewRequest(http.MethodGet, "/oauth2/callback?code=callback_code&state="+encodeState(csrf.HashOAuthState(), "%2F", false), nil)
+			req = middlewareapi.AddRequestScope(req, &middlewareapi.RequestScope{})
+			csrfCookie, err := csrf.SetCookie(httptest.NewRecorder(), req)
+			require.NoError(t, err)
+			req.AddCookie(csrfCookie)
+
+			rw := httptest.NewRecorder()
+			test.proxy.OAuthCallback(rw, req)
+			assert.Equal(t, tc.expected, rw.Code)
+		})
+	}
+}
+
 // getEndpointWithCookie makes a requests againt the oauthproxy with passed requestPath
 // and cookie and returns body and status code.
 func (patTest *PassAccessTokenTest) getEndpointWithCookie(cookie string, endpoint string) (httpCode int, accessToken string) {

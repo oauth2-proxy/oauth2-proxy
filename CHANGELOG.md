@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.5
 
+- [#3573](https://github.com/oauth2-proxy/oauth2-proxy/pull/3573) fix: return 403 instead of 500 when a user with an unverified email completes the OAuth2 callback (fixes [#3234](https://github.com/oauth2-proxy/oauth2-proxy/issues/3234)) @amichelic
+
 # V7.15.5
 
 ## Release Highlights

@@ -196,7 +196,7 @@ func emailFromUserInfo(ctx context.Context, accessToken string, userInfoEndpoint
 	}
 
 	if !emailData.EmailVerified {
-		return "", fmt.Errorf("email %s not listed as verified", email)
+		return "", fmt.Errorf("%w: email %s not listed as verified", ErrEmailNotVerified, email)
 	}
 
 	return email, nil
