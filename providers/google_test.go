@@ -120,6 +120,22 @@ func TestGoogleProviderGetEmailAddress(t *testing.T) {
 	assert.Equal(t, "refresh12345", session.RefreshToken)
 }
 
+func TestGoogleProviderGetEmailAddressUnverified(t *testing.T) {
+	p := newGoogleProvider(t)
+	body, err := json.Marshal(redeemResponse{
+		AccessToken: "a1234",
+		IDToken:     "ignored prefix." + base64.RawURLEncoding.EncodeToString([]byte(`{"email": "michael.bland@gsa.gov", "email_verified":false}`)),
+	})
+	assert.Equal(t, nil, err)
+	var server *httptest.Server
+	p.RedeemURL, server = newRedeemServer(body)
+	defer server.Close()
+
+	session, err := p.Redeem(context.Background(), "http://redirect/", "code1234", "123")
+	assert.ErrorIs(t, err, ErrEmailNotVerified)
+	assert.Nil(t, session)
+}
+
 func TestGoogleProviderGroupValidator(t *testing.T) {
 	const sessionEmail = "michael.bland@gsa.gov"
 
