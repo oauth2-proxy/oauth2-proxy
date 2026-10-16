@@ -6,7 +6,11 @@
 
 ## Breaking Changes
 
+- [#3572](https://github.com/oauth2-proxy/oauth2-proxy/pull/3572) `RequestURI` and `UserAgent` are no longer wrapped in quotes in request and auth log variables. The default request log format quotes them itself, so its output is unchanged. A custom `--request-logging-format` or `--auth-logging-format` that relied on the quotes should add them, e.g. `"{{.RequestURI}}"`.
+
 ## Changes since v7.15.5
+
+- [#3572](https://github.com/oauth2-proxy/oauth2-proxy/pull/3572) fix(logger): stop quoting RequestURI and UserAgent in log variables (@carterpewpew)
 
 # V7.15.5
 

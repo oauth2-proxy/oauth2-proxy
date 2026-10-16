@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"runtime"
+	"strconv"
 	"sync"
 	"text/template"
 	"time"
@@ -28,7 +29,7 @@ const (
 	// DefaultAuthLoggingFormat defines the default auth log format
 	DefaultAuthLoggingFormat = "{{.Client}} - {{.RequestID}} - {{.Username}} [{{.Timestamp}}] [{{.Status}}] {{.Message}}"
 	// DefaultRequestLoggingFormat defines the default request log format
-	DefaultRequestLoggingFormat = "{{.Client}} - {{.RequestID}} - {{.Username}} [{{.Timestamp}}] {{.Host}} {{.RequestMethod}} {{.Upstream}} {{.RequestURI}} {{.Protocol}} {{.UserAgent}} {{.StatusCode}} {{.ResponseSize}} {{.RequestDuration}}"
+	DefaultRequestLoggingFormat = "{{.Client}} - {{.RequestID}} - {{.Username}} [{{.Timestamp}}] {{.Host}} {{.RequestMethod}} {{.Upstream}} \"{{.RequestURI}}\" {{.Protocol}} \"{{.UserAgent}}\" {{.StatusCode}} {{.ResponseSize}} {{.RequestDuration}}"
 
 	// AuthSuccess indicates that an auth attempt has succeeded explicitly
 	AuthSuccess AuthStatus = "AuthSuccess"
@@ -206,7 +207,7 @@ func (l *Logger) PrintAuthf(username string, req *http.Request, status AuthStatu
 		RequestID:     scope.RequestID,
 		RequestMethod: req.Method,
 		Timestamp:     FormatTimestamp(now),
-		UserAgent:     fmt.Sprintf("%q", req.UserAgent()),
+		UserAgent:     escape(req.UserAgent()),
 		Username:      username,
 		Status:        string(status),
 		Message:       fmt.Sprintf(format, a...),
@@ -262,12 +263,12 @@ func (l *Logger) PrintReq(username, upstream string, req *http.Request, url url.
 		RequestID:       scope.RequestID,
 		RequestDuration: fmt.Sprintf("%0.3f", duration),
 		RequestMethod:   req.Method,
-		RequestURI:      fmt.Sprintf("%q", url.RequestURI()),
+		RequestURI:      escape(url.RequestURI()),
 		ResponseSize:    fmt.Sprintf("%d", size),
 		StatusCode:      fmt.Sprintf("%d", status),
 		Timestamp:       FormatTimestamp(ts),
 		Upstream:        upstream,
-		UserAgent:       fmt.Sprintf("%q", req.UserAgent()),
+		UserAgent:       escape(req.UserAgent()),
 		Username:        username,
 	})
 	if err != nil {
@@ -278,6 +279,14 @@ func (l *Logger) PrintReq(username, upstream string, req *http.Request, url url.
 	if err != nil {
 		panic(err)
 	}
+}
+
+// escape escapes s as %q does, but without the surrounding quotes, so that a
+// client-supplied value cannot break a log line while the format string decides
+// whether it is quoted.
+func escape(s string) string {
+	quoted := strconv.Quote(s)
+	return quoted[1 : len(quoted)-1]
 }
 
 // GetFileLineString will find the caller file and line number

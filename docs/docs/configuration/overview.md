@@ -466,8 +466,12 @@ If you require a different format than that, you can configure it with the `--re
 The default format is configured as follows:
 
 ```
-{{.Client}} - {{.RequestID}} - {{.Username}} [{{.Timestamp}}] {{.Host}} {{.RequestMethod}} {{.Upstream}} {{.RequestURI}} {{.Protocol}} {{.UserAgent}} {{.StatusCode}} {{.ResponseSize}} {{.RequestDuration}}
+{{.Client}} - {{.RequestID}} - {{.Username}} [{{.Timestamp}}] {{.Host}} {{.RequestMethod}} {{.Upstream}} "{{.RequestURI}}" {{.Protocol}} "{{.UserAgent}}" {{.StatusCode}} {{.ResponseSize}} {{.RequestDuration}}
 ```
+
+Variables are not quoted; add quotes in the format where you want them, as the default format does.
+`RequestURI` and `UserAgent` come from the client, so special characters in them are escaped as in a Go
+string literal.
 
 Available variables for request logging:
 
@@ -479,7 +483,7 @@ Available variables for request logging:
 | RequestDuration | 0.001                                | The time in seconds that a request took to process.                                                      |
 | RequestID       | 00010203-0405-4607-8809-0a0b0c0d0e0f | The request ID pulled from the `--request-id-header`. Random UUID if empty                               |
 | RequestMethod   | GET                                  | The request method.                                                                                      |
-| RequestURI      | "/oauth2/auth"                       | The URI path of the request.                                                                             |
+| RequestURI      | /oauth2/auth                         | The URI path of the request.                                                                             |
 | ResponseSize    | 12                                   | The size in bytes of the response.                                                                       |
 | StatusCode      | 200                                  | The HTTP status code of the response.                                                                    |
 | Timestamp       | 2015/03/19 17:20:19                  | The date and time of the logging event.                                                                  |
