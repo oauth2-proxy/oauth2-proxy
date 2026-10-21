@@ -15,6 +15,11 @@ var CookieSessionStoreType = "cookie"
 // used for storing sessions.
 var RedisSessionStoreType = "redis"
 
+// AzureManagedIdentityRedisCredentialsProvider is used to indicate the
+// RedisSessionStore should authenticate with Microsoft Entra ID tokens of the
+// Azure managed identity the proxy runs as.
+var AzureManagedIdentityRedisCredentialsProvider = "azure-managed-identity"
+
 // CookieStoreOptions contains configuration options for the CookieSessionStore.
 type CookieStoreOptions struct {
 	Minimal bool `flag:"session-cookie-minimal" cfg:"session_cookie_minimal"`
@@ -34,6 +39,7 @@ type RedisStoreOptions struct {
 	CAPath                 string   `flag:"redis-ca-path" cfg:"redis_ca_path"`
 	InsecureSkipTLSVerify  bool     `flag:"redis-insecure-skip-tls-verify" cfg:"redis_insecure_skip_tls_verify"`
 	IdleTimeout            int      `flag:"redis-connection-idle-timeout" cfg:"redis_connection_idle_timeout"`
+	CredentialsProvider    string   `flag:"redis-credentials-provider" cfg:"redis_credentials_provider"`
 }
 
 func sessionOptionsDefaults() SessionOptions {
