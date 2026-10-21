@@ -27,7 +27,7 @@ func NewManager(store Store, cookieOpts *options.Cookie) *Manager {
 	}
 }
 
-// sidIndexKey returns the Redis key that maps an OIDC session ID (sid claim)
+// sidIndexKey returns the session store key that maps an OIDC session ID (sid claim)
 // to a session ticket ID, enabling back-channel logout lookups.
 func (m *Manager) sidIndexKey(sessionID string) string {
 	return m.Options.Name + "-sid-" + sessionID

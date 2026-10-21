@@ -634,7 +634,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.StringSlice("allowed-group", []string{}, "restrict logins to members of this group (may be given multiple times)")
 	flagSet.StringSlice("allowed-role", []string{}, "(keycloak-oidc) restrict logins to members of these roles (may be given multiple times)")
 	flagSet.String("backend-logout-url", "", "url to perform a backend logout, {id_token} can be used as placeholder for the id_token")
-	flagSet.Bool("oidc-backchannel-logout", false, "enable the OIDC back-channel logout endpoint (POST /oauth2/backchannel-logout); requires --session-store-type=redis")
+	flagSet.Bool("oidc-backchannel-logout", false, "enable the OIDC back-channel logout endpoint (POST /oauth2/backchannel-logout); requires a server-side session store (e.g. --session-store-type=redis)")
 
 	return flagSet
 }

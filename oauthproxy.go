@@ -815,13 +815,13 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 //
 // Keycloak posts to POST /oauth2/backchannel-logout with a signed logout_token JWT.
 // The handler validates the token, extracts the sid claim, and immediately deletes
-// the associated Redis session — instant global logout without waiting for cookie-refresh.
+// the associated session from the session store — instant global logout without waiting for cookie-refresh.
 //
-// Only works when --session-store-type=redis is configured.
+// Only works with a server-side session store (e.g. --session-store-type=redis).
 func (p *OAuthProxy) BackChannelLogout(rw http.ResponseWriter, req *http.Request) {
 	backChannelStore, ok := p.sessionStore.(sessionsapi.BackChannelSessionStore)
 	if !ok {
-		logger.Errorf("back-channel logout: session store does not support ClearBySID; use --session-store-type=redis")
+		logger.Errorf("back-channel logout: session store does not support ClearBySID; use a server-side session store such as --session-store-type=redis")
 		http.Error(rw, "back-channel logout not supported by session store", http.StatusNotImplemented)
 		return
 	}

@@ -335,7 +335,7 @@ type OIDCOptions struct {
 	// BackChannelLogoutEnabled enables the OIDC back-channel logout endpoint
 	// (POST /oauth2/backchannel-logout). When enabled, the identity provider can
 	// POST a signed logout_token to instantly revoke sessions server-side without
-	// a browser redirect. Requires --session-store-type=redis.
+	// a browser redirect. Requires a server-side session store (e.g. --session-store-type=redis).
 	// default set to 'false'
 	BackChannelLogoutEnabled *bool `yaml:"backChannelLogoutEnabled,omitempty"`
 }

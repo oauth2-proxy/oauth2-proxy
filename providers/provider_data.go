@@ -79,7 +79,7 @@ type ProviderData struct {
 
 	// BackChannelLogoutSupported indicates that the OIDC back-channel logout
 	// endpoint is enabled. Set via --oidc-backchannel-logout or the YAML option
-	// oidcConfig.backChannelLogoutEnabled. Requires Redis session storage.
+	// oidcConfig.backChannelLogoutEnabled. Requires a server-side session store.
 	BackChannelLogoutSupported bool
 }
 

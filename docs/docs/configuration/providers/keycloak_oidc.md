@@ -158,7 +158,7 @@ terminates a session from the Keycloak console or when a user logs out of anothe
 session.
 
 Requirements:
-- `--session-store-type=redis` (cookie sessions cannot be revoked server-side)
+- A server-side session store, e.g. `--session-store-type=redis` (cookie sessions cannot be revoked server-side)
 - `--oidc-backchannel-logout` flag (or `oidcConfig.backChannelLogoutEnabled: true` in YAML config)
 - Keycloak must include the `sid` claim in ID tokens (enabled by default in recent versions)
 

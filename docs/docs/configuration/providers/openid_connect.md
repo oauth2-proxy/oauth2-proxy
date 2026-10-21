@@ -152,15 +152,15 @@ When enabled, the identity provider can POST a signed `logout_token` to `POST /o
 instantly revoke a session server-side — no browser redirect needed.
 
 **Requirements:**
-- `--session-store-type=redis`
+- A server-side session store, e.g. `--session-store-type=redis` (cookie sessions cannot be revoked server-side)
 - `--oidc-backchannel-logout` (or `oidcConfig.backChannelLogoutEnabled: true` in YAML)
 - The provider must include the `sid` claim in ID tokens
 
 **How it works:**
 
-1. On login, the `sid` claim from the OIDC ID token is stored alongside the session in Redis.
+1. On login, the `sid` claim from the OIDC ID token is stored alongside the session in the session store.
 2. When the provider sends a back-channel logout request, oauth2-proxy validates the signed `logout_token`,
-   extracts the `sid` claim, and immediately deletes the associated Redis session.
+   extracts the `sid` claim, and immediately deletes the associated session from the store.
 3. The next request from the user will find no session and redirect to login.
 
 If the session store does not support server-side revocation (e.g. cookie sessions), the endpoint returns
