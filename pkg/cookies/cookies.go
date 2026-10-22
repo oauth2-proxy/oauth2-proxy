@@ -69,11 +69,16 @@ func GetCookieDomain(req *http.Request, cookieDomains []string) string {
 		host = h
 	}
 	for _, domain := range cookieDomains {
-		if strings.HasSuffix(host, domain) {
+		if cookieDomainMatches(host, domain) {
 			return domain
 		}
 	}
 	return ""
+}
+
+func cookieDomainMatches(host, domain string) bool {
+	return host == strings.TrimPrefix(domain, ".") ||
+		strings.HasSuffix(host, domain)
 }
 
 // ParseSameSite a valid http.SameSite value from a user supplied string for use of making cookies.
@@ -103,7 +108,12 @@ func warnInvalidDomain(c *http.Cookie, req *http.Request) {
 	if h, _, err := net.SplitHostPort(host); err == nil {
 		host = h
 	}
-	if !strings.HasSuffix(host, c.Domain) {
-		logger.Errorf("Warning: request host is %q but using configured cookie domain of %q", host, c.Domain)
+
+	if !cookieDomainMatches(host, c.Domain) {
+		logger.Errorf(
+			"Warning: request host is %q but using configured cookie domain of %q",
+			host,
+			c.Domain,
+		)
 	}
 }
