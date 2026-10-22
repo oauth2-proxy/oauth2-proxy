@@ -171,6 +171,7 @@ Requirements:
    https://<your-domain>/oauth2/backchannel-logout
    ```
 4. Ensure **Backchannel logout session required** is enabled so Keycloak includes the `sid` claim
+   (without it, Keycloak sends logout tokens with only `sub`, which are rejected)
 
 **oauth2-proxy configuration:**
 

@@ -183,6 +183,106 @@ var _ = Describe("Verify", func() {
 	})
 })
 
+var _ = Describe("VerifyLogout", func() {
+	ctx := context.Background()
+	defaultOptions := IDTokenVerificationOptions{
+		AudienceClaims: []string{"aud"},
+		ClientID:       "1226737",
+		ExtraAudiences: []string{},
+	}
+
+	validLogoutPayload := func() logoutPayload {
+		return logoutPayload{
+			Iss:    "https://foo",
+			Aud:    "1226737",
+			Sub:    "user-123",
+			Sid:    "sid-123",
+			Jti:    "jti-123",
+			Iat:    1700000000,
+			Exp:    4102444800,
+			Events: map[string]interface{}{backChannelLogoutEvent: map[string]interface{}{}},
+		}
+	}
+
+	It("Succeeds with a valid logout token", func() {
+		result, err := verifyLogout(ctx, defaultOptions, validLogoutPayload())
+
+		Expect(err).ToNot(HaveOccurred())
+		Expect(result.SessionID).To(Equal("sid-123"))
+		Expect(result.Subject).To(Equal("user-123"))
+		Expect(result.TokenID).To(Equal("jti-123"))
+	})
+
+	It("Succeeds with only a sub claim", func() {
+		p := validLogoutPayload()
+		p.Sid = ""
+
+		result, err := verifyLogout(ctx, defaultOptions, p)
+
+		Expect(err).ToNot(HaveOccurred())
+		Expect(result.SessionID).To(BeEmpty())
+		Expect(result.Subject).To(Equal("user-123"))
+	})
+
+	It("Fails when the audience does not match", func() {
+		p := validLogoutPayload()
+		p.Aud = "another-client"
+
+		result, err := verifyLogout(ctx, defaultOptions, p)
+
+		Expect(err).To(MatchError("audience from claim aud with value [another-client] does not match with " +
+			"any of allowed audiences map[1226737:{}]"))
+		Expect(result).To(BeNil())
+	})
+
+	It("Succeeds with extra audiences", func() {
+		p := validLogoutPayload()
+		p.Aud = "xyz"
+
+		result, err := verifyLogout(ctx, IDTokenVerificationOptions{
+			AudienceClaims: []string{"aud"},
+			ClientID:       "1226737",
+			ExtraAudiences: []string{"xyz"},
+		}, p)
+
+		Expect(err).ToNot(HaveOccurred())
+		Expect(result.SessionID).To(Equal("sid-123"))
+	})
+
+	DescribeTable("Fails with an invalid logout token",
+		func(mutate func(*logoutPayload), expectedErr string) {
+			p := validLogoutPayload()
+			mutate(&p)
+
+			result, err := verifyLogout(ctx, defaultOptions, p)
+
+			Expect(err).To(MatchError(ContainSubstring(expectedErr)))
+			Expect(result).To(BeNil())
+		},
+		Entry("without the back-channel logout event", func(p *logoutPayload) { p.Events = nil },
+			"missing required http://schemas.openid.net/event/backchannel-logout event"),
+		Entry("with a nonce", func(p *logoutPayload) { p.Nonce = "n-123" }, "must not contain a 'nonce' claim"),
+		Entry("without jti", func(p *logoutPayload) { p.Jti = "" }, "missing required claim 'jti'"),
+		Entry("without exp", func(p *logoutPayload) { p.Exp = 0 }, "must contain an 'exp' claim"),
+		Entry("without sub and sid", func(p *logoutPayload) { p.Sub, p.Sid = "", "" },
+			"must contain a 'sub' claim, a 'sid' claim, or both"),
+	)
+})
+
+const backChannelLogoutEvent = "http://schemas.openid.net/event/backchannel-logout"
+
+type logoutPayload struct {
+	Iss    string                 `json:"iss,omitempty"`
+	Aud    interface{}            `json:"aud,omitempty"`
+	Sub    string                 `json:"sub,omitempty"`
+	Sid    string                 `json:"sid,omitempty"`
+	Jti    string                 `json:"jti,omitempty"`
+	Nonce  string                 `json:"nonce,omitempty"`
+	Iat    int64                  `json:"iat,omitempty"`
+	Exp    int64                  `json:"exp,omitempty"`
+	Events map[string]interface{} `json:"events,omitempty"`
+}
+
 type payload struct {
 	Iss      string      `json:"iss,omitempty"`
 	Aud      interface{} `json:"aud,omitempty"`
@@ -220,6 +320,21 @@ func verify(ctx context.Context, verificationOptions IDTokenVerificationOptions,
 	token, _ := createToken(rawToken)
 	verifier := NewVerifier(oidc.NewVerifier("https://foo", &testVerifier{jwk: token.PublicKey}, config), verificationOptions)
 	return verifier.Verify(ctx, token.Token)
+}
+
+func verifyLogout(ctx context.Context, verificationOptions IDTokenVerificationOptions, payload logoutPayload) (*oidc.LogoutToken, error) {
+	config := &oidc.Config{
+		ClientID:          "1226737",
+		SkipClientIDCheck: true, // as in production: the audience is checked by our verifier
+		SkipExpiryCheck:   true,
+	}
+	rawToken, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+	token, _ := createToken(rawToken)
+	verifier := NewVerifier(oidc.NewVerifier("https://foo", &testVerifier{jwk: token.PublicKey}, config), verificationOptions)
+	return verifier.(LogoutTokenVerifier).VerifyLogout(ctx, token.Token)
 }
 
 func createToken(payload []byte) (*jwtToken, error) {

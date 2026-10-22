@@ -154,7 +154,7 @@ instantly revoke a session server-side — no browser redirect needed.
 **Requirements:**
 - A server-side session store, e.g. `--session-store-type=redis` (cookie sessions cannot be revoked server-side)
 - `--oidc-backchannel-logout` (or `oidcConfig.backChannelLogoutEnabled: true` in YAML)
-- The provider must include the `sid` claim in ID tokens
+- The provider must include the `sid` claim in ID tokens and logout tokens (logout tokens with only a `sub` claim are rejected with `400`)
 
 **How it works:**
 

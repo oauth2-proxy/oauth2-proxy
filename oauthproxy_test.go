@@ -4561,6 +4561,9 @@ func validLogoutClaims(sid string) map[string]interface{} {
 		"aud": clientID,
 		"sub": "user123",
 		"sid": sid,
+		"jti": "jti-" + sid,
+		"iat": 1700000000,
+		"exp": 4102444800,
 		"events": map[string]interface{}{
 			backChannelLogoutEvent: map[string]interface{}{},
 		},
@@ -4616,7 +4619,7 @@ func TestBackChannelLogout_TokenWithNonce(t *testing.T) {
 	proxy.BackChannelLogout(rw, req)
 
 	assert.Equal(t, http.StatusBadRequest, rw.Code)
-	assert.Contains(t, rw.Body.String(), "must not contain nonce")
+	assert.Contains(t, rw.Body.String(), "invalid logout_token")
 }
 
 func TestBackChannelLogout_MissingEvent(t *testing.T) {
@@ -4633,7 +4636,7 @@ func TestBackChannelLogout_MissingEvent(t *testing.T) {
 	proxy.BackChannelLogout(rw, req)
 
 	assert.Equal(t, http.StatusBadRequest, rw.Code)
-	assert.Contains(t, rw.Body.String(), "missing backchannel-logout event")
+	assert.Contains(t, rw.Body.String(), "invalid logout_token")
 }
 
 func TestBackChannelLogout_MissingSID(t *testing.T) {
@@ -4650,7 +4653,77 @@ func TestBackChannelLogout_MissingSID(t *testing.T) {
 	proxy.BackChannelLogout(rw, req)
 
 	assert.Equal(t, http.StatusBadRequest, rw.Code)
-	assert.Contains(t, rw.Body.String(), "missing sid claim")
+	assert.Contains(t, rw.Body.String(), "logout tokens without a sid claim are not supported")
+}
+
+func TestBackChannelLogout_MissingSIDAndSub(t *testing.T) {
+	proxy, _ := newBackChannelLogoutProxy(t)
+
+	claims := validLogoutClaims("")
+	delete(claims, "sid")
+	delete(claims, "sub")
+	rw := postLogoutToken(t, proxy, makeLogoutToken(t, claims))
+
+	assert.Equal(t, http.StatusBadRequest, rw.Code)
+	assert.Contains(t, rw.Body.String(), "invalid logout_token")
+}
+
+func TestBackChannelLogout_MissingJTI(t *testing.T) {
+	proxy, _ := newBackChannelLogoutProxy(t)
+
+	claims := validLogoutClaims("sid-abc")
+	delete(claims, "jti")
+	rw := postLogoutToken(t, proxy, makeLogoutToken(t, claims))
+
+	assert.Equal(t, http.StatusBadRequest, rw.Code)
+	assert.Contains(t, rw.Body.String(), "invalid logout_token")
+}
+
+func TestBackChannelLogout_WrongAudience(t *testing.T) {
+	proxy, ms := newBackChannelLogoutProxy(t)
+	saveSessionWithSID(t, proxy, "sid-other-client")
+
+	claims := validLogoutClaims("sid-other-client")
+	claims["aud"] = "another-client"
+	rw := postLogoutToken(t, proxy, makeLogoutToken(t, claims))
+
+	assert.Equal(t, http.StatusBadRequest, rw.Code)
+	assert.Equal(t, 2, ms.CacheSize(), "a token for another client must not clear the session")
+}
+
+// idTokenOnlyVerifier verifies ID tokens but cannot verify logout tokens.
+type idTokenOnlyVerifier struct{}
+
+func (idTokenOnlyVerifier) Verify(context.Context, string) (*oidc.IDToken, error) {
+	return nil, errors.New("not used")
+}
+
+func TestBackChannelLogout_VerifierWithoutLogoutSupport(t *testing.T) {
+	proxy, _ := newBackChannelLogoutProxy(t)
+	proxy.provider = &TestProvider{
+		ProviderData: &providers.ProviderData{Verifier: idTokenOnlyVerifier{}},
+		ValidToken:   true,
+	}
+
+	rw := postLogoutToken(t, proxy, makeLogoutToken(t, validLogoutClaims("sid-abc")))
+
+	assert.Equal(t, http.StatusNotImplemented, rw.Code)
+}
+
+func postLogoutToken(t *testing.T, proxy *OAuthProxy, token string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodPost, "/oauth2/backchannel-logout", strings.NewReader("logout_token="+token))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rw := httptest.NewRecorder()
+	proxy.BackChannelLogout(rw, req)
+	return rw
+}
+
+func saveSessionWithSID(t *testing.T, proxy *OAuthProxy, sid string) {
+	t.Helper()
+	err := proxy.sessionStore.Save(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil),
+		&sessions.SessionState{Email: "user@example.com", SessionID: sid})
+	require.NoError(t, err)
 }
 
 func TestBackChannelLogout_StoreDoesNotSupportClearBySID(t *testing.T) {

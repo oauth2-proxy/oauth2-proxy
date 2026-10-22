@@ -35,6 +35,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/middleware"
+	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
 	requestutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/upstream"
@@ -844,59 +845,40 @@ func (p *OAuthProxy) BackChannelLogout(rw http.ResponseWriter, req *http.Request
 		return
 	}
 
-	verifier := p.provider.Data().Verifier
-	if verifier == nil {
-		logger.Errorf("back-channel logout: OIDC verifier not configured; provider must support OIDC")
+	verifier, ok := p.provider.Data().Verifier.(internaloidc.LogoutTokenVerifier)
+	if !ok {
+		logger.Errorf("back-channel logout: provider has no OIDC verifier able to verify logout tokens")
 		http.Error(rw, "back-channel logout not supported: OIDC verifier not configured", http.StatusNotImplemented)
 		return
 	}
-	token, err := verifier.Verify(req.Context(), rawToken)
+
+	// Validates the signature, iss, aud, iat/exp, jti, the back-channel logout
+	// event, the absence of nonce and the presence of sub and/or sid (spec §2.6).
+	token, err := verifier.VerifyLogout(req.Context(), rawToken)
 	if err != nil {
 		logger.Errorf("back-channel logout: invalid logout_token: %v", err)
 		http.Error(rw, "invalid logout_token", http.StatusBadRequest)
 		return
 	}
 
-	var claims struct {
-		SID    string                     `json:"sid"`
-		Nonce  string                     `json:"nonce"`
-		Events map[string]json.RawMessage `json:"events"`
-	}
-	if err := token.Claims(&claims); err != nil {
-		logger.Errorf("back-channel logout: failed to parse claims: %v", err)
-		http.Error(rw, "malformed logout_token", http.StatusBadRequest)
-		return
-	}
-
-	// Per spec §2.4: MUST NOT contain nonce
-	if claims.Nonce != "" {
-		http.Error(rw, "invalid logout_token: must not contain nonce", http.StatusBadRequest)
-		return
-	}
-
-	// Per spec §2.4: MUST contain the backchannel-logout event
-	const backChannelLogoutEvent = "http://schemas.openid.net/event/backchannel-logout"
-	if _, ok := claims.Events[backChannelLogoutEvent]; !ok {
-		http.Error(rw, "invalid logout_token: missing backchannel-logout event", http.StatusBadRequest)
-		return
-	}
-
-	if claims.SID == "" {
-		http.Error(rw, "invalid logout_token: missing sid claim", http.StatusBadRequest)
+	// Sessions are indexed by sid; logging out every session of a sub is not supported yet.
+	if token.SessionID == "" {
+		logger.Errorf("back-channel logout: logout_token for sub %q has no sid claim (jti %q)", token.Subject, token.TokenID)
+		http.Error(rw, "invalid logout_token: logout tokens without a sid claim are not supported", http.StatusBadRequest)
 		return
 	}
 
 	// Per spec §2.8: responses must not be cached
 	rw.Header().Set("Cache-Control", "no-store")
 
-	if err := backChannelStore.ClearBySID(req.Context(), claims.SID); err != nil {
+	if err := backChannelStore.ClearBySID(req.Context(), token.SessionID); err != nil {
 		// 200 per spec — session not found is not an error
-		logger.Printf("back-channel logout: session not found for sid %q (already expired?): %v", claims.SID, err)
+		logger.Printf("back-channel logout: session not found for sid %q (already expired?): %v", token.SessionID, err)
 		rw.WriteHeader(http.StatusOK)
 		return
 	}
 
-	logger.Printf("back-channel logout: session cleared for sid %q", claims.SID)
+	logger.Printf("back-channel logout: session cleared for sid %q (jti %q)", token.SessionID, token.TokenID)
 	rw.WriteHeader(http.StatusOK)
 }
 

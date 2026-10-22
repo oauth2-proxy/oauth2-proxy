@@ -13,6 +13,12 @@ type IDTokenVerifier interface {
 	Verify(context.Context, string) (*oidc.IDToken, error)
 }
 
+// LogoutTokenVerifier allows an OIDC back-channel logout token to be verified.
+// https://openid.net/specs/openid-connect-backchannel-1_0.html
+type LogoutTokenVerifier interface {
+	VerifyLogout(context.Context, string) (*oidc.LogoutToken, error)
+}
+
 // idTokenVerifier Used to verify an ID Token and extends oidc.idTokenVerifier from the underlying oidc library
 type idTokenVerifier struct {
 	verifier            *oidc.IDTokenVerifier
@@ -58,6 +64,22 @@ func (v *idTokenVerifier) Verify(ctx context.Context, rawIDToken string) (*oidc.
 	}
 
 	return token, err
+}
+
+// VerifyLogout verifies an incoming back-channel logout token. The underlying
+// verifier skips the client ID check, so the audience is checked here against
+// the client ID and extra audiences, as Verify does for ID tokens.
+func (v *idTokenVerifier) VerifyLogout(ctx context.Context, rawLogoutToken string) (*oidc.LogoutToken, error) {
+	token, err := v.verifier.VerifyLogout(ctx, rawLogoutToken)
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify logout token: %v", err)
+	}
+
+	if isValidAudience, err := v.isValidAudience("aud", token.Audience, v.allowedAudiences); !isValidAudience {
+		return nil, err
+	}
+
+	return token, nil
 }
 
 func (v *idTokenVerifier) verifyAudience(token *oidc.IDToken, claims map[string]interface{}) (bool, error) {
