@@ -35,6 +35,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/middleware"
+	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
 	requestutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/upstream"
@@ -46,16 +47,21 @@ const (
 	schemeHTTPS     = "https"
 	applicationJSON = "application/json"
 
-	robotsPath        = "/robots.txt"
-	signInPath        = "/sign_in"
-	signOutPath       = "/sign_out"
-	oauthStartPath    = "/start"
-	oauthCallbackPath = "/callback"
-	authOnlyPath      = "/auth"
-	userInfoPath      = "/userinfo"
-	staticPathPrefix  = "/static/"
+	robotsPath            = "/robots.txt"
+	signInPath            = "/sign_in"
+	signOutPath           = "/sign_out"
+	oauthStartPath        = "/start"
+	oauthCallbackPath     = "/callback"
+	authOnlyPath          = "/auth"
+	userInfoPath          = "/userinfo"
+	backChannelLogoutPath = "/backchannel-logout"
+	staticPathPrefix      = "/static/"
 
 	idTokenPlaceholder = "{id_token}"
+
+	// backChannelLogoutMaxBodyBytes bounds the unauthenticated back-channel
+	// logout request body; a logout_token is a single signed JWT.
+	backChannelLogoutMaxBodyBytes = 64 * 1024
 )
 
 var (
@@ -353,6 +359,12 @@ func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
 	// The userinfo and logout endpoints needs to load sessions before handling the request
 	s.Path(userInfoPath).Handler(p.sessionChain.ThenFunc(p.UserInfo))
 	s.Path(signOutPath).Handler(p.sessionChain.ThenFunc(p.SignOut))
+
+	// Back-channel logout: called directly by the OIDC provider, no browser session needed.
+	// Only registered when --oidc-backchannel-logout is enabled.
+	if p.provider.Data().BackChannelLogoutSupported {
+		s.Path(backChannelLogoutPath).HandlerFunc(p.BackChannelLogout)
+	}
 }
 
 // buildPreAuthChain constructs a chain that should process every request before
@@ -797,6 +809,77 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	http.Redirect(rw, req, redirect, http.StatusFound)
+}
+
+// BackChannelLogout handles OIDC back-channel logout requests from the Identity Provider.
+// https://openid.net/specs/openid-connect-backchannel-1_0.html
+//
+// Keycloak posts to POST /oauth2/backchannel-logout with a signed logout_token JWT.
+// The handler validates the token, extracts the sid claim, and immediately deletes
+// the associated session from the session store — instant global logout without waiting for cookie-refresh.
+//
+// Only works with a server-side session store (e.g. --session-store-type=redis).
+func (p *OAuthProxy) BackChannelLogout(rw http.ResponseWriter, req *http.Request) {
+	backChannelStore, ok := p.sessionStore.(sessionsapi.BackChannelSessionStore)
+	if !ok {
+		logger.Errorf("back-channel logout: session store does not support ClearBySID; use a server-side session store such as --session-store-type=redis")
+		http.Error(rw, "back-channel logout not supported by session store", http.StatusNotImplemented)
+		return
+	}
+
+	if req.Method != http.MethodPost {
+		http.Error(rw, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	req.Body = http.MaxBytesReader(rw, req.Body, backChannelLogoutMaxBodyBytes)
+	if err := req.ParseForm(); err != nil {
+		http.Error(rw, "bad request", http.StatusBadRequest)
+		return
+	}
+
+	// Per spec §2.5: the logout_token is sent in the POST body only
+	rawToken := req.PostFormValue("logout_token")
+	if rawToken == "" {
+		http.Error(rw, "missing logout_token", http.StatusBadRequest)
+		return
+	}
+
+	verifier, ok := p.provider.Data().Verifier.(internaloidc.LogoutTokenVerifier)
+	if !ok {
+		logger.Errorf("back-channel logout: provider has no OIDC verifier able to verify logout tokens")
+		http.Error(rw, "back-channel logout not supported: OIDC verifier not configured", http.StatusNotImplemented)
+		return
+	}
+
+	// Validates the signature, iss, aud, iat/exp, jti, the back-channel logout
+	// event, the absence of nonce and the presence of sub and/or sid (spec §2.6).
+	token, err := verifier.VerifyLogout(req.Context(), rawToken)
+	if err != nil {
+		logger.Errorf("back-channel logout: invalid logout_token: %v", err)
+		http.Error(rw, "invalid logout_token", http.StatusBadRequest)
+		return
+	}
+
+	// Sessions are indexed by sid; logging out every session of a sub is not supported yet.
+	if token.SessionID == "" {
+		logger.Errorf("back-channel logout: logout_token for sub %q has no sid claim (jti %q)", token.Subject, token.TokenID)
+		http.Error(rw, "invalid logout_token: logout tokens without a sid claim are not supported", http.StatusBadRequest)
+		return
+	}
+
+	// Per spec §2.8: responses must not be cached
+	rw.Header().Set("Cache-Control", "no-store")
+
+	if err := backChannelStore.ClearBySID(req.Context(), token.SessionID); err != nil {
+		// 200 per spec — session not found is not an error
+		logger.Printf("back-channel logout: session not found for sid %q (already expired?): %v", token.SessionID, err)
+		rw.WriteHeader(http.StatusOK)
+		return
+	}
+
+	logger.Printf("back-channel logout: session cleared for sid %q (jti %q)", token.SessionID, token.TokenID)
+	rw.WriteHeader(http.StatusOK)
 }
 
 func (p *OAuthProxy) backendLogout(rw http.ResponseWriter, req *http.Request) {

@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.5
 
+- [#3445](https://github.com/oauth2-proxy/oauth2-proxy/pull/3445) feat: add OIDC back-channel logout support (@aaranda233)
+
 # V7.15.5
 
 ## Release Highlights

@@ -188,6 +188,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 					InsecureSkipIssuerVerification: ptr.To(false),
 					SkipDiscovery:                  ptr.To(false),
 					EnabledSigningAlgs:             []string{},
+					BackChannelLogoutEnabled:       ptr.To(false),
 				},
 				MicrosoftEntraIDConfig: options.MicrosoftEntraIDOptions{
 					FederatedTokenAuth: ptr.To(false),
