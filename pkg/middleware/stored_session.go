@@ -42,7 +42,6 @@ func isFatalRefreshError(err error) bool {
 	return false
 }
 
-
 // StoredSessionLoaderOptions contains all of the requirements to construct
 // a stored session loader.
 // All options must be provided.
