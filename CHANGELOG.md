@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.5
 
+- [#3579](https://github.com/oauth2-proxy/oauth2-proxy/pull/3579) feat(redis): authenticate to Azure Redis with a managed identity (@ignacyr)
+
 # V7.15.5
 
 ## Release Highlights

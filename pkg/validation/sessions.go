@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -49,6 +50,11 @@ func validateRedisSessionStore(o *options.Options) []string {
 	client, err := redis.NewRedisClient(o.Session.Redis)
 	if err != nil {
 		return []string{fmt.Sprintf("unable to initialize a redis client: %v", err)}
+	}
+	// Release the connections, and with them the credential subscriptions, of
+	// this test client
+	if closer, ok := client.(io.Closer); ok {
+		defer closer.Close()
 	}
 
 	n, err := encryption.Nonce(32)

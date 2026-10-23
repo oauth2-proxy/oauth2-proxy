@@ -97,3 +97,19 @@ Note that flags `--redis-use-sentinel=true` and `--redis-use-cluster=true` are m
 Note, if Redis timeout option is set to non-zero, the `--redis-connection-idle-timeout` 
 must be less than [Redis timeout option](https://redis.io/docs/reference/clients/#client-timeouts). For example: if either redis.conf includes 
 `timeout 15` or using `CONFIG SET timeout 15` the `--redis-connection-idle-timeout` must be at least `--redis-connection-idle-timeout=14`
+
+#### Azure managed identity
+
+OAuth2 Proxy can authenticate to [Azure Managed Redis](https://learn.microsoft.com/en-us/azure/redis/entra-for-authentication)
+and [Azure Cache for Redis](https://learn.microsoft.com/en-us/azure/azure-cache-for-redis/cache-azure-active-directory-for-authentication)
+with Microsoft Entra ID instead of an access key. Set `--redis-credentials-provider=azure-managed-identity`
+and connect with TLS (`rediss://`) without `--redis-insecure-skip-tls-verify`. Do not set `--redis-username` or `--redis-password`.
+
+OAuth2 Proxy uses the [workload identity](https://learn.microsoft.com/en-us/azure/aks/workload-identity-overview)
+when the Azure Workload Identity webhook has configured the pod, and the managed identity of the host otherwise.
+On AKS, a pod without the `azure.workload.identity/use: "true"` label therefore uses the managed identity of its node.
+To select a user-assigned managed identity, set `AZURE_CLIENT_ID` to its client ID.
+Assign the identity a Redis access policy. OAuth2 Proxy authenticates with the object ID of the identity as username,
+renews the access token before it expires, and re-authenticates open connections without reconnecting.
+
+This option is not supported with Redis Sentinel.

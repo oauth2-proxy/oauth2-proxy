@@ -85,6 +85,11 @@ func NewRedisClient(opts options.RedisStoreOptions) (Client, error) {
 	if opts.UseSentinel && opts.UseCluster {
 		return nil, fmt.Errorf("options redis-use-sentinel and redis-use-cluster are mutually exclusive")
 	}
+	// go-redis does not support streaming credentials with Sentinel yet
+	// (https://github.com/redis/go-redis/issues/4181)
+	if opts.UseSentinel && opts.CredentialsProvider != "" {
+		return nil, fmt.Errorf("option redis-credentials-provider is not supported with redis-use-sentinel")
+	}
 	if opts.UseSentinel {
 		return buildSentinelClient(opts)
 	}
@@ -150,12 +155,17 @@ func buildClusterClient(opts options.RedisStoreOptions) (Client, error) {
 		return nil, err
 	}
 
+	if err := setupCredentialsProvider(opts, opt); err != nil {
+		return nil, err
+	}
+
 	client := redis.NewClusterClient(&redis.ClusterOptions{
-		Addrs:           addrs,
-		Username:        opt.Username,
-		Password:        opt.Password,
-		TLSConfig:       opt.TLSConfig,
-		ConnMaxIdleTime: opt.ConnMaxIdleTime,
+		Addrs:                        addrs,
+		Username:                     opt.Username,
+		Password:                     opt.Password,
+		StreamingCredentialsProvider: opt.StreamingCredentialsProvider,
+		TLSConfig:                    opt.TLSConfig,
+		ConnMaxIdleTime:              opt.ConnMaxIdleTime,
 	})
 	return newClusterClient(client), nil
 }
@@ -179,6 +189,10 @@ func buildStandaloneClient(opts options.RedisStoreOptions) (Client, error) {
 	}
 
 	if err := setupTLSConfig(opts, opt); err != nil {
+		return nil, err
+	}
+
+	if err := setupCredentialsProvider(opts, opt); err != nil {
 		return nil, err
 	}
 
@@ -223,6 +237,47 @@ func setupTLSConfig(opts options.RedisStoreOptions, opt *redis.Options) error {
 		opt.TLSConfig.RootCAs = rootCAs
 	}
 	return nil
+}
+
+// setupCredentialsProvider sets the StreamingCredentialsProvider if the
+// redis-credentials-provider option is given in redis.Options
+func setupCredentialsProvider(opts options.RedisStoreOptions, opt *redis.Options) error {
+	if opts.CredentialsProvider == "" {
+		return nil
+	}
+	if opts.CredentialsProvider != options.AzureManagedIdentityRedisCredentialsProvider {
+		return fmt.Errorf("unknown redis credentials provider %q", opts.CredentialsProvider)
+	}
+
+	if opts.Username != "" || opts.Password != "" || hasURLCredentials(opts) {
+		return fmt.Errorf("redis credentials provider %q cannot be used with a redis username or password", opts.CredentialsProvider)
+	}
+	// The access tokens are bearer credentials
+	if opt.TLSConfig == nil || opt.TLSConfig.InsecureSkipVerify {
+		return fmt.Errorf("redis credentials provider %q requires a TLS connection with certificate verification", opts.CredentialsProvider)
+	}
+
+	credential, err := newAzureCredential()
+	if err != nil {
+		return fmt.Errorf("unable to create the Azure credential: %v", err)
+	}
+	opt.StreamingCredentialsProvider = newAzureCredentialsProvider(credential, azureTokenPollInterval)
+	return nil
+}
+
+// hasURLCredentials reports whether any of the standalone or cluster redis
+// URLs contains a username or password
+func hasURLCredentials(opts options.RedisStoreOptions) bool {
+	urls := []string{opts.ConnectionURL}
+	if opts.UseCluster {
+		urls = opts.ClusterConnectionURLs
+	}
+	for _, u := range urls {
+		if parsed, err := redis.ParseURL(u); err == nil && (parsed.Username != "" || parsed.Password != "") {
+			return true
+		}
+	}
+	return false
 }
 
 // parseRedisURLs parses a list of redis urls and returns a list
