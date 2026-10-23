@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strings"
 
+	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/authentication/hmacauth"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
@@ -89,7 +90,15 @@ func Validate(o *options.Options) error {
 
 		// Allow the logger to get client IPs
 		logger.SetGetClientFunc(func(r *http.Request) string {
-			return ip.GetClientString(o.GetRealClientIPParser(), r, false)
+			parser := o.GetRealClientIPParser()
+			var trustedProxies *ip.NetSet
+			scope := middlewareapi.GetRequestScope(r)
+			if scope != nil && scope.CanTrustForwardedHeaders(r) {
+				trustedProxies = scope.TrustedProxies
+			} else {
+				parser = nil
+			}
+			return ip.GetClientString(parser, r, trustedProxies, false)
 		})
 	}
 

@@ -167,6 +167,17 @@ injectResponseHeaders:
 * `claimSource` - `claim` (session claims either from id token or from profile URL)
 * `secretSource` - `value` (base64), `fromFile` (file path)
 
+#### Claim value serialization
+
+`claimSource` converts the selected claim into one or more string header values. Scalars
+produce one value, while arrays produce one value per element. Values that cannot be
+converted directly to strings, such as objects, are JSON-encoded individually.
+
+Each non-empty value is added separately under the configured header name. An array of
+objects therefore produces multiple header values containing one JSON object each, not a
+single JSON array. HTTP libraries and intermediaries may expose repeated values as a
+comma-joined string, so consumers should retrieve and parse each header value separately.
+
 **Request option:** `preserveRequestValue: true` retains existing header values
 
 **Incompatibility:** Remove legacy flags `pass-user-headers`, `set-xauthrequest`
@@ -331,7 +342,8 @@ They may change between releases without notice.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `team` | _string_ | Team sets restrict logins to members of this team |
+| `team` | _string_ | Team sets restrict logins to members of this team - Bitbucket has deprecated teams, it will act as workspace instead |
+| `workspace` | _string_ | Workspace sets restrict logins to members of this workspace, use workspace slug |
 | `repository` | _string_ | Repository sets restrict logins to user with access to this repository |
 
 ### ClaimSource
@@ -678,7 +690,7 @@ Requests will be proxied to this upstream if the path matches the request path.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | `id` | _string_ | ID should be a unique identifier for the upstream.<br/>This value is required for all upstreams. |
-| `path` | _string_ | Path is used to map requests to the upstream server.<br/>The closest match will take precedence and all Paths must be unique.<br/>Path can also take a pattern when used with RewriteTarget.<br/>Path segments can be captured and matched using regular experessions.<br/>Eg:<br/>- `^/foo$`: Match only the explicit path `/foo`<br/>- `^/bar/$`: Match any path prefixed with `/bar/`<br/>- `^/baz/(.*)$`: Match any path prefixed with `/baz` and capture the remaining path for use with RewriteTarget |
+| `path` | _string_ | Path is used to map requests to the upstream server.<br/>The closest match will take precedence and all Paths must be unique.<br/>Without RewriteTarget, Path follows gorilla/mux route syntax.<br/>Eg:<br/>- `/foo`: Match only the explicit path `/foo`<br/>- `/bar/`: Match any path prefixed with `/bar/`<br/>- `/baz/{path:.*}`: Match any path prefixed with `/baz/`<br/>When RewriteTarget is set, Path is treated as a regular expression.<br/>Eg: `^/baz/(.*)$` matches any path prefixed with `/baz` and captures the<br/>remaining path for use with RewriteTarget. |
 | `rewriteTarget` | _string_ | RewriteTarget allows users to rewrite the request path before it is sent to<br/>the upstream server (for an HTTP/HTTPS upstream) or mapped to the filesystem<br/>(for a `file:` upstream).<br/>Use the Path to capture segments for reuse within the rewrite target.<br/>Eg: With a Path of `^/baz/(.*)`, a RewriteTarget of `/foo/$1` would rewrite<br/>the request `/baz/abc/123` to `/foo/abc/123` before proxying to the<br/>upstream server.  Or if the upstream were `file:///app`, a request for<br/>`/baz/info.html` would return the contents of the file `/app/foo/info.html`. |
 | `uri` | _string_ | The URI of the upstream server. This may be an HTTP(S) server of a File<br/>based URL. It may include a path, in which case all requests will be served<br/>under that path.<br/>Eg:<br/>- http://localhost:8080<br/>- https://service.localhost<br/>- https://service.localhost/path<br/>- file://host/path<br/>If the URI's path is "/base" and the incoming request was for "/dir",<br/>the upstream request will be for "/base/dir". |
 | `insecureSkipTLSVerify` | _bool_ | InsecureSkipTLSVerify will skip TLS verification of upstream HTTPS hosts.<br/>This option is insecure and will allow potential Man-In-The-Middle attacks<br/>between OAuth2 Proxy and the upstream server.<br/>Defaults to false. |

@@ -48,6 +48,15 @@
     },
     {
       customType: "regex",
+      fileMatch: [
+        "^Makefile",
+      ],
+      matchStrings: [
+        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\s+?GOLANGCILINT_VERSION \\?= (?<currentValue>.*)\\s",
+      ],
+    },
+    {
+      customType: "regex",
       fileMatch: ["(^|/)\\.github/workflows/[^/]+\\.ya?ml$"],
       matchStrings: [
         "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)( versioning=(?<versioning>.*?))?\\s+?[\\w\\s-]*?version: (?<currentValue>.*)\\s",

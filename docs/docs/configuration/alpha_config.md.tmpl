@@ -167,6 +167,17 @@ injectResponseHeaders:
 * `claimSource` - `claim` (session claims either from id token or from profile URL)
 * `secretSource` - `value` (base64), `fromFile` (file path)
 
+#### Claim value serialization
+
+`claimSource` converts the selected claim into one or more string header values. Scalars
+produce one value, while arrays produce one value per element. Values that cannot be
+converted directly to strings, such as objects, are JSON-encoded individually.
+
+Each non-empty value is added separately under the configured header name. An array of
+objects therefore produces multiple header values containing one JSON object each, not a
+single JSON array. HTTP libraries and intermediaries may expose repeated values as a
+comma-joined string, so consumers should retrieve and parse each header value separately.
+
 **Request option:** `preserveRequestValue: true` retains existing header values
 
 **Incompatibility:** Remove legacy flags `pass-user-headers`, `set-xauthrequest`
