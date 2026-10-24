@@ -394,6 +394,7 @@ var _ = Describe("Server", func() {
 				expectHTTPListener: true,
 				expectTLSListener:  false,
 				fdAddr:             "[::1]:0",
+				ipv6:               true,
 			}),
 			Entry("with an ipv6 valid http bind address", &newServerTableInput{
 				opts: Opts{
