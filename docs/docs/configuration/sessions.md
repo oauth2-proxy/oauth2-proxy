@@ -54,6 +54,11 @@ and compatible authentication settings. Mount the whole directory into container
 not just the database file. Do not use network filesystems (including NFS), or share
 the database across hosts. Use Redis for multi-host deployments.
 
+On first startup, instances coordinate schema creation through a database write
+transaction, retrying temporary contention for up to ten seconds. Subsequent
+starts read the schema version without taking a schema write lock. A database
+with a newer, unsupported schema version is rejected rather than modified.
+
 SQLite WAL mode allows concurrent readers but only one writer at a time. Writes
 wait up to five seconds for contention. Short database leases coordinate session
 refreshes across processes without holding a write transaction during provider
