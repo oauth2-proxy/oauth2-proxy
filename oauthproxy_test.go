@@ -632,6 +632,36 @@ func TestOAuthCallbackClientIPLogging(t *testing.T) {
 	}
 }
 
+type redeemErrorProvider struct {
+	*TestProvider
+	err error
+}
+
+func (p *redeemErrorProvider) Redeem(_ context.Context, _, _, _ string) (*sessions.SessionState, error) {
+	return nil, p.err
+}
+
+func TestOAuthCallbackRedeemErrorStatus(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		err      error
+		expected int
+	}{
+		{"Invalid audience", fmt.Errorf("could not verify id_token: %w", internaloidc.ErrInvalidAudience), http.StatusForbidden},
+		{"Other redeem error", errors.New("token exchange failed"), http.StatusInternalServerError},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			test, err := NewPassAccessTokenTest(PassAccessTokenTestOptions{})
+			require.NoError(t, err)
+			t.Cleanup(test.Close)
+			test.proxy.provider = &redeemErrorProvider{TestProvider: test.proxy.provider.(*TestProvider), err: tc.err}
+
+			code, _ := test.getCallbackEndpoint()
+			assert.Equal(t, tc.expected, code)
+		})
+	}
+}
+
 // getEndpointWithCookie makes a requests againt the oauthproxy with passed requestPath
 // and cookie and returns body and status code.
 func (patTest *PassAccessTokenTest) getEndpointWithCookie(cookie string, endpoint string) (httpCode int, accessToken string) {
