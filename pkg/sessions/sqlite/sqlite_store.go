@@ -52,7 +52,7 @@ func newStore(path string) (*SessionStore, error) {
 	u := url.URL{Scheme: "file", Path: path}
 	q := u.Query()
 	q.Add("_pragma", "busy_timeout(5000)")
-	q.Add("_pragma", "journal_mode(WAL)")
+	q.Set("_txlock", "immediate")
 	u.RawQuery = q.Encode()
 	db, err := sql.Open("sqlite", u.String())
 	if err != nil {
@@ -62,21 +62,7 @@ func newStore(path string) (*SessionStore, error) {
 	db.SetMaxIdleConns(4)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	_, err = db.ExecContext(ctx, `
-		CREATE TABLE IF NOT EXISTS sessions (
-			key TEXT PRIMARY KEY NOT NULL,
-			value BLOB NOT NULL,
-			expires_at INTEGER
-		);
-		CREATE INDEX IF NOT EXISTS sessions_expiry ON sessions(expires_at);
-		CREATE TABLE IF NOT EXISTS session_locks (
-			key TEXT PRIMARY KEY NOT NULL,
-			owner TEXT NOT NULL,
-			expires_at INTEGER NOT NULL
-		);
-		CREATE INDEX IF NOT EXISTS session_locks_expiry ON session_locks(expires_at);
-	`)
-	if err != nil {
+	if err := initialize(ctx, db); err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("initializing SQLite session database: %w", err)
 	}
