@@ -1,6 +1,7 @@
 package sessions_test
 
 import (
+	"io"
 	"path/filepath"
 	"testing"
 
@@ -19,5 +20,6 @@ func TestSQLiteFactory(t *testing.T) {
 	require.NoError(t, err)
 	backend := store.(*persistence.Manager).Store.(*sqlite.SessionStore)
 	require.NoError(t, backend.VerifyConnection(t.Context()))
-	require.NoError(t, backend.Close())
+	require.NoError(t, store.(io.Closer).Close())
+	require.Error(t, backend.VerifyConnection(t.Context()))
 }

@@ -1,12 +1,15 @@
 package persistence
 
 import (
+	"errors"
+	"testing"
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/tests"
 	. "github.com/onsi/ginkgo/v2"
+	"github.com/stretchr/testify/require"
 )
 
 var _ = Describe("Persistence Manager Tests", func() {
@@ -23,3 +26,16 @@ var _ = Describe("Persistence Manager Tests", func() {
 			return nil
 		})
 })
+
+type closeableStore struct {
+	Store
+	err error
+}
+
+func (s *closeableStore) Close() error { return s.err }
+
+func TestManagerClose(t *testing.T) {
+	require.NoError(t, NewManager(tests.NewMockStore(), nil).Close())
+	err := errors.New("close failed")
+	require.ErrorIs(t, NewManager(&closeableStore{err: err}, nil).Close(), err)
+}
