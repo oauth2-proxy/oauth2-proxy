@@ -5,6 +5,7 @@ type SessionOptions struct {
 	Type   string             `flag:"session-store-type" cfg:"session_store_type"`
 	Cookie CookieStoreOptions `cfg:",squash"`
 	Redis  RedisStoreOptions  `cfg:",squash"`
+	SQLite SQLiteStoreOptions `cfg:",squash"`
 }
 
 // CookieSessionStoreType is used to indicate the CookieSessionStore should be
@@ -14,6 +15,14 @@ var CookieSessionStoreType = "cookie"
 // RedisSessionStoreType is used to indicate the RedisSessionStore should be
 // used for storing sessions.
 var RedisSessionStoreType = "redis"
+
+// SQLiteSessionStoreType stores sessions in a local database shared on one host.
+var SQLiteSessionStoreType = "sqlite"
+
+// SQLiteStoreOptions contains configuration for the SQLite session store.
+type SQLiteStoreOptions struct {
+	Path string `flag:"sqlite-path" cfg:"sqlite_path"`
+}
 
 // CookieStoreOptions contains configuration options for the CookieSessionStore.
 type CookieStoreOptions struct {

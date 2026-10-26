@@ -3,6 +3,7 @@ package persistence
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -95,4 +96,12 @@ func (m *Manager) Clear(rw http.ResponseWriter, req *http.Request) error {
 // VerifyConnection validates the underlying store is ready and connected
 func (m *Manager) VerifyConnection(ctx context.Context) error {
 	return m.Store.VerifyConnection(ctx)
+}
+
+// Close releases resources owned by a persistent store, when supported.
+func (m *Manager) Close() error {
+	if closer, ok := m.Store.(io.Closer); ok {
+		return closer.Close()
+	}
+	return nil
 }
