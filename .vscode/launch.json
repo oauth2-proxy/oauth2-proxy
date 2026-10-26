@@ -1,6 +1,12 @@
 {
     "version": "0.2.0",
     "configurations": [
+        
+
+
+
+
+
         {
             "name": "OAuth2 Proxy for Dex",
             "type": "go",
