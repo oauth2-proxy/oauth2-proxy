@@ -12,6 +12,7 @@ import (
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/persistence"
 	_ "modernc.org/sqlite" // Register the CGO-free SQLite driver.
 )
@@ -95,7 +96,7 @@ func (s *SessionStore) Save(ctx context.Context, key string, value []byte, exp t
 	// worker or a database-wide sweep on each read. Load enforces expiry independently.
 	if _, err := s.db.ExecContext(ctx, `DELETE FROM sessions WHERE key IN
 		(SELECT key FROM sessions WHERE expires_at <= `+sqliteNow+` LIMIT 100)`); err != nil {
-		return fmt.Errorf("cleaning expired SQLite sessions: %w", err)
+		logger.Errorf("Error cleaning expired SQLite sessions: %v", err)
 	}
 	_, err := s.db.ExecContext(ctx, `INSERT INTO sessions(key, value, expires_at) VALUES (?, ?, `+sqliteNow+` + ?)
 		ON CONFLICT(key) DO UPDATE SET value=excluded.value, expires_at=excluded.expires_at`, key, value, ttl)

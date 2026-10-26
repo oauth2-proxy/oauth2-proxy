@@ -277,3 +277,28 @@ func TestSQLiteSessionTTLStartsAfterWriterWait(t *testing.T) {
 		return err != nil
 	}, time.Second, 10*time.Millisecond)
 }
+
+func TestSQLiteCleanupFailureDoesNotPreventSave(t *testing.T) {
+	store := openTestStore(t, filepath.Join(t.TempDir(), "sessions.sqlite"))
+	ctx := t.Context()
+	_, err := store.db.ExecContext(ctx, `
+		INSERT INTO sessions VALUES ('expired', x'00', 0);
+		CREATE TRIGGER fail_cleanup BEFORE DELETE ON sessions BEGIN
+			SELECT RAISE(FAIL, 'cleanup unavailable');
+		END;
+	`)
+	require.NoError(t, err)
+	require.NoError(t, store.Save(ctx, "active", []byte("payload"), time.Hour))
+	value, err := store.Load(ctx, "active")
+	require.NoError(t, err)
+	require.Equal(t, []byte("payload"), value)
+	_, err = store.Load(ctx, "expired")
+	require.Error(t, err, "cleanup failure must not make expired sessions valid")
+	_, err = store.db.ExecContext(ctx, `CREATE TRIGGER fail_save BEFORE INSERT ON sessions BEGIN
+		SELECT RAISE(FAIL, 'save unavailable');
+	END`)
+	require.NoError(t, err)
+	require.ErrorContains(t, store.Save(ctx, "unsaved", []byte("payload"), time.Hour), "saving SQLite session")
+	_, err = store.Load(ctx, "unsaved")
+	require.Error(t, err)
+}
