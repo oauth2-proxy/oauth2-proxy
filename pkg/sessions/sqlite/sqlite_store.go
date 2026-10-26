@@ -16,6 +16,10 @@ import (
 	_ "modernc.org/sqlite" // Register the CGO-free SQLite driver.
 )
 
+// Evaluate deadlines inside SQLite so waiting for a writer does not consume
+// a new session's TTL or a refresh lease's lifetime.
+const sqliteNow = "CAST(unixepoch('subsec') * 1000000000 AS INTEGER)"
+
 // SessionStore persists encrypted session payloads on a local filesystem.
 // Multiple processes can share the database, but all must run on the same host.
 type SessionStore struct {
@@ -83,19 +87,18 @@ func (s *SessionStore) Save(ctx context.Context, key string, value []byte, exp t
 	if exp < 0 {
 		return errors.New("SQLite session expiration must not be negative")
 	}
-	now := time.Now()
-	var expiresAt any
+	var ttl any
 	if exp > 0 {
-		expiresAt = now.Add(exp).UnixNano()
+		ttl = exp.Nanoseconds()
 	}
 	// Reclaim expired records in bounded batches during writes, without a background
 	// worker or a database-wide sweep on each read. Load enforces expiry independently.
 	if _, err := s.db.ExecContext(ctx, `DELETE FROM sessions WHERE key IN
-		(SELECT key FROM sessions WHERE expires_at <= ? LIMIT 100)`, now.UnixNano()); err != nil {
+		(SELECT key FROM sessions WHERE expires_at <= `+sqliteNow+` LIMIT 100)`); err != nil {
 		return fmt.Errorf("cleaning expired SQLite sessions: %w", err)
 	}
-	_, err := s.db.ExecContext(ctx, `INSERT INTO sessions(key, value, expires_at) VALUES (?, ?, ?)
-		ON CONFLICT(key) DO UPDATE SET value=excluded.value, expires_at=excluded.expires_at`, key, value, expiresAt)
+	_, err := s.db.ExecContext(ctx, `INSERT INTO sessions(key, value, expires_at) VALUES (?, ?, `+sqliteNow+` + ?)
+		ON CONFLICT(key) DO UPDATE SET value=excluded.value, expires_at=excluded.expires_at`, key, value, ttl)
 	if err != nil {
 		return fmt.Errorf("saving SQLite session: %w", err)
 	}
@@ -106,7 +109,7 @@ func (s *SessionStore) Save(ctx context.Context, key string, value []byte, exp t
 func (s *SessionStore) Load(ctx context.Context, key string) ([]byte, error) {
 	var value []byte
 	err := s.db.QueryRowContext(ctx, `SELECT value FROM sessions
-		WHERE key = ? AND (expires_at IS NULL OR expires_at > ?)`, key, time.Now().UnixNano()).Scan(&value)
+		WHERE key = ? AND (expires_at IS NULL OR expires_at > `+sqliteNow+`)`, key).Scan(&value)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, errors.New("session does not exist or has expired")
 	}

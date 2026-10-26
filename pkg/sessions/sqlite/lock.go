@@ -18,10 +18,6 @@ type lock struct {
 	owner string
 }
 
-// Evaluate time inside SQLite, after waiting for a writer. Computing the lease
-// deadline before a busy wait could return a lease that has already expired.
-const sqliteNow = "CAST(unixepoch('subsec') * 1000000000 AS INTEGER)"
-
 func (l *lock) Obtain(ctx context.Context, expiration time.Duration) error {
 	if expiration <= 0 {
 		return errors.New("SQLite lock expiration must be positive")

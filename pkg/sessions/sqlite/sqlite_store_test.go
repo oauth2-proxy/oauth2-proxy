@@ -249,3 +249,31 @@ func TestSQLiteUnavailableFailsClosed(t *testing.T) {
 	require.Error(t, store.VerifyConnection(t.Context()))
 	require.Error(t, store.Lock("session").Obtain(t.Context(), time.Minute))
 }
+
+func TestSQLiteSessionTTLStartsAfterWriterWait(t *testing.T) {
+	store := openTestStore(t, filepath.Join(t.TempDir(), "sessions.sqlite"))
+	ctx := t.Context()
+	writer, err := store.db.Conn(ctx)
+	require.NoError(t, err)
+	defer writer.Close()
+	_, err = writer.ExecContext(ctx, "BEGIN IMMEDIATE")
+	require.NoError(t, err)
+	defer writer.ExecContext(ctx, "ROLLBACK")
+	result := make(chan error, 1)
+	go func() { result <- store.Save(ctx, "waiting", []byte("payload"), 200*time.Millisecond) }()
+	select {
+	case err := <-result:
+		t.Fatalf("save completed while writer was held: %v", err)
+	case <-time.After(400 * time.Millisecond):
+	}
+	_, err = writer.ExecContext(ctx, "COMMIT")
+	require.NoError(t, err)
+	require.NoError(t, <-result)
+	value, err := store.Load(ctx, "waiting")
+	require.NoError(t, err, "waiting for the writer must not consume the storage TTL")
+	require.Equal(t, []byte("payload"), value)
+	require.Eventually(t, func() bool {
+		_, err := store.Load(ctx, "waiting")
+		return err != nil
+	}, time.Second, 10*time.Millisecond)
+}
