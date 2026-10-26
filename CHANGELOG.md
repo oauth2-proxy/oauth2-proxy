@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.5
 
+- [#3583](https://github.com/oauth2-proxy/oauth2-proxy/pull/3583) fix: return 403 instead of 500 when the ID token audience is invalid @marsluca
+
 # V7.15.5
 
 ## Release Highlights
