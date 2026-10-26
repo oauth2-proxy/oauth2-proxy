@@ -217,7 +217,7 @@ var _ = Describe("ProviderVerifier", func() {
 			modifyClaims: func(j *jwt.RegisteredClaims) {
 				j.Audience = jwt.ClaimStrings{"OtherClient"}
 			},
-			expectedError: "audience from claim aud with value [OtherClient] does not match with any of allowed audiences",
+			expectedError: "invalid audience: audience from claim aud with value [OtherClient] does not match with any of allowed audiences",
 		}),
 		Entry("when the audience is an extra audience", &verifierTableInput{
 			modifyOpts: func(p *ProviderVerifierOptions) {

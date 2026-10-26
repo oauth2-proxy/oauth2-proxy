@@ -2,11 +2,16 @@ package oidc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 )
+
+// ErrInvalidAudience is returned when a token's audience claims are missing
+// or don't contain any of the allowed audiences
+var ErrInvalidAudience = errors.New("invalid audience")
 
 // idTokenVerifier allows an ID Token to be verified against the issue and provided keys.
 type IDTokenVerifier interface {
@@ -54,7 +59,7 @@ func (v *idTokenVerifier) Verify(ctx context.Context, rawIDToken string) (*oidc.
 	}
 
 	if isValidAudience, err := v.verifyAudience(token, claims); !isValidAudience {
-		return nil, err
+		return nil, fmt.Errorf("%w: %w", ErrInvalidAudience, err)
 	}
 
 	return token, err
