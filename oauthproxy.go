@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -126,6 +127,12 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 	if err != nil {
 		return nil, fmt.Errorf("error initialising session store: %v", err)
 	}
+	initialized := false
+	defer func() {
+		if !initialized {
+			closeSessionStore(sessionStore)
+		}
+	}()
 
 	var basicAuthValidator basic.Validator
 	if opts.HtpasswdFile != "" {
@@ -260,7 +267,16 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		return nil, fmt.Errorf("error setting up server: %v", err)
 	}
 
+	initialized = true
 	return p, nil
+}
+
+func closeSessionStore(store sessionsapi.SessionStore) {
+	if closer, ok := store.(io.Closer); ok {
+		if err := closer.Close(); err != nil {
+			logger.Errorf("Error closing session store: %v", err)
+		}
+	}
 }
 
 func (p *OAuthProxy) Start() error {
@@ -270,15 +286,10 @@ func (p *OAuthProxy) Start() error {
 		panic("server has not been initialised")
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-
-	// Observe signals in background goroutine.
-	go func() {
-		sigint := make(chan os.Signal, 1)
-		signal.Notify(sigint, os.Interrupt, syscall.SIGTERM)
-		<-sigint
-		cancel() // cancel the context
-	}()
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+	// Server.Start waits for HTTP shutdown before the session store is closed.
+	defer closeSessionStore(p.sessionStore)
 
 	return p.server.Start(ctx)
 }
