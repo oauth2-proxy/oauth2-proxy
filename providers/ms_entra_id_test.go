@@ -167,6 +167,80 @@ func TestAzureEntraOIDCProviderValidateSessionAllowedTenants(t *testing.T) {
 	assert.True(t, valid)
 }
 
+func TestAzureEntraOIDCProviderValidateSessionTenantFromTidClaim(t *testing.T) {
+	const tenant = "85d7d600-7804-4d92-8d43-9c33c21c130c"
+	const otherTenant = "f1c2a8e4-7b3d-4c6e-9a1f-2d5b8e0c3a47"
+	key, _ := rsa.GenerateKey(rand.Reader, 2048)
+
+	testCases := []struct {
+		name           string
+		allowedTenants []string
+		claims         jwt.MapClaims
+		valid          bool
+	}{
+		{
+			name:   "single-tenant app in Azure US Government",
+			claims: jwt.MapClaims{"iss": "https://login.microsoftonline.us/" + tenant + "/v2.0", "tid": tenant},
+			valid:  true,
+		},
+		{
+			name:   "single-tenant app in Azure China",
+			claims: jwt.MapClaims{"iss": "https://login.chinacloudapi.cn/" + tenant + "/v2.0", "tid": tenant},
+			valid:  true,
+		},
+		{
+			name:           "allowed tenant in Azure US Government",
+			allowedTenants: []string{tenant},
+			claims:         jwt.MapClaims{"iss": "https://login.microsoftonline.us/" + tenant + "/v2.0", "tid": tenant},
+			valid:          true,
+		},
+		{
+			name:           "tenant not allowed in Azure US Government",
+			allowedTenants: []string{tenant},
+			claims:         jwt.MapClaims{"iss": "https://login.microsoftonline.us/" + otherTenant + "/v2.0", "tid": otherTenant},
+			valid:          false,
+		},
+		{
+			name:           "tid takes precedence over the issuer",
+			allowedTenants: []string{tenant},
+			claims:         jwt.MapClaims{"iss": "https://login.microsoftonline.com/" + tenant + "/v2.0", "tid": otherTenant},
+			valid:          false,
+		},
+		{
+			name:   "no tid and a national cloud issuer",
+			claims: jwt.MapClaims{"iss": "https://login.microsoftonline.us/" + tenant + "/v2.0"},
+			valid:  false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			provider := NewMicrosoftEntraIDProvider(
+				&ProviderData{
+					Verifier: &mockedVerifier{},
+				},
+				options.Provider{
+					OIDCConfig: options.OIDCOptions{
+						IssuerURL:         "https://login.microsoftonline.us/" + tenant + "/v2.0",
+						InsecureSkipNonce: ptr.To(true),
+					},
+					MicrosoftEntraIDConfig: options.MicrosoftEntraIDOptions{
+						AllowedTenants: tc.allowedTenants,
+					},
+				},
+			)
+
+			idToken, err := jwt.NewWithClaims(jwt.SigningMethodRS256, tc.claims).SignedString(key)
+			assert.NoError(t, err)
+
+			session := CreateAuthorizedSession()
+			session.IDToken = idToken
+
+			assert.Equal(t, tc.valid, provider.ValidateSession(context.Background(), session))
+		})
+	}
+}
+
 func mockGraphAPI(noGroupMemberPermissions bool) *httptest.Server {
 	groupsPath := "/v1.0/me/transitiveMemberOf"
 
