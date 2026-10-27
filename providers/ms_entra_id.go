@@ -275,6 +275,16 @@ func (p *MicrosoftEntraIDProvider) getTenantFromToken(session *sessions.SessionS
 		return "", fmt.Errorf("unable to get claim extractor: %v", err)
 	}
 
+	// The tid (tenant ID) claim is set in every Entra ID token, regardless of the cloud the token
+	// was issued in (login.microsoftonline.com, login.microsoftonline.us, login.chinacloudapi.cn).
+	// https://learn.microsoft.com/en-us/entra/identity-platform/id-token-claims-reference
+	if tid, exists, err := extractor.GetClaim("tid"); exists && err == nil {
+		if tenant, ok := tid.(string); ok && tenant != "" {
+			return tenant, nil
+		}
+	}
+
+	// Fall back to parsing the tenant ID from the issuer URL
 	value, exists, err := extractor.GetClaim("iss")
 
 	if !exists || err != nil {

@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.5
 
+- [#3584](https://github.com/oauth2-proxy/oauth2-proxy/pull/3584) fix: read the Entra ID tenant from the `tid` claim so session validation works in national clouds such as Azure US Government (fixes [#2939](https://github.com/oauth2-proxy/oauth2-proxy/issues/2939)) (@dantreiman)
+
 # V7.15.5
 
 ## Release Highlights
