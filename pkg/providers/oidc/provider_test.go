@@ -49,6 +49,7 @@ var _ = Describe("Provider", func() {
 		Expect(endpoints.TokenURL).To(Equal(m.TokenEndpoint()))
 		Expect(endpoints.JWKsURL).To(Equal(m.JWKSEndpoint()))
 		Expect(endpoints.UserInfoURL).To(Equal(m.UserinfoEndpoint()))
+		Expect(endpoints.DeviceURL).To(Equal("")) // mockoidc has to device_authorization_endpoint
 	},
 		Entry("with issuer verification and the issuer matches", &newProviderTableInput{
 			skipIssuerVerification: false,
