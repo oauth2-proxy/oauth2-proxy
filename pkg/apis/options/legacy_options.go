@@ -569,6 +569,8 @@ type LegacyProvider struct {
 	PubJWKURL  string `flag:"pubjwk-url" cfg:"pubjwk_url"`
 	// PKCE Code Challenge method to use (either S256 or plain)
 	CodeChallengeMethod string `flag:"code-challenge-method" cfg:"code_challenge_method"`
+	// OAuth grant type, defaults to ["authorization_code"]
+	GrantTypes []string `flag:"grant-types" cfg:"grant_types"`
 	// Provided for legacy reasons, to be dropped in newer version see #1667
 	ForceCodeChallengeMethod string `flag:"force-code-challenge-method" cfg:"force_code_challenge_method"`
 }
@@ -622,6 +624,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("prompt", "", "OIDC prompt")
 	flagSet.String("approval-prompt", "force", "OAuth approval_prompt")
 	flagSet.String("code-challenge-method", "", "use PKCE code challenges with the specified method. Either 'plain' or 'S256'")
+	flagSet.StringSlice("grant-types", []string{"authorization_code"}, "grant type(s) to use for OAuth login flow. Available 'authorization_code' and 'urn:ietf:params:oauth:grant-type:device_code'. Defaults to just 'authorization_code'")
 	flagSet.String("force-code-challenge-method", "", "Deprecated - use --code-challenge-method")
 
 	flagSet.String("acr-values", "", "acr values string:  optional")
@@ -714,6 +717,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		Scope:                    l.Scope,
 		AllowedGroups:            l.AllowedGroups,
 		CodeChallengeMethod:      l.CodeChallengeMethod,
+		GrantTypes:               l.GrantTypes,
 		BackendLogoutURL:         l.BackendLogoutURL,
 		AuthRequestResponseMode:  l.AuthRequestResponseMode,
 	}
