@@ -16,12 +16,27 @@ var _ = Describe("Providers", func() {
 		ID:           "ProviderID",
 		ClientID:     "ClientID",
 		ClientSecret: "ClientSecret",
+		GrantTypes:   []string{"authorization_code"},
+	}
+
+	validProviderDeviceGrantOnly := options.Provider{
+		ID:           "ProviderIDDeviceGrantOnly",
+		ClientID:     "ClientID",
+		ClientSecret: "ClientSecret",
+		GrantTypes:   []string{"urn:ietf:params:oauth:grant-type:device_code"},
+	}
+	validProviderDivecGrantAndAuthorizationCode := options.Provider{
+		ID:           "ProviderIDAuthCodeAndDeviceGrant",
+		ClientID:     "ClientID",
+		ClientSecret: "ClientSecret",
+		GrantTypes:   []string{"authorization_code", "urn:ietf:params:oauth:grant-type:device_code"},
 	}
 
 	validOIDCSigningAlgorithmsProvider := options.Provider{
 		ID:           "ProviderIDOIDCSigningAlgorithms",
 		ClientID:     "ClientID",
 		ClientSecret: "ClientSecret",
+		GrantTypes:   []string{"authorization_code"},
 		OIDCConfig: options.OIDCOptions{
 			EnabledSigningAlgs: []string{"RS256", "EdDSA"},
 		},
@@ -31,6 +46,7 @@ var _ = Describe("Providers", func() {
 		ID:           "ProviderIDInvalidOIDCSigningAlgorithms",
 		ClientID:     "ClientID",
 		ClientSecret: "ClientSecret",
+		GrantTypes:   []string{"authorization_code"},
 		OIDCConfig: options.OIDCOptions{
 			EnabledSigningAlgs: []string{"RS256", "invalid"},
 		},
@@ -40,6 +56,7 @@ var _ = Describe("Providers", func() {
 		ID:           "ProviderIDInvalidOIDCSigningAlgorithmCase",
 		ClientID:     "ClientID",
 		ClientSecret: "ClientSecret",
+		GrantTypes:   []string{"authorization_code"},
 		OIDCConfig: options.OIDCOptions{
 			EnabledSigningAlgs: []string{"rs256"},
 		},
@@ -50,11 +67,32 @@ var _ = Describe("Providers", func() {
 		ID:           "ProviderIDLoginGov",
 		ClientID:     "ClientID",
 		ClientSecret: "ClientSecret",
+		GrantTypes:   []string{"authorization_code"},
 	}
 
 	missingIDProvider := options.Provider{
 		ClientID:     "ClientID",
 		ClientSecret: "ClientSecret",
+		GrantTypes:   []string{"authorization_code"},
+	}
+
+	invalidProviderNoGrantTypes := options.Provider{
+		ID:           "ProviderIDNoGrantTypes",
+		ClientID:     "ClientID",
+		ClientSecret: "ClientSecret",
+		GrantTypes:   []string{},
+	}
+	invalidProviderGrantTypeEmptyString := options.Provider{
+		ID:           "ProviderIDGrantTypeEmtpyString",
+		ClientID:     "ClientID",
+		ClientSecret: "ClientSecret",
+		GrantTypes:   []string{""},
+	}
+	invalidProviderGrantTypeWithTypo := options.Provider{
+		ID:           "ProviderIDGrantTypeWithTypo",
+		ClientID:     "ClientID",
+		ClientSecret: "ClientSecret",
+		GrantTypes:   []string{"authoraization_code"},
 	}
 
 	missingProvider := "at least one provider has to be defined"
@@ -63,6 +101,9 @@ var _ = Describe("Providers", func() {
 	skipButtonAndMultipleProvidersMsg := "SkipProviderButton and multiple providers are mutually exclusive"
 	invalidOIDCSigningAlgorithmMsg := "provider ProviderIDInvalidOIDCSigningAlgorithms has invalid EnabledSigningAlgs entry \"invalid\""
 	invalidOIDCSigningAlgorithmCaseMsg := "provider ProviderIDInvalidOIDCSigningAlgorithmCase has invalid EnabledSigningAlgs entry \"rs256\""
+	invalidProviderNoGrantTypesMsg := "provider ProviderIDNoGrantTypes has no grant type(s). Supported are: 'authorization_code', 'urn:ietf:params:oauth:grant-type:device_code'"
+	invalidProviderGrantTypeWithTypeMsg := "provider ProviderIDGrantTypeWithTypo has invalid grant type 'authoraization_code'. Supported are: 'authorization_code', 'urn:ietf:params:oauth:grant-type:device_code'"
+	invalidProviderGrantTypeEmptyStringMsg := "provider ProviderIDGrantTypeEmtpyString has invalid grant type ''. Supported are: 'authorization_code', 'urn:ietf:params:oauth:grant-type:device_code'"
 
 	DescribeTable("validateProviders",
 		func(o *validateProvidersTableInput) {
@@ -76,6 +117,8 @@ var _ = Describe("Providers", func() {
 			options: &options.Options{
 				Providers: options.Providers{
 					validProvider,
+					validProviderDeviceGrantOnly,
+					validProviderDivecGrantAndAuthorizationCode,
 					validLoginGovProvider,
 				},
 			},
@@ -131,6 +174,30 @@ var _ = Describe("Providers", func() {
 				},
 			},
 			errStrings: []string{invalidOIDCSigningAlgorithmCaseMsg},
+		}),
+		Entry("without grant types", &validateProvidersTableInput{
+			options: &options.Options{
+				Providers: options.Providers{
+					invalidProviderNoGrantTypes,
+				},
+			},
+			errStrings: []string{invalidProviderNoGrantTypesMsg},
+		}),
+		Entry("with empty string grant types", &validateProvidersTableInput{
+			options: &options.Options{
+				Providers: options.Providers{
+					invalidProviderGrantTypeEmptyString,
+				},
+			},
+			errStrings: []string{invalidProviderGrantTypeEmptyStringMsg},
+		}),
+		Entry("grant type with typo", &validateProvidersTableInput{
+			options: &options.Options{
+				Providers: options.Providers{
+					invalidProviderGrantTypeWithTypo,
+				},
+			},
+			errStrings: []string{invalidProviderGrantTypeWithTypeMsg},
 		}),
 	)
 })
