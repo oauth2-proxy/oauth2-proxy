@@ -99,6 +99,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 			ExtraAudiences:         providerConfig.OIDCConfig.ExtraAudiences,
 			IssuerURL:              providerConfig.OIDCConfig.IssuerURL,
 			JWKsURL:                providerConfig.OIDCConfig.JwksURL,
+			DeviceAuthorizationURL: providerConfig.DeviceAuthorizationURL,
 			PublicKeyFiles:         providerConfig.OIDCConfig.PublicKeyFiles,
 			SupportedSigningAlgs:   providerConfig.OIDCConfig.EnabledSigningAlgs,
 			SkipDiscovery:          ptr.Deref(providerConfig.OIDCConfig.SkipDiscovery, options.DefaultSkipDiscovery),
@@ -113,6 +114,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 			// Use the discovered values rather than any specified values
 			endpoints := pv.Provider().Endpoints()
 			pkce := pv.Provider().PKCE()
+			providerConfig.DeviceAuthorizationURL = endpoints.DeviceAuthorizationURL
 			providerConfig.LoginURL = endpoints.AuthURL
 			providerConfig.RedeemURL = endpoints.TokenURL
 			providerConfig.ProfileURL = endpoints.UserInfoURL
@@ -127,6 +129,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 		raw string
 	}{
 		"login":    {dst: &p.LoginURL, raw: providerConfig.LoginURL},
+		"device":   {dst: &p.DeviceAuthorizationURL, raw: providerConfig.DeviceAuthorizationURL},
 		"redeem":   {dst: &p.RedeemURL, raw: providerConfig.RedeemURL},
 		"profile":  {dst: &p.ProfileURL, raw: providerConfig.ProfileURL},
 		"validate": {dst: &p.ValidateURL, raw: providerConfig.ValidateURL},

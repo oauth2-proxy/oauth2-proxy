@@ -143,6 +143,9 @@ type Provider struct {
 
 	// URL to call to perform backend logout, `{id_token}` would be replaced by the actual `id_token` if available in the session
 	BackendLogoutURL string `yaml:"backendLogoutURL"`
+
+	// URL to call to perform OAuth 2.0 device authorization code flow
+	DeviceAuthorizationURL string `yaml:"deviceAuthorizationURL"`
 }
 
 // ProviderType is used to enumerate the different provider type options
