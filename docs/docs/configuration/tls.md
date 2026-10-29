@@ -36,6 +36,57 @@ There are two recommended configurations:
     If not specified, the defaults from [`crypto/tls`](https://pkg.go.dev/crypto/tls#CipherSuites) of the currently used `go` version for building `oauth2-proxy` will be used.
     A complete list of valid TLS cipher suite names can be found in [`crypto/tls`](https://pkg.go.dev/crypto/tls#pkg-constants).
 
+### Require client certificates (mTLS)
+
+TLS and client authentication are opt-in. Without `--tls-client-ca-file`, HTTPS
+continues to accept connections without a client certificate. To require and verify
+client certificates, provide a PEM bundle containing only the CAs you trust to issue
+client certificates. To allow mapped certificate identities alongside ordinary OIDC
+clients, also configure `clientIdentities` in the alpha configuration; mapped
+certificates authenticate directly and requests without a certificate continue
+through OIDC:
+
+```bash
+--tls-cert-file=/certs/tls.crt \
+--tls-key-file=/certs/tls.key \
+--tls-client-ca-file=/certs/client-ca.pem
+```
+
+Clients using certificate authentication must present a valid certificate issued by
+a configured CA, suitable for client authentication, and its SHA-256 fingerprint
+must have an explicit identity mapping. Missing certificates use OIDC when mapped
+identities are configured; untrusted, expired, unsuitable, or unmapped certificates
+are rejected. The mapping supplies the user, optional email, and explicitly listed
+groups; certificate subjects and headers are never trusted implicitly.
+Certificate identity authentication requires the client certificate to reach
+oauth2-proxy directly. Do not terminate TLS at an ingress and present one shared
+certificate for browser traffic: every forwarded request would authenticate as that
+single mapped identity. A certificate-less ingress can use the normal OIDC flow;
+oauth2-proxy does not trust forwarded client-certificate headers.
+
+The application and metrics listeners are configured independently. For metrics,
+use `--metrics-secure-address`, `--metrics-tls-cert-file`,
+`--metrics-tls-key-file`, and `--metrics-tls-client-ca-file`. They may use different
+server certificates and client CA bundles. No application CA setting is inherited
+by metrics. Disable `--metrics-address` when requiring metrics client certificates.
+A client CA without an HTTPS listener or server certificate/key is a startup error.
+
+With alpha configuration, set `server.tls.clientCA.fromFile` and/or
+`metricsServer.tls.clientCA.fromFile`; `fromEnv` and inline `value` are also
+supported through the existing SecretSource format. Each server using client
+authentication must disable its plaintext `bindAddress` (empty or `-`) to prevent
+bypassing client authentication. Configuring both is a startup error. Legacy
+application TLS configuration already disables its HTTP listener automatically.
+
+Certificates and CA bundles can be supplied by an external issuer such as
+cert-manager using mounted files. They are loaded at startup; restart or roll the
+process after replacing the server certificate/key or client CA bundle. Updating a
+mounted Secret alone does not reload them. For CA rotation, deploy a bundle trusting
+both old and new client CAs, restart, migrate clients, then remove the old CA and
+restart again. When renewing a mapped client certificate, update its configured
+SHA-256 leaf fingerprint and restart before switching clients to the renewed
+certificate. Plan server-certificate renewal before expiry.
+
 ### Terminate TLS at Reverse Proxy, e.g. Nginx
 
 1.  Configure SSL Termination with [Nginx](http://nginx.org/) (example config below), Amazon ELB, Google Cloud Platform Load Balancing, or ...

@@ -39,6 +39,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestMetricsServerRejectsClientIdentityMappings(t *testing.T) {
+	opts := &options.Options{}
+	opts.MetricsServer.TLS = &options.TLS{
+		ClientIdentities: []options.ClientIdentity{{Fingerprint: strings.Repeat("0", 64), User: "metrics"}},
+	}
+	require.EqualError(t, validateMetricsServer(opts), "metrics listener does not support client certificate identity mappings")
+}
+
 const (
 	// The rawCookieSecret is 32 bytes and the base64CookieSecret is the base64
 	// encoded version of this.

@@ -35,6 +35,17 @@ type TLS struct {
 	// Typically this will come from a file.
 	Cert *SecretSource `yaml:"cert,omitempty"`
 
+	// ClientCA contains the trusted client CA certificates in PEM format.
+	// When set, the HTTPS listener verifies client certificates. Without
+	// ClientIdentities every client must present a certificate; with mappings,
+	// mapped certificates authenticate directly and other clients use OIDC.
+	// The HTTP listener must be disabled.
+	ClientCA *SecretSource `yaml:"clientCA,omitempty"`
+
+	// ClientIdentities maps SHA-256 leaf-certificate fingerprints to users.
+	// When configured, a verified client certificate may authenticate without OIDC.
+	ClientIdentities []ClientIdentity `yaml:"clientIdentities,omitempty"`
+
 	// MinVersion is the minimal TLS version that is acceptable.
 	// E.g. Set to "TLS1.3" to select TLS version 1.3
 	MinVersion string `yaml:"minVersion,omitempty"`
@@ -46,4 +57,13 @@ type TLS struct {
 	// If not specified, the default Go safe cipher list is used.
 	// List of valid cipher suites can be found in the [crypto/tls documentation](https://pkg.go.dev/crypto/tls#pkg-constants).
 	CipherSuites []string `yaml:"cipherSuites,omitempty"`
+}
+
+// ClientIdentity is the identity granted to one exact client certificate.
+type ClientIdentity struct {
+	Fingerprint       string   `yaml:"fingerprint"`
+	User              string   `yaml:"user"`
+	Email             string   `yaml:"email,omitempty"`
+	Groups            []string `yaml:"groups,omitempty"`
+	PreferredUsername string   `yaml:"preferredUsername,omitempty"`
 }
