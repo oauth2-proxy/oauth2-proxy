@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net"
@@ -177,6 +178,27 @@ func parseCipherSuites(names []string) ([]uint16, error) {
 	return result, nil
 }
 
+func validateClientIdentities(identities []options.ClientIdentity) error {
+	seen := make(map[string]struct{}, len(identities))
+	for _, identity := range identities {
+		if identity.User == "" || strings.ContainsAny(identity.User+identity.Email+identity.PreferredUsername, "\r\n") {
+			return errors.New("client certificate identity must have a non-empty user without newlines")
+		}
+		fingerprint := strings.ReplaceAll(strings.ToLower(identity.Fingerprint), ":", "")
+		if len(fingerprint) != 64 {
+			return fmt.Errorf("client certificate fingerprint %q must be a SHA-256 fingerprint", identity.Fingerprint)
+		}
+		if _, err := hex.DecodeString(fingerprint); err != nil {
+			return fmt.Errorf("client certificate fingerprint %q is not hexadecimal", identity.Fingerprint)
+		}
+		if _, ok := seen[fingerprint]; ok {
+			return fmt.Errorf("duplicate client certificate fingerprint %q", identity.Fingerprint)
+		}
+		seen[fingerprint] = struct{}{}
+	}
+	return nil
+}
+
 // setupTLSListener sets the server TLS listener if the HTTPS server is enabled.
 // The HTTPS server can be disabled by setting the SecureBindAddress to "-" or by
 // leaving it empty.
@@ -188,6 +210,11 @@ func (s *server) setupTLSListener(opts Opts) error {
 		if opts.BindAddress != "" && opts.BindAddress != "-" {
 			return errors.New("HTTP listener must be disabled when client certificate authentication is enabled")
 		}
+		if err := validateClientIdentities(opts.TLS.ClientIdentities); err != nil {
+			return err
+		}
+	} else if opts.TLS != nil && len(opts.TLS.ClientIdentities) > 0 {
+		return errors.New("client certificate identities require a client CA")
 	}
 	if opts.SecureBindAddress == "" || opts.SecureBindAddress == "-" {
 		// No HTTPS listener required
@@ -219,6 +246,9 @@ func (s *server) setupTLSListener(opts Opts) error {
 		}
 		config.ClientCAs = pool
 		config.ClientAuth = tls.RequireAndVerifyClientCert
+		if len(opts.TLS.ClientIdentities) > 0 {
+			config.ClientAuth = tls.VerifyClientCertIfGiven
+		}
 	}
 
 	if len(opts.TLS.CipherSuites) > 0 {

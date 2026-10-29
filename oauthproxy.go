@@ -209,7 +209,10 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 	if err != nil {
 		return nil, fmt.Errorf("could not build pre-auth chain: %v", err)
 	}
-	sessionChain := buildSessionChain(opts, provider, sessionStore, basicAuthValidator)
+	sessionChain, err := buildSessionChain(opts, provider, sessionStore, basicAuthValidator)
+	if err != nil {
+		return nil, fmt.Errorf("could not build session chain: %v", err)
+	}
 	headersChain, err := buildHeadersChain(opts)
 	if err != nil {
 		return nil, fmt.Errorf("could not build headers chain: %v", err)
@@ -408,8 +411,11 @@ func buildTrustedProxyNetSet(opts *options.Options) (*ip.NetSet, error) {
 	return ip.ParseNetSet(trustedProxyIPs)
 }
 
-func buildSessionChain(opts *options.Options, provider providers.Provider, sessionStore sessionsapi.SessionStore, validator basic.Validator) alice.Chain {
+func buildSessionChain(opts *options.Options, provider providers.Provider, sessionStore sessionsapi.SessionStore, validator basic.Validator) (alice.Chain, error) {
 	chain := alice.New()
+	if opts.Server.TLS != nil && len(opts.Server.TLS.ClientIdentities) > 0 {
+		chain = chain.Append(middleware.NewClientCertificateSessionLoader(opts.Server.TLS.ClientIdentities))
+	}
 
 	if opts.SkipJwtBearerTokens {
 		verifiers := opts.GetJWTBearerVerifiers()
@@ -436,7 +442,7 @@ func buildSessionChain(opts *options.Options, provider providers.Provider, sessi
 		ValidateSession: provider.ValidateSession,
 	}))
 
-	return chain
+	return chain, nil
 }
 
 func buildHeadersChain(opts *options.Options) (alice.Chain, error) {

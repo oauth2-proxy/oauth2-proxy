@@ -663,9 +663,22 @@ as well as an optional minimal TLS version that is acceptable.
 | ----- | ---- | ----------- |
 | `key` | _[SecretSource](#secretsource)_ | Key is the TLS key data to use.<br/>Typically this will come from a file. |
 | `cert` | _[SecretSource](#secretsource)_ | Cert is the TLS certificate data to use.<br/>Typically this will come from a file. |
-| `clientCA` | _[SecretSource](#secretsource)_ | ClientCA contains the trusted client CA certificates in PEM format.<br/>When set, the HTTPS listener requires and verifies client certificates.<br/>The HTTP listener must be disabled. |
+| `clientCA` | _[SecretSource](#secretsource)_ | ClientCA contains the trusted client CA certificates in PEM format.<br/>The HTTPS listener verifies client certificates; with no identity mappings they are all required, while mapped certificates can authenticate alongside OIDC.<br/>The HTTP listener must be disabled. |
+| `clientIdentities` | _[]ClientIdentity_ | Optional SHA-256 leaf-certificate fingerprint mappings for certificate authentication. A mapped certificate may authenticate without OIDC; requests without a certificate use the normal OIDC flow. |
 | `minVersion` | _string_ | MinVersion is the minimal TLS version that is acceptable.<br/>E.g. Set to "TLS1.3" to select TLS version 1.3 |
 | `cipherSuites` | _[]string_ | CipherSuites is a list of TLS cipher suites that are allowed.<br/>E.g.:<br/>- TLS_RSA_WITH_RC4_128_SHA<br/>- TLS_RSA_WITH_AES_256_GCM_SHA384<br/>If not specified, the default Go safe cipher list is used.<br/>List of valid cipher suites can be found in the [crypto/tls documentation](https://pkg.go.dev/crypto/tls#pkg-constants). |
+
+### ClientIdentity
+
+ClientIdentity maps one exact client certificate to an authenticated user.
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `fingerprint` | _string_ | Lowercase hexadecimal SHA-256 fingerprint of the leaf certificate, with optional colon separators. |
+| `user` | _string_ | User identity emitted for the authenticated request. |
+| `email` | _string_ | Optional email identity used by the normal authorization checks. |
+| `groups` | _[]string_ | Optional explicitly configured groups. |
+| `preferredUsername` | _string_ | Optional preferred username identity. |
 
 ### URLParameterRule
 
