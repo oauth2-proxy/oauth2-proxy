@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.6
 
+- [#2](https://github.com/MaxRink/oauth2-proxy/pull/2) feat: add per-upstream CA trust and client certificates for HTTPS and WebSocket backends @MaxRink
+
 # V7.15.6
 
 ## Release Highlights
