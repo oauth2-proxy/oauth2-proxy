@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.5
 
+- [#1](https://github.com/MaxRink/oauth2-proxy/pull/1) feat: add opt-in mTLS for application and metrics listeners, with mapped application certificate identities alongside OIDC @MaxRink
+
 # V7.15.5
 
 ## Release Highlights
