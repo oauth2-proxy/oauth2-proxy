@@ -382,6 +382,8 @@ If multiple `--upstream` URLs' paths match an incoming request, the one with the
 
 **Unix socket upstreams** are configured as `unix:///path/to/unix.sock`.
 
+HTTPS upstreams use the system trust store by default. Alpha upstream configuration can add `rootCA` to trust a private certificate authority, or `clientCert` and `clientKey` to authenticate oauth2-proxy to the upstream with a client certificate. These settings are per-upstream, require an `https://` URL, and are loaded when the proxy starts; restart oauth2-proxy after certificate rotation. `rootCA` replaces the system trust roots for that upstream, while omitting it retains normal system verification.
+
 **Static file paths** are configured as a file:// URL. `file:///var/www/static/` will serve the files from that directory at `http://[oauth2-proxy url]/var/www/static/`, which may not be what you want. You can provide the path to where the files should be available by adding a fragment to the configured URL. The value of the fragment will then be used to specify which path the files are available at, e.g. `file:///var/www/static/#/static/` will make `/var/www/static/` available at `http://[oauth2-proxy url]/static/`.
 
 Multiple upstreams can either be configured by supplying a comma separated list to the `--upstream` parameter, supplying the parameter multiple times or providing a list in the [config file](#config-file). When multiple upstreams are used routing to them will be based on the path they are set up with.

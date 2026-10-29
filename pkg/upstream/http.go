@@ -2,6 +2,7 @@ package upstream
 
 import (
 	"context"
+	"crypto/tls"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -55,7 +56,7 @@ func newHTTPUpstreamProxy(upstream options.Upstream, u *url.URL, sigData *option
 	// Set up a WebSocket proxy if required
 	var wsProxy http.Handler
 	if ptr.Deref(upstream.ProxyWebSockets, options.DefaultUpstreamProxyWebSockets) {
-		wsProxy = newWebSocketReverseProxy(u, upstream.InsecureSkipTLSVerify, upstream.PassHostHeader)
+		wsProxy = newWebSocketReverseProxy(u, upstream.InsecureSkipTLSVerify, upstream.PassHostHeader, upstream.TLSClientConfig())
 	}
 
 	var auth hmacauth.HmacAuth
@@ -151,7 +152,16 @@ func newReverseProxy(target *url.URL, upstream options.Upstream, errorHandler Pr
 	// InsecureSkipVerify is a configurable option we allow
 	/* #nosec G402 */
 	if ptr.Deref(upstream.InsecureSkipTLSVerify, options.DefaultUpsteamInsecureSkipTLSVerify) {
+		if transport.TLSClientConfig == nil {
+			transport.TLSClientConfig = &tls.Config{MinVersion: tls.VersionTLS12}
+		}
 		transport.TLSClientConfig.InsecureSkipVerify = true
+	}
+	if upstream.TLSClientConfig() != nil {
+		transport.TLSClientConfig = upstream.TLSClientConfig().Clone()
+		if ptr.Deref(upstream.InsecureSkipTLSVerify, options.DefaultUpsteamInsecureSkipTLSVerify) {
+			transport.TLSClientConfig.InsecureSkipVerify = true
+		}
 	}
 
 	// Ensure we always pass the original request path
@@ -242,7 +252,7 @@ func setProxyForwardingHeaders(proxyReq *httputil.ProxyRequest) {
 }
 
 // newWebSocketReverseProxy creates a new reverse proxy for proxying websocket connections.
-func newWebSocketReverseProxy(u *url.URL, skipTLSVerify *bool, passHostHeader *bool) http.Handler {
+func newWebSocketReverseProxy(u *url.URL, skipTLSVerify *bool, passHostHeader *bool, tlsConfigs ...*tls.Config) http.Handler {
 	wsProxy := newSingleHostReverseProxy(u)
 
 	// Inherit default transport options from Go's stdlib
@@ -250,7 +260,16 @@ func newWebSocketReverseProxy(u *url.URL, skipTLSVerify *bool, passHostHeader *b
 
 	/* #nosec G402 */
 	if ptr.Deref(skipTLSVerify, false) {
+		if transport.TLSClientConfig == nil {
+			transport.TLSClientConfig = &tls.Config{MinVersion: tls.VersionTLS12}
+		}
 		transport.TLSClientConfig.InsecureSkipVerify = true
+	}
+	if len(tlsConfigs) > 0 && tlsConfigs[0] != nil {
+		transport.TLSClientConfig = tlsConfigs[0].Clone()
+		if ptr.Deref(skipTLSVerify, false) {
+			transport.TLSClientConfig.InsecureSkipVerify = true
+		}
 	}
 
 	// Apply the customized transport to our proxy before returning it

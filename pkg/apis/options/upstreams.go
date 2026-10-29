@@ -1,6 +1,7 @@
 package options
 
 import (
+	"crypto/tls"
 	"net/http"
 	"time"
 
@@ -100,6 +101,14 @@ type Upstream struct {
 	// Defaults to false.
 	InsecureSkipTLSVerify *bool `yaml:"insecureSkipTLSVerify,omitempty"`
 
+	// RootCA supplies PEM-encoded CA certificates for this HTTPS upstream, replacing system roots.
+	RootCA *SecretSource `yaml:"rootCA,omitempty"`
+	// ClientCert and ClientKey configure an optional client certificate for this HTTPS upstream.
+	ClientCert *SecretSource `yaml:"clientCert,omitempty"`
+	ClientKey  *SecretSource `yaml:"clientKey,omitempty"`
+
+	tlsClientConfig *tls.Config
+
 	// Static will make all requests to this upstream have a static response.
 	// The response will have a body of "Authenticated" and a response code
 	// matching StaticCode.
@@ -132,6 +141,12 @@ type Upstream struct {
 	// Defaults to false.
 	DisableKeepAlives *bool `yaml:"disableKeepAlives,omitempty"`
 }
+
+// SetTLSClientConfig stores the validated runtime transport configuration.
+func (u *Upstream) SetTLSClientConfig(config *tls.Config) { u.tlsClientConfig = config }
+
+// TLSClientConfig returns the validated runtime transport configuration.
+func (u Upstream) TLSClientConfig() *tls.Config { return u.tlsClientConfig }
 
 // EnsureDefaults sets any default values for UpstreamConfig fields.
 func (uc *UpstreamConfig) EnsureDefaults() {

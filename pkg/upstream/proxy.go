@@ -2,6 +2,8 @@ package upstream
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -12,6 +14,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options/util"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/app/pagewriter"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
@@ -34,6 +37,9 @@ func NewProxy(upstreams options.UpstreamConfig, sigData *options.SignatureData, 
 
 	for _, upstream := range sortByPathLongest(upstreams.Upstreams) {
 		if ptr.Deref(upstream.Static, options.DefaultUpstreamStatic) {
+			if upstream.RootCA != nil || upstream.ClientCert != nil || upstream.ClientKey != nil {
+				return nil, fmt.Errorf("TLS options cannot be used with static upstream %q", upstream.ID)
+			}
 			if err := m.registerStaticResponseHandler(upstream, writer); err != nil {
 				return nil, fmt.Errorf("could not register static upstream %q: %v", upstream.ID, err)
 			}
@@ -43,6 +49,9 @@ func NewProxy(upstreams options.UpstreamConfig, sigData *options.SignatureData, 
 		u, err := url.Parse(upstream.URI)
 		if err != nil {
 			return nil, fmt.Errorf("error parsing URI for upstream %q: %w", upstream.ID, err)
+		}
+		if err := prepareUpstreamTLS(&upstream, u); err != nil {
+			return nil, fmt.Errorf("invalid TLS configuration for upstream %q: %w", upstream.ID, err)
 		}
 		switch u.Scheme {
 		case fileScheme:
@@ -62,6 +71,50 @@ func NewProxy(upstreams options.UpstreamConfig, sigData *options.SignatureData, 
 		return nil, fmt.Errorf("could not register trailing slash handler: %w", err)
 	}
 	return m, nil
+}
+
+func prepareUpstreamTLS(upstream *options.Upstream, target *url.URL) error {
+	if upstream.RootCA == nil && upstream.ClientCert == nil && upstream.ClientKey == nil {
+		return nil
+	}
+	if target.Scheme != httpsScheme {
+		return fmt.Errorf("TLS options require an https upstream")
+	}
+	if ptr.Deref(upstream.InsecureSkipTLSVerify, options.DefaultUpsteamInsecureSkipTLSVerify) {
+		return fmt.Errorf("TLS options cannot be combined with insecureSkipTLSVerify")
+	}
+	config := &tls.Config{MinVersion: tls.VersionTLS12} // #nosec G402 -- verification remains enabled
+	if upstream.RootCA != nil {
+		data, err := util.GetSecretValue(upstream.RootCA)
+		if err != nil {
+			return fmt.Errorf("load root CA: %w", err)
+		}
+		pool := x509.NewCertPool()
+		if ok := pool.AppendCertsFromPEM(data); !ok {
+			return fmt.Errorf("root CA does not contain a valid PEM certificate")
+		}
+		config.RootCAs = pool
+	}
+	if (upstream.ClientCert == nil) != (upstream.ClientKey == nil) {
+		return fmt.Errorf("clientCert and clientKey must be configured together")
+	}
+	if upstream.ClientCert != nil {
+		certData, err := util.GetSecretValue(upstream.ClientCert)
+		if err != nil {
+			return fmt.Errorf("load client certificate: %w", err)
+		}
+		keyData, err := util.GetSecretValue(upstream.ClientKey)
+		if err != nil {
+			return fmt.Errorf("load client key: %w", err)
+		}
+		cert, err := tls.X509KeyPair(certData, keyData)
+		if err != nil {
+			return fmt.Errorf("load client certificate: %w", err)
+		}
+		config.Certificates = []tls.Certificate{cert}
+	}
+	upstream.SetTLSClientConfig(config)
+	return nil
 }
 
 // multiUpstreamProxy will serve requests directed to multiple upstream servers
