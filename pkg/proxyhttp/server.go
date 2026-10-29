@@ -3,6 +3,7 @@ package proxyhttp
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"net"
@@ -57,6 +58,9 @@ func NewServer(opts Opts) (Server, error) {
 		return nil, fmt.Errorf("error setting up listener: %v", err)
 	}
 	if err := s.setupTLSListener(opts); err != nil {
+		if s.listener != nil {
+			s.listener.Close()
+		}
 		return nil, fmt.Errorf("error setting up TLS listener: %v", err)
 	}
 
@@ -177,6 +181,14 @@ func parseCipherSuites(names []string) ([]uint16, error) {
 // The HTTPS server can be disabled by setting the SecureBindAddress to "-" or by
 // leaving it empty.
 func (s *server) setupTLSListener(opts Opts) error {
+	if opts.TLS != nil && opts.TLS.ClientCA != nil {
+		if opts.SecureBindAddress == "" || opts.SecureBindAddress == "-" {
+			return errors.New("client certificate authentication requires an HTTPS listener")
+		}
+		if opts.BindAddress != "" && opts.BindAddress != "-" {
+			return errors.New("HTTP listener must be disabled when client certificate authentication is enabled")
+		}
+	}
 	if opts.SecureBindAddress == "" || opts.SecureBindAddress == "-" {
 		// No HTTPS listener required
 		return nil
@@ -195,6 +207,19 @@ func (s *server) setupTLSListener(opts Opts) error {
 		return fmt.Errorf("could not load certificate: %v", err)
 	}
 	config.Certificates = []tls.Certificate{cert}
+
+	if opts.TLS.ClientCA != nil {
+		data, err := getSecretValue(opts.TLS.ClientCA)
+		if err != nil {
+			return fmt.Errorf("could not load client CA: %w", err)
+		}
+		pool := x509.NewCertPool()
+		if !pool.AppendCertsFromPEM(data) {
+			return errors.New("client CA contains no valid PEM certificates")
+		}
+		config.ClientCAs = pool
+		config.ClientAuth = tls.RequireAndVerifyClientCert
+	}
 
 	if len(opts.TLS.CipherSuites) > 0 {
 		cipherSuites, err := parseCipherSuites(opts.TLS.CipherSuites)

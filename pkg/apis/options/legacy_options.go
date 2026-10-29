@@ -472,16 +472,18 @@ func getXAuthRequestAccessTokenHeader() Header {
 }
 
 type LegacyServer struct {
-	MetricsAddress       string   `flag:"metrics-address" cfg:"metrics_address"`
-	MetricsSecureAddress string   `flag:"metrics-secure-address" cfg:"metrics_secure_address"`
-	MetricsTLSCertFile   string   `flag:"metrics-tls-cert-file" cfg:"metrics_tls_cert_file"`
-	MetricsTLSKeyFile    string   `flag:"metrics-tls-key-file" cfg:"metrics_tls_key_file"`
-	HTTPAddress          string   `flag:"http-address" cfg:"http_address"`
-	HTTPSAddress         string   `flag:"https-address" cfg:"https_address"`
-	TLSCertFile          string   `flag:"tls-cert-file" cfg:"tls_cert_file"`
-	TLSKeyFile           string   `flag:"tls-key-file" cfg:"tls_key_file"`
-	TLSMinVersion        string   `flag:"tls-min-version" cfg:"tls_min_version"`
-	TLSCipherSuites      []string `flag:"tls-cipher-suite" cfg:"tls_cipher_suites"`
+	MetricsAddress         string   `flag:"metrics-address" cfg:"metrics_address"`
+	MetricsSecureAddress   string   `flag:"metrics-secure-address" cfg:"metrics_secure_address"`
+	MetricsTLSCertFile     string   `flag:"metrics-tls-cert-file" cfg:"metrics_tls_cert_file"`
+	MetricsTLSClientCAFile string   `flag:"metrics-tls-client-ca-file" cfg:"metrics_tls_client_ca_file"`
+	MetricsTLSKeyFile      string   `flag:"metrics-tls-key-file" cfg:"metrics_tls_key_file"`
+	HTTPAddress            string   `flag:"http-address" cfg:"http_address"`
+	HTTPSAddress           string   `flag:"https-address" cfg:"https_address"`
+	TLSCertFile            string   `flag:"tls-cert-file" cfg:"tls_cert_file"`
+	TLSKeyFile             string   `flag:"tls-key-file" cfg:"tls_key_file"`
+	TLSClientCAFile        string   `flag:"tls-client-ca-file" cfg:"tls_client_ca_file"`
+	TLSMinVersion          string   `flag:"tls-min-version" cfg:"tls_min_version"`
+	TLSCipherSuites        []string `flag:"tls-cipher-suite" cfg:"tls_cipher_suites"`
 }
 
 func legacyServerFlagset() *pflag.FlagSet {
@@ -491,6 +493,8 @@ func legacyServerFlagset() *pflag.FlagSet {
 	flagSet.String("metrics-secure-address", "", "the address /metrics will be served on for HTTPS clients (e.g. \":9100\")")
 	flagSet.String("metrics-tls-cert-file", "", "path to certificate file for secure metrics server")
 	flagSet.String("metrics-tls-key-file", "", "path to private key file for secure metrics server")
+	flagSet.String("metrics-tls-client-ca-file", "", "path to trusted client CA PEM file; requires and verifies client certificates on the secure metrics server")
+	flagSet.String("tls-client-ca-file", "", "path to trusted client CA PEM file; requires and verifies HTTPS client certificates")
 	flagSet.String("http-address", "127.0.0.1:4180", "[http://]<addr>:<port> or unix://<path> or fd:<int> (case insensitive) to listen on for HTTP clients")
 	flagSet.String("https-address", ":443", "<addr>:<port> to listen on for HTTPS clients")
 	flagSet.String("tls-cert-file", "", "path to certificate file")
@@ -656,7 +660,7 @@ func (l LegacyServer) convert() (Server, Server) {
 		BindAddress:       l.HTTPAddress,
 		SecureBindAddress: l.HTTPSAddress,
 	}
-	if l.TLSKeyFile != "" || l.TLSCertFile != "" {
+	if l.TLSKeyFile != "" || l.TLSCertFile != "" || l.TLSClientCAFile != "" {
 		appServer.TLS = &TLS{
 			Key: &SecretSource{
 				FromFile: l.TLSKeyFile,
@@ -665,6 +669,9 @@ func (l LegacyServer) convert() (Server, Server) {
 				FromFile: l.TLSCertFile,
 			},
 			MinVersion: l.TLSMinVersion,
+		}
+		if l.TLSClientCAFile != "" {
+			appServer.TLS.ClientCA = &SecretSource{FromFile: l.TLSClientCAFile}
 		}
 		if len(l.TLSCipherSuites) != 0 {
 			appServer.TLS.CipherSuites = l.TLSCipherSuites
@@ -681,7 +688,7 @@ func (l LegacyServer) convert() (Server, Server) {
 		BindAddress:       l.MetricsAddress,
 		SecureBindAddress: l.MetricsSecureAddress,
 	}
-	if l.MetricsTLSKeyFile != "" || l.MetricsTLSCertFile != "" {
+	if l.MetricsTLSKeyFile != "" || l.MetricsTLSCertFile != "" || l.MetricsTLSClientCAFile != "" {
 		metricsServer.TLS = &TLS{
 			Key: &SecretSource{
 				FromFile: l.MetricsTLSKeyFile,
@@ -690,6 +697,10 @@ func (l LegacyServer) convert() (Server, Server) {
 				FromFile: l.MetricsTLSCertFile,
 			},
 		}
+	}
+
+	if l.MetricsTLSClientCAFile != "" {
+		metricsServer.TLS.ClientCA = &SecretSource{FromFile: l.MetricsTLSClientCAFile}
 	}
 
 	return appServer, metricsServer

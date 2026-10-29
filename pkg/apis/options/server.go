@@ -35,6 +35,11 @@ type TLS struct {
 	// Typically this will come from a file.
 	Cert *SecretSource `yaml:"cert,omitempty"`
 
+	// ClientCA contains the trusted client CA certificates in PEM format.
+	// When set, the HTTPS listener requires and verifies client certificates.
+	// The HTTP listener must be disabled.
+	ClientCA *SecretSource `yaml:"clientCA,omitempty"`
+
 	// MinVersion is the minimal TLS version that is acceptable.
 	// E.g. Set to "TLS1.3" to select TLS version 1.3
 	MinVersion string `yaml:"minVersion,omitempty"`
