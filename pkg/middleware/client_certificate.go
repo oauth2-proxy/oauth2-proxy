@@ -30,11 +30,14 @@ func NewClientCertificateSessionLoader(identities []options.ClientIdentity) func
 				return
 			}
 
-			cert := req.TLS.VerifiedChains[0][0]
-			if cert.NotAfter.Before(time.Now()) {
-				http.Error(rw, http.StatusText(http.StatusForbidden), http.StatusForbidden)
-				return
+			now := time.Now()
+			for _, cert := range req.TLS.VerifiedChains[0] {
+				if cert.NotBefore.After(now) || cert.NotAfter.Before(now) {
+					http.Error(rw, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+					return
+				}
 			}
+			cert := req.TLS.VerifiedChains[0][0]
 			digest := sha256.Sum256(cert.Raw)
 			identity, ok := identityByFingerprint[hex.EncodeToString(digest[:])]
 			if !ok {

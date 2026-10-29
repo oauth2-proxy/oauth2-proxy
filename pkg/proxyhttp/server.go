@@ -184,6 +184,11 @@ func validateClientIdentities(identities []options.ClientIdentity) error {
 		if identity.User == "" || strings.ContainsAny(identity.User+identity.Email+identity.PreferredUsername, "\r\n") {
 			return errors.New("client certificate identity must have a non-empty user without newlines")
 		}
+		for _, group := range identity.Groups {
+			if strings.ContainsAny(group, "\r\n") {
+				return errors.New("client certificate identity groups must not contain newlines")
+			}
+		}
 		fingerprint := strings.ReplaceAll(strings.ToLower(identity.Fingerprint), ":", "")
 		if len(fingerprint) != 64 {
 			return fmt.Errorf("client certificate fingerprint %q must be a SHA-256 fingerprint", identity.Fingerprint)

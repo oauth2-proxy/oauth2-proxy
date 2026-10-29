@@ -287,6 +287,10 @@ func (p *OAuthProxy) Start() error {
 }
 
 func (p *OAuthProxy) setupServer(opts *options.Options) error {
+	if err := validateMetricsServer(opts); err != nil {
+		return err
+	}
+
 	serverOpts := proxyhttp.Opts{
 		Handler:           p,
 		BindAddress:       opts.Server.BindAddress,
@@ -315,6 +319,13 @@ func (p *OAuthProxy) setupServer(opts *options.Options) error {
 	}
 
 	p.server = proxyhttp.NewServerGroup(appServer, metricsServer)
+	return nil
+}
+
+func validateMetricsServer(opts *options.Options) error {
+	if opts.MetricsServer.TLS != nil && len(opts.MetricsServer.TLS.ClientIdentities) > 0 {
+		return fmt.Errorf("metrics listener does not support client certificate identity mappings")
+	}
 	return nil
 }
 

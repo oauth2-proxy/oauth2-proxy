@@ -58,8 +58,11 @@ must have an explicit identity mapping. Missing certificates use OIDC when mappe
 identities are configured; untrusted, expired, unsuitable, or unmapped certificates
 are rejected. The mapping supplies the user, optional email, and explicitly listed
 groups; certificate subjects and headers are never trusted implicitly.
-TLS termination at an ingress must use HTTPS and a client certificate when
-connecting to this listener.
+Certificate identity authentication requires the client certificate to reach
+oauth2-proxy directly. Do not terminate TLS at an ingress and present one shared
+certificate for browser traffic: every forwarded request would authenticate as that
+single mapped identity. A certificate-less ingress can use the normal OIDC flow;
+oauth2-proxy does not trust forwarded client-certificate headers.
 
 The application and metrics listeners are configured independently. For metrics,
 use `--metrics-secure-address`, `--metrics-tls-cert-file`,
