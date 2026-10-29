@@ -83,7 +83,9 @@ cert-manager using mounted files. They are loaded at startup; restart or roll th
 process after replacing the server certificate/key or client CA bundle. Updating a
 mounted Secret alone does not reload them. For CA rotation, deploy a bundle trusting
 both old and new client CAs, restart, migrate clients, then remove the old CA and
-restart again. Plan server-certificate renewal before expiry.
+restart again. When renewing a mapped client certificate, update its configured
+SHA-256 leaf fingerprint and restart before switching clients to the renewed
+certificate. Plan server-certificate renewal before expiry.
 
 ### Terminate TLS at Reverse Proxy, e.g. Nginx
 
