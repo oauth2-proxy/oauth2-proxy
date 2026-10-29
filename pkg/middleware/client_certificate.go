@@ -31,7 +31,11 @@ func NewClientCertificateSessionLoader(identities []options.ClientIdentity) func
 			}
 
 			now := time.Now()
+			expiresOn := req.TLS.VerifiedChains[0][0].NotAfter
 			for _, cert := range req.TLS.VerifiedChains[0] {
+				if cert.NotAfter.Before(expiresOn) {
+					expiresOn = cert.NotAfter
+				}
 				if cert.NotBefore.After(now) || cert.NotAfter.Before(now) {
 					http.Error(rw, http.StatusText(http.StatusForbidden), http.StatusForbidden)
 					return
@@ -46,6 +50,8 @@ func NewClientCertificateSessionLoader(identities []options.ClientIdentity) func
 			}
 
 			scope.Session = &sessions.SessionState{
+				CreatedAt:         &now,
+				ExpiresOn:         &expiresOn,
 				User:              identity.User,
 				Email:             identity.Email,
 				Groups:            append([]string(nil), identity.Groups...),

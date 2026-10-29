@@ -29,6 +29,9 @@ func TestClientCertificateSessionLoader(t *testing.T) {
 		rw := httptest.NewRecorder()
 		loader(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			s := middlewareapi.GetRequestScope(r).Session
+			require.NotNil(t, s.CreatedAt)
+			require.WithinDuration(t, time.Now(), *s.CreatedAt, time.Second)
+			require.Equal(t, cert.NotAfter, *s.ExpiresOn)
 			require.Equal(t, "client", s.User)
 			require.Equal(t, "client@example.com", s.Email)
 			require.Equal(t, []string{"operators"}, s.Groups)
@@ -57,4 +60,34 @@ func TestClientCertificateSessionLoader(t *testing.T) {
 		loader(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { t.Fatal("unmapped certificate reached handler") })).ServeHTTP(rw, req)
 		require.Equal(t, http.StatusForbidden, rw.Code)
 	})
+}
+
+func TestClientCertificateSessionChainValidity(t *testing.T) {
+	now := time.Now()
+	leaf := &x509.Certificate{Raw: []byte("leaf"), NotAfter: now.Add(time.Hour)}
+	digest := sha256.Sum256(leaf.Raw)
+	loader := NewClientCertificateSessionLoader([]options.ClientIdentity{{Fingerprint: hex.EncodeToString(digest[:]), User: "client"}})
+	for _, position := range []string{"intermediate", "root"} {
+		t.Run(position, func(t *testing.T) {
+			issuer := &x509.Certificate{NotAfter: now.Add(time.Minute)}
+			chain := []*x509.Certificate{leaf, issuer}
+			if position == "root" {
+				chain = []*x509.Certificate{leaf, {NotAfter: leaf.NotAfter}, issuer}
+			}
+			req := middlewareapi.AddRequestScope(httptest.NewRequest(http.MethodGet, "/", nil), &middlewareapi.RequestScope{})
+			req.TLS = &tls.ConnectionState{VerifiedChains: [][]*x509.Certificate{chain}}
+			rw := httptest.NewRecorder()
+			loader(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				require.Equal(t, issuer.NotAfter, *middlewareapi.GetRequestScope(r).Session.ExpiresOn)
+				w.WriteHeader(http.StatusNoContent)
+			})).ServeHTTP(rw, req)
+			require.Equal(t, http.StatusNoContent, rw.Code)
+			// A reused TLS connection must not retain authentication after an issuer expires.
+			issuer.NotAfter = now.Add(-time.Minute)
+			req = middlewareapi.AddRequestScope(req, &middlewareapi.RequestScope{})
+			rw = httptest.NewRecorder()
+			loader(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { t.Fatal("expired chain reached handler") })).ServeHTTP(rw, req)
+			require.Equal(t, http.StatusForbidden, rw.Code)
+		})
+	}
 }
