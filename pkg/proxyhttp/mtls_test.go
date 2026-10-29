@@ -4,9 +4,11 @@ import (
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/hex"
 	"encoding/pem"
 	"math/big"
 	"net"
@@ -15,7 +17,9 @@ import (
 	"testing"
 	"time"
 
+	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
 	"github.com/stretchr/testify/require"
 )
@@ -112,4 +116,68 @@ func TestClientCertificateAuthentication(t *testing.T) {
 	listener, err = net.Listen("tcp", address)
 	require.NoError(t, err)
 	require.NoError(t, listener.Close())
+}
+
+func TestMappedCertificateAndOIDCFallbackShareListener(t *testing.T) {
+	serverDER, serverKey, err := util.GenerateCert("127.0.0.1")
+	require.NoError(t, err)
+	serverCert := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: serverDER})
+	serverKeyPEM := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: serverKey})
+	serverRoots := x509.NewCertPool()
+	require.True(t, serverRoots.AppendCertsFromPEM(serverCert))
+
+	caPub, caKey, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+	ca := &x509.Certificate{SerialNumber: big.NewInt(10), Subject: pkix.Name{CommonName: "client CA"}, NotBefore: time.Now().Add(-time.Hour), NotAfter: time.Now().Add(time.Hour), IsCA: true, BasicConstraintsValid: true, KeyUsage: x509.KeyUsageCertSign}
+	caDER, err := x509.CreateCertificate(rand.Reader, ca, ca, caPub, caKey)
+	require.NoError(t, err)
+	caCert, err := x509.ParseCertificate(caDER)
+	require.NoError(t, err)
+	caPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: caDER})
+	clientPub, clientKey, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+	clientTemplate := &x509.Certificate{SerialNumber: big.NewInt(11), Subject: pkix.Name{CommonName: "mapped-client"}, NotBefore: time.Now().Add(-time.Hour), NotAfter: time.Now().Add(time.Hour), ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth}, KeyUsage: x509.KeyUsageDigitalSignature}
+	clientDER, err := x509.CreateCertificate(rand.Reader, clientTemplate, caCert, clientPub, caKey)
+	require.NoError(t, err)
+	clientCert := tls.Certificate{Certificate: [][]byte{clientDER, caDER}, PrivateKey: clientKey}
+	fingerprint := sha256.Sum256(clientDER)
+
+	fallback := true
+	loader := middleware.NewClientCertificateSessionLoader([]options.ClientIdentity{{Fingerprint: hex.EncodeToString(fingerprint[:]), User: "mapped-client", Email: "mapped@example.com"}})
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		session := middlewareapi.GetRequestScope(r).Session
+		if session == nil {
+			fallback = true
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		fallback = false
+		w.WriteHeader(http.StatusNoContent)
+	})
+	wrappedHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r = middlewareapi.AddRequestScope(r, &middlewareapi.RequestScope{})
+		loader(handler).ServeHTTP(w, r)
+	})
+	s := &server{handler: wrappedHandler}
+	require.NoError(t, s.setupTLSListener(Opts{SecureBindAddress: "127.0.0.1:0", TLS: &options.TLS{Cert: &options.SecretSource{Value: serverCert}, Key: &options.SecretSource{Value: serverKeyPEM}, ClientCA: &options.SecretSource{Value: caPEM}, ClientIdentities: []options.ClientIdentity{{Fingerprint: hex.EncodeToString(fingerprint[:]), User: "mapped-client", Email: "mapped@example.com"}}}}))
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan error, 1)
+	go func() { done <- s.Start(ctx) }()
+	t.Cleanup(func() { require.NoError(t, <-done) })
+
+	client := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{RootCAs: serverRoots, MinVersion: tls.VersionTLS12}}, Timeout: 5 * time.Second}
+	resp, err := client.Get("https://" + s.tlsListener.Addr().String())
+	require.NoError(t, err)
+	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+	require.True(t, fallback)
+	resp.Body.Close()
+
+	client.Transport.(*http.Transport).TLSClientConfig.Certificates = []tls.Certificate{clientCert}
+	client.Transport.(*http.Transport).CloseIdleConnections()
+	resp, err = client.Get("https://" + s.tlsListener.Addr().String())
+	require.NoError(t, err)
+	require.Equal(t, http.StatusNoContent, resp.StatusCode)
+	require.False(t, fallback)
+	resp.Body.Close()
 }
