@@ -41,7 +41,10 @@ There are two recommended configurations:
 TLS and client authentication are opt-in. Without `--tls-client-ca-file`, HTTPS
 continues to accept connections without a client certificate. To require and verify
 client certificates, provide a PEM bundle containing only the CAs you trust to issue
-client certificates:
+client certificates. To allow mapped certificate identities alongside ordinary OIDC
+clients, also configure `clientIdentities` in the alpha configuration; mapped
+certificates authenticate directly and requests without a certificate continue
+through OIDC:
 
 ```bash
 --tls-cert-file=/certs/tls.crt \
@@ -49,11 +52,12 @@ client certificates:
 --tls-client-ca-file=/certs/client-ca.pem
 ```
 
-Clients must present a valid certificate issued by a configured CA, suitable for
-client authentication. Missing, untrusted, expired, or unsuitable certificates are
-rejected during the TLS handshake. This gate supplements OAuth authentication;
-it does not log in users or map certificate subjects to identities. It applies to
-all routes, including health checks, which must also present a client certificate.
+Clients using certificate authentication must present a valid certificate issued by
+a configured CA, suitable for client authentication, and its SHA-256 fingerprint
+must have an explicit identity mapping. Missing certificates use OIDC when mapped
+identities are configured; untrusted, expired, unsuitable, or unmapped certificates
+are rejected. The mapping supplies the user, optional email, and explicitly listed
+groups; certificate subjects and headers are never trusted implicitly.
 TLS termination at an ingress must use HTTPS and a client certificate when
 connecting to this listener.
 
