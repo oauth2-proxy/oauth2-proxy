@@ -92,26 +92,76 @@ func TestUpstreamTLSRejectsUntrustedServer(t *testing.T) {
 }
 
 func TestUpstreamTLSKeepsPerUpstreamTrustIsolated(t *testing.T) {
-	first := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("first")) }))
-	defer first.Close()
-	second := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("second")) }))
-	defer second.Close()
-	makeProxy := func(backend *httptest.Server) http.Handler {
-		u := mustParseURL(t, backend.URL)
-		upstream := options.Upstream{URI: backend.URL, RootCA: &options.SecretSource{Value: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: backend.Certificate().Raw})}}
-		if err := prepareUpstreamTLS(&upstream, u); err != nil {
+	var backends []*httptest.Server
+	var upstreams []options.Upstream
+	for range 2 {
+		caKey, caCert, caPEM := testCertificate(t, true, nil, nil)
+		serverKey, serverCert, _ := testCertificate(t, false, caCert, caKey)
+		backend := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("ok")) }))
+		backend.TLS = &tls.Config{Certificates: []tls.Certificate{{Certificate: [][]byte{serverCert.Raw}, PrivateKey: serverKey}}, MinVersion: tls.VersionTLS12}
+		backend.StartTLS()
+		defer backend.Close()
+		upstream := options.Upstream{URI: backend.URL, RootCA: &options.SecretSource{Value: caPEM}}
+		if err := prepareUpstreamTLS(&upstream, mustParseURL(t, backend.URL)); err != nil {
 			t.Fatal(err)
 		}
-		return newReverseProxy(u, upstream, nil)
+		backends = append(backends, backend)
+		upstreams = append(upstreams, upstream)
 	}
+	for i, upstream := range upstreams {
+		for j, backend := range backends {
+			proxy := newReverseProxy(mustParseURL(t, backend.URL), upstream, nil)
+			rec := httptest.NewRecorder()
+			proxy.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+			if i == j {
+				if rec.Code != http.StatusOK || rec.Body.String() != "ok" {
+					t.Fatalf("upstream %d rejected its own CA: got %d %q", i, rec.Code, rec.Body.String())
+				}
+			} else if rec.Code != http.StatusBadGateway {
+				t.Fatalf("upstream %d trusted upstream %d's CA: got %d", i, j, rec.Code)
+			}
+		}
+	}
+}
+
+func TestUpstreamTLSKeepsClientCertificateIsolated(t *testing.T) {
+	caKey, caCert, caPEM := testCertificate(t, true, nil, nil)
+	serverKey, serverCert, _ := testCertificate(t, false, caCert, caKey)
+	clientKey, clientCert, _ := testCertificate(t, true, caCert, caKey)
+	backend := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if len(r.TLS.PeerCertificates) == 0 {
+			_, _ = w.Write([]byte("anonymous"))
+			return
+		}
+		if !r.TLS.PeerCertificates[0].Equal(clientCert) {
+			http.Error(w, "unexpected client certificate", http.StatusForbidden)
+			return
+		}
+		_, _ = w.Write([]byte("authenticated"))
+	}))
+	clientCAs := x509.NewCertPool()
+	clientCAs.AppendCertsFromPEM(caPEM)
+	backend.TLS = &tls.Config{Certificates: []tls.Certificate{{Certificate: [][]byte{serverCert.Raw}, PrivateKey: serverKey}}, ClientAuth: tls.VerifyClientCertIfGiven, ClientCAs: clientCAs, MinVersion: tls.VersionTLS12}
+	backend.StartTLS()
+	defer backend.Close()
+	u := mustParseURL(t, backend.URL)
+	withCert := options.Upstream{URI: backend.URL, RootCA: &options.SecretSource{Value: caPEM}, ClientCert: &options.SecretSource{Value: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: clientCert.Raw})}, ClientKey: &options.SecretSource{Value: pem.EncodeToMemory(pemBlockForKey(clientKey))}}
+	withoutCert := options.Upstream{URI: backend.URL, RootCA: &options.SecretSource{Value: caPEM}}
+	for _, upstream := range []*options.Upstream{&withCert, &withoutCert} {
+		if err := prepareUpstreamTLS(upstream, u); err != nil {
+			t.Fatal(err)
+		}
+	}
+	withProxy := newReverseProxy(u, withCert, nil)
+	withoutProxy := newReverseProxy(u, withoutCert, nil)
 	for _, tc := range []struct {
 		proxy http.Handler
 		want  string
-	}{{makeProxy(first), "first"}, {makeProxy(second), "second"}} {
+	}{{withProxy, "authenticated"}, {withoutProxy, "anonymous"}, {withProxy, "authenticated"}} {
 		rec := httptest.NewRecorder()
 		tc.proxy.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
-		if rec.Body.String() != tc.want {
-			t.Fatalf("got %q, want %q", rec.Body.String(), tc.want)
+		if rec.Code != http.StatusOK || rec.Body.String() != tc.want {
+			t.Fatalf("got %d %q, want 200 %q", rec.Code, rec.Body.String(), tc.want)
 		}
 	}
 }
