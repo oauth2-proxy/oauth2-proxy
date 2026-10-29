@@ -43,6 +43,10 @@ type ProviderData struct {
 	CodeChallengeMethod string
 	// Code challenge methods supported by the Provider
 	SupportedCodeChallengeMethods []string `json:"code_challenge_methods_supported,omitempty"`
+	// Grant Types supported by the Provider
+	SupportedGrantTypes           []string `json:"grant_types_supported",omitempty`
+	// grant types configured in oauth2-proxy settings, should be a subset of SupportedGrantTypes
+	GrantTypes []string `json:"grant_types_configured",omitempty`
 
 	// Common OIDC options for any OIDC-based providers to consume
 	AllowUnverifiedEmail bool
@@ -76,6 +80,7 @@ type ProviderData struct {
 	loginURLParameterOverrides map[string]*regexp.Regexp
 
 	BackendLogoutURL string
+	DeviceAuthorizationURL *url.URL
 }
 
 // Data returns the ProviderData
@@ -205,6 +210,7 @@ func (p *ProviderData) setAllowedGroups(groups []string) {
 type providerDefaults struct {
 	name        string
 	loginURL    *url.URL
+	deviceAuthorizationURL *url.URL
 	redeemURL   *url.URL
 	profileURL  *url.URL
 	validateURL *url.URL
@@ -214,6 +220,7 @@ type providerDefaults struct {
 func (p *ProviderData) setProviderDefaults(defaults providerDefaults) {
 	p.ProviderName = defaults.name
 	p.LoginURL = defaultURL(p.LoginURL, defaults.loginURL)
+	p.DeviceAuthorizationURL = defaultURL(p.DeviceAuthorizationURL, defaults.deviceAuthorizationURL)
 	p.RedeemURL = defaultURL(p.RedeemURL, defaults.redeemURL)
 	p.ProfileURL = defaultURL(p.ProfileURL, defaults.profileURL)
 	p.ValidateURL = defaultURL(p.ValidateURL, defaults.validateURL)

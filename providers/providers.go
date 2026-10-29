@@ -16,7 +16,29 @@ import (
 const (
 	CodeChallengeMethodPlain = "plain"
 	CodeChallengeMethodS256  = "S256"
+
+	GrantTypeAuthorizationCode = "authorization_code"
+	GrantTypeDeviceCode = "urn:ietf:params:oauth:grant-type:device_code"
 )
+
+// TODO: remove json
+// {
+//   "device_code": "authelia_dc_ku3iJG00-ry1I938E0o2WmluN4K2mSjH8GOYD4BU0h8.tbDoPzJXcc_5WWvsHN1Ny3jf6274QrjxG5YsKgUtwws",
+//   "expires_in": 599,
+//   "interval": 10,
+//   "user_code": "GFBTHFVG",
+//   "verification_uri": "https://<authelia>/consent/openid/device-authorization",
+//   "verification_uri_complete": "https://<authelia>/consent/openid/device-authorization?user_code=GFBTHFVG"
+// }
+
+// DeviceAuthenticationCode represents the data requested in a device authorization code login flow
+type DeviceAuthenticationCode struct {
+	DeviceCode      string `json:"device_code"`
+	UserCode        string `"json:user_code"`
+	VerificationUri string `json:"verification_uri"`
+	Interval        int    `json:"interval"`
+	ExpiresIn       int    `json:"expires_in"`
+}
 
 // Provider represents an upstream identity provider implementation
 type Provider interface {
@@ -30,6 +52,7 @@ type Provider interface {
 	ValidateSession(ctx context.Context, s *sessions.SessionState) bool
 	RefreshSession(ctx context.Context, s *sessions.SessionState) (bool, error)
 	CreateSessionFromToken(ctx context.Context, token string) (*sessions.SessionState, error)
+	StartDeviceAuthenticationFlow(ctx context.Context/*, s *sessions.SessionState*/) (*DeviceAuthenticationCode, error)
 }
 
 func NewProvider(providerConfig options.Provider) (Provider, error) {
@@ -85,6 +108,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 		ClientSecretFile:        providerConfig.ClientSecretFile,
 		AuthRequestResponseMode: providerConfig.AuthRequestResponseMode,
 		AdditionalClaims:        providerConfig.AdditionalClaims,
+		GrantTypes:              providerConfig.GrantTypes,
 	}
 
 	needsVerifier, err := providerRequiresOIDCProviderVerifier(providerConfig.Type)
@@ -114,7 +138,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 			// Use the discovered values rather than any specified values
 			endpoints := pv.Provider().Endpoints()
 			pkce := pv.Provider().PKCE()
-			providerConfig.DeviceAuthorizationURL = endpoints.DeviceAuthorizationURL
+			providerConfig.DeviceAuthorizationURL = endpoints.DeviceURL
 			providerConfig.LoginURL = endpoints.AuthURL
 			providerConfig.RedeemURL = endpoints.TokenURL
 			providerConfig.ProfileURL = endpoints.UserInfoURL

@@ -54,6 +54,7 @@
       </div>
       {{ end }}
 
+      {{ if .AuthorizationCodeFlowAvailable }}
       <form method="GET" action="{{.ProxyPrefix}}/start">
         <input type="hidden" name="rd" value="{{.Redirect}}">
           {{ if .SignInMessage }}
@@ -61,6 +62,18 @@
           {{ end}}
           <button type="submit" class="button block is-primary">Sign in with {{.ProviderName}}</button>
       </form>
+      {{ end }}
+
+      {{ if .DeviceFlowAvailable }}
+      <form method="GET" action="{{.ProxyPrefix}}/device-code?usercode=TODO">
+        <input type="hidden" name="rd" value="{{.Redirect}}">
+          {{ if .SignInMessage }}
+          <p class="block">{{.SignInMessage}}</p>
+          {{ end}}
+          <!-- TODO: primary color for both login buttons? --!>
+          <button type="submit" class="button block is-primary">Sign in with {{.ProviderName}} using another device (e.g phone, laptop)</button>
+      </form>
+      {{ end }}
 
       {{ if .CustomLogin }}
       <hr>
@@ -93,7 +106,7 @@
         {{ else }}
         {{.StatusCode}}: Invalid Username or Password
         {{ end }}
-      </div> 
+      </div>
       {{ end }}
 
     </div>

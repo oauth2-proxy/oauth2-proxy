@@ -32,6 +32,7 @@ type Endpoints struct {
 	DeviceURL   string
 }
 
+
 // PKCE holds information relevant to the PKCE (code challenge) support of the
 // provider.
 type PKCE struct {

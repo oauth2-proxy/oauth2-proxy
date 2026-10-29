@@ -14,6 +14,7 @@ import (
 	"os/signal"
 	"regexp"
 	"strings"
+	"slices"
 	"syscall"
 	"time"
 
@@ -50,6 +51,7 @@ const (
 	signInPath        = "/sign_in"
 	signOutPath       = "/sign_out"
 	oauthStartPath    = "/start"
+	oauthDeviceCheckPath    = "/device/check"
 	oauthCallbackPath = "/callback"
 	authOnlyPath      = "/auth"
 	userInfoPath      = "/userinfo"
@@ -142,6 +144,8 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		return nil, fmt.Errorf("error initialising provider: %v", err)
 	}
 
+
+
 	pageWriter, err := pagewriter.NewWriter(pagewriter.Opts{
 		TemplatesPath:    opts.Templates.Path,
 		CustomLogo:       opts.Templates.CustomLogo,
@@ -150,6 +154,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		Version:          version.VERSION,
 		Debug:            opts.Templates.Debug,
 		ProviderName:     buildProviderName(provider, opts.Providers[0].Name),
+		AuthorizationCodeFlowAvailable: slices.Contains(provider.Data().GrantTypes, providers.GrantTypeAuthorizationCode),
 		SignInMessage:    buildSignInMessage(opts),
 		DisplayLoginForm: basicAuthValidator != nil && opts.Templates.DisplayLoginForm,
 	})
@@ -346,6 +351,7 @@ func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
 	s.Path(signInPath).HandlerFunc(p.SignIn)
 	s.Path(oauthStartPath).HandlerFunc(p.OAuthStart)
 	s.Path(oauthCallbackPath).HandlerFunc(p.OAuthCallback)
+	s.Path(oauthDeviceCheckPath).HandlerFunc(p.DeviceCodeAuthenticationCheck)
 
 	// Static file paths
 	s.PathPrefix(staticPathPrefix).Handler(http.StripPrefix(p.ProxyPrefix, http.FileServer(http.FS(staticFiles))))
@@ -585,6 +591,7 @@ func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, req *http.Request, code i
 	})
 }
 
+
 // IsAllowedRequest is used to check if auth should be skipped for this request
 func (p *OAuthProxy) IsAllowedRequest(req *http.Request) bool {
 	isPreflightRequestAllowed := p.skipAuthPreflight && req.Method == http.MethodOptions
@@ -659,7 +666,7 @@ func (p *OAuthProxy) isTrustedIP(req *http.Request) bool {
 }
 
 // SignInPage writes the sign in template to the response
-func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code int) {
+func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code int, deviceCode *providers.DeviceAuthenticationCode) {
 	prepareNoCache(rw)
 
 	if err := p.ClearSessionCookie(rw, req); err != nil {
@@ -677,6 +684,7 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 	if redirectURL == p.SignInPath {
 		redirectURL = "/"
 	}
+
 
 	p.pageWriter.WriteSignInPage(rw, req, redirectURL, code)
 }
@@ -723,8 +731,15 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 		if p.SkipProviderButton {
 			p.OAuthStart(rw, req)
 		} else {
+			// TODO: add logic to check if device code flow is enabled
+			deviceCode, err := p.provider.StartDeviceAuthenticationFlow(req.Context())
+			if err != nil {
+				logger.Printf("Error retrieving device code: %v", err)
+				p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+				return
+			}
 			// TODO - should we pass on /oauth2/sign_in query params to /oauth2/start?
-			p.SignInPage(rw, req, statusCode)
+			p.SignInPage(rw, req, statusCode, deviceCode)
 		}
 	}
 }
@@ -1021,6 +1036,15 @@ func (p *OAuthProxy) redeemCode(req *http.Request, codeVerifier string) (*sessio
 	return s, nil
 }
 
+// OAuthStart checks the status of the OAuth2 device code authentication flow
+func (p *OAuthProxy) DeviceCodeAuthenticationCheck(rw http.ResponseWriter, req *http.Request) {
+	// 1. poll on backend using device code until we get a token
+	// 2. if token: validate token for permissions (e.g. groups) and continue or redirect request to actual upstream
+	http.Error(rw, http.StatusText(http.StatusTeapot), http.StatusTeapot)
+	return
+
+}
+
 func (p *OAuthProxy) enrichSessionState(ctx context.Context, s *sessionsapi.SessionState) error {
 	var err error
 	if s.Email == "" {
@@ -1090,7 +1114,7 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 			// the user did not explicitly start the login flow
 			p.doOAuthStart(rw, req, nil)
 		} else {
-			p.SignInPage(rw, req, http.StatusForbidden)
+			p.SignInPage(rw, req, http.StatusForbidden, nil) // TODO: deviceCode
 		}
 
 	case ErrAccessDenied:

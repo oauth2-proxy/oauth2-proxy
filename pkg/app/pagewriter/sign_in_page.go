@@ -13,6 +13,7 @@ import (
 	"html/template"
 	"net/http"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 )
@@ -50,6 +51,13 @@ type signInPageWriter struct {
 	// LogoData is the logo to render in the template.
 	// This should contain valid html.
 	logoData string
+
+	// whether the OAuth2 grant type "authorization_code" is enabled for the provider
+	// this is the default login flow with a web redirect
+	authorizationCodeFlowAvailable bool
+
+	// available the OAuth2 grant type "urn:ietf:params:oauth:grant-type:device_code" is enabled for the provider
+	deviceAuthenticationCode *providers.DeviceAuthenticationCode
 }
 
 // WriteSignInPage writes the sign-in page to the given response writer.
@@ -65,6 +73,10 @@ func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, req *http.Req
 		ProxyPrefix   string
 		Footer        template.HTML
 		LogoData      template.HTML
+		DeviceAuthenticationCodeUserCode string
+		DeviceAuthenticationCodeVerificationUri string
+		DeviceAuthenticationCodeInterval int
+		DeviceAuthenticationCodeExpiresIn int
 	}{
 		ProviderName:  s.providerName,
 		SignInMessage: template.HTML(s.signInMessage), // #nosec G203 -- We allow unescaped template.HTML since it is user configured options
@@ -75,6 +87,13 @@ func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, req *http.Req
 		ProxyPrefix:   s.proxyPrefix,
 		Footer:        template.HTML(s.footer),   // #nosec G203 -- We allow unescaped template.HTML since it is user configured options
 		LogoData:      template.HTML(s.logoData), // #nosec G203 -- We allow unescaped template.HTML since it is user configured options
+	}
+
+	if s.deviceAuthenticationCode != nil {
+		t.DeviceAuthenticationCodeUserCode = s.deviceAuthenticationCode.UserCode
+		t.DeviceAuthenticationCodeVerificationUri = s.deviceAuthenticationCode.VerificationUri
+		t.DeviceAuthenticationCodeInterval = s.deviceAuthenticationCode.Interval
+		t.DeviceAuthenticationCodeExpiresIn = s.deviceAuthenticationCode.ExpiresIn
 	}
 
 	err := s.template.Execute(rw, t)

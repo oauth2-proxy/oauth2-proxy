@@ -56,6 +56,13 @@ type Opts struct {
 	// The logo can be either PNG, JPG/JPEG or SVG.
 	// If a URL is used, image support depends on the browser.
 	CustomLogo string
+
+	// whether the OAuth2 grant type "authorization_code" is enabled for the provider
+	// this is the default login flow with a web redirect
+	AuthorizationCodeFlowAvailable bool
+
+	// available the OAuth2 grant type "urn:ietf:params:oauth:grant-type:device_code" is enabled for the provider
+	//DeviceAuthenticationCode *providers.DeviceAuthenticationCode
 }
 
 // NewWriter constructs a Writer from the options given to allow
@@ -85,10 +92,12 @@ func NewWriter(opts Opts) (Writer, error) {
 		proxyPrefix:      opts.ProxyPrefix,
 		providerName:     opts.ProviderName,
 		signInMessage:    opts.SignInMessage,
+		authorizationCodeFlowAvailable: opts.AuthorizationCodeFlowAvailable,
 		footer:           opts.Footer,
 		version:          opts.Version,
 		displayLoginForm: opts.DisplayLoginForm,
 		logoData:         logoData,
+		//deviceAuthenticationCode: opts.DeviceAuthenticationCode,
 	}
 
 	staticPages, err := newStaticPageWriter(opts.TemplatesPath, errorPage)
