@@ -3,8 +3,7 @@ package pagewriter
 import (
 	"fmt"
 	"net/http"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
-
+	oauth2 "golang.org/x/oauth2"
 )
 
 // Writer is an interface for rendering html templates for both sign-in and
@@ -12,7 +11,7 @@ import (
 // It can also be used to write errors for the http.ReverseProxy used in the
 // upstream package.
 type Writer interface {
-	WriteSignInPage(rw http.ResponseWriter, req *http.Request, redirectURL string, statusCode int, deviceCode *providers.DeviceAuthenticationCode)
+	WriteSignInPage(rw http.ResponseWriter, req *http.Request, redirectURL string, statusCode int, deviceCode *oauth2.DeviceAuthResponse)
 	WriteErrorPage(rw http.ResponseWriter, opts ErrorPageOpts)
 	ProxyErrorHandler(rw http.ResponseWriter, req *http.Request, proxyErr error)
 	WriteRobotsTxt(rw http.ResponseWriter, req *http.Request)
@@ -62,9 +61,6 @@ type Opts struct {
 	// whether the OAuth2 grant type "authorization_code" is enabled for the provider
 	// this is the default login flow with a web redirect
 	AuthorizationCodeFlowAvailable bool
-
-	// available the OAuth2 grant type "urn:ietf:params:oauth:grant-type:device_code" is enabled for the provider
-	//DeviceAuthenticationCode *providers.DeviceAuthenticationCode
 }
 
 // NewWriter constructs a Writer from the options given to allow

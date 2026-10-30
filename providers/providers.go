@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
+	"sync"
 	"net/url"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -11,6 +13,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
+	oauth2 "golang.org/x/oauth2"
 )
 
 const (
@@ -31,14 +34,44 @@ const (
 //   "verification_uri_complete": "https://<authelia>/consent/openid/device-authorization?user_code=GFBTHFVG"
 // }
 
-// DeviceAuthenticationCode represents the data requested in a device authorization code login flow
-type DeviceAuthenticationCode struct {
-	DeviceCode      string `json:"device_code"`
-	UserCode        string `json:"user_code"`
-	VerificationUri string `json:"verification_uri"`
-	Interval        int    `json:"interval"`
-	ExpiresIn       int    `json:"expires_in"`
-	VerificationUriComplete string `json:"verification_uri_complete"`
+type ActiveDeviceCodeFlows struct {
+	mu sync.RWMutex
+	// user_code -> all data
+	deviceCodes map[string] *oauth2.DeviceAuthResponse
+}
+
+func NewActiveDeviceCodeFlows() *ActiveDeviceCodeFlows {
+	return &ActiveDeviceCodeFlows{
+		deviceCodes: make(map[string]*oauth2.DeviceAuthResponse),
+	}
+}
+
+func (adcf *ActiveDeviceCodeFlows) Set(deviceCode *oauth2.DeviceAuthResponse) {
+	adcf.mu.Lock()
+	defer adcf.mu.Unlock()
+	adcf.deviceCodes[deviceCode.UserCode] = deviceCode
+	fmt.Println("Added device code for %s", deviceCode.UserCode)
+}
+
+func (adcf *ActiveDeviceCodeFlows) Get(userCode string) *oauth2.DeviceAuthResponse{
+	adcf.mu.RLock()
+	defer adcf.mu.RUnlock()
+	if val, ok := adcf.deviceCodes[userCode]; ok {
+		return val
+	}
+	return nil
+}
+
+func (adcf *ActiveDeviceCodeFlows) RemoveExpired() {
+	now := time.Now()
+
+	adcf.mu.Lock()
+	defer adcf.mu.Unlock()
+	for userCode, deviceCode := range adcf.deviceCodes {
+		if deviceCode.Expiry.Before(now) {
+			delete(adcf.deviceCodes, userCode)
+		}
+	}
 }
 
 // Provider represents an upstream identity provider implementation
@@ -46,6 +79,9 @@ type Provider interface {
 	Data() *ProviderData
 	GetLoginURL(redirectURI, finalRedirect, nonce string, extraParams url.Values) string
 	Redeem(ctx context.Context, redirectURI, code, codeVerifier string) (*sessions.SessionState, error)
+	// and a single call of RedeemDeviceCode should keep trying the token endpoint
+	// every DeviceAuthResponse.Interval seconds until DeviceAuthResponse.Expiry
+	RedeemDeviceCode(ctx context.Context, redirectURI string, deviceCode *oauth2.DeviceAuthResponse) (*sessions.SessionState, error)
 	// Deprecated: Migrate to EnrichSession
 	GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error)
 	EnrichSession(ctx context.Context, s *sessions.SessionState) error
@@ -53,7 +89,7 @@ type Provider interface {
 	ValidateSession(ctx context.Context, s *sessions.SessionState) bool
 	RefreshSession(ctx context.Context, s *sessions.SessionState) (bool, error)
 	CreateSessionFromToken(ctx context.Context, token string) (*sessions.SessionState, error)
-	StartDeviceAuthenticationFlow(ctx context.Context/*, s *sessions.SessionState*/) (*DeviceAuthenticationCode, error)
+	StartDeviceAuthenticationFlow(ctx context.Context/*, s *sessions.SessionState*/) (*oauth2.DeviceAuthResponse, error)
 }
 
 func NewProvider(providerConfig options.Provider) (Provider, error) {

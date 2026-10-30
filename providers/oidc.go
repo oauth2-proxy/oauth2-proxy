@@ -3,9 +3,13 @@ package providers
 import (
 	"context"
 	"errors"
+	"io"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"time"
+	"net/http"
+	"bytes"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -97,6 +101,55 @@ func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code, codeVerifi
 	if err != nil {
 		return nil, fmt.Errorf("token exchange failed: %v", err)
 	}
+
+	return p.createSession(ctx, token, false)
+}
+
+func (p *OIDCProvider) RedeemDeviceCode(ctx context.Context, redirectURL string, deviceCode *oauth2.DeviceAuthResponse) (*sessions.SessionState, error) {
+	clientSecret, err := p.GetClientSecret()
+	if err != nil {
+		return nil, err
+	}
+
+	var opts []oauth2.AuthCodeOption
+
+	c := oauth2.Config{
+		ClientID:     p.ClientID,
+		ClientSecret: clientSecret,
+		Endpoint: oauth2.Endpoint{
+			TokenURL: p.RedeemURL.String(),
+		},
+		RedirectURL: redirectURL,
+		Scopes: []string{"openid", "profile", "email"},
+	}
+
+	ctx = oidc.ClientContext(ctx, requests.DefaultHTTPClient)
+	token, err := c.DeviceAccessToken(ctx, deviceCode, opts...)
+	if err != nil {
+		return nil, fmt.Errorf("token exchange failed: %v", err)
+	}
+	token_json, err := json.Marshal(token)
+	fmt.Println("token succes!\n%s\n", string(token_json))
+
+	client := &http.Client{}
+	params := url.Values{}
+	params.Add("client_id", p.ClientID)
+	params.Add("client_secret", clientSecret)
+	userinfo_req, err := http.NewRequestWithContext(ctx, "GET", p.ProfileURL.String(), bytes.NewBufferString(params.Encode()))
+	if err != nil {
+		return nil, fmt.Errorf("could not create userinfor requst object", err)
+	}
+	userinfo_req.Header.Add("Content-Type","application/x-www-form-urlencoded")
+
+	token.SetAuthHeader(userinfo_req)
+	userinfo_resp, err := client.Do(userinfo_req)
+	if err != nil {
+		return nil, fmt.Errorf("userinfo endpoint failed: %v", err)
+	}
+	fmt.Println("userinfo response: %+v", userinfo_resp)
+	body, err := io.ReadAll(userinfo_resp.Body)
+	fmt.Println("userinfo body: %s", string(body))
+	userinfo_resp.Body.Close()
 
 	return p.createSession(ctx, token, false)
 }

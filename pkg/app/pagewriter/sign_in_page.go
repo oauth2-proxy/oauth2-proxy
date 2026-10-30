@@ -13,11 +13,11 @@ import (
 	"html/template"
 	"net/http"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	 //qrsvg "github.com/wamuir/svg-qr-code"
 	 qr "github.com/piglig/go-qr/v2"
+	oauth2 "golang.org/x/oauth2"
 
 )
 
@@ -59,13 +59,13 @@ type signInPageWriter struct {
 	// this is the default login flow with a web redirect
 	authorizationCodeFlowAvailable bool
 
-	// available the OAuth2 grant type "urn:ietf:params:oauth:grant-type:device_code" is enabled for the provider
-	deviceAuthenticationCode *providers.DeviceAuthenticationCode
+	// available if the OAuth2 grant type "urn:ietf:params:oauth:grant-type:device_code" is enabled for the provider
+	deviceAuthenticationCode *oauth2.DeviceAuthResponse
 }
 
 // WriteSignInPage writes the sign-in page to the given response writer.
 // It uses the redirectURL to be able to set the final destination for the user post login.
-func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, req *http.Request, redirectURL string, statusCode int, deviceCode *providers.DeviceAuthenticationCode) {
+func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, req *http.Request, redirectURL string, statusCode int, deviceCode *oauth2.DeviceAuthResponse) {
 	t := struct {
 		ProviderName  string
 		SignInMessage template.HTML
@@ -79,8 +79,9 @@ func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, req *http.Req
 		AuthorizationCodeFlowAvailable bool
 		DeviceAuthenticationCodeUserCode string
 		DeviceAuthenticationCodeVerificationUri string
-		DeviceAuthenticationCodeInterval int
-		DeviceAuthenticationCodeExpiresIn int
+		DeviceAuthenticationCodeInterval int64
+		DeviceAuthenticationCodeExpiresAtPretty string
+		DeviceAuthenticationCodeExpiresAt int64
 		DeviceAuthenticationCodeQR template.HTML
 	}{
 		ProviderName:  s.providerName,
@@ -98,13 +99,14 @@ func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, req *http.Req
 	if deviceCode != nil {
 		// we explicitly do not pass the value for deviceCode.DeviceCode since that must not leave the server
 		t.DeviceAuthenticationCodeUserCode = deviceCode.UserCode
-		t.DeviceAuthenticationCodeVerificationUri = deviceCode.VerificationUri
+		t.DeviceAuthenticationCodeVerificationUri = deviceCode.VerificationURI
 		t.DeviceAuthenticationCodeInterval = deviceCode.Interval
-		t.DeviceAuthenticationCodeExpiresIn = deviceCode.ExpiresIn
-		if deviceCode.VerificationUriComplete != "" {
-			qr_data, err := qr.Encode(deviceCode.VerificationUriComplete)
+		t.DeviceAuthenticationCodeExpiresAtPretty = deviceCode.Expiry.Format("03:04:05")
+		t.DeviceAuthenticationCodeExpiresAt = deviceCode.Expiry.UnixMilli()
+		if deviceCode.VerificationURIComplete != "" {
+			qr_data, err := qr.Encode(deviceCode.VerificationURIComplete)
 			if err != nil {
-				logger.Printf("Error rendering QR code of '%s': %v", deviceCode.VerificationUriComplete, err)
+				logger.Printf("Error rendering QR code of '%s': %v", deviceCode.VerificationURIComplete, err)
 				s.errorPageWriter.WriteErrorPage(rw, ErrorPageOpts{
 					Status:      http.StatusInternalServerError,
 					AppError:    err.Error(),
@@ -113,7 +115,7 @@ func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, req *http.Req
 			}
 			qr_svg, err := qr_data.SVG(qr.WithScale(5))
 			if err != nil {
-				logger.Printf("Error rendering QR code of '%s' to SVG: %v", deviceCode.VerificationUriComplete, err)
+				logger.Printf("Error rendering QR code of '%s' to SVG: %v", deviceCode.VerificationURIComplete, err)
 				s.errorPageWriter.WriteErrorPage(rw, ErrorPageOpts{
 					Status:      http.StatusInternalServerError,
 					AppError:    err.Error(),

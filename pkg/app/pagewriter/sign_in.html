@@ -82,6 +82,7 @@
 				<p><code>{{ .DeviceAuthenticationCodeVerificationUri }}</code></p>
 				<p>And use code</p>
 				<p><code>{{ .DeviceAuthenticationCodeUserCode }}</code></p>
+				<p>Expires At {{ .DeviceAuthenticationCodeExpiresAt }}</p>
 			</div>
 		</div>
 	</div>
@@ -119,7 +120,7 @@
         {{ else }}
         {{.StatusCode}}: Invalid Username or Password
         {{ end }}
-      </div> 
+      </div>
       {{ end }}
 
     </div>
@@ -141,6 +142,54 @@
       })();
     }
   </script>
+{{- if .DeviceAuthenticationCodeUserCode }}
+  <script>
+	  let timer;
+
+	  /*
+	  function startDeviceAuthenticationFlowChecks() {
+		  console.log("Start device flow auth checks every {{ .DeviceAuthenticationCodeInterval }} seconds")
+		  if (!timer) {
+			  timer = setInterval(checkDeviceAuthenticationFlowStatus, ({{ .DeviceAuthenticationCodeInterval }} * 1000));
+		  }
+	  }
+	  */
+
+	  function checkDeviceAuthenticationFlowStatus() {
+		  console.log("checking device flow auth status")
+		  device_code_status = fetch('{{.ProxyPrefix}}/device?user_code={{ .DeviceAuthenticationCodeUserCode }}')
+			  .then(function (response) {
+				  return response.json();
+			  })
+			  .then(function (data) {
+				  appendDataAsTable(data);
+			  })
+			  .catch(function (err) {
+				  console.log('error: ' + err);
+			  });
+	  }
+
+	  /*
+	  function stopDeviceAuthenticationFlowChecks() {
+		  console.log("stopped device flow auth checks")
+		  clearInterval(timer);
+		  timer = undefined;
+	  }
+	  */
+	  window.addEventListener('load', function () {
+		  /*
+		  startDeviceAuthenticationFlowChecks()
+
+		  let expires_at = new Date( {{ .DeviceAuthenticationCodeExpiresAt }} )
+		  let expires_in = expires_at - Date.now()
+		  console.log("stopping device flow auth checks in ", Math.floor(expires_in / 1000), "seconds")
+		  setTimeout(stopDeviceAuthenticationFlowChecks, expires_in)
+		  */
+		  setTimeout(checkDeviceAuthenticationFlowStatus, 100)
+
+	  });
+  </script>
+{{- end }}
 
   <footer class="footer has-text-grey has-background-light is-size-7">
     <div class="content has-text-centered">
