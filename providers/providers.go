@@ -34,10 +34,11 @@ const (
 // DeviceAuthenticationCode represents the data requested in a device authorization code login flow
 type DeviceAuthenticationCode struct {
 	DeviceCode      string `json:"device_code"`
-	UserCode        string `"json:user_code"`
+	UserCode        string `json:"user_code"`
 	VerificationUri string `json:"verification_uri"`
 	Interval        int    `json:"interval"`
 	ExpiresIn       int    `json:"expires_in"`
+	VerificationUriComplete string `json:"verification_uri_complete"`
 }
 
 // Provider represents an upstream identity provider implementation

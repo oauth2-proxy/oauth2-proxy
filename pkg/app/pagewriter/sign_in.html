@@ -54,7 +54,7 @@
       </div>
       {{ end }}
 
-      {{ if .AuthorizationCodeFlowAvailable }}
+      {{- if .AuthorizationCodeFlowAvailable }}
       <form method="GET" action="{{.ProxyPrefix}}/start">
         <input type="hidden" name="rd" value="{{.Redirect}}">
           {{ if .SignInMessage }}
@@ -62,18 +62,31 @@
           {{ end}}
           <button type="submit" class="button block is-primary">Sign in with {{.ProviderName}}</button>
       </form>
-      {{ end }}
+      {{- end }}
 
-      {{ if .DeviceFlowAvailable }}
-      <form method="GET" action="{{.ProxyPrefix}}/device-code?usercode=TODO">
+      {{- if .DeviceAuthenticationCodeUserCode }}
+      <div>
         <input type="hidden" name="rd" value="{{.Redirect}}">
-          {{ if .SignInMessage }}
-          <p class="block">{{.SignInMessage}}</p>
-          {{ end}}
-          <!-- TODO: primary color for both login buttons? --!>
-          <button type="submit" class="button block is-primary">Sign in with {{.ProviderName}} using another device (e.g phone, laptop)</button>
-      </form>
-      {{ end }}
+	<div class="card">
+		{{- if .DeviceAuthenticationCodeQR }}
+		<div class="card-image">
+			<figure class="image is-4by4" width=100 height=100>
+				{{ .DeviceAuthenticationCodeQR }}
+			</figure>
+			<p>Sign in with {{.ProviderName}} using the QR code above.</p>
+		</div>
+		{{- end }}
+		<div class="card-content">
+			<div class="content">
+				<p>Or you can go to</p>
+				<p><code>{{ .DeviceAuthenticationCodeVerificationUri }}</code></p>
+				<p>And use code</p>
+				<p><code>{{ .DeviceAuthenticationCodeUserCode }}</code></p>
+			</div>
+		</div>
+	</div>
+      </div>
+      {{- end }}
 
       {{ if .CustomLogin }}
       <hr>
@@ -106,7 +119,7 @@
         {{ else }}
         {{.StatusCode}}: Invalid Username or Password
         {{ end }}
-      </div>
+      </div> 
       {{ end }}
 
     </div>

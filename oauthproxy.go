@@ -666,7 +666,7 @@ func (p *OAuthProxy) isTrustedIP(req *http.Request) bool {
 }
 
 // SignInPage writes the sign in template to the response
-func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code int, deviceCode *providers.DeviceAuthenticationCode) {
+func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code int) {
 	prepareNoCache(rw)
 
 	if err := p.ClearSessionCookie(rw, req); err != nil {
@@ -686,7 +686,29 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 	}
 
 
-	p.pageWriter.WriteSignInPage(rw, req, redirectURL, code)
+	var deviceCode *providers.DeviceAuthenticationCode;
+	// deviceCode is nil if the device code flow is not enabled
+	deviceCode, err = p.provider.StartDeviceAuthenticationFlow(req.Context())
+	if err != nil {
+		logger.Printf("Error retrieving device code: %v", err)
+		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if deviceCode == nil {
+		var jsonBlob = []byte(`{
+  "device_code": "authelia_dc_ku3iJG00-ry1I938E0o2WmluN4K2mSjH8GOYD4BU0h8.tbDoPzJXcc_5WWvsHN1Ny3jf6274QrjxG5YsKgUtwws",
+  "expires_in": 599,
+  "interval": 10,
+  "user_code": "DUMMYCODE",
+  "verification_uri": "https://<authelia>/consent/openid/device-authorization",
+  "verification_uri_complete": "https://<authelia>/consent/openid/device-authorization?user_code=DUMMYCODE"
+}`)
+
+		_ = json.Unmarshal(jsonBlob, &deviceCode)
+
+	}
+	// TODO - should we pass on /oauth2/sign_in query params to /oauth2/start?
+	p.pageWriter.WriteSignInPage(rw, req, redirectURL, code, deviceCode)
 }
 
 // ManualSignIn handles basic auth logins to the proxy
@@ -731,15 +753,7 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 		if p.SkipProviderButton {
 			p.OAuthStart(rw, req)
 		} else {
-			// TODO: add logic to check if device code flow is enabled
-			deviceCode, err := p.provider.StartDeviceAuthenticationFlow(req.Context())
-			if err != nil {
-				logger.Printf("Error retrieving device code: %v", err)
-				p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
-				return
-			}
-			// TODO - should we pass on /oauth2/sign_in query params to /oauth2/start?
-			p.SignInPage(rw, req, statusCode, deviceCode)
+			p.SignInPage(rw, req, statusCode)
 		}
 	}
 }
@@ -1114,7 +1128,7 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 			// the user did not explicitly start the login flow
 			p.doOAuthStart(rw, req, nil)
 		} else {
-			p.SignInPage(rw, req, http.StatusForbidden, nil) // TODO: deviceCode
+			p.SignInPage(rw, req, http.StatusForbidden)
 		}
 
 	case ErrAccessDenied:
