@@ -128,6 +128,9 @@ func (p *OIDCProvider) RedeemDeviceCode(ctx context.Context, redirectURL string,
 	if err != nil {
 		return nil, fmt.Errorf("token exchange failed: %v", err)
 	}
+
+
+	// check userinfo for debug
 	token_json, err := json.Marshal(token)
 	fmt.Println("token succes!\n%s\n", string(token_json))
 

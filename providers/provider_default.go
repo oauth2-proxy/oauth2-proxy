@@ -125,6 +125,7 @@ func (p *ProviderData) RedeemDeviceCode(ctx context.Context, redirectURL string,
 	params.Add("client_secret", clientSecret)
 	params.Add("grant_type", GrantTypeDeviceCode)
 	params.Add("device_code", deviceCode.DeviceCode)
+	params.Add("scope", p.Scope)
 
 
 	result := requests.New(p.RedeemURL.String()).
@@ -227,7 +228,7 @@ func (p *ProviderData) StartDeviceAuthenticationFlow(ctx context.Context /*, cod
 	params.Add("client_id", p.ClientID)
 	params.Add("client_secret", clientSecret)
 	params.Add("grant_type", "urn:ietf:params:oauth:grant-type:device_code")
-	params.Add("scope", "openid groups")
+	params.Add("scope", p.Scope)
 	/*
 	if codeVerifier != "" {
 		params.Add("code_verifier", codeVerifier)
