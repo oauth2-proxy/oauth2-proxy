@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
+	"sync"
 	"net/url"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -11,18 +13,75 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
+	oauth2 "golang.org/x/oauth2"
 )
 
 const (
 	CodeChallengeMethodPlain = "plain"
 	CodeChallengeMethodS256  = "S256"
+
+	GrantTypeAuthorizationCode = "authorization_code"
+	GrantTypeDeviceCode = "urn:ietf:params:oauth:grant-type:device_code"
 )
+
+// TODO: remove json
+// {
+//   "device_code": "authelia_dc_ku3iJG00-ry1I938E0o2WmluN4K2mSjH8GOYD4BU0h8.tbDoPzJXcc_5WWvsHN1Ny3jf6274QrjxG5YsKgUtwws",
+//   "expires_in": 599,
+//   "interval": 10,
+//   "user_code": "GFBTHFVG",
+//   "verification_uri": "https://<authelia>/consent/openid/device-authorization",
+//   "verification_uri_complete": "https://<authelia>/consent/openid/device-authorization?user_code=GFBTHFVG"
+// }
+
+type ActiveDeviceCodeFlows struct {
+	mu sync.RWMutex
+	// user_code -> all data
+	deviceCodes map[string] *oauth2.DeviceAuthResponse
+}
+
+func NewActiveDeviceCodeFlows() *ActiveDeviceCodeFlows {
+	return &ActiveDeviceCodeFlows{
+		deviceCodes: make(map[string]*oauth2.DeviceAuthResponse),
+	}
+}
+
+func (adcf *ActiveDeviceCodeFlows) Set(deviceCode *oauth2.DeviceAuthResponse) {
+	adcf.mu.Lock()
+	defer adcf.mu.Unlock()
+	adcf.deviceCodes[deviceCode.UserCode] = deviceCode
+	fmt.Println("Added device code for %s", deviceCode.UserCode)
+}
+
+func (adcf *ActiveDeviceCodeFlows) Get(userCode string) *oauth2.DeviceAuthResponse{
+	adcf.mu.RLock()
+	defer adcf.mu.RUnlock()
+	if val, ok := adcf.deviceCodes[userCode]; ok {
+		return val
+	}
+	return nil
+}
+
+func (adcf *ActiveDeviceCodeFlows) RemoveExpired() {
+	now := time.Now()
+
+	adcf.mu.Lock()
+	defer adcf.mu.Unlock()
+	for userCode, deviceCode := range adcf.deviceCodes {
+		if deviceCode.Expiry.Before(now) {
+			delete(adcf.deviceCodes, userCode)
+		}
+	}
+}
 
 // Provider represents an upstream identity provider implementation
 type Provider interface {
 	Data() *ProviderData
 	GetLoginURL(redirectURI, finalRedirect, nonce string, extraParams url.Values) string
 	Redeem(ctx context.Context, redirectURI, code, codeVerifier string) (*sessions.SessionState, error)
+	// and a single call of RedeemDeviceCode should keep trying the token endpoint
+	// every DeviceAuthResponse.Interval seconds until DeviceAuthResponse.Expiry
+	RedeemDeviceCode(ctx context.Context, redirectURI string, deviceCode *oauth2.DeviceAuthResponse) (*sessions.SessionState, error)
 	// Deprecated: Migrate to EnrichSession
 	GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error)
 	EnrichSession(ctx context.Context, s *sessions.SessionState) error
@@ -30,6 +89,7 @@ type Provider interface {
 	ValidateSession(ctx context.Context, s *sessions.SessionState) bool
 	RefreshSession(ctx context.Context, s *sessions.SessionState) (bool, error)
 	CreateSessionFromToken(ctx context.Context, token string) (*sessions.SessionState, error)
+	StartDeviceAuthenticationFlow(ctx context.Context/*, s *sessions.SessionState*/) (*oauth2.DeviceAuthResponse, error)
 }
 
 func NewProvider(providerConfig options.Provider) (Provider, error) {
@@ -85,6 +145,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 		ClientSecretFile:        providerConfig.ClientSecretFile,
 		AuthRequestResponseMode: providerConfig.AuthRequestResponseMode,
 		AdditionalClaims:        providerConfig.AdditionalClaims,
+		GrantTypes:              providerConfig.GrantTypes,
 	}
 
 	needsVerifier, err := providerRequiresOIDCProviderVerifier(providerConfig.Type)
@@ -99,6 +160,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 			ExtraAudiences:         providerConfig.OIDCConfig.ExtraAudiences,
 			IssuerURL:              providerConfig.OIDCConfig.IssuerURL,
 			JWKsURL:                providerConfig.OIDCConfig.JwksURL,
+			DeviceAuthorizationURL: providerConfig.DeviceAuthorizationURL,
 			PublicKeyFiles:         providerConfig.OIDCConfig.PublicKeyFiles,
 			SupportedSigningAlgs:   providerConfig.OIDCConfig.EnabledSigningAlgs,
 			SkipDiscovery:          ptr.Deref(providerConfig.OIDCConfig.SkipDiscovery, options.DefaultSkipDiscovery),
@@ -113,6 +175,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 			// Use the discovered values rather than any specified values
 			endpoints := pv.Provider().Endpoints()
 			pkce := pv.Provider().PKCE()
+			providerConfig.DeviceAuthorizationURL = endpoints.DeviceURL
 			providerConfig.LoginURL = endpoints.AuthURL
 			providerConfig.RedeemURL = endpoints.TokenURL
 			providerConfig.ProfileURL = endpoints.UserInfoURL
@@ -127,6 +190,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 		raw string
 	}{
 		"login":    {dst: &p.LoginURL, raw: providerConfig.LoginURL},
+		"device":   {dst: &p.DeviceAuthorizationURL, raw: providerConfig.DeviceAuthorizationURL},
 		"redeem":   {dst: &p.RedeemURL, raw: providerConfig.RedeemURL},
 		"profile":  {dst: &p.ProfileURL, raw: providerConfig.ProfileURL},
 		"validate": {dst: &p.ValidateURL, raw: providerConfig.ValidateURL},

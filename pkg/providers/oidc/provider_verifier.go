@@ -36,6 +36,7 @@ type ProviderVerifierOptions struct {
 	// IssuerURL is the OpenID Connect issuer URL
 	// eg: https://accounts.google.com
 	IssuerURL string
+	DeviceAuthorizationURL string
 
 	// JWKsURL is the OpenID Connect JWKS URL
 	// eg: https://www.googleapis.com/oauth2/v3/certs

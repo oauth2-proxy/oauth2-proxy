@@ -14,6 +14,7 @@ import (
 	"os/signal"
 	"regexp"
 	"strings"
+	"slices"
 	"syscall"
 	"time"
 
@@ -39,6 +40,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/upstream"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
+	oauth2 "golang.org/x/oauth2"
 )
 
 const (
@@ -50,6 +52,7 @@ const (
 	signInPath        = "/sign_in"
 	signOutPath       = "/sign_out"
 	oauthStartPath    = "/start"
+	oauthDevicePath   = "/device"
 	oauthCallbackPath = "/callback"
 	authOnlyPath      = "/auth"
 	userInfoPath      = "/userinfo"
@@ -69,7 +72,12 @@ var (
 
 	//go:embed static/*
 	staticFiles embed.FS
+
+	// keep track of ongoing device code flows
+	// TODO: find better solution than global variable
+	ActiveDeviceCodeFlows *providers.ActiveDeviceCodeFlows = providers.NewActiveDeviceCodeFlows()
 )
+
 
 // allowedRoute manages method + path based allowlists
 type allowedRoute struct {
@@ -142,6 +150,8 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		return nil, fmt.Errorf("error initialising provider: %v", err)
 	}
 
+
+
 	pageWriter, err := pagewriter.NewWriter(pagewriter.Opts{
 		TemplatesPath:    opts.Templates.Path,
 		CustomLogo:       opts.Templates.CustomLogo,
@@ -150,6 +160,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		Version:          version.VERSION,
 		Debug:            opts.Templates.Debug,
 		ProviderName:     buildProviderName(provider, opts.Providers[0].Name),
+		AuthorizationCodeFlowAvailable: slices.Contains(provider.Data().GrantTypes, providers.GrantTypeAuthorizationCode),
 		SignInMessage:    buildSignInMessage(opts),
 		DisplayLoginForm: basicAuthValidator != nil && opts.Templates.DisplayLoginForm,
 	})
@@ -346,6 +357,7 @@ func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
 	s.Path(signInPath).HandlerFunc(p.SignIn)
 	s.Path(oauthStartPath).HandlerFunc(p.OAuthStart)
 	s.Path(oauthCallbackPath).HandlerFunc(p.OAuthCallback)
+	s.Path(oauthDevicePath).HandlerFunc(p.DeviceCodeAuthenticationCheck)
 
 	// Static file paths
 	s.PathPrefix(staticPathPrefix).Handler(http.StripPrefix(p.ProxyPrefix, http.FileServer(http.FS(staticFiles))))
@@ -585,6 +597,7 @@ func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, req *http.Request, code i
 	})
 }
 
+
 // IsAllowedRequest is used to check if auth should be skipped for this request
 func (p *OAuthProxy) IsAllowedRequest(req *http.Request) bool {
 	isPreflightRequestAllowed := p.skipAuthPreflight && req.Method == http.MethodOptions
@@ -678,7 +691,18 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 		redirectURL = "/"
 	}
 
-	p.pageWriter.WriteSignInPage(rw, req, redirectURL, code)
+
+	var deviceCode *oauth2.DeviceAuthResponse;
+	// deviceCode is nil if the device code flow is not enabled
+	deviceCode, err = p.provider.StartDeviceAuthenticationFlow(req.Context())
+	if err != nil {
+		logger.Printf("Error retrieving device code: %v", err)
+		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+		return
+	}
+	ActiveDeviceCodeFlows.Set(deviceCode)
+	// TODO - should we pass on /oauth2/sign_in query params to /oauth2/start?
+	p.pageWriter.WriteSignInPage(rw, req, redirectURL, code, deviceCode)
 }
 
 // ManualSignIn handles basic auth logins to the proxy
@@ -723,7 +747,6 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 		if p.SkipProviderButton {
 			p.OAuthStart(rw, req)
 		} else {
-			// TODO - should we pass on /oauth2/sign_in query params to /oauth2/start?
 			p.SignInPage(rw, req, statusCode)
 		}
 	}
@@ -1019,6 +1042,76 @@ func (p *OAuthProxy) redeemCode(req *http.Request, codeVerifier string) (*sessio
 	}
 
 	return s, nil
+}
+
+// OAuthStart checks the status of the OAuth2 device code authentication flow
+func (p *OAuthProxy) DeviceCodeAuthenticationCheck(rw http.ResponseWriter, req *http.Request) {
+	// 1. poll on backend using device code until we get a token
+	// 2. if token: validate token for permissions (e.g. groups) and continue or redirect request to actual upstream
+
+	userCode := req.FormValue("user_code")
+	deviceCode := ActiveDeviceCodeFlows.Get(userCode)
+	if deviceCode == nil {
+		logger.Printf("Device code for user_code %s does not exist", userCode)
+		p.ErrorPage(rw, req, http.StatusInternalServerError, fmt.Errorf("Device code for user_code %s does not exist: %v", userCode).Error())
+		return
+	}
+	redirectURI := p.getOAuthRedirectURI(req)
+	session, err := p.provider.RedeemDeviceCode(req.Context(), redirectURI, deviceCode)
+	if err != nil {
+		logger.Printf("Error getting device code token for user_code %s: %v", userCode, err)
+		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if session.CreatedAt == nil {
+		session.CreatedAtNow()
+	}
+	if session.ExpiresOn == nil {
+		session.ExpiresIn(p.CookieOptions.Expire)
+	}
+	/*
+	// TODO: no id_token in response, maybe use userinfo endpoint?
+	err = p.enrichSessionState(req.Context(), session)
+	if err != nil {
+		logger.Printf("Error enriching session: %v", err)
+		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	realClientIPParser := p.realClientIPParser
+	var trustedProxies *ip.NetSet
+	scope := middlewareapi.GetRequestScope(req)
+	if scope != nil && scope.CanTrustForwardedHeaders(req) {
+		trustedProxies = scope.TrustedProxies
+	} else {
+		realClientIPParser = nil
+	}
+	remoteAddr := ip.GetClientString(realClientIPParser, req, trustedProxies, true)
+
+	authorized, err := p.provider.Authorize(req.Context(), session)
+	if err != nil {
+		logger.Errorf("Error with authorization: %v", err)
+	}
+	if p.Validator(session.Email) && authorized {
+		logger.PrintAuthf(session.Email, req, logger.AuthSuccess, "Authenticated via OAuth2: %s", session)
+		err := p.SaveSession(rw, req, session)
+		if err != nil {
+			logger.Errorf("Error saving session state for %s: %v", remoteAddr, err)
+			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+			return
+		}
+		// TODO: fix app redirect like OAuthCallback
+		http.Redirect(rw, req, "/", http.StatusFound)
+	} else {
+		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: unauthorized")
+		p.ErrorPage(rw, req, http.StatusForbidden, "Invalid session: unauthorized")
+	}
+	*/
+	// TODO: fix app redirect like OAuthCallback
+	// TODO: this is not checked for group permissions
+	http.Redirect(rw, req, "/", http.StatusFound)
+
+
 }
 
 func (p *OAuthProxy) enrichSessionState(ctx context.Context, s *sessionsapi.SessionState) error {

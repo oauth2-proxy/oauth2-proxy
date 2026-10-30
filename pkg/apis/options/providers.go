@@ -48,6 +48,8 @@ const (
 	// DefaultUseSystemTrustStore is the default value
 	// for Provider.UseSystemTrustStore
 	DefaultUseSystemTrustStore bool = false
+
+	DefaultGrantType string = "authorization_code"
 )
 
 // OIDCAudienceClaims is the generic audience claim list used by the OIDC provider.
@@ -133,12 +135,17 @@ type Provider struct {
 	AllowedGroups []string `yaml:"allowedGroups,omitempty"`
 	// The code challenge method
 	CodeChallengeMethod string `yaml:"code_challenge_method,omitempty"`
+	// A list of OAuth 2.0 grant types to use. Defaults to ["authorization_code"]
+	GrantTypes []string `yaml:"grant_types,omitempty"`
 
 	// Additional claims to be obtained from the upstream IDP, either from the id_token or from the userinfo endpoint if configured.
 	AdditionalClaims []string `yaml:"additionalClaims,omitempty"`
 
 	// URL to call to perform backend logout, `{id_token}` would be replaced by the actual `id_token` if available in the session
 	BackendLogoutURL string `yaml:"backendLogoutURL"`
+
+	// URL to call to perform OAuth 2.0 device authorization code flow
+	DeviceAuthorizationURL string `yaml:"deviceAuthorizationURL"`
 }
 
 // ProviderType is used to enumerate the different provider type options
@@ -347,6 +354,7 @@ func providerDefaults() Providers {
 			AzureConfig: AzureOptions{
 				Tenant: "common",
 			},
+			GrantTypes: []string{},
 			OIDCConfig: OIDCOptions{
 				InsecureAllowUnverifiedEmail: ptr.To(DefaultInsecureAllowUnverifiedEmail),
 				InsecureSkipNonce:            ptr.To(DefaultInsecureSkipNonce),
@@ -376,6 +384,10 @@ func (p *Provider) EnsureDefaults() {
 	}
 	if p.UseSystemTrustStore == nil {
 		p.UseSystemTrustStore = ptr.To(DefaultUseSystemTrustStore)
+	}
+
+	if len(p.GrantTypes) == 0 {
+		p.GrantTypes = []string{DefaultGrantType}
 	}
 
 	p.OIDCConfig.EnsureDefaults()

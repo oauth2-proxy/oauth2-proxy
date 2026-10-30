@@ -562,6 +562,7 @@ type LegacyProvider struct {
 	AllowedGroups                      []string `flag:"allowed-group" cfg:"allowed_groups"`
 	AllowedRoles                       []string `flag:"allowed-role" cfg:"allowed_roles"`
 	BackendLogoutURL                   string   `flag:"backend-logout-url" cfg:"backend_logout_url"`
+	DeviceAuthorizationURL             string   `flag:"device-authorization-url" cfg:"device_authorization_url"`
 
 	AcrValues  string `flag:"acr-values" cfg:"acr_values"`
 	JWTKey     string `flag:"jwt-key" cfg:"jwt_key"`
@@ -569,6 +570,8 @@ type LegacyProvider struct {
 	PubJWKURL  string `flag:"pubjwk-url" cfg:"pubjwk_url"`
 	// PKCE Code Challenge method to use (either S256 or plain)
 	CodeChallengeMethod string `flag:"code-challenge-method" cfg:"code_challenge_method"`
+	// OAuth grant type, defaults to ["authorization_code"]
+	GrantTypes []string `flag:"grant-types" cfg:"grant_types"`
 	// Provided for legacy reasons, to be dropped in newer version see #1667
 	ForceCodeChallengeMethod string `flag:"force-code-challenge-method" cfg:"force_code_challenge_method"`
 }
@@ -622,6 +625,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("prompt", "", "OIDC prompt")
 	flagSet.String("approval-prompt", "force", "OAuth approval_prompt")
 	flagSet.String("code-challenge-method", "", "use PKCE code challenges with the specified method. Either 'plain' or 'S256'")
+	flagSet.StringSlice("grant-types", []string{"authorization_code"}, "grant type(s) to use for OAuth login flow. Available 'authorization_code' and 'urn:ietf:params:oauth:grant-type:device_code'. Defaults to just 'authorization_code'")
 	flagSet.String("force-code-challenge-method", "", "Deprecated - use --code-challenge-method")
 
 	flagSet.String("acr-values", "", "acr values string:  optional")
@@ -633,6 +637,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.StringSlice("allowed-group", []string{}, "restrict logins to members of this group (may be given multiple times)")
 	flagSet.StringSlice("allowed-role", []string{}, "(keycloak-oidc) restrict logins to members of these roles (may be given multiple times)")
 	flagSet.String("backend-logout-url", "", "url to perform a backend logout, {id_token} can be used as placeholder for the id_token")
+	flagSet.String("device-authorization-url", "", "url to perform a device authentication code flow")
 
 	return flagSet
 }
@@ -714,7 +719,9 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		Scope:                    l.Scope,
 		AllowedGroups:            l.AllowedGroups,
 		CodeChallengeMethod:      l.CodeChallengeMethod,
+		GrantTypes:               l.GrantTypes,
 		BackendLogoutURL:         l.BackendLogoutURL,
+		DeviceAuthorizationURL:   l.DeviceAuthorizationURL,
 		AuthRequestResponseMode:  l.AuthRequestResponseMode,
 	}
 

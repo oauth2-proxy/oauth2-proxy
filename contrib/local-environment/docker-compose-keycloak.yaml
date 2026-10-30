@@ -17,30 +17,27 @@ services:
     image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.5
     command: --config /oauth2-proxy.cfg
     hostname: oauth2-proxy
+    restart: always
     volumes:
       - "./oauth2-proxy-keycloak.cfg:/oauth2-proxy.cfg"
     restart: unless-stopped
+    network_mode: host
     ports:
-      - 4180:4180/tcp
-    networks:
-      keycloak: {}
-      httpbin: {}
-      oauth2-proxy: {}
+      - 0.0.0.0:4180:4180/tcp
     depends_on:
       - httpbin
       - keycloak
 
   httpbin:
     container_name: httpbin
-    image: kennethreitz/httpbin:latest
+    image: docker.io/kennethreitz/httpbin:latest
     hostname: httpbin
     ports: []
-    networks:
-      httpbin: {}
+    network_mode: host
 
   keycloak:
     container_name: keycloak
-    image: keycloak/keycloak:26.7
+    image: docker.io/keycloak/keycloak:26.7
     hostname: keycloak
     command:
       - "start-dev"
@@ -53,13 +50,6 @@ services:
       KEYCLOAK_ADMIN: admin@example.com
       KEYCLOAK_ADMIN_PASSWORD: password
     ports:
-      - 9080:9080/tcp
-    networks:
-      keycloak:
-        aliases:
-          - keycloak.localtest.me
+      - 0.0.0.0:9080:9080/tcp
+    network_mode: host
 
-networks:
-  httpbin: {}
-  keycloak: {}
-  oauth2-proxy: {}

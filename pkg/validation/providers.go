@@ -3,6 +3,8 @@ package validation
 import (
 	"fmt"
 	"os"
+	"slices"
+	"strings"
 
 	jose "github.com/go-jose/go-jose/v4"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -23,6 +25,11 @@ var supportedOIDCSigningAlgorithms = map[jose.SignatureAlgorithm]struct{}{
 	jose.PS256: {},
 	jose.PS384: {},
 	jose.PS512: {},
+}
+
+var supportedGrantTypes = []string{
+	"authorization_code",
+	"urn:ietf:params:oauth:grant-type:device_code",
 }
 
 // validateProviders is the initial validation migration for multiple providrers
@@ -77,6 +84,27 @@ func validateProvider(provider options.Provider, providerIDs map[string]struct{}
 	}
 
 	msgs = append(msgs, validateOIDCSigningAlgorithms(provider)...)
+	msgs = append(msgs, validateGrantTypes(provider)...)
+
+	return msgs
+}
+
+func validateGrantTypes(provider options.Provider) []string {
+	msgs := []string{}
+
+	if len(provider.GrantTypes) == 0 {
+		msgs = append(msgs, fmt.Sprintf("provider %s has no grant type(s). Supported are: '%s'", provider.ID, strings.Join(supportedGrantTypes, "', '")))
+		return msgs
+	}
+
+	for _, grantType := range provider.GrantTypes {
+
+		if slices.Contains(supportedGrantTypes, grantType) {
+			continue
+		}
+
+		msgs = append(msgs, fmt.Sprintf("provider %s has invalid grant type '%s'. Supported are: '%s'", provider.ID, grantType, strings.Join(supportedGrantTypes, "', '")))
+	}
 
 	return msgs
 }

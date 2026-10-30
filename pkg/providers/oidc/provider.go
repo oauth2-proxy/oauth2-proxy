@@ -18,6 +18,8 @@ type providerJSON struct {
 	UserInfoURL          string   `json:"userinfo_endpoint"`
 	CodeChallengeAlgs    []string `json:"code_challenge_methods_supported"`
 	SupportedSigningAlgs []string `json:"id_token_signing_alg_values_supported"`
+	DeviceURL            string   `json:"device_authorization_endpoint"`
+	SupportedGrantTypes  []string `json:"grant_types_supported"`
 }
 
 // Endpoints represents the endpoints discovered as part of the OIDC discovery process
@@ -27,7 +29,9 @@ type Endpoints struct {
 	TokenURL    string
 	JWKsURL     string
 	UserInfoURL string
+	DeviceURL   string
 }
+
 
 // PKCE holds information relevant to the PKCE (code challenge) support of the
 // provider.
@@ -68,6 +72,7 @@ func NewProvider(ctx context.Context, issuerURL string, skipIssuerVerification b
 		authURL:              p.AuthURL,
 		tokenURL:             p.TokenURL,
 		jwksURL:              p.JWKsURL,
+		deviceURL:            p.DeviceURL,
 		userInfoURL:          p.UserInfoURL,
 		codeChallengeAlgs:    p.CodeChallengeAlgs,
 		supportedSigningAlgs: p.SupportedSigningAlgs,
@@ -79,6 +84,7 @@ type discoveryProvider struct {
 	authURL              string
 	tokenURL             string
 	jwksURL              string
+	deviceURL            string
 	userInfoURL          string
 	codeChallengeAlgs    []string
 	supportedSigningAlgs []string
@@ -91,6 +97,7 @@ func (p *discoveryProvider) Endpoints() Endpoints {
 		TokenURL:    p.tokenURL,
 		JWKsURL:     p.jwksURL,
 		UserInfoURL: p.userInfoURL,
+		DeviceURL:   p.deviceURL,
 	}
 }
 

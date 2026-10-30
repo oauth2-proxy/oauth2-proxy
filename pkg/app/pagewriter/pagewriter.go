@@ -3,6 +3,7 @@ package pagewriter
 import (
 	"fmt"
 	"net/http"
+	oauth2 "golang.org/x/oauth2"
 )
 
 // Writer is an interface for rendering html templates for both sign-in and
@@ -10,7 +11,7 @@ import (
 // It can also be used to write errors for the http.ReverseProxy used in the
 // upstream package.
 type Writer interface {
-	WriteSignInPage(rw http.ResponseWriter, req *http.Request, redirectURL string, statusCode int)
+	WriteSignInPage(rw http.ResponseWriter, req *http.Request, redirectURL string, statusCode int, deviceCode *oauth2.DeviceAuthResponse)
 	WriteErrorPage(rw http.ResponseWriter, opts ErrorPageOpts)
 	ProxyErrorHandler(rw http.ResponseWriter, req *http.Request, proxyErr error)
 	WriteRobotsTxt(rw http.ResponseWriter, req *http.Request)
@@ -56,6 +57,10 @@ type Opts struct {
 	// The logo can be either PNG, JPG/JPEG or SVG.
 	// If a URL is used, image support depends on the browser.
 	CustomLogo string
+
+	// whether the OAuth2 grant type "authorization_code" is enabled for the provider
+	// this is the default login flow with a web redirect
+	AuthorizationCodeFlowAvailable bool
 }
 
 // NewWriter constructs a Writer from the options given to allow
@@ -85,6 +90,7 @@ func NewWriter(opts Opts) (Writer, error) {
 		proxyPrefix:      opts.ProxyPrefix,
 		providerName:     opts.ProviderName,
 		signInMessage:    opts.SignInMessage,
+		authorizationCodeFlowAvailable: opts.AuthorizationCodeFlowAvailable,
 		footer:           opts.Footer,
 		version:          opts.Version,
 		displayLoginForm: opts.DisplayLoginForm,
