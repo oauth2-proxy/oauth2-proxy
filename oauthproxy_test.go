@@ -2245,6 +2245,41 @@ func TestGetJwtSession(t *testing.T) {
 	assert.Equal(t, test.rw.Header().Get("X-Auth-Request-Email"), "john@example.com")
 }
 
+func TestGetJwtSessionWithCustomGroupsClaim(t *testing.T) {
+	verifier := oidc.NewVerifier("https://issuer.example.com", NoOpKeySet{},
+		&oidc.Config{ClientID: "test-client"})
+	test, err := NewAuthOnlyEndpointTest("?allowed_groups=custom", func(opts *options.Options) {
+		opts.SkipJwtBearerTokens = true
+		opts.Providers[0].OIDCConfig.GroupsClaim = "ADGroups"
+		opts.Providers[0].AllowedGroups = []string{"custom"}
+		opts.SetJWTBearerVerifiers([]internaloidc.IDTokenVerifier{verifier})
+		opts.InjectResponseHeaders = []options.Header{{
+			Name: "X-Auth-Request-Groups",
+			Values: []options.HeaderValue{{
+				ClaimSource: &options.ClaimSource{Claim: "groups"},
+			}},
+		}}
+	})
+	require.NoError(t, err)
+
+	payload := fmt.Sprintf(`{"iss": "https://issuer.example.com",
+		"aud": "test-client",
+		"sub": "user",
+		"email": "user@example.com",
+		"exp": %d,
+		"groups": ["default"],
+		"ADGroups": ["custom"]
+	}`, time.Now().Add(time.Hour).Unix())
+	token := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"RS256"}`)) + "." +
+		base64.RawURLEncoding.EncodeToString([]byte(payload)) + ".c2lnbmF0dXJl"
+	test.req.Header.Set("Authorization", "Bearer "+token)
+
+	test.proxy.ServeHTTP(test.rw, test.req)
+
+	assert.Equal(t, http.StatusAccepted, test.rw.Code)
+	assert.Equal(t, "custom", test.rw.Header().Get("X-Auth-Request-Groups"))
+}
+
 func Test_prepareNoCache(t *testing.T) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		prepareNoCache(w)

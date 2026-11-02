@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -10,9 +11,14 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 )
 
-// defaultGroupsClaim is the token claim used to populate a session's Groups
-// when no groups claim name is configured.
-const defaultGroupsClaim = "groups"
+// SessionClaimMapping selects literal token claim names for session fields.
+// Empty fields default to sub, email, groups, and preferred_username respectively.
+type SessionClaimMapping struct {
+	User              string
+	Email             string
+	Groups            string
+	PreferredUsername string
+}
 
 // TokenToSessionFunc takes a raw ID Token and converts it into a SessionState.
 type TokenToSessionFunc func(ctx context.Context, token string) (*sessionsapi.SessionState, error)
@@ -23,58 +29,61 @@ type VerifyFunc func(ctx context.Context, token string) (*oidc.IDToken, error)
 
 // CreateTokenToSessionFunc provides a handler that is a default implementation
 // for converting a JWT into a session.
-//
-// groupsClaim controls which token claim is used to populate the session's
-// Groups. This mirrors the primary OIDC provider's --oidc-groups-claim so that
-// bearer tokens verified through this path (e.g. --extra-jwt-issuers) resolve
-// groups from the same claim. When empty it defaults to "groups".
-func CreateTokenToSessionFunc(verify VerifyFunc, groupsClaim string) TokenToSessionFunc {
-	if groupsClaim == "" {
-		groupsClaim = defaultGroupsClaim
-	}
-	return func(ctx context.Context, token string) (*sessionsapi.SessionState, error) {
-		var claims struct {
-			Subject           string `json:"sub"`
-			Email             string `json:"email"`
-			Verified          *bool  `json:"email_verified"`
-			PreferredUsername string `json:"preferred_username"`
-		}
+func CreateTokenToSessionFunc(verify VerifyFunc, mapping SessionClaimMapping) TokenToSessionFunc {
+	mapping.User = cmp.Or(mapping.User, "sub")
+	mapping.Email = cmp.Or(mapping.Email, "email")
+	mapping.Groups = cmp.Or(mapping.Groups, "groups")
+	mapping.PreferredUsername = cmp.Or(mapping.PreferredUsername, "preferred_username")
 
+	return func(ctx context.Context, token string) (*sessionsapi.SessionState, error) {
 		idToken, err := verify(ctx, token)
 		if err != nil {
 			return nil, err
 		}
 
+		var claims map[string]json.RawMessage
 		if err := idToken.Claims(&claims); err != nil {
 			return nil, fmt.Errorf("failed to parse bearer token claims: %v", err)
 		}
 
-		groups, err := extractGroups(idToken, groupsClaim)
+		newSession := &sessionsapi.SessionState{}
+		var verified *bool
+		for _, field := range []struct {
+			claim string
+			dst   any
+		}{
+			{mapping.User, &newSession.User},
+			{mapping.Email, &newSession.Email},
+			{mapping.PreferredUsername, &newSession.PreferredUsername},
+			{"email_verified", &verified},
+		} {
+			if raw, ok := claims[field.claim]; ok {
+				if err := json.Unmarshal(raw, field.dst); err != nil {
+					return nil, fmt.Errorf("failed to parse bearer token claim %q: %w", field.claim, err)
+				}
+			}
+		}
+
+		groups, err := extractGroups(claims, mapping.Groups)
 		if err != nil {
 			return nil, err
 		}
 
-		if claims.Email == "" {
-			claims.Email = claims.Subject
+		if newSession.Email == "" {
+			newSession.Email = newSession.User
 		}
 
 		// Ensure email is verified
 		// If the email is not verified, return an error
 		// If the email_verified claim is missing, assume it is verified
-		if !ptr.Deref(claims.Verified, true) {
-			return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
+		if !ptr.Deref(verified, true) {
+			return nil, fmt.Errorf("email in id_token (%s) isn't verified", newSession.Email)
 		}
 
-		newSession := &sessionsapi.SessionState{
-			Email:             claims.Email,
-			User:              claims.Subject,
-			Groups:            groups,
-			PreferredUsername: claims.PreferredUsername,
-			AccessToken:       token,
-			IDToken:           token,
-			RefreshToken:      "",
-			ExpiresOn:         &idToken.Expiry,
-		}
+		newSession.Groups = groups
+		newSession.AccessToken = token
+		newSession.IDToken = token
+		newSession.ExpiresOn = &idToken.Expiry
 
 		return newSession, nil
 	}
@@ -85,13 +94,8 @@ func CreateTokenToSessionFunc(verify VerifyFunc, groupsClaim string) TokenToSess
 // claim yields no groups, while a claim present in any other format is reported
 // as an error so that a misconfigured issuer or groups claim name cannot be
 // mistaken for a user that belongs to no groups.
-func extractGroups(idToken *oidc.IDToken, groupsClaim string) ([]string, error) {
-	var rawClaims map[string]json.RawMessage
-	if err := idToken.Claims(&rawClaims); err != nil {
-		return nil, fmt.Errorf("failed to parse bearer token claims: %v", err)
-	}
-
-	raw, ok := rawClaims[groupsClaim]
+func extractGroups(claims map[string]json.RawMessage, groupsClaim string) ([]string, error) {
+	raw, ok := claims[groupsClaim]
 	if !ok {
 		return nil, nil
 	}
