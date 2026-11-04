@@ -40,7 +40,8 @@ var _ = Describe("Verify", func() {
 			Iss: "https://foo",
 			Aud: "1226737",
 		})
-		Expect(err).To(MatchError("audience from claim aud with value [1226737] does not match with " +
+		Expect(err).To(MatchError(ErrInvalidAudience))
+		Expect(err).To(MatchError("invalid audience: audience from claim aud with value [1226737] does not match with " +
 			"any of allowed audiences map[7817818:{}]"))
 		Expect(result).To(BeNil())
 	})
@@ -70,7 +71,7 @@ var _ = Describe("Verify", func() {
 			Aud: "1226737",
 		})
 
-		Expect(err).To(MatchError("audience from claim aud with value [1226737] does not match with any " +
+		Expect(err).To(MatchError("invalid audience: audience from claim aud with value [1226737] does not match with any " +
 			"of allowed audiences map[7817818:{} abc:{} xyz:{}]"))
 		Expect(result).To(BeNil())
 	})
@@ -99,7 +100,7 @@ var _ = Describe("Verify", func() {
 			Iss:      "https://foo",
 			ClientID: "1226737",
 		})
-		Expect(err).To(MatchError("audience from claim client_id with value [1226737] does not match with " +
+		Expect(err).To(MatchError("invalid audience: audience from claim client_id with value [1226737] does not match with " +
 			"any of allowed audiences map[7817818:{}]"))
 		Expect(result).To(BeNil())
 	})
@@ -129,7 +130,7 @@ var _ = Describe("Verify", func() {
 			ClientID: "1226737",
 		})
 
-		Expect(err).To(MatchError("audience from claim client_id with value [1226737] does not match with any " +
+		Expect(err).To(MatchError("invalid audience: audience from claim client_id with value [1226737] does not match with any " +
 			"of allowed audiences map[7817818:{} abc:{} xyz:{}]"))
 		Expect(result).To(BeNil())
 	})
@@ -145,7 +146,8 @@ var _ = Describe("Verify", func() {
 			Aud:      "1226737",
 		})
 
-		Expect(err).To(MatchError("audience claims [not_exists] do not exist in claims: " +
+		Expect(err).To(MatchError(ErrInvalidAudience))
+		Expect(err).To(MatchError("invalid audience: audience claims [not_exists] do not exist in claims: " +
 			"map[aud:1226737 client_id:1226737 iss:https://foo]"))
 		Expect(result).To(BeNil())
 	})

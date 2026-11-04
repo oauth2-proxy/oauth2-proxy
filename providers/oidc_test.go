@@ -147,6 +147,29 @@ func TestOIDCProviderRedeem_custom_userid(t *testing.T) {
 	assert.Equal(t, defaultIDToken.Phone, session.Email)
 }
 
+func TestOIDCProviderRedeem_invalid_audience(t *testing.T) {
+	idToken, _ := newSignedTestIDToken(defaultIDToken)
+	body, _ := json.Marshal(redeemTokenResponse{
+		AccessToken: accessToken,
+		ExpiresIn:   10,
+		TokenType:   "Bearer",
+		IDToken:     idToken,
+	})
+
+	server, provider := newTestOIDCSetup(body)
+	provider.Verifier = internaloidc.NewVerifier(
+		oidc.NewVerifier(oidcIssuer, mockJWKS{}, &oidc.Config{SkipClientIDCheck: true}),
+		internaloidc.IDTokenVerificationOptions{
+			AudienceClaims: []string{"aud"},
+			ClientID:       "https://other.myapp.com",
+		},
+	)
+	defer server.Close()
+
+	_, err := provider.Redeem(context.Background(), provider.RedeemURL.String(), "code1234", "")
+	assert.ErrorIs(t, err, internaloidc.ErrInvalidAudience)
+}
+
 func TestOIDCProviderRefreshSessionIfNeededWithoutIdToken(t *testing.T) {
 
 	idToken, _ := newSignedTestIDToken(defaultIDToken)
