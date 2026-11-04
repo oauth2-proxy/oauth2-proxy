@@ -17,6 +17,7 @@ func initialize(ctx context.Context, db *sql.DB) error {
 	for {
 		err := initializeOnce(ctx, db)
 		var sqliteErr *sqlite.Error
+		// The low 8 bits identify the primary result code, including for extended SQLITE_BUSY errors (https://sqlite.org/rescode.html#primary_result_codes_versus_extended_result_codes).
 		if !errors.As(err, &sqliteErr) || sqliteErr.Code()&0xff != sqlite3.SQLITE_BUSY {
 			return err
 		}
@@ -35,6 +36,7 @@ func initializeOnce(ctx context.Context, db *sql.DB) error {
 	if err := db.QueryRowContext(ctx, "PRAGMA user_version").Scan(&version); err != nil {
 		return err
 	}
+	// SQLite defaults user_version to 0 until the application sets it.
 	if version != 0 && version != schemaVersion {
 		return fmt.Errorf("unsupported SQLite session schema version %d (supported: %d)", version, schemaVersion)
 	}
