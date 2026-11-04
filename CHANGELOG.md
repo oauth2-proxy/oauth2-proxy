@@ -16,6 +16,7 @@
 - [#3573](https://github.com/oauth2-proxy/oauth2-proxy/pull/3573) fix: return 403 instead of 500 when a user with an unverified email completes the OAuth2 callback (fixes [#3234](https://github.com/oauth2-proxy/oauth2-proxy/issues/3234)) @amichelic
 - [#3540](https://github.com/oauth2-proxy/oauth2-proxy/pull/3540) fix: honor `--oidc-groups-claim` for tokens verified via `--extra-jwt-issuers` (#3539) (@jaewak)
 - [#3540](https://github.com/oauth2-proxy/oauth2-proxy/pull/3540) fix: honor `--oidc-groups-claim` for tokens verified via `--extra-jwt-issuers` (@jaewak / @tuunit)
+- [#3472](https://github.com/oauth2-proxy/oauth2-proxy/pull/3472) fix: apply configured signing algorithms to extra JWT issuers (#3471) (@Bortlesboat)
 
 # V7.15.5
 
@@ -121,7 +122,6 @@ longer fall back to granting exemptions based on the proxy's own IP.
 ## Changes since v7.15.3
 
 - [#3493](https://github.com/oauth2-proxy/oauth2-proxy/pull/3493) chore(deps): update gomod @tuunit
-- [#3472](https://github.com/oauth2-proxy/oauth2-proxy/pull/3472) fix: apply configured signing algorithms to extra JWT issuers (#3471) (@Bortlesboat)
 
 # V7.15.3
 
