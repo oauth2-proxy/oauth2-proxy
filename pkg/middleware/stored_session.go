@@ -16,14 +16,17 @@ import (
 )
 
 const (
-	// When attempting to obtain the lock, if it's not done before this timeout
-	// then exit and fail the refresh attempt.
+	// Maximum time allowed for the critical section of a session refresh:
+	// reloading the session, redeeming the refresh token with the provider and
+	// persisting the result. It is independent of the triggering request, so a
+	// client disconnect cannot interrupt a refresh after the provider may
+	// already have rotated the refresh token.
 	// TODO: This should probably be configurable by the end user.
-	sessionRefreshObtainTimeout = 5 * time.Second
+	sessionRefreshTimeout = 30 * time.Second
 
-	// Maximum time allowed for a session refresh attempt.
-	// If the refresh request isn't finished within this time, the lock will be
-	// released.
+	// Margin added to sessionRefreshTimeout for the lifetime of the session
+	// refresh lock, so the lock outlives the critical section it protects. It
+	// also bounds how long releasing the lock may take.
 	// TODO: This should probably be configurable by the end user.
 	sessionRefreshLockDuration = 2 * time.Second
 
@@ -99,6 +102,25 @@ type storedSessionLoader struct {
 	refreshPeriod    time.Duration
 	sessionRefresher func(context.Context, *sessionsapi.SessionState) (bool, error)
 	sessionValidator func(context.Context, *sessionsapi.SessionState) bool
+
+	// Overrides for sessionRefreshTimeout and sessionRefreshLockDuration.
+	// Zero means the default; only tests set them.
+	refreshTimeout      time.Duration
+	refreshLockDuration time.Duration
+}
+
+func (s *storedSessionLoader) getRefreshTimeout() time.Duration {
+	if s.refreshTimeout > 0 {
+		return s.refreshTimeout
+	}
+	return sessionRefreshTimeout
+}
+
+func (s *storedSessionLoader) getRefreshLockDuration() time.Duration {
+	if s.refreshLockDuration > 0 {
+		return s.refreshLockDuration
+	}
+	return sessionRefreshLockDuration
 }
 
 // loadSession attempts to load a session as identified by the request cookies.
@@ -158,40 +180,62 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
 		return nil
 	}
 
-	var lockObtained bool
-	ctx, cancel := context.WithTimeout(context.Background(), sessionRefreshObtainTimeout)
-	defer cancel()
+	refreshTimeout := s.getRefreshTimeout()
+	lockMargin := s.getRefreshLockDuration()
 
-	for !lockObtained {
-		select {
-		case <-ctx.Done():
-			return errors.New("timeout obtaining session lock")
-		default:
-			err := session.ObtainLock(req.Context(), sessionRefreshLockDuration)
-			if err != nil && !errors.Is(err, sessionsapi.ErrLockNotObtained) {
-				return fmt.Errorf("error occurred while trying to obtain lock: %v", err)
-			} else if errors.Is(err, sessionsapi.ErrLockNotObtained) {
-				time.Sleep(sessionRefreshRetryPeriod)
-				continue
-			}
-			// No error means we obtained the lock
-			lockObtained = true
+	// The lock lives for the whole bounded critical section plus a margin, so
+	// it cannot expire while the holder is still able to redeem or persist the
+	// refresh token, however slow the provider is or however long Redis is
+	// unreachable. If the holder dies, the lock expires on its own.
+	lockTTL := refreshTimeout + lockMargin
+
+	// Wait for at least as long as another request may hold the lock, so that
+	// this request picks up the refreshed tokens, or obtains the lock once a
+	// holder that died has let it expire. Stop waiting if the client goes away;
+	// nothing has been redeemed yet.
+	waitCtx, cancelWait := context.WithTimeout(req.Context(), lockTTL+lockMargin)
+	defer cancelWait()
+
+	if err := obtainLock(waitCtx, session, lockTTL); err != nil {
+		if req.Context().Err() != nil {
+			return err
 		}
+		// Another request is still refreshing, or Redis is briefly
+		// unavailable. Neither makes this session invalid, and clearing it
+		// would also remove the session the other request is refreshing, so
+		// keep it as for any non-fatal refresh failure.
+		logger.Errorf("Not refreshing session - User: %s: %v", session.User, err)
+		return s.validateSession(req.Context(), session)
 	}
 
+	// From here on the provider may rotate the refresh token, so the work must
+	// not depend on the triggering request staying alive: a cancelled request
+	// would otherwise abort the redeem or the save of the rotated token and the
+	// next request would present the old, already redeemed, refresh token.
+	// The detached context is still bounded by refreshTimeout, which the lock
+	// lifetime covers.
+	refreshCtx, cancelRefresh := context.WithTimeout(context.WithoutCancel(req.Context()), refreshTimeout)
+	defer cancelRefresh()
+	refreshReq := req.WithContext(refreshCtx)
+
+	// Loading from the session store creates a new lock in the session, so
+	// keep a reference to the lock we hold.
+	lock := session.Lock
+
 	// The rest of this function is carried out under lock, but we must release it
-	// wherever we exit from this function.
+	// wherever we exit from this function. The release only removes a lock that
+	// is still ours, and uses its own context so that it still happens after a
+	// cancelled request or a timed out refresh.
 	defer func() {
-		if session == nil {
-			return
-		}
-		if err := session.ReleaseLock(req.Context()); err != nil {
+		releaseCtx, cancelRelease := context.WithTimeout(context.WithoutCancel(req.Context()), lockMargin)
+		defer cancelRelease()
+		if err := lock.Release(releaseCtx); err != nil {
 			logger.Errorf("unable to release lock: %v", err)
 		}
 	}()
 
 	// Reload the session in case it was changed underneath us.
-	freshSession, err := s.store.Load(req)
+	freshSession, err := s.store.Load(refreshReq)
 	if err != nil {
 		return fmt.Errorf("could not load session: %v", err)
 	}
@@ -200,7 +244,6 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
 	}
 	// Restore the state of the fresh session into the original pointer.
 	// This is important so that changes are passed up the to the parent scope.
-	lock := session.Lock
 	*session = *freshSession
 
 	// Ensure we maintain the session lock after we have refreshed the session.
@@ -213,9 +256,20 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
 		return nil
 	}
 
+	// Presenting the refresh token cannot be undone, so right before doing it,
+	// confirm that we still own the lock and extend it to cover the rest of the
+	// refresh. If the lock is gone (e.g. Redis lost the key) another request
+	// may be redeeming the same token, and if Redis is unreachable a rotated
+	// token could not be saved; either way, keep the current session as for
+	// any non-fatal refresh failure.
+	if err := extendLock(refreshCtx, lock, lockMargin); err != nil {
+		logger.Errorf("Not refreshing session, could not confirm the session refresh lock - User: %s: %v", session.User, err)
+		return s.validateSession(req.Context(), session)
+	}
+
 	// We are holding the lock and the session needs a refresh
 	logger.Printf("Refreshing session - User: %s; SessionAge: %s", session.User, session.Age())
-	if err := s.refreshSession(rw, req, session); err != nil {
+	if err := s.refreshSession(rw, refreshReq, session); err != nil {
 		logger.Errorf("Unable to refresh session: %v", err)
 
 		// Check if this is a fatal error that indicates the session is revoked
@@ -224,7 +278,7 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
 			logger.Printf("Fatal refresh error detected (session revoked or invalid), clearing session for user: %s", session.User)
 
 			// Clear the session from storage (Redis) and remove the cookie
-			if err := s.store.Clear(rw, req); err != nil {
+			if err := s.store.Clear(rw, refreshReq); err != nil {
 				logger.Errorf("failed clearing session: %v", err)
 			}
 
@@ -238,6 +292,53 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
 
 	// Validate all sessions after any Redeem/Refresh operation (fail or success)
 	return s.validateSession(req.Context(), session)
+}
+
+// obtainLock retries obtaining the session refresh lock, for ttl, until it
+// succeeds or ctx is done.
+func obtainLock(ctx context.Context, session *sessionsapi.SessionState, ttl time.Duration) error {
+	for {
+		err := session.ObtainLock(ctx, ttl)
+		if err == nil {
+			return nil
+		}
+		if ctx.Err() != nil {
+			return lockWaitError(ctx)
+		}
+		if !errors.Is(err, sessionsapi.ErrLockNotObtained) {
+			return fmt.Errorf("error occurred while trying to obtain lock: %v", err)
+		}
+
+		retry := time.NewTimer(sessionRefreshRetryPeriod)
+		select {
+		case <-ctx.Done():
+			retry.Stop()
+			return lockWaitError(ctx)
+		case <-retry.C:
+		}
+	}
+}
+
+func lockWaitError(ctx context.Context) error {
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		return errors.New("timeout obtaining session lock")
+	}
+	return fmt.Errorf("stopped waiting for session lock: %w", ctx.Err())
+}
+
+// extendLock confirms that the session refresh lock is still held and extends
+// it to the deadline of ctx plus margin. The lock implementation only extends
+// a lock that is still ours, and reports ErrNotLocked otherwise.
+func extendLock(ctx context.Context, lock sessionsapi.Lock, margin time.Duration) error {
+	ttl := margin
+	if deadline, ok := ctx.Deadline(); ok {
+		ttl += time.Until(deadline)
+	}
+	err := lock.Refresh(ctx, ttl)
+	if errors.Is(err, sessionsapi.ErrNotLocked) {
+		return fmt.Errorf("session refresh lock is no longer held: %w", err)
+	}
+	return err
 }
 
 // needsRefresh determines whether we should attempt to refresh a session or not.
