@@ -153,7 +153,15 @@ func (p *ProviderData) RefreshSession(_ context.Context, _ *sessions.SessionStat
 // CreateSessionFromToken converts Bearer IDTokens into sessions
 func (p *ProviderData) CreateSessionFromToken(ctx context.Context, token string) (*sessions.SessionState, error) {
 	if p.Verifier != nil {
-		return middleware.CreateTokenToSessionFunc(p.Verifier.Verify)(ctx, token)
+		return middleware.CreateTokenToSessionFunc(p.Verifier.Verify, p.SessionClaimMapping())(ctx, token)
 	}
 	return nil, ErrNotImplemented
+}
+
+// SessionClaimMapping returns the generic bearer session mapping, inheriting only
+// the provider's groups claim and leaving other fields at their bearer defaults.
+func (p *ProviderData) SessionClaimMapping() middleware.SessionClaimMapping {
+	return middleware.SessionClaimMapping{
+		Groups: p.GroupsClaim,
+	}
 }

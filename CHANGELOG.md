@@ -12,6 +12,8 @@
 - [#3584](https://github.com/oauth2-proxy/oauth2-proxy/pull/3584) fix: read the Entra ID tenant from the `tid` claim so session validation works in national clouds such as Azure US Government (fixes [#2939](https://github.com/oauth2-proxy/oauth2-proxy/issues/2939)) (@asifsid / @dantreiman)
 - [#3583](https://github.com/oauth2-proxy/oauth2-proxy/pull/3583) fix: return 403 instead of 500 when the ID token audience is invalid @marsluca
 - [#3573](https://github.com/oauth2-proxy/oauth2-proxy/pull/3573) fix: return 403 instead of 500 when a user with an unverified email completes the OAuth2 callback (fixes [#3234](https://github.com/oauth2-proxy/oauth2-proxy/issues/3234)) @amichelic
+- [#3540](https://github.com/oauth2-proxy/oauth2-proxy/pull/3540) fix: honor `--oidc-groups-claim` for tokens verified via `--extra-jwt-issuers` (#3539) (@jaewak)
+- [#3540](https://github.com/oauth2-proxy/oauth2-proxy/pull/3540) fix: honor `--oidc-groups-claim` for tokens verified via `--extra-jwt-issuers` (@jaewak / @tuunit)
 
 # V7.15.5
 
