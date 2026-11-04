@@ -8,6 +8,7 @@
 
 ## Changes since v7.15.5
 
+- [#3596](https://github.com/oauth2-proxy/oauth2-proxy/pull/3596) fix: preserve rotated refresh tokens across request cancellation and hold the Redis lock for the full refresh (fixes [#3586](https://github.com/oauth2-proxy/oauth2-proxy/issues/3586)) (@nikhilred2619)
 - [#3587](https://github.com/oauth2-proxy/oauth2-proxy/pull/3587) fix: keep the query after the slash in the trailing slash redirect (@jayhemnani9910)
 - [#3584](https://github.com/oauth2-proxy/oauth2-proxy/pull/3584) fix: read the Entra ID tenant from the `tid` claim so session validation works in national clouds such as Azure US Government (fixes [#2939](https://github.com/oauth2-proxy/oauth2-proxy/issues/2939)) (@asifsid / @dantreiman)
 - [#3583](https://github.com/oauth2-proxy/oauth2-proxy/pull/3583) fix: return 403 instead of 500 when the ID token audience is invalid @marsluca
