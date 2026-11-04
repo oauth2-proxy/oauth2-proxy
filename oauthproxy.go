@@ -1344,7 +1344,7 @@ func decodeState(state string, encode bool) (string, string, error) {
 	nonce := parsedState[0]
 	redirect := parsedState[1]
 
-	if encode {
+	if !encode {
 		var err error
 		redirect, err = url.QueryUnescape(redirect)
 		if err != nil {
