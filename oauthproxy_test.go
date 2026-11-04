@@ -52,6 +52,34 @@ func init() {
 	logger.SetFlags(logger.Lshortfile)
 }
 
+type lifecycleServer func(context.Context) error
+
+func (s lifecycleServer) Start(ctx context.Context) error { return s(ctx) }
+
+type lifecycleStore struct {
+	sessions.SessionStore
+	closed bool
+}
+
+func (s *lifecycleStore) Close() error {
+	s.closed = true
+	return nil
+}
+
+func TestProxyClosesSessionStoreAfterServerStops(t *testing.T) {
+	for name, serverErr := range map[string]error{"clean shutdown": nil, "server failure": errors.New("server failed")} {
+		t.Run(name, func(t *testing.T) {
+			store := &lifecycleStore{}
+			proxy := &OAuthProxy{sessionStore: store, server: lifecycleServer(func(context.Context) error {
+				require.False(t, store.closed)
+				return serverErr
+			})}
+			require.ErrorIs(t, proxy.Start(), serverErr)
+			require.True(t, store.closed)
+		})
+	}
+}
+
 func TestRobotsTxt(t *testing.T) {
 	opts := baseTestOptions()
 	err := validation.Validate(opts)
