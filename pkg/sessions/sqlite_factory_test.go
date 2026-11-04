@@ -1,7 +1,6 @@
 package sessions_test
 
 import (
-	"io"
 	"path/filepath"
 	"testing"
 
@@ -20,6 +19,7 @@ func TestSQLiteFactory(t *testing.T) {
 	require.NoError(t, err)
 	backend := store.(*persistence.Manager).Store.(*sqlite.SessionStore)
 	require.NoError(t, backend.VerifyConnection(t.Context()))
-	require.NoError(t, store.(io.Closer).Close())
+	sessions.CloseSessionStore(store)
 	require.Error(t, backend.VerifyConnection(t.Context()))
+	require.NoFileExists(t, opts.Session.SQLite.Path+"-wal", "last close checkpoints the WAL")
 }
