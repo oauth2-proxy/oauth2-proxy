@@ -2,22 +2,25 @@ package options
 
 // SessionOptions contains configuration options for the SessionStore providers.
 type SessionOptions struct {
-	Type   string             `flag:"session-store-type" cfg:"session_store_type"`
+	Type   SessionStoreType   `flag:"session-store-type" cfg:"session_store_type"`
 	Cookie CookieStoreOptions `cfg:",squash"`
 	Redis  RedisStoreOptions  `cfg:",squash"`
 	SQLite SQLiteStoreOptions `cfg:",squash"`
 }
 
-// CookieSessionStoreType is used to indicate the CookieSessionStore should be
-// used for storing sessions.
-var CookieSessionStoreType = "cookie"
+// SessionStoreType selects the backend used to store sessions.
+type SessionStoreType string
 
-// RedisSessionStoreType is used to indicate the RedisSessionStore should be
-// used for storing sessions.
-var RedisSessionStoreType = "redis"
+const (
+	// CookieSessionStoreType stores the session in a browser cookie.
+	CookieSessionStoreType SessionStoreType = "cookie"
 
-// SQLiteSessionStoreType stores sessions in a local database shared on one host.
-var SQLiteSessionStoreType = "sqlite"
+	// RedisSessionStoreType stores the session in Redis.
+	RedisSessionStoreType SessionStoreType = "redis"
+
+	// SQLiteSessionStoreType stores the session in a local database on a single host.
+	SQLiteSessionStoreType SessionStoreType = "sqlite"
+)
 
 // SQLiteStoreOptions contains configuration for the SQLite session store.
 type SQLiteStoreOptions struct {
