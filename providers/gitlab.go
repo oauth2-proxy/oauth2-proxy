@@ -130,7 +130,7 @@ func (p *GitLabProvider) EnrichSession(ctx context.Context, s *sessions.SessionS
 
 	// Check if email is verified
 	if !p.AllowUnverifiedEmail && !userinfo.EmailVerified {
-		return fmt.Errorf("user email is not verified")
+		return ErrEmailNotVerified
 	}
 
 	if userinfo.Nickname != "" {

@@ -22,6 +22,10 @@ var (
 	// code
 	ErrMissingCode = errors.New("missing code")
 
+	// ErrEmailNotVerified is returned when the provider reports the user's
+	// email address as not verified
+	ErrEmailNotVerified = errors.New("email not verified")
+
 	// ErrMissingIDToken is returned when an oidc.Token does not contain the
 	// extra `id_token` field for an IDToken.
 	ErrMissingIDToken = errors.New("missing id_token")
