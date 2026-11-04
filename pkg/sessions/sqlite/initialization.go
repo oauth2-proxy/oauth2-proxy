@@ -26,6 +26,7 @@ func initialize(ctx context.Context, db *sql.DB) error {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
+		// Pause briefly on SQLITE_BUSY to avoid a tight retry loop when multiple instances start together.
 		case <-time.After(50 * time.Millisecond):
 		}
 	}
