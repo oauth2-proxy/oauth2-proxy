@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -131,7 +130,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 	initialized := false
 	defer func() {
 		if !initialized {
-			closeSessionStore(sessionStore)
+			sessions.CloseSessionStore(sessionStore)
 		}
 	}()
 
@@ -272,14 +271,6 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 	return p, nil
 }
 
-func closeSessionStore(store sessionsapi.SessionStore) {
-	if closer, ok := store.(io.Closer); ok {
-		if err := closer.Close(); err != nil {
-			logger.Errorf("Error closing session store: %v", err)
-		}
-	}
-}
-
 func (p *OAuthProxy) Start() error {
 	if p.server == nil {
 		// We have to call setupServer before Start is called.
@@ -290,7 +281,7 @@ func (p *OAuthProxy) Start() error {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 	// Server.Start waits for HTTP shutdown before the session store is closed.
-	defer closeSessionStore(p.sessionStore)
+	defer sessions.CloseSessionStore(p.sessionStore)
 
 	return p.server.Start(ctx)
 }
