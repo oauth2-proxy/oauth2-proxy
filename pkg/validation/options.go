@@ -3,6 +3,7 @@ package validation
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -62,6 +63,7 @@ func Validate(o *options.Options) error {
 				verifier, err := newVerifierFromJwtIssuer(
 					o.Providers[0].OIDCConfig.AudienceClaims,
 					o.Providers[0].OIDCConfig.ExtraAudiences,
+					o.Providers[0].OIDCConfig.EnabledSigningAlgs,
 					jwtIssuer,
 				)
 				if err != nil {
@@ -152,24 +154,25 @@ func parseJwtIssuers(issuers []string, msgs []string) ([]jwtIssuer, []string) {
 
 // newVerifierFromJwtIssuer takes in issuer information in jwtIssuer info and returns
 // a verifier for that issuer.
-func newVerifierFromJwtIssuer(audienceClaims []string, extraAudiences []string, jwtIssuer jwtIssuer) (internaloidc.IDTokenVerifier, error) {
+func newVerifierFromJwtIssuer(audienceClaims []string, extraAudiences []string, supportedSigningAlgs []string, jwtIssuer jwtIssuer) (internaloidc.IDTokenVerifier, error) {
 	pvOpts := internaloidc.ProviderVerifierOptions{
-		AudienceClaims: audienceClaims,
-		ClientID:       jwtIssuer.audience,
-		ExtraAudiences: extraAudiences,
-		IssuerURL:      jwtIssuer.issuerURI,
+		AudienceClaims:       audienceClaims,
+		ClientID:             jwtIssuer.audience,
+		ExtraAudiences:       extraAudiences,
+		IssuerURL:            jwtIssuer.issuerURI,
+		SupportedSigningAlgs: supportedSigningAlgs,
 	}
 
 	pv, err := internaloidc.NewProviderVerifier(context.TODO(), pvOpts)
-	if err != nil {
+	if errors.Is(err, internaloidc.ErrDiscoveryFailed) {
 		// If the discovery didn't work, try again without discovery
 		pvOpts.JWKsURL = strings.TrimSuffix(jwtIssuer.issuerURI, "/") + "/.well-known/jwks.json"
 		pvOpts.SkipDiscovery = true
 
 		pv, err = internaloidc.NewProviderVerifier(context.TODO(), pvOpts)
-		if err != nil {
-			return nil, fmt.Errorf("could not construct provider verifier for JWT Issuer: %v", err)
-		}
+	}
+	if err != nil {
+		return nil, fmt.Errorf("could not construct provider verifier for JWT Issuer: %w", err)
 	}
 
 	return pv.Verifier(), nil
