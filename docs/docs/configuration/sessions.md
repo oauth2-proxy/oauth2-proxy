@@ -12,6 +12,7 @@ data in one of the available session storage backends.
 At present the available backends are (as passed to `--session-store-type`):
 - [cookie](#cookie-storage) (default)
 - [redis](#redis-storage)
+- [sqlite](#sqlite-storage) (multiple instances, single host only)
 
 ### Cookie Storage
 
@@ -29,6 +30,48 @@ The following should be known when using this implementation:
 cannot lock sessions and while updating and refreshing sessions, there can be conflicts which force
 users to re-authenticate
 
+
+### SQLite Storage
+
+SQLite stores encrypted sessions in a local database and sends the browser the same
+short, signed ticket used by the Redis backend. Tokens stay server-side. Large tokens
+therefore do not cause split session cookies, including when using Nginx `auth_request`.
+Cookie storage remains the default; no existing deployments need to migrate.
+
+```text
+--session-store-type=sqlite
+--sqlite-path=/var/lib/oauth2-proxy/sessions.sqlite
+```
+
+The path must be absolute. Create the parent directory with permissions that allow
+only the OAuth2 Proxy user to access it. The process must be able to write both the
+database and its `-wal` and `-shm` sidecar files. New databases have mode `0600`;
+administrators must restrict permissions on existing files and backups.
+
+**Multiple instances are supported, but always on a single host.** All instances
+must share the same database on a local filesystem and use the same cookie secret
+and compatible authentication settings. Mount the whole directory into containers,
+not just the database file. Do not use network filesystems (including NFS), or share
+the database across hosts. Use Redis for multi-host deployments.
+
+On first startup, instances coordinate schema creation through a database write
+transaction, retrying temporary contention for up to ten seconds. Subsequent
+starts read the schema version without taking a schema write lock. A database
+with a newer, unsupported schema version is rejected rather than modified.
+
+SQLite WAL mode allows concurrent readers but only one writer at a time. Writes
+wait up to five seconds for contention. Short database leases coordinate session
+refreshes across processes without holding a write transaction during provider
+requests. This backend is intended for deployments whose session-write volume fits
+a single host, not as a distributed replacement for Redis.
+
+`--cookie-expire` and `--cookie-refresh` have the same meaning as with Redis.
+Expired sessions are rejected on reads; writes reclaim expired rows in bounded
+batches. Idle databases can retain expired, encrypted records until another write.
+Database errors do not authenticate a request. Keep a persistent volume across
+restarts; losing the database, or changing from another storage backend, requires
+users to sign in again. Use SQLite-aware backup tools rather than copying a live
+database file without its WAL.
 
 ### Redis Storage
 
