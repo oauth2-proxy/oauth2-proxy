@@ -32,6 +32,8 @@ services:
     image: ghcr.io/dexidp/dex:v2.45.1
     command: dex serve /dex.yaml
     hostname: dex
+    tmpfs:
+      - /tmp:mode=1777
     volumes:
       - "./dex.yaml:/dex.yaml"
     restart: unless-stopped
