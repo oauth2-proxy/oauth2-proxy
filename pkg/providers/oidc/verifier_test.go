@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"github.com/coreos/go-oidc/v3/oidc"
-	"github.com/go-jose/go-jose/v3"
+	"github.com/go-jose/go-jose/v4"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -202,7 +202,7 @@ type testVerifier struct {
 }
 
 func (t *testVerifier) VerifySignature(_ context.Context, jwt string) ([]byte, error) {
-	jws, err := jose.ParseSigned(jwt)
+	jws, err := jose.ParseSignedCompact(jwt, []jose.SignatureAlgorithm{jose.RS256})
 	if err != nil {
 		return nil, fmt.Errorf("oidc: malformed jwt: %v", err)
 	}
