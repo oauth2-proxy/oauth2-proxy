@@ -12,6 +12,30 @@
 
 ## Release Highlights
 
+- Entra ID: Fixed tenant ID extraction for national / private cloud support
+- Fixed multiple return code and redirect issues
+- 🔵 Golang version upgrade to v1.26.10
+    - Upgrade of all dependencies to their latest versions
+- 🕵️‍♀️ Vulnerabilities have been addressed
+    - [CVE-2026-111943](https://nvd.nist.gov/vuln/detail/CVE-2026-111943)
+    - [CVE-2026-116585](https://nvd.nist.gov/vuln/detail/CVE-2026-116585)
+    - [CVE-2026-116586](https://nvd.nist.gov/vuln/detail/CVE-2026-116586)
+    - [CVE-2026-56857](https://nvd.nist.gov/vuln/detail/CVE-2026-56857)
+    - [CVE-2026-56866](https://nvd.nist.gov/vuln/detail/CVE-2026-56866)
+    - [CVE-2026-78659](https://nvd.nist.gov/vuln/detail/CVE-2026-78659)
+    - [CVE-2026-78660](https://nvd.nist.gov/vuln/detail/CVE-2026-78660)
+    - [CVE-2026-78661](https://nvd.nist.gov/vuln/detail/CVE-2026-78661)
+    - [CVE-2026-78663](https://nvd.nist.gov/vuln/detail/CVE-2026-78663)
+    - [CVE-2026-78667](https://nvd.nist.gov/vuln/detail/CVE-2026-78667)
+    - [CVE-2026-78669](https://nvd.nist.gov/vuln/detail/CVE-2026-78669)
+    - [CVE-2026-94439](https://nvd.nist.gov/vuln/detail/CVE-2026-94439)
+    - [CVE-2026-94440](https://nvd.nist.gov/vuln/detail/CVE-2026-94440)
+    - [CVE-2026-94448](https://nvd.nist.gov/vuln/detail/CVE-2026-94448)
+    - [CVE-2026-97030](https://nvd.nist.gov/vuln/detail/CVE-2026-97030)
+    - [CVE-2026-97031](https://nvd.nist.gov/vuln/detail/CVE-2026-97031)
+    - [CVE-2026-97032](https://nvd.nist.gov/vuln/detail/CVE-2026-97032)
+    - [CVE-2026-97045](https://nvd.nist.gov/vuln/detail/CVE-2026-97045)
+
 ## Important Notes
 
 ## Breaking Changes
