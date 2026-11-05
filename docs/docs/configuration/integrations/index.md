@@ -12,6 +12,7 @@ OAuth2 Proxy can be integrated with popular reverse proxies and ingress controll
 - [Nginx](nginx.md)
 - [Traefik](traefik.md)
 - [caddy](caddy.md)
+- [Cilium](cilium.md)
 
 ## Kubernetes Web UIs
 
