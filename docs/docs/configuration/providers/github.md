@@ -21,6 +21,8 @@ title: GitHub
 The GitHub auth provider supports two additional ways to restrict authentication to either organization and optional 
 team level access, or to collaborators of a repository. Restricting by these options is normally accompanied with `--email-domain=*`. Additionally, all the organizations and teams a user belongs to are set as part of the `X-Forwarded-Groups` header. e.g. `org1:team1,org1:team2,org2:team1`
 
+By default, the provider requests the `user:email read:org` scopes. Organization and team memberships are retrieved during login only when the configured `scope` includes `read:org`; to avoid prompting users for organization access, set a `scope` that omits it, e.g. `scope = "user:email"`. Note that `X-Forwarded-Groups` will then be empty.
+
 NOTE: When `--github-user` is set, the specified users are allowed to log in even if they do not belong to the specified 
 org and team or collaborators.
 
@@ -38,6 +40,9 @@ To restrict access to specific teams within an organization:
     # restrict logins to members of any of these teams (slug), comma separated
     --github-team="team1,team2,team3"
 ```
+
+Configuring `--github-org` or `--github-team` requires the `read:org` scope, so it is added to the `scope`
+automatically if it is missing.
 
 To restrict to teams within different organizations, keep the organization flag empty and use `--github-team` like so:
 
