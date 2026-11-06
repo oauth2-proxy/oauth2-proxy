@@ -187,6 +187,71 @@ http:
           - Authorization
 ```
 
+### ForwardAuth with `/oauth2/auth/sign_in` endpoint
+
+The `/oauth2/auth/sign_in` endpoint combines auth checking and sign-in redirect in a single endpoint, eliminating the need for the `errors` middleware. It returns 202 Accepted when authenticated and authorized, 403 Forbidden when authenticated but not authorized, or redirects to the sign-in flow when unauthenticated.
+
+**Following options need to be set on `oauth2-proxy`:**
+- `--skip-provider-button=true`: Recommended so that unauthenticated requests redirect directly to the OAuth provider instead of showing the sign-in page
+- `--reverse-proxy=true`: Enables the use of `X-Forwarded-*` headers to determine redirects correctly
+
+```yaml
+http:
+  routers:
+    a-service:
+      rule: "Host(`a-service.example.com`)"
+      service: a-service-backend
+      middlewares:
+        - oauth-auth-signin
+      tls:
+        certResolver: default
+        domains:
+          - main: "example.com"
+            sans:
+              - "*.example.com"
+    oauth:
+      rule: "Host(`a-service.example.com`, `oauth.example.com`) && PathPrefix(`/oauth2/`)"
+      middlewares:
+        - auth-headers
+      service: oauth-backend
+      tls:
+        certResolver: default
+        domains:
+          - main: "example.com"
+            sans:
+              - "*.example.com"
+
+  services:
+    a-service-backend:
+      loadBalancer:
+        servers:
+          - url: http://172.16.0.2:7555
+    oauth-backend:
+      loadBalancer:
+        servers:
+          - url: http://172.16.0.1:4180
+
+  middlewares:
+    auth-headers:
+      headers:
+        sslRedirect: true
+        stsSeconds: 315360000
+        browserXssFilter: true
+        contentTypeNosniff: true
+        forceSTSHeader: true
+        sslHost: example.com
+        stsIncludeSubdomains: true
+        stsPreload: true
+        frameDeny: true
+    oauth-auth-signin:
+      forwardAuth:
+        address: https://oauth.example.com/oauth2/auth/sign_in
+        trustForwardHeader: true
+        authResponseHeaders:
+          - X-Auth-Request-Access-Token
+          - Authorization
+```
+
 :::note
 If you set up your OAuth2 provider to rotate your client secret, you can use the `client-secret-file` option to reload the secret when it is updated.
 :::
