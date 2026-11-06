@@ -74,4 +74,56 @@ func (a *AlphaOptions) MergeOptionsWithDefaults(opts *Options) {
 	opts.Server = a.Server
 	opts.MetricsServer = a.MetricsServer
 	opts.Providers = a.Providers
+
+	// Automatically add claims referenced in header injection to each
+	// provider's AdditionalClaims so they are extracted from the ID token.
+	collectHeaderClaimsIntoProviders(opts)
+}
+
+// builtinSessionClaims are claims that are always available on the session
+// without needing to be listed in AdditionalClaims.
+var builtinSessionClaims = map[string]bool{
+	"access_token":       true,
+	"id_token":           true,
+	"created_at":         true,
+	"expires_on":         true,
+	"refresh_token":      true,
+	"email":              true,
+	"user":               true,
+	"groups":             true,
+	"preferred_username": true,
+}
+
+// collectHeaderClaimsIntoProviders inspects InjectRequestHeaders and
+// InjectResponseHeaders for ClaimSource entries whose claim is not a
+// built-in session field and adds them to every provider's
+// AdditionalClaims list (deduplicated).
+func collectHeaderClaimsIntoProviders(opts *Options) {
+	needed := map[string]bool{}
+	for _, header := range append(opts.InjectRequestHeaders, opts.InjectResponseHeaders...) {
+		for _, value := range header.Values {
+			if value.ClaimSource != nil && value.ClaimSource.Claim != "" {
+				claim := value.ClaimSource.Claim
+				if !builtinSessionClaims[claim] {
+					needed[claim] = true
+				}
+			}
+		}
+	}
+
+	if len(needed) == 0 {
+		return
+	}
+
+	for i := range opts.Providers {
+		existing := map[string]bool{}
+		for _, c := range opts.Providers[i].AdditionalClaims {
+			existing[c] = true
+		}
+		for claim := range needed {
+			if !existing[claim] {
+				opts.Providers[i].AdditionalClaims = append(opts.Providers[i].AdditionalClaims, claim)
+			}
+		}
+	}
 }
