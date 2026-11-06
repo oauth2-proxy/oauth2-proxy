@@ -35,6 +35,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/middleware"
+	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
 	requestutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/upstream"
@@ -419,7 +420,7 @@ func buildSessionChain(opts *options.Options, provider providers.Provider, sessi
 
 		for _, verifier := range opts.GetJWTBearerVerifiers() {
 			sessionLoaders = append(sessionLoaders,
-				middlewareapi.CreateTokenToSessionFunc(verifier.Verify))
+				middlewareapi.CreateTokenToSessionFunc(verifier.Verify, provider.Data().SessionClaimMapping()))
 		}
 
 		chain = chain.Append(middleware.NewJwtSessionLoader(sessionLoaders, opts.BearerTokenLoginFallback))
@@ -946,16 +947,21 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	session, err := p.redeemCode(req, csrf.GetCodeVerifier())
+	if errors.Is(err, internaloidc.ErrInvalidAudience) {
+		logger.PrintAuthf("", req, logger.AuthFailure, "Invalid authentication via OAuth2: %v", err)
+		p.ErrorPage(rw, req, http.StatusForbidden, err.Error())
+		return
+	}
 	if err != nil {
 		logger.Errorf("Error redeeming code during OAuth2 callback: %v", err)
-		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+		p.ErrorPage(rw, req, callbackErrorStatus(err), err.Error())
 		return
 	}
 
 	err = p.enrichSessionState(req.Context(), session)
 	if err != nil {
 		logger.Errorf("Error creating session during OAuth2 callback: %v", err)
-		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+		p.ErrorPage(rw, req, callbackErrorStatus(err), err.Error())
 		return
 	}
 
@@ -996,6 +1002,15 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: unauthorized")
 		p.ErrorPage(rw, req, http.StatusForbidden, "Invalid session: unauthorized")
 	}
+}
+
+// callbackErrorStatus maps an error from redeeming or enriching a session
+// during the OAuth2 callback to the HTTP status returned to the user
+func callbackErrorStatus(err error) int {
+	if errors.Is(err, providers.ErrEmailNotVerified) {
+		return http.StatusForbidden
+	}
+	return http.StatusInternalServerError
 }
 
 func (p *OAuthProxy) redeemCode(req *http.Request, codeVerifier string) (*sessionsapi.SessionState, error) {
@@ -1302,6 +1317,10 @@ func checkAllowedEmails(req *http.Request, s *sessionsapi.SessionState) bool {
 // encodeState builds the OAuth state param out of our nonce and
 // original application redirect
 func encodeState(nonce string, redirect string, encode bool) string {
+	if !encode {
+		redirect = url.QueryEscape(redirect)
+	}
+
 	rawString := fmt.Sprintf("%v:%v", nonce, redirect)
 	if encode {
 		return base64.RawURLEncoding.EncodeToString([]byte(rawString))
@@ -1322,7 +1341,18 @@ func decodeState(state string, encode bool) (string, string, error) {
 	if len(parsedState) != 2 {
 		return "", "", errors.New("invalid length")
 	}
-	return parsedState[0], parsedState[1], nil
+	nonce := parsedState[0]
+	redirect := parsedState[1]
+
+	if !encode {
+		var err error
+		redirect, err = url.QueryUnescape(redirect)
+		if err != nil {
+			return "", "", fmt.Errorf("couldn't parse redirect url: %w", err)
+		}
+	}
+
+	return nonce, redirect, nil
 }
 
 // addHeadersForProxying adds the appropriate headers the request / response for proxying

@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"github.com/coreos/go-oidc/v3/oidc"
-	"github.com/go-jose/go-jose/v3"
+	"github.com/go-jose/go-jose/v4"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -40,7 +40,8 @@ var _ = Describe("Verify", func() {
 			Iss: "https://foo",
 			Aud: "1226737",
 		})
-		Expect(err).To(MatchError("audience from claim aud with value [1226737] does not match with " +
+		Expect(err).To(MatchError(ErrInvalidAudience))
+		Expect(err).To(MatchError("invalid audience: audience from claim aud with value [1226737] does not match with " +
 			"any of allowed audiences map[7817818:{}]"))
 		Expect(result).To(BeNil())
 	})
@@ -70,7 +71,7 @@ var _ = Describe("Verify", func() {
 			Aud: "1226737",
 		})
 
-		Expect(err).To(MatchError("audience from claim aud with value [1226737] does not match with any " +
+		Expect(err).To(MatchError("invalid audience: audience from claim aud with value [1226737] does not match with any " +
 			"of allowed audiences map[7817818:{} abc:{} xyz:{}]"))
 		Expect(result).To(BeNil())
 	})
@@ -99,7 +100,7 @@ var _ = Describe("Verify", func() {
 			Iss:      "https://foo",
 			ClientID: "1226737",
 		})
-		Expect(err).To(MatchError("audience from claim client_id with value [1226737] does not match with " +
+		Expect(err).To(MatchError("invalid audience: audience from claim client_id with value [1226737] does not match with " +
 			"any of allowed audiences map[7817818:{}]"))
 		Expect(result).To(BeNil())
 	})
@@ -129,7 +130,7 @@ var _ = Describe("Verify", func() {
 			ClientID: "1226737",
 		})
 
-		Expect(err).To(MatchError("audience from claim client_id with value [1226737] does not match with any " +
+		Expect(err).To(MatchError("invalid audience: audience from claim client_id with value [1226737] does not match with any " +
 			"of allowed audiences map[7817818:{} abc:{} xyz:{}]"))
 		Expect(result).To(BeNil())
 	})
@@ -145,7 +146,8 @@ var _ = Describe("Verify", func() {
 			Aud:      "1226737",
 		})
 
-		Expect(err).To(MatchError("audience claims [not_exists] do not exist in claims: " +
+		Expect(err).To(MatchError(ErrInvalidAudience))
+		Expect(err).To(MatchError("invalid audience: audience claims [not_exists] do not exist in claims: " +
 			"map[aud:1226737 client_id:1226737 iss:https://foo]"))
 		Expect(result).To(BeNil())
 	})
@@ -200,7 +202,7 @@ type testVerifier struct {
 }
 
 func (t *testVerifier) VerifySignature(_ context.Context, jwt string) ([]byte, error) {
-	jws, err := jose.ParseSigned(jwt)
+	jws, err := jose.ParseSignedCompact(jwt, []jose.SignatureAlgorithm{jose.RS256})
 	if err != nil {
 		return nil, fmt.Errorf("oidc: malformed jwt: %v", err)
 	}

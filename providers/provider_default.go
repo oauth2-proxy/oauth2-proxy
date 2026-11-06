@@ -22,6 +22,10 @@ var (
 	// code
 	ErrMissingCode = errors.New("missing code")
 
+	// ErrEmailNotVerified is returned when the provider reports the user's
+	// email address as not verified
+	ErrEmailNotVerified = errors.New("email not verified")
+
 	// ErrMissingIDToken is returned when an oidc.Token does not contain the
 	// extra `id_token` field for an IDToken.
 	ErrMissingIDToken = errors.New("missing id_token")
@@ -149,7 +153,15 @@ func (p *ProviderData) RefreshSession(_ context.Context, _ *sessions.SessionStat
 // CreateSessionFromToken converts Bearer IDTokens into sessions
 func (p *ProviderData) CreateSessionFromToken(ctx context.Context, token string) (*sessions.SessionState, error) {
 	if p.Verifier != nil {
-		return middleware.CreateTokenToSessionFunc(p.Verifier.Verify)(ctx, token)
+		return middleware.CreateTokenToSessionFunc(p.Verifier.Verify, p.SessionClaimMapping())(ctx, token)
 	}
 	return nil, ErrNotImplemented
+}
+
+// SessionClaimMapping returns the generic bearer session mapping, inheriting only
+// the provider's groups claim and leaving other fields at their bearer defaults.
+func (p *ProviderData) SessionClaimMapping() middleware.SessionClaimMapping {
+	return middleware.SessionClaimMapping{
+		Groups: p.GroupsClaim,
+	}
 }
