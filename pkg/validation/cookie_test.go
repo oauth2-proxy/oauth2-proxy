@@ -318,6 +318,83 @@ func TestValidateCookie(t *testing.T) {
 			},
 			errStrings: []string{"could not read cookie secret file: /nonexistent/file.txt"},
 		},
+		{
+			name: "with valid __Host- prefixed name",
+			cookie: options.Cookie{
+				Name:    "__Host-oauth2_proxy",
+				Secret:  validSecret,
+				Domains: emptyDomains,
+				Path:    "/",
+				Secure:  true,
+			},
+			errStrings: []string{},
+		},
+		{
+			name: "with __Host- prefixed name and invalid attributes",
+			cookie: options.Cookie{
+				Name:    "__Host-oauth2_proxy",
+				Secret:  validSecret,
+				Domains: domains,
+				Path:    "/oauth2",
+				Secure:  false,
+			},
+			errStrings: []string{
+				"cookie_name (\"__Host-oauth2_proxy\") uses the __Host- prefix, which requires cookie_secure to be true",
+				"cookie_name (\"__Host-oauth2_proxy\") uses the __Host- prefix, which does not allow cookie_domains to be set",
+				"cookie_name (\"__Host-oauth2_proxy\") uses the __Host- prefix, which requires cookie_path to be \"/\"",
+			},
+		},
+		{
+			name: "with __Host-Http- prefixed name and cookie domains",
+			cookie: options.Cookie{
+				Name:     "__Host-Http-oauth2_proxy",
+				Secret:   validSecret,
+				Domains:  []string{".example.com"},
+				Path:     "/",
+				Secure:   true,
+				HTTPOnly: true,
+			},
+			errStrings: []string{
+				"cookie_name (\"__Host-Http-oauth2_proxy\") uses the __Host- prefix, which does not allow cookie_domains to be set",
+			},
+		},
+		{
+			name: "with lowercase __host- prefixed name and cookie domains",
+			cookie: options.Cookie{
+				Name:    "__host-oauth2_proxy",
+				Secret:  validSecret,
+				Domains: []string{".example.com"},
+				Path:    "/",
+				Secure:  true,
+			},
+			errStrings: []string{
+				"cookie_name (\"__host-oauth2_proxy\") uses the __Host- prefix, which does not allow cookie_domains to be set",
+			},
+		},
+		{
+			name: "with valid __Secure- prefixed name",
+			cookie: options.Cookie{
+				Name:    "__Secure-oauth2_proxy",
+				Secret:  validSecret,
+				Domains: domains,
+				Path:    "/oauth2",
+				Secure:  true,
+			},
+			errStrings: []string{},
+		},
+		{
+			name: "with __Secure- prefixed name and insecure cookie",
+			cookie: options.Cookie{
+				Name:    "__Secure-oauth2_proxy",
+				Secret:  validSecret,
+				Domains: emptyDomains,
+				Path:    "/",
+				Secure:  false,
+			},
+			errStrings: []string{
+				"cookie_name (\"__Secure-oauth2_proxy\") uses the __Secure- prefix, which requires cookie_secure to be true",
+			},
+		},
 	}
 
 	for _, tc := range testCases {
