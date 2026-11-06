@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.6
 
+- [#3563](https://github.com/oauth2-proxy/oauth2-proxy/pull/3563) perf: add configurable concurrency to Google group membership checks (@KKamJi98)
+
 # V7.15.6
 
 ## Release Highlights

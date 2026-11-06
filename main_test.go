@@ -169,6 +169,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 				UseSystemTrustStore:      ptr.To(false),
 				SkipClaimsFromProfileURL: ptr.To(false),
 				GoogleConfig: options.GoogleOptions{
+					GroupMembershipConcurrency:       ptr.To(5),
 					AdminEmail:                       "admin@example.com",
 					TargetPrincipal:                  "principal",
 					UseOrganizationID:                ptr.To(false),
