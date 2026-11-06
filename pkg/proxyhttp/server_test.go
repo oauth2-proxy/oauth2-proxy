@@ -2,12 +2,15 @@ package proxyhttp
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"os"
+
+	"golang.org/x/net/http2"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	. "github.com/onsi/ginkgo/v2"
@@ -1325,6 +1328,136 @@ var _ = Describe("Server", func() {
 					_, err := httpGet(ctx, secureListenAddr)
 					return err
 				}).Should(HaveOccurred())
+			})
+		})
+	})
+
+	Context("HTTP/2 support", func() {
+		var srv Server
+		var ctx context.Context
+		var cancel context.CancelFunc
+
+		BeforeEach(func() {
+			ctx, cancel = context.WithCancel(context.Background())
+		})
+
+		AfterEach(func() {
+			cancel()
+			Eventually(Goroutines).ShouldNot(HaveLeaked())
+		})
+
+		Context("with h2c (HTTP/2 Cleartext) on an insecure server", func() {
+			var listenAddr string
+
+			BeforeEach(func() {
+				var err error
+				srv, err = NewServer(Opts{
+					Handler:     handler,
+					BindAddress: "127.0.0.1:0",
+					HTTP2:       true,
+				})
+				Expect(err).ToNot(HaveOccurred())
+
+				s, ok := srv.(*server)
+				Expect(ok).To(BeTrue())
+				Expect(s.http2).To(BeTrue())
+
+				listenAddr = s.listener.Addr().String()
+			})
+
+			It("Serves HTTP/2 cleartext requests", func() {
+				go func() {
+					defer GinkgoRecover()
+					Expect(srv.Start(ctx)).To(Succeed())
+				}()
+
+				// Use an HTTP/2 cleartext client
+				h2cTransport := &http2.Transport{
+					AllowHTTP: true,
+					DialTLSContext: func(ctx context.Context, network, addr string, _ *tls.Config) (net.Conn, error) {
+						return net.Dial(network, addr)
+					},
+				}
+				h2cClient := &http.Client{
+					Transport: h2cTransport,
+				}
+
+				resp, err := h2cClient.Get(fmt.Sprintf("http://%s/", listenAddr))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				Expect(resp.ProtoMajor).To(Equal(2))
+
+				body, err := io.ReadAll(resp.Body)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(string(body)).To(Equal(hello))
+
+				// Close idle connections to prevent goroutine leaks
+				h2cTransport.CloseIdleConnections()
+			})
+
+			It("Still serves HTTP/1.1 requests", func() {
+				go func() {
+					defer GinkgoRecover()
+					Expect(srv.Start(ctx)).To(Succeed())
+				}()
+
+				resp, err := httpGet(ctx, fmt.Sprintf("http://%s/", listenAddr))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				body, err := io.ReadAll(resp.Body)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(string(body)).To(Equal(hello))
+			})
+		})
+
+		Context("with HTTP/2 on a TLS server", func() {
+			var secureListenAddr string
+
+			BeforeEach(func() {
+				var err error
+				srv, err = NewServer(Opts{
+					Handler:           handler,
+					SecureBindAddress: "127.0.0.1:0",
+					TLS: &options.TLS{
+						Key:  &ipv4KeyDataSource,
+						Cert: &ipv4CertDataSource,
+					},
+					HTTP2: true,
+				})
+				Expect(err).ToNot(HaveOccurred())
+
+				s, ok := srv.(*server)
+				Expect(ok).To(BeTrue())
+
+				secureListenAddr = s.tlsListener.Addr().String()
+			})
+
+			It("Negotiates HTTP/2 via ALPN", func() {
+				go func() {
+					defer GinkgoRecover()
+					Expect(srv.Start(ctx)).To(Succeed())
+				}()
+
+				// Use an HTTP/2 TLS client
+				h2Transport := transport.Clone()
+				h2Transport.ForceAttemptHTTP2 = true
+
+				h2Client := &http.Client{Transport: h2Transport}
+				req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("https://%s/", secureListenAddr), nil)
+				Expect(err).ToNot(HaveOccurred())
+
+				resp, err := h2Client.Do(req)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				Expect(resp.ProtoMajor).To(Equal(2))
+
+				body, err := io.ReadAll(resp.Body)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(string(body)).To(Equal(hello))
+
+				// Close idle connections to prevent goroutine leaks
+				h2Transport.CloseIdleConnections()
 			})
 		})
 	})
