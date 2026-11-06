@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -33,7 +34,34 @@ func validateCookie(o options.Cookie) []string {
 	})
 
 	msgs = append(msgs, validateCookieName(o.Name)...)
+	msgs = append(msgs, validateCookieNamePrefix(o)...)
 	return msgs
+}
+
+func validateCookieNamePrefix(o options.Cookie) []string {
+	msgs := []string{}
+
+	switch {
+	case hasPrefixFold(o.Name, "__Host-"):
+		if !o.Secure {
+			msgs = append(msgs, fmt.Sprintf("cookie_name (%q) uses the __Host- prefix, which requires cookie_secure to be true", o.Name))
+		}
+		if len(o.Domains) > 0 {
+			msgs = append(msgs, fmt.Sprintf("cookie_name (%q) uses the __Host- prefix, which does not allow cookie_domains to be set", o.Name))
+		}
+		if o.Path != "/" {
+			msgs = append(msgs, fmt.Sprintf("cookie_name (%q) uses the __Host- prefix, which requires cookie_path to be \"/\"", o.Name))
+		}
+	case hasPrefixFold(o.Name, "__Secure-"):
+		if !o.Secure {
+			msgs = append(msgs, fmt.Sprintf("cookie_name (%q) uses the __Secure- prefix, which requires cookie_secure to be true", o.Name))
+		}
+	}
+	return msgs
+}
+
+func hasPrefixFold(s, prefix string) bool {
+	return len(s) >= len(prefix) && strings.EqualFold(s[:len(prefix)], prefix)
 }
 
 func validateCookieName(name string) []string {
