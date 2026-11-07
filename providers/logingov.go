@@ -13,7 +13,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/go-jose/go-jose/v3"
+	"github.com/go-jose/go-jose/v4"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
@@ -196,7 +196,7 @@ func emailFromUserInfo(ctx context.Context, accessToken string, userInfoEndpoint
 	}
 
 	if !emailData.EmailVerified {
-		return "", fmt.Errorf("email %s not listed as verified", email)
+		return "", fmt.Errorf("%w: email %s not listed as verified", ErrEmailNotVerified, email)
 	}
 
 	return email, nil

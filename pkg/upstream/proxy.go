@@ -148,7 +148,12 @@ func registerTrailingSlashHandler(serveMux *mux.Router) error {
 		slashReq.URL.Path += "/"
 		return serveMux.Match(slashReq, m)
 	}).Handler(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		http.Redirect(rw, req, req.URL.String()+"/", http.StatusMovedPermanently)
+		redirect := *req.URL
+		redirect.Path += "/"
+		if redirect.RawPath != "" {
+			redirect.RawPath += "/"
+		}
+		http.Redirect(rw, req, redirect.String(), http.StatusMovedPermanently)
 	})).GetError()
 }
 

@@ -632,6 +632,78 @@ func TestOAuthCallbackClientIPLogging(t *testing.T) {
 	}
 }
 
+type redeemErrorProvider struct {
+	*TestProvider
+	err error
+}
+
+func (p *redeemErrorProvider) Redeem(_ context.Context, _, _, _ string) (*sessions.SessionState, error) {
+	return nil, p.err
+}
+
+func TestOAuthCallbackRedeemErrorStatus(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		err      error
+		expected int
+	}{
+		{"Invalid audience", fmt.Errorf("could not verify id_token: %w", internaloidc.ErrInvalidAudience), http.StatusForbidden},
+		{"Other redeem error", errors.New("token exchange failed"), http.StatusInternalServerError},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			test, err := NewPassAccessTokenTest(PassAccessTokenTestOptions{})
+			require.NoError(t, err)
+			t.Cleanup(test.Close)
+			test.proxy.provider = &redeemErrorProvider{TestProvider: test.proxy.provider.(*TestProvider), err: tc.err}
+
+			code, _ := test.getCallbackEndpoint()
+			assert.Equal(t, tc.expected, code)
+		})
+	}
+}
+
+type enrichSessionErrorProvider struct {
+	*TestProvider
+	err error
+}
+
+func (p *enrichSessionErrorProvider) EnrichSession(_ context.Context, _ *sessions.SessionState) error {
+	return p.err
+}
+
+func TestOAuthCallbackSessionErrorStatus(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		err      error
+		expected int
+	}{
+		{"Unverified email", fmt.Errorf("%w: user email is not verified", providers.ErrEmailNotVerified), http.StatusForbidden},
+		{"Other error", errors.New("upstream unavailable"), http.StatusInternalServerError},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			test, err := NewPassAccessTokenTest(PassAccessTokenTestOptions{ValidToken: true})
+			require.NoError(t, err)
+			t.Cleanup(test.Close)
+			test.proxy.provider = &enrichSessionErrorProvider{
+				TestProvider: test.proxy.provider.(*TestProvider),
+				err:          tc.err,
+			}
+
+			csrf, err := cookies.NewCSRF(test.proxy.CookieOptions, "")
+			require.NoError(t, err)
+			req := httptest.NewRequest(http.MethodGet, "/oauth2/callback?code=callback_code&state="+encodeState(csrf.HashOAuthState(), "%2F", false), nil)
+			req = middlewareapi.AddRequestScope(req, &middlewareapi.RequestScope{})
+			csrfCookie, err := csrf.SetCookie(httptest.NewRecorder(), req)
+			require.NoError(t, err)
+			req.AddCookie(csrfCookie)
+
+			rw := httptest.NewRecorder()
+			test.proxy.OAuthCallback(rw, req)
+			assert.Equal(t, tc.expected, rw.Code)
+		})
+	}
+}
+
 // getEndpointWithCookie makes a requests againt the oauthproxy with passed requestPath
 // and cookie and returns body and status code.
 func (patTest *PassAccessTokenTest) getEndpointWithCookie(cookie string, endpoint string) (httpCode int, accessToken string) {
@@ -2171,6 +2243,41 @@ func TestGetJwtSession(t *testing.T) {
 	assert.Equal(t, test.rw.Header().Get("Authorization"), authHeader)
 	assert.Equal(t, test.rw.Header().Get("X-Auth-Request-User"), "1234567890")
 	assert.Equal(t, test.rw.Header().Get("X-Auth-Request-Email"), "john@example.com")
+}
+
+func TestGetJwtSessionWithCustomGroupsClaim(t *testing.T) {
+	verifier := oidc.NewVerifier("https://issuer.example.com", NoOpKeySet{},
+		&oidc.Config{ClientID: "test-client"})
+	test, err := NewAuthOnlyEndpointTest("?allowed_groups=custom", func(opts *options.Options) {
+		opts.SkipJwtBearerTokens = true
+		opts.Providers[0].OIDCConfig.GroupsClaim = "ADGroups"
+		opts.Providers[0].AllowedGroups = []string{"custom"}
+		opts.SetJWTBearerVerifiers([]internaloidc.IDTokenVerifier{verifier})
+		opts.InjectResponseHeaders = []options.Header{{
+			Name: "X-Auth-Request-Groups",
+			Values: []options.HeaderValue{{
+				ClaimSource: &options.ClaimSource{Claim: "groups"},
+			}},
+		}}
+	})
+	require.NoError(t, err)
+
+	payload := fmt.Sprintf(`{"iss": "https://issuer.example.com",
+		"aud": "test-client",
+		"sub": "user",
+		"email": "user@example.com",
+		"exp": %d,
+		"groups": ["default"],
+		"ADGroups": ["custom"]
+	}`, time.Now().Add(time.Hour).Unix())
+	token := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"RS256"}`)) + "." +
+		base64.RawURLEncoding.EncodeToString([]byte(payload)) + ".c2lnbmF0dXJl"
+	test.req.Header.Set("Authorization", "Bearer "+token)
+
+	test.proxy.ServeHTTP(test.rw, test.req)
+
+	assert.Equal(t, http.StatusAccepted, test.rw.Code)
+	assert.Equal(t, "custom", test.rw.Header().Get("X-Auth-Request-Groups"))
 }
 
 func Test_prepareNoCache(t *testing.T) {
@@ -4274,26 +4381,45 @@ func TestAuthOnlyAllowedEmailDomains(t *testing.T) {
 }
 
 func TestStateEncodesCorrectly(t *testing.T) {
-	state := "some_state_to_test"
+	state := "https://example.com/callback?foo=bar&baz=qux"
 	nonce := "some_nonce_to_test"
 
 	encodedResult := encodeState(nonce, state, true)
-	assert.Equal(t, "c29tZV9ub25jZV90b190ZXN0OnNvbWVfc3RhdGVfdG9fdGVzdA", encodedResult)
+	expectedEncoded := base64.RawURLEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", nonce, state)))
+	assert.Equal(t, expectedEncoded, encodedResult)
 
 	notEncodedResult := encodeState(nonce, state, false)
-	assert.Equal(t, "some_nonce_to_test:some_state_to_test", notEncodedResult)
+	expectedUnencoded := fmt.Sprintf("%s:%s", nonce, url.QueryEscape(state))
+	assert.Equal(t, expectedUnencoded, notEncodedResult)
+	assert.NotContains(t, notEncodedResult, "&")
 }
 
 func TestStateDecodesCorrectly(t *testing.T) {
-	nonce, redirect, _ := decodeState("c29tZV9ub25jZV90b190ZXN0OnNvbWVfc3RhdGVfdG9fdGVzdA", true)
+	state := "https://example.com/callback?foo=bar&baz=qux"
+	nonce := "some_nonce_to_test"
 
-	assert.Equal(t, "some_nonce_to_test", nonce)
-	assert.Equal(t, "some_state_to_test", redirect)
+	encodedState := base64.RawURLEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", nonce, state)))
+	decodedNonce, decodedRedirect, err := decodeState(encodedState, true)
+	assert.NoError(t, err)
+	assert.Equal(t, nonce, decodedNonce)
+	assert.Equal(t, state, decodedRedirect)
 
-	nonce2, redirect2, _ := decodeState("some_nonce_to_test:some_state_to_test", false)
+	rawState := fmt.Sprintf("%s:%s", nonce, url.QueryEscape(state))
+	decodedNonce2, decodedRedirect2, err := decodeState(rawState, false)
+	assert.NoError(t, err)
+	assert.Equal(t, nonce, decodedNonce2)
+	assert.Equal(t, state, decodedRedirect2)
+}
 
-	assert.Equal(t, "some_nonce_to_test", nonce2)
-	assert.Equal(t, "some_state_to_test", redirect2)
+func TestStateRoundTripWithMultipleQueryParameters(t *testing.T) {
+	state := "https://example.com/callback?foo=bar&baz=qux&zap=zazzle"
+	nonce := "another_nonce"
+
+	encoded := encodeState(nonce, state, false)
+	decodedNonce, decodedRedirect, err := decodeState(encoded, false)
+	assert.NoError(t, err)
+	assert.Equal(t, nonce, decodedNonce)
+	assert.Equal(t, state, decodedRedirect)
 }
 
 func TestAuthOnlyAllowedEmails(t *testing.T) {
