@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -449,7 +450,7 @@ func TestCidaasProvider_RefreshSession(t *testing.T) {
 				RefreshToken: refreshToken,
 			},
 			ExpectedRefreshed: false,
-			ExpectedError:     fmt.Errorf("unable to redeem refresh token: failed to get token: oauth2: server response missing access_token"),
+			ExpectedError:     fmt.Errorf("unable to redeem refresh token: failed to get token from <redeem-url>: oauth2: server response missing access_token"),
 			ExpectedUser:      "session.is.unable.to.refresh",
 			ExpectedEmail:     "found@email.com",
 		},
@@ -481,7 +482,8 @@ func TestCidaasProvider_RefreshSession(t *testing.T) {
 			refreshed, err = provider.RefreshSession(context.Background(), tc.ExistingSession)
 
 			if tc.ExpectedError != nil {
-				assert.EqualError(t, err, tc.ExpectedError.Error())
+				expectedError := strings.ReplaceAll(tc.ExpectedError.Error(), "<redeem-url>", provider.RedeemURL.String())
+				assert.EqualError(t, err, expectedError)
 			} else {
 				assert.NoError(t, err)
 			}

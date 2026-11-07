@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.6
 
+- [#XXXX](https://github.com/oauth2-proxy/oauth2-proxy/pull/XXXX) fix: include the token endpoint URL in OIDC redeem and refresh errors (fixes [#2727](https://github.com/oauth2-proxy/oauth2-proxy/issues/2727)) (@jaewak)
+
 # V7.15.6
 
 ## Release Highlights
