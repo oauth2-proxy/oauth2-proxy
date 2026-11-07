@@ -16,6 +16,8 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"golang.org/x/oauth2"
 )
 
 type redeemTokenResponse struct {
@@ -168,6 +170,40 @@ func TestOIDCProviderRedeem_invalid_audience(t *testing.T) {
 
 	_, err := provider.Redeem(context.Background(), provider.RedeemURL.String(), "code1234", "")
 	assert.ErrorIs(t, err, internaloidc.ErrInvalidAudience)
+}
+
+func newForbiddenOIDCServer() (*url.URL, *httptest.Server) {
+	s := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		rw.Header().Add("content-type", "text/html")
+		rw.WriteHeader(http.StatusForbidden)
+		_, _ = rw.Write([]byte("<h1>Forbidden</h1>"))
+	}))
+	u, _ := url.Parse(s.URL)
+	return u, s
+}
+
+func TestOIDCProviderRedeem_error_includes_redeem_url(t *testing.T) {
+	serverURL, server := newForbiddenOIDCServer()
+	defer server.Close()
+	provider := newOIDCProvider(serverURL, false)
+
+	_, err := provider.Redeem(context.Background(), provider.RedeemURL.String(), "code1234", "")
+	assert.ErrorContains(t, err, provider.RedeemURL.String())
+
+	var retrieveErr *oauth2.RetrieveError
+	require.ErrorAs(t, err, &retrieveErr)
+	assert.Equal(t, http.StatusForbidden, retrieveErr.Response.StatusCode)
+}
+
+func TestOIDCProviderRefreshSession_error_includes_redeem_url(t *testing.T) {
+	serverURL, server := newForbiddenOIDCServer()
+	defer server.Close()
+	provider := newOIDCProvider(serverURL, false)
+
+	existingSession := &sessions.SessionState{RefreshToken: refreshToken}
+	refreshed, err := provider.RefreshSession(context.Background(), existingSession)
+	assert.False(t, refreshed)
+	assert.ErrorContains(t, err, provider.RedeemURL.String())
 }
 
 func TestOIDCProviderRefreshSessionIfNeededWithoutIdToken(t *testing.T) {
