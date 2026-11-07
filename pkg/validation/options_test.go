@@ -195,6 +195,9 @@ func TestForceHTTPS(t *testing.T) {
 		"with an HTTPS address": {
 			secureBindAddress: ":443",
 		},
+		"with an HTTPS address and scheme": {
+			secureBindAddress: "https://:443",
+		},
 		"with the HTTPS server disabled": {
 			secureBindAddress: "",
 			expectedMsg:       "force-https requires the HTTPS server, which is disabled: set a TLS certificate and key (tls-cert-file and tls-key-file)",
