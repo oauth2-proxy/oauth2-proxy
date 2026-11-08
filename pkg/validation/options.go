@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -81,6 +82,10 @@ func Validate(o *options.Options) error {
 
 	msgs = append(msgs, validateUpstreams(o.UpstreamServers)...)
 
+	if o.ForceHTTPS {
+		msgs = append(msgs, validateForceHTTPS(o.Server.SecureBindAddress)...)
+	}
+
 	if o.ReverseProxy {
 		parser, err := ip.GetRealClientIPParser(o.RealClientIPHeader)
 		if err != nil {
@@ -108,6 +113,18 @@ func Validate(o *options.Options) error {
 	if len(msgs) != 0 {
 		return fmt.Errorf("invalid configuration:\n  %s",
 			strings.Join(msgs, "\n  "))
+	}
+	return nil
+}
+
+// validateForceHTTPS checks that the HTTPS server is enabled, as force-https
+// redirects to its port. The HTTPS server is disabled without a TLS certificate.
+func validateForceHTTPS(secureBindAddress string) []string {
+	if secureBindAddress == "" || secureBindAddress == "-" {
+		return []string{"force-https requires the HTTPS server, which is disabled: set a TLS certificate and key (tls-cert-file and tls-key-file)"}
+	}
+	if _, _, err := net.SplitHostPort(util.GetListenAddress(secureBindAddress)); err != nil {
+		return []string{fmt.Sprintf("invalid HTTPS address %q for force-https: %v", secureBindAddress, err)}
 	}
 	return nil
 }

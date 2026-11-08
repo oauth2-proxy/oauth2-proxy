@@ -187,6 +187,43 @@ func TestValidateSignatureKeyUnsupportedAlgorithm(t *testing.T) {
 		"  unsupported signature hash algorithm: "+o.SignatureKey)
 }
 
+func TestForceHTTPS(t *testing.T) {
+	testCases := map[string]struct {
+		secureBindAddress string
+		expectedMsg       string
+	}{
+		"with an HTTPS address": {
+			secureBindAddress: ":443",
+		},
+		"with an HTTPS address and scheme": {
+			secureBindAddress: "https://:443",
+		},
+		"with the HTTPS server disabled": {
+			secureBindAddress: "",
+			expectedMsg:       "force-https requires the HTTPS server, which is disabled: set a TLS certificate and key (tls-cert-file and tls-key-file)",
+		},
+		"with an HTTPS address without a port": {
+			secureBindAddress: "localhost",
+			expectedMsg:       "invalid HTTPS address \"localhost\" for force-https: address localhost: missing port in address",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			o := testOptions()
+			o.ForceHTTPS = true
+			o.Server.SecureBindAddress = tc.secureBindAddress
+
+			err := Validate(o)
+			if tc.expectedMsg == "" {
+				assert.NoError(t, err)
+				return
+			}
+			assert.EqualError(t, err, errorMsg([]string{tc.expectedMsg}))
+		})
+	}
+}
+
 func TestGCPHealthcheck(t *testing.T) {
 	o := testOptions()
 	o.GCPHealthChecks = true

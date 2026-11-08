@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.6
 
+- [#3597](https://github.com/oauth2-proxy/oauth2-proxy/pull/3597) fix: report a clear error when `--force-https` is set without a TLS certificate (fixes [#1918](https://github.com/oauth2-proxy/oauth2-proxy/issues/1918)) @marsluca
+
 # V7.15.6
 
 ## Release Highlights

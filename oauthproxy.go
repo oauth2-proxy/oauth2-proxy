@@ -363,7 +363,7 @@ func buildPreAuthChain(opts *options.Options, sessionStore sessionsapi.SessionSt
 	chain := alice.New(middleware.NewScope(opts.ReverseProxy, opts.Logging.RequestIDHeader, trustedProxies))
 
 	if opts.ForceHTTPS {
-		_, httpsPort, err := net.SplitHostPort(opts.Server.SecureBindAddress)
+		_, httpsPort, err := net.SplitHostPort(util.GetListenAddress(opts.Server.SecureBindAddress))
 		if err != nil {
 			return alice.Chain{}, fmt.Errorf("invalid HTTPS address %q: %v", opts.Server.SecureBindAddress, err)
 		}
