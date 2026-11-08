@@ -445,7 +445,7 @@ sub:
 				configFile:     []byte("\tfoo: bar"),
 				input:          &TestOptions{},
 				expectedOutput: &TestOptions{},
-				expectedErr:    errors.New("error unmarshalling config: yaml: found character that cannot start any token"),
+				expectedErr:    errors.New("error unmarshalling config: yaml: line 1: found character that cannot start any token"),
 			}),
 			Entry("with extra fields in the YAML", loadYAMLTableInput{
 				configFile: append(testOptionsConfigBytesFull, []byte("foo: bar\n")...),
