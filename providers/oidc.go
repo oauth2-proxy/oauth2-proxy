@@ -95,7 +95,7 @@ func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code, codeVerifi
 	ctx = oidc.ClientContext(ctx, requests.DefaultHTTPClient)
 	token, err := c.Exchange(ctx, code, opts...)
 	if err != nil {
-		return nil, fmt.Errorf("token exchange failed: %v", err)
+		return nil, fmt.Errorf("token exchange with %s failed: %w", p.RedeemURL.Redacted(), err)
 	}
 
 	return p.createSession(ctx, token, false)
@@ -180,7 +180,7 @@ func (p *OIDCProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sessi
 	}
 	token, err := c.TokenSource(ctx, t).Token()
 	if err != nil {
-		return fmt.Errorf("failed to get token: %v", err)
+		return fmt.Errorf("failed to get token from %s: %w", p.RedeemURL.Redacted(), err)
 	}
 
 	newSession, err := p.createSession(ctx, token, true)
