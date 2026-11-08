@@ -482,6 +482,9 @@ var _ = Describe("Stored Session Suite", func() {
 				s := &storedSessionLoader{
 					refreshPeriod: in.refreshPeriod,
 					store:         store,
+					// Keep the "timeout obtaining session lock" case short.
+					refreshTimeout:      100 * time.Millisecond,
+					refreshLockDuration: 100 * time.Millisecond,
 					sessionRefresher: func(_ context.Context, ss *sessionsapi.SessionState) (bool, error) {
 						refreshed = true
 						switch ss.RefreshToken {
@@ -590,9 +593,24 @@ var _ = Describe("Stored Session Suite", func() {
 						obtainError: sessionsapi.ErrLockNotObtained,
 					},
 				},
-				expectedErr:          errors.New("timeout obtaining session lock"),
+				expectedErr:          nil,
 				expectRefreshed:      false,
-				expectValidated:      false,
+				expectValidated:      true,
+				expectedLockObtained: true,
+			}),
+			Entry("when obtaining lock failed with an invalid session", refreshSessionIfNeededTableInput{
+				refreshPeriod: 1 * time.Minute,
+				session: &sessionsapi.SessionState{
+					AccessToken:  "Invalid",
+					RefreshToken: noRefresh,
+					CreatedAt:    &createdPast,
+					Lock: &testLock{
+						obtainError: sessionsapi.ErrLockNotObtained,
+					},
+				},
+				expectedErr:          errors.New("session is invalid"),
+				expectRefreshed:      false,
+				expectValidated:      true,
 				expectedLockObtained: true,
 			}),
 			Entry("when the session is not refreshed by the provider", refreshSessionIfNeededTableInput{
