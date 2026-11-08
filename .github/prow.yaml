@@ -23,6 +23,7 @@ labels:
     - refactor
     - test
     - breaking-change
+    - dependencies
   provider:
     - adfs
     - azure

@@ -1,6 +1,9 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   semanticCommits: "enabled",
+  labels: [
+    "kind/dependencies",
+  ],
   schedule: [
     "after 8am on sunday"
   ],
