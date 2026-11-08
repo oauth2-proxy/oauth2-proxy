@@ -123,6 +123,7 @@ var _ = Describe("Legacy Options", func() {
 				BindAddress: "127.0.0.1:4180",
 			}
 
+			opts.Providers[0].GoogleConfig.GroupMembershipConcurrency = ptr.To(5)
 			opts.Providers[0].ID = "google=oauth-proxy"
 			opts.Providers[0].ClientID = "oauth-proxy"
 			opts.Providers[0].OIDCConfig.AudienceClaims = []string{"aud"}

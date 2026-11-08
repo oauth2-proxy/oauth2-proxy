@@ -127,6 +127,10 @@ func validateClientSecret(provider options.Provider) []string {
 
 func validateGoogleConfig(provider options.Provider) []string {
 	msgs := []string{}
+	concurrency := ptr.Deref(provider.GoogleConfig.GroupMembershipConcurrency, options.DefaultGoogleGroupMembershipConcurrency)
+	if concurrency < 1 || concurrency > options.MaxGoogleGroupMembershipConcurrency {
+		msgs = append(msgs, "google-group-membership-concurrency must be between 1 and 10")
+	}
 
 	hasAdminEmail := provider.GoogleConfig.AdminEmail != ""
 	hasSAJSON := provider.GoogleConfig.ServiceAccountJSON != ""

@@ -22,6 +22,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
+	"golang.org/x/sync/errgroup"
 	admin "google.golang.org/api/admin/directory/v1"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/impersonate"
@@ -42,7 +43,8 @@ type GoogleProvider struct {
 	// Since it is called on every request.
 	groupValidator func(*sessions.SessionState) bool
 
-	setPreferredUsername func(s *sessions.SessionState) error
+	setPreferredUsername       func(s *sessions.SessionState) error
+	groupMembershipConcurrency int
 }
 
 var _ Provider = (*GoogleProvider)(nil)
@@ -88,6 +90,10 @@ var (
 
 // NewGoogleProvider initiates a new GoogleProvider
 func NewGoogleProvider(p *ProviderData, opts options.GoogleOptions) (*GoogleProvider, error) {
+	concurrency := ptr.Deref(opts.GroupMembershipConcurrency, options.DefaultGoogleGroupMembershipConcurrency)
+	if concurrency < 1 || concurrency > options.MaxGoogleGroupMembershipConcurrency {
+		return nil, fmt.Errorf("google-group-membership-concurrency must be between 1 and 10")
+	}
 	p.setProviderDefaults(providerDefaults{
 		name:        googleProviderName,
 		loginURL:    googleDefaultLoginURL,
@@ -97,7 +103,8 @@ func NewGoogleProvider(p *ProviderData, opts options.GoogleOptions) (*GoogleProv
 		scope:       googleDefaultScope,
 	})
 	provider := &GoogleProvider{
-		ProviderData: p,
+		ProviderData:               p,
+		groupMembershipConcurrency: concurrency,
 		// Set a default groupValidator to just always return valid (true), it will
 		// be overwritten if we configured a Google group restriction.
 		groupValidator: func(*sessions.SessionState) bool {
@@ -266,14 +273,33 @@ func (p *GoogleProvider) setGroupRestriction(groups []string, adminService *admi
 	return func(s *sessions.SessionState) bool {
 		// Reset our saved Groups in case membership changed
 		// This is used by `Authorize` on every request
-		s.Groups = make([]string, 0, len(groups))
-		for _, group := range groups {
-			if userInGroup(adminService, group, s.Email) {
-				s.Groups = append(s.Groups, group)
-			}
-		}
+		s.Groups = userGroupsIn(adminService, groups, s.Email, p.groupMembershipConcurrency)
 		return len(s.Groups) > 0
 	}
+}
+
+// userGroupsIn returns matching groups in their configured order.
+func userGroupsIn(service *admin.Service, groups []string, email string, concurrency int) []string {
+	isMember := make([]bool, len(groups))
+
+	var g errgroup.Group
+	g.SetLimit(concurrency)
+	for i, group := range groups {
+		g.Go(func() error {
+			isMember[i] = userInGroup(service, group, email)
+			return nil
+		})
+	}
+	// userInGroup logs and swallows its own errors, so Wait never returns one.
+	_ = g.Wait()
+
+	matched := make([]string, 0, len(groups))
+	for i, group := range groups {
+		if isMember[i] {
+			matched = append(matched, group)
+		}
+	}
+	return matched
 }
 
 // populateAllGroups configures the GoogleProvider to allow access with all
