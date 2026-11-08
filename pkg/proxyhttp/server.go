@@ -17,6 +17,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options/util"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	pkgutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
 )
 
 // Server represents an HTTP or HTTPS server.
@@ -93,8 +94,8 @@ func (s *server) setupListener(opts Opts) error {
 		return s.checkSystemdSocketSupport(opts)
 	}
 
-	networkType := getNetworkScheme(opts.BindAddress)
-	listenAddr := getListenAddress(opts.BindAddress)
+	networkType := pkgutil.GetNetworkScheme(opts.BindAddress)
+	listenAddr := pkgutil.GetListenAddress(opts.BindAddress)
 
 	listener, err := func() (net.Listener, error) {
 		if networkType == "unix" {
@@ -215,7 +216,7 @@ func (s *server) setupTLSListener(opts Opts) error {
 		}
 	}
 
-	listenAddr := getListenAddress(opts.SecureBindAddress)
+	listenAddr := pkgutil.GetListenAddress(opts.SecureBindAddress)
 
 	listener, err := net.Listen("tcp", listenAddr)
 	if err != nil {
@@ -277,28 +278,6 @@ func (s *server) startServer(ctx context.Context, listener net.Listener) error {
 	})
 
 	return g.Wait()
-}
-
-// getNetworkScheme gets the scheme for the HTTP server.
-func getNetworkScheme(addr string) string {
-	var scheme string
-	i := strings.Index(addr, "://")
-	if i > -1 {
-		scheme = addr[0:i]
-	}
-
-	switch scheme {
-	case "", "http":
-		return "tcp"
-	default:
-		return scheme
-	}
-}
-
-// getListenAddress gets the address for the HTTP server.
-func getListenAddress(addr string) string {
-	slice := strings.SplitN(addr, "//", 2)
-	return slice[len(slice)-1]
 }
 
 // getCertificate loads the certificate data from the TLS config.

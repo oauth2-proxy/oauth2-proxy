@@ -257,6 +257,49 @@ func TestGetCertPool(t *testing.T) {
 	}
 }
 
+func TestGetNetworkScheme(t *testing.T) {
+	tests := map[string]struct{ in, expected string }{
+		"ipv4 address with no scheme":       {"127.0.0.1:0", "tcp"},
+		"ipv4 address with a tcp scheme":    {"tcp://127.0.0.1:0", "tcp"},
+		"ipv4 address with a http scheme":   {"http://192.168.0.1:1", "tcp"},
+		"ipv4 address with a unix scheme":   {"unix://172.168.16.2:2", "unix"},
+		"ipv4 address with a random scheme": {"random://10.10.10.10:10", "random"},
+		"ipv6 address with no scheme":       {"[::1]:0", "tcp"},
+		"ipv6 address with a tcp scheme":    {"tcp://[::1]:0", "tcp"},
+		"ipv6 address with a http scheme":   {"http://[::ffff:c0a8:1]:1", "tcp"},
+		"ipv6 address with a unix scheme":   {"unix://[::ffff:aca8:1002]:2", "unix"},
+		"ipv6 address with a random scheme": {"random://[::ffff:a0a:a0a]:10", "random"},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, GetNetworkScheme(tt.in))
+		})
+	}
+}
+
+func TestGetListenAddress(t *testing.T) {
+	tests := map[string]struct{ in, expected string }{
+		"ipv4 address with no scheme":       {"127.0.0.1:0", "127.0.0.1:0"},
+		"ipv4 address with a tcp scheme":    {"tcp://127.0.0.1:0", "127.0.0.1:0"},
+		"ipv4 address with a http scheme":   {"http://192.168.0.1:1", "192.168.0.1:1"},
+		"ipv4 address with a https scheme":  {"https://192.168.0.1:1", "192.168.0.1:1"},
+		"ipv4 address with a unix scheme":   {"unix://172.168.16.2:2", "172.168.16.2:2"},
+		"ipv4 address with a random scheme": {"random://10.10.10.10:10", "10.10.10.10:10"},
+		"ipv6 address with no scheme":       {"[::1]:0", "[::1]:0"},
+		"ipv6 address with a tcp scheme":    {"tcp://[::1]:0", "[::1]:0"},
+		"ipv6 address with a http scheme":   {"http://[::ffff:c0a8:1]:1", "[::ffff:c0a8:1]:1"},
+		"ipv6 address with a unix scheme":   {"unix://[::ffff:aca8:1002]:2", "[::ffff:aca8:1002]:2"},
+		"ipv6 address with a random scheme": {"random://[::ffff:a0a:a0a]:10", "[::ffff:a0a:a0a]:10"},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, GetListenAddress(tt.in))
+		})
+	}
+}
+
 type coerceClaimTableInput struct {
 	name          string
 	value         any

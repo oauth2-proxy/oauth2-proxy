@@ -123,7 +123,7 @@ func validateForceHTTPS(secureBindAddress string) []string {
 	if secureBindAddress == "" || secureBindAddress == "-" {
 		return []string{"force-https requires the HTTPS server, which is disabled: set a TLS certificate and key (tls-cert-file and tls-key-file)"}
 	}
-	if _, _, err := net.SplitHostPort(strings.TrimPrefix(secureBindAddress, "https://")); err != nil {
+	if _, _, err := net.SplitHostPort(util.GetListenAddress(secureBindAddress)); err != nil {
 		return []string{fmt.Sprintf("invalid HTTPS address %q for force-https: %v", secureBindAddress, err)}
 	}
 	return nil

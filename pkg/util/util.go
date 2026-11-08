@@ -255,3 +255,25 @@ func toString(value any) (string, error) {
 	}
 	return string(jsonStr), nil
 }
+
+// GetNetworkScheme gets the scheme for the HTTP server.
+func GetNetworkScheme(addr string) string {
+	var scheme string
+	i := strings.Index(addr, "://")
+	if i > -1 {
+		scheme = addr[0:i]
+	}
+
+	switch scheme {
+	case "", "http":
+		return "tcp"
+	default:
+		return scheme
+	}
+}
+
+// GetListenAddress gets the address for the HTTP server.
+func GetListenAddress(addr string) string {
+	slice := strings.SplitN(addr, "//", 2)
+	return slice[len(slice)-1]
+}
