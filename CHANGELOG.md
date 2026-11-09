@@ -3,6 +3,7 @@
 ## Release Highlights
 
 ## Important Notes
+- OAuth2 Proxy now redirects back to the original request URL after authentication if the request's `Host` header matches one of the configured `whitelist_domains` and no trusted `X-Forwarded-Host` header is present. Previously it always redirected to the path on the host OAuth2 Proxy itself is served from.
 
 ## Breaking Changes
 
@@ -41,6 +42,7 @@
 ## Breaking Changes
 
 ## Changes since v7.15.5
+- [#3519](https://github.com/oauth2-proxy/oauth2-proxy/issues/3519) feat: redirect back to the original request URL for whitelisted hosts (@codello)
 
 - [#3587](https://github.com/oauth2-proxy/oauth2-proxy/pull/3587) fix: keep the query after the slash in the trailing slash redirect (@jayhemnani9910)
 - [#3584](https://github.com/oauth2-proxy/oauth2-proxy/pull/3584) fix: read the Entra ID tenant from the `tid` claim so session validation works in national clouds such as Azure US Government (fixes [#2939](https://github.com/oauth2-proxy/oauth2-proxy/issues/2939)) (@asifsid / @dantreiman)

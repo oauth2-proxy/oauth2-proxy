@@ -33,6 +33,7 @@ const sidebars = {
             "configuration/integrations/nginx",
             "configuration/integrations/traefik",
             "configuration/integrations/caddy",
+            "configuration/integrations/cilium",
             "configuration/integrations/headlamp",
             "configuration/integrations/kubernetes-dashboard"
           ],

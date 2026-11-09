@@ -7,6 +7,11 @@ import (
 	requestutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
 )
 
+const (
+	schemeHTTP  = "http"
+	schemeHTTPS = "https"
+)
+
 // redirectGetter represents a method to allow the proxy to determine a redirect
 // based on the original request.
 type redirectGetter func(req *http.Request) string
@@ -55,6 +60,7 @@ func (a *appDirector) getXForwardedHeadersRedirect(req *http.Request) string {
 
 // getURIRedirect handles these getAppRedirect strategies:
 // - `X-Forwarded-Uri` direct URI path (when ReverseProxy mode is enabled)
+// - Full request URL if the request host is whitelisted and not under the ProxyPath (i.e. /oauth2/*)
 // - `req.URL.RequestURI` if not under the ProxyPath (i.e. /oauth2/*)
 // - `/`
 func (a *appDirector) getURIRedirect(req *http.Request) string {
@@ -67,7 +73,22 @@ func (a *appDirector) getURIRedirect(req *http.Request) string {
 	}
 
 	if a.hasProxyPrefix(redirect) {
-		return "/"
+		redirect = "/"
+	}
+
+	if a.includeHost {
+		host := requestutil.GetRequestHost(req)
+		scheme := a.scheme
+		if scheme == "" {
+			scheme = requestutil.GetRequestProto(req)
+		}
+		if scheme == "" {
+			scheme = schemeHTTP
+			if req.TLS != nil {
+				scheme = schemeHTTPS
+			}
+		}
+		return a.validateRedirect(scheme+"://"+host+redirect, "Invalid redirect generated from the request URL: %s")
 	}
 	return redirect
 }
