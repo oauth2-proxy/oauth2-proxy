@@ -24,6 +24,12 @@ type Validator interface {
 	IsValidRedirect(redirect string) bool
 }
 
+// isControlChar reports whether r is an ASCII control character (a C0
+// control, 0x00-0x1F, or DEL, 0x7F).
+func isControlChar(r rune) bool {
+	return r < 0x20 || r == 0x7f
+}
+
 // NewValidator constructs a new redirect validator.
 func NewValidator(allowedDomains []string) Validator {
 	return &validator{
@@ -40,6 +46,13 @@ type validator struct {
 // IsValidRedirect checks whether the redirect URL is safe and allowed.
 func (v *validator) IsValidRedirect(redirect string) bool {
 	switch {
+	case strings.ContainsFunc(redirect, isControlChar):
+		// Raw ASCII control characters (e.g. a decoded CR/LF smuggled in via
+		// an encoded rd parameter) have no valid use in a URL. They can tamper
+		// with response construction, so reject them before either the
+		// relative or absolute URL acceptance branches.
+		logger.Printf("Rejecting invalid redirect %q: contains ASCII control characters", redirect)
+		return false
 	case redirect == "":
 		// The user didn't specify a redirect.
 		// In this case, we expect the proxt to fallback to `/`

