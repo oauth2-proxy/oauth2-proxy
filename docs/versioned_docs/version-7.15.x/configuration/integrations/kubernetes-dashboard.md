@@ -9,14 +9,14 @@ Kubernetes Dashboard has been deprecated and discontinued as of January 2025. Se
 You may want to consider alternative solutions such as [Headlamp](./headlamp.md).
 :::
 
-## Kubernetes Dashboard on AKS with Azure Entra ID
+## Kubernetes Dashboard on AKS with Microsoft Entra ID
 
-Integration guide for the deprecated Kubernetes Dashboard, including comprehensive Azure Entra ID configuration on AKS with detailed troubleshooting and RBAC setup.
+Integration guide for the deprecated Kubernetes Dashboard, including comprehensive Microsoft Entra ID configuration on AKS with detailed troubleshooting and RBAC setup.
 
 ### Architecture
 
 ```
-User → Nginx Ingress → OAuth2 Proxy → Entra ID
+User → Nginx Ingress → OAuth2 Proxy → Microsoft Entra ID
            ↓
    Kubernetes Dashboard
 ```
@@ -24,20 +24,21 @@ User → Nginx Ingress → OAuth2 Proxy → Entra ID
 The integration flow:
 1. Unauthenticated requests to Dashboard are intercepted by Nginx Ingress
 2. Nginx redirects to OAuth2 Proxy for authentication
-3. OAuth2 Proxy redirects to Entra ID login
-4. After successful authentication, OAuth2 Proxy receives ID token from Entra ID
+3. OAuth2 Proxy redirects to Microsoft Entra ID login
+4. After successful authentication, OAuth2 Proxy receives an ID token from Microsoft Entra ID
 5. OAuth2 Proxy sets Authorization header with the bearer token
 6. Nginx forwards the request with token to Kubernetes Dashboard
 7. Dashboard validates the token and grants access based on AKS RBAC configuration
 
 ### Prerequisites
 
-- AKS cluster with Entra ID integration enabled
+- AKS cluster with Microsoft Entra ID integration enabled
 - Kubernetes Dashboard installed (version 7.x or later)
 - NGINX Ingress Controller installed
-- Entra ID App Registration configured with:
+- Microsoft Entra ID app registration configured with:
   - Redirect URI: `https://your-oauth2-domain.com/oauth2/callback`
-  - API Permissions: `openid`, `email`, `profile`
+  - Requested OIDC scopes: `openid`, `email`, `profile`
+  - Microsoft Graph delegated `User.Read` permission if group overage handling is required
   - Groups claim enabled (if using group-based RBAC)
 - Users or groups assigned appropriate Kubernetes RBAC permissions
 
@@ -110,7 +111,7 @@ ingress:
   enabled: true
   className: nginx
   hosts:
-    - OAuth2 Proxy.your-domain.com
+    - oauth2-proxy.your-domain.com
   path: /oauth2
   pathType: Prefix
 ```
@@ -130,8 +131,8 @@ metadata:
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
 
     # OAuth2 Proxy authentication
-    nginx.ingress.kubernetes.io/auth-url: "https://OAuth2 Proxy.your-domain.com/oauth2/auth"
-    nginx.ingress.kubernetes.io/auth-signin: "https://OAuth2 Proxy.your-domain.com/oauth2/start?rd=$scheme://$best_http_host$request_uri"
+    nginx.ingress.kubernetes.io/auth-url: "https://oauth2-proxy.your-domain.com/oauth2/auth"
+    nginx.ingress.kubernetes.io/auth-signin: "https://oauth2-proxy.your-domain.com/oauth2/start?rd=$scheme://$best_http_host$request_uri"
 
     # Include Authorization header with bearer token
     nginx.ingress.kubernetes.io/auth-response-headers: "Authorization, X-Auth-Request-User, X-Auth-Request-Email"
@@ -161,7 +162,7 @@ spec:
 
 ### RBAC Configuration
 
-Assign Kubernetes permissions to Entra ID users or groups.
+Assign Kubernetes permissions to Microsoft Entra ID users or groups.
 
 **User-based:**
 ```yaml
@@ -175,7 +176,7 @@ roleRef:
   name: cluster-admin
 subjects:
   - kind: User
-    name: "user@your-domain.com"  # Email from Entra ID token
+    name: "user@your-domain.com"  # Email from Microsoft Entra ID token
     apiGroup: rbac.authorization.k8s.io
 ```
 
@@ -191,7 +192,7 @@ roleRef:
   name: cluster-admin
 subjects:
   - kind: Group
-    name: "YOUR_ENTRA_GROUP_OBJECT_ID"  # Entra ID Group Object ID
+    name: "YOUR_ENTRA_GROUP_OBJECT_ID"  # Microsoft Entra ID group object ID
     apiGroup: rbac.authorization.k8s.io
 ```
 
@@ -205,7 +206,7 @@ Verify that:
 1. `injectResponseHeaders` in alphaConfig includes Authorization header with id_token claim
 2. Dashboard Ingress includes `Authorization` in `auth-response-headers` annotation
 3. Buffer sizes are sufficient for large tokens (set to 256k as shown above)
-4. Check OAuth2 Proxy logs for successful token generation: `kubectl logs -n OAuth2 Proxy <pod-name>`
+4. Check OAuth2 Proxy logs for successful token generation: `kubectl logs -n oauth2-proxy <pod-name>`
 
 **"Unauthorized" or "Invalid token" errors**
 
@@ -213,7 +214,7 @@ Common causes:
 1. User/group not configured in Kubernetes RBAC
    - Check: `kubectl get clusterrolebindings | grep <user-email>`
 2. Token validation failed
-   - Verify AKS Entra ID integration is enabled
+   - Verify AKS Microsoft Entra ID integration is enabled
    - Check Dashboard logs: `kubectl logs -n kubernetes-dashboard <pod-name>`
 3. Incorrect OAuth2 Proxy configuration
    - Ensure `reverse-proxy: true` is set
@@ -222,10 +223,10 @@ Common causes:
 **Groups not included in token**
 
 To include groups in the token:
-1. In Entra ID App Registration, go to **Token configuration**
+1. In the Microsoft Entra ID app registration, go to **Token configuration**
 2. Add **groups claim** and select security groups
 3. Or edit the manifest and add: `"groupMembershipClaims": "SecurityGroup"`
-4. For 200+ groups, ensure scope includes `User.Read` for group overage handling
+4. For 200+ groups, ensure OAuth2 Proxy requests `User.Read` for group overage handling
 5. Verify groups appear in token: check OAuth2 Proxy logs
 
 **Session expires too quickly**
@@ -267,20 +268,20 @@ alphaConfig:
         oidcConfig:
           issuerURL: https://login.microsoftonline.com/YOUR_TENANT_ID/v2.0
           # ... other config
-        entraIdConfig:
+        microsoftEntraIDConfig:
           federatedTokenAuth: true
 ```
 
 This requires:
 - AKS with OIDC issuer and Workload Identity enabled
-- Federated identity credential configured in Entra ID App Registration
+- Federated identity credential configured in the Microsoft Entra ID app registration
 - Service account annotated with `azure.workload.identity/client-id`
 
 For detailed Workload Identity setup instructions, see the [Workload Identity section](../providers/ms_entra_id.md#workload-identity) in the Microsoft Entra ID provider documentation.
 
 ## Integration with Other Providers
 
-While this guide focuses on Azure Entra ID, Kubernetes Dashboard can be integrated with other OAuth2 providers supported by OAuth2 Proxy. The key requirements remain the same:
+While this guide focuses on Microsoft Entra ID, Kubernetes Dashboard can be integrated with other OAuth2 providers supported by OAuth2 Proxy. The key requirements remain the same:
 
 1. **Authorization Header**: Pass the bearer token via the `Authorization` header
 2. **RBAC Configuration**: Configure Kubernetes RBAC for your authentication provider's users/groups
