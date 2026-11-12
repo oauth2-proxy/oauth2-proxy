@@ -8,7 +8,7 @@
 
 ## Changes since v7.15.6
 
-- [#PR](https://github.com/oauth2-proxy/oauth2-proxy/pull/PR) fix: return 403 instead of 500 when the GitHub organization, team, repository or user restrictions deny a user @onmax
+- [#3601](https://github.com/oauth2-proxy/oauth2-proxy/pull/3601) fix: return 403 instead of 500 when the GitHub organization, team, repository or user restrictions deny a user @onmax
 
 # V7.15.6
 
