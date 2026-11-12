@@ -83,9 +83,9 @@ without its WAL.
 Database loss or a change of storage backend requires users to sign in again.
 Their identity-provider session survives database loss and can let them complete
 login without entering credentials, subject to provider policy and browser state.
-API and background requests can fail during recovery and need to be retried.
-An unavailable database can return errors even when the identity-provider session
-is valid.
+API and background requests that use session cookies can fail until a new proxy
+session is established. If OAuth2 Proxy cannot access SQLite, requests can fail
+until database access is restored.
 
 ### Redis Storage
 
