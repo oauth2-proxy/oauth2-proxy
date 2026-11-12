@@ -102,6 +102,20 @@ server {
 }
 ```
 
+### Small session cookies with server-side storage
+
+Use `--session-store-type=sqlite` or `--session-store-type=redis` to keep tokens
+server-side and send a short ticket in the cookie. See
+[Choosing a session store](../sessions.md#choosing-a-session-store) for deployment limits.
+
+With either store, remove the numbered-cookie extraction and both `if` blocks
+from the example above. Keep these directives to forward refreshed cookies:
+
+```nginx
+auth_request_set $auth_cookie $upstream_http_set_cookie;
+add_header Set-Cookie $auth_cookie;
+```
+
 ### Multi-part session cookies
 
 The example above is ready to use with the default `--cookie-name=_oauth2_proxy` setting and handles a session split into two cookies. If you configure a custom cookie name, update both references to the second cookie part:
@@ -118,7 +132,7 @@ auth_request_set $auth_cookie_upstream_1 $upstream_cookie_my_cookie_1;
 set $auth_cookie_1 "my_cookie_1=$auth_cookie_upstream_1$1";
 ```
 
-If a session is split into more than two cookies, repeat the extraction for each additional numeric suffix. For consistently large sessions, prefer `--session-store-type=redis` so only a small session ticket is stored in the browser cookie.
+If a session is split into more than two cookies, repeat the extraction for each additional numeric suffix. For large sessions, use [server-side storage](#small-session-cookies-with-server-side-storage).
 
 ### Understanding the `error_page` redirect pattern
 
@@ -189,7 +203,7 @@ nginx.ingress.kubernetes.io/auth-signin: "https://<oauth2-proxy-fqdn>/oauth2/sta
 
 This minimal configuration works for standard authentication flows. Lua/cookie handling is only needed for advanced scenarios (e.g., multi-part cookies, custom session logic). See the official ingress-nginx example: https://kubernetes.github.io/ingress-nginx/examples/auth/oauth-external-auth/.
 
-It is recommended to use `--session-store-type=redis` when expecting large sessions/OIDC tokens (_e.g._ with MS Azure).
+For large sessions/OIDC tokens (_e.g._ with MS Azure), see the [server-side storage options](#small-session-cookies-with-server-side-storage) above.
 
 :::tip Kubernetes Dashboard with Azure Entra ID
 For a complete example of integrating oauth2-proxy with Kubernetes Dashboard on AKS using Azure Entra ID, including RBAC configuration and troubleshooting, see the [Kubernetes Dashboard on AKS](../providers/ms_entra_id.md#kubernetes-dashboard-on-aks) section in the Microsoft Entra ID provider documentation.

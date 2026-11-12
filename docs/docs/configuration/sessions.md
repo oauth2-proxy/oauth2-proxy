@@ -12,7 +12,15 @@ data in one of the available session storage backends.
 At present the available backends are (as passed to `--session-store-type`):
 - [cookie](#cookie-storage) (default)
 - [redis](#redis-storage)
-- [sqlite](#sqlite-storage) (multiple instances, single host only)
+- [sqlite](#sqlite-storage) (local database; see deployment limits below)
+
+### Choosing a session store
+
+| Store | Use when | Deployment limits |
+| --- | --- | --- |
+| Cookie (default) | Sessions fit comfortably in cookies | Works across hosts; large sessions require split cookies |
+| SQLite | You need small cookies and a local datastore | Multiple instances can share a database on one host |
+| Redis | You need server-side sessions shared across hosts | Requires a Redis service configured for your availability needs |
 
 ### Cookie Storage
 
@@ -48,11 +56,9 @@ only the OAuth2 Proxy user to access it. The process must be able to write both 
 database and its `-wal` and `-shm` sidecar files. New databases have mode `0600`;
 administrators must restrict permissions on existing files and backups.
 
-**Multiple instances are supported, but always on a single host.** All instances
-must share the same database on a local filesystem and use the same cookie secret
-and compatible authentication settings. Mount the whole directory into containers,
-not just the database file. Do not use network filesystems (including NFS), or share
-the database across hosts. Use Redis for multi-host deployments.
+#### Deployment limits
+
+Multiple instances on one host can share a SQLite database with the same settings (cookie secret, etc). The filesystem must be local; network filesystems such as NFS are unsupported.
 
 On first startup, instances coordinate schema creation through a database write
 transaction, retrying temporary contention for up to ten seconds. Subsequent
@@ -69,9 +75,17 @@ a single host, not as a distributed replacement for Redis.
 Expired sessions are rejected on reads; writes reclaim expired rows in bounded
 batches. Idle databases can retain expired, encrypted records until another write.
 Database errors do not authenticate a request. Keep a persistent volume across
-restarts; losing the database, or changing from another storage backend, requires
-users to sign in again. Use SQLite-aware backup tools rather than copying a live
-database file without its WAL.
+restarts. Use SQLite-aware backup tools rather than copying a live database file
+without its WAL.
+
+#### Session loss and recovery
+
+Database loss or a change of storage backend requires users to sign in again.
+Their identity-provider session survives database loss and can let them complete
+login without entering credentials, subject to provider policy and browser state.
+API and background requests can fail during recovery and need to be retried.
+An unavailable database can return errors even when the identity-provider session
+is valid.
 
 ### Redis Storage
 
