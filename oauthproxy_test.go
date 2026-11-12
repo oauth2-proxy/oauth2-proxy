@@ -678,6 +678,7 @@ func TestOAuthCallbackSessionErrorStatus(t *testing.T) {
 		expected int
 	}{
 		{"Unverified email", fmt.Errorf("%w: user email is not verified", providers.ErrEmailNotVerified), http.StatusForbidden},
+		{"Not authorized", fmt.Errorf("%w: user is missing required organization", providers.ErrNotAuthorized), http.StatusForbidden},
 		{"Other error", errors.New("upstream unavailable"), http.StatusInternalServerError},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
