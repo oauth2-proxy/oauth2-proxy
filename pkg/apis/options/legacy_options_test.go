@@ -951,6 +951,7 @@ var _ = Describe("Legacy Options", func() {
 
 		defaultOIDCOptions := OIDCOptions{
 			SkipDiscovery:                  ptr.To(false),
+			LazyDiscovery:                  ptr.To(false),
 			InsecureSkipNonce:              ptr.To(false),
 			InsecureAllowUnverifiedEmail:   ptr.To(false),
 			InsecureSkipIssuerVerification: ptr.To(false),
