@@ -172,7 +172,7 @@ func (p *GitHubProvider) hasOrg(s *sessions.SessionState) error {
 	}
 
 	logger.Printf("Missing Organization:%q in %v", p.Org, presentOrgs)
-	return errors.New("user is missing required organization")
+	return fmt.Errorf("%w: user is missing required organization", ErrNotAuthorized)
 }
 
 func (p *GitHubProvider) hasOrgAndTeam(s *sessions.SessionState) error {
@@ -214,11 +214,11 @@ func (p *GitHubProvider) hasOrgAndTeam(s *sessions.SessionState) error {
 
 	if hasOrg {
 		logger.Printf("Missing Team:%q from Org:%q in teams: %v", p.Team, p.Org, presentTeams)
-		return errors.New("user is missing required team")
+		return fmt.Errorf("%w: user is missing required team", ErrNotAuthorized)
 	}
 
 	logger.Printf("Missing Organization:%q in %#v", p.Org, maps.Keys(presentOrgs))
-	return errors.New("user is missing required organization")
+	return fmt.Errorf("%w: user is missing required organization", ErrNotAuthorized)
 }
 
 func (p *GitHubProvider) hasTeam(s *sessions.SessionState) error {
@@ -249,7 +249,7 @@ func (p *GitHubProvider) hasTeam(s *sessions.SessionState) error {
 	}
 
 	logger.Printf("Missing Team:%q in teams: %v", p.Team, presentTeams)
-	return errors.New("user is missing required team")
+	return fmt.Errorf("%w: user is missing required team", ErrNotAuthorized)
 }
 
 func (p *GitHubProvider) hasRepoAccess(ctx context.Context, accessToken string) error {
@@ -284,7 +284,7 @@ func (p *GitHubProvider) hasRepoAccess(ctx context.Context, accessToken string) 
 		return nil
 	}
 
-	return errors.New("user doesn't have repository access")
+	return fmt.Errorf("%w: user doesn't have repository access", ErrNotAuthorized)
 }
 
 func (p *GitHubProvider) hasUser(ctx context.Context, accessToken string) (bool, error) {
@@ -444,7 +444,7 @@ func (p *GitHubProvider) checkUserRestriction(ctx context.Context, s *sessions.S
 
 	// org and repository options are not configured
 	if !verifiedUser && p.Org == "" && p.Repo == "" {
-		return false, errors.New("missing github user")
+		return false, fmt.Errorf("%w: missing github user", ErrNotAuthorized)
 	}
 
 	return verifiedUser, nil

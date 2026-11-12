@@ -208,7 +208,7 @@ func TestGitHubProvider_checkRestrictionsOrg(t *testing.T) {
 	)
 
 	err = p.checkRestrictions(context.Background(), session)
-	assert.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotAuthorized)
 }
 
 func TestGitHubProvider_checkRestrictionsOrgTeam(t *testing.T) {
