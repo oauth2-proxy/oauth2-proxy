@@ -648,6 +648,20 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				expectedGroups:  []string{"foo"},
 				expectedExpires: &expiresFuture,
 			}),
+			Entry("with groups in a nested claim", tokenToSessionTableInput{
+				idToken: jwt.MapClaims{
+					"iss":          "https://issuer.example.com",
+					"aud":          "asdf1234",
+					"exp":          expiresFuture.Unix(),
+					"sub":          "subject",
+					"realm_access": map[string]any{"roles": []string{"foo", "bar"}},
+				},
+				mapping:         middlewareapi.SessionClaimMapping{Groups: "realm_access.roles"},
+				expectedUser:    "subject",
+				expectedEmail:   "subject",
+				expectedGroups:  []string{"foo", "bar"},
+				expectedExpires: &expiresFuture,
+			}),
 			Entry("with a groups claim that is an object", tokenToSessionTableInput{
 				idToken: idTokenClaims{
 					RegisteredClaims: jwt.RegisteredClaims{

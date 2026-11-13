@@ -5,13 +5,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 )
 
-// SessionClaimMapping selects literal token claim names for session fields.
+// SessionClaimMapping selects token claim names for session fields.
+// Groups also supports dot-separated paths into nested objects.
 // Empty fields default to sub, email, groups, and preferred_username respectively.
 type SessionClaimMapping struct {
 	User              string
@@ -89,15 +91,28 @@ func CreateTokenToSessionFunc(verify VerifyFunc, mapping SessionClaimMapping) To
 	}
 }
 
-// extractGroups reads the configured groups claim from the token. The claim may
-// be encoded either as an array of strings or as a single string. A missing
+// extractGroups checks the literal claim name before trying a dot-separated path.
+// The claim may be encoded either as an array of strings or as a single string. A missing
 // claim yields no groups, while a claim present in any other format is reported
 // as an error so that a misconfigured issuer or groups claim name cannot be
 // mistaken for a user that belongs to no groups.
 func extractGroups(claims map[string]json.RawMessage, groupsClaim string) ([]string, error) {
 	raw, ok := claims[groupsClaim]
 	if !ok {
-		return nil, nil
+		parts := strings.Split(groupsClaim, ".")
+		for i, part := range parts {
+			raw, ok = claims[part]
+			if !ok {
+				return nil, nil
+			}
+			if i < len(parts)-1 {
+				var nested map[string]json.RawMessage
+				if err := json.Unmarshal(raw, &nested); err != nil {
+					return nil, nil
+				}
+				claims = nested
+			}
+		}
 	}
 
 	var groups []string
