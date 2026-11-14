@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.6
 
+- [#3605](https://github.com/oauth2-proxy/oauth2-proxy/pull/3605) feat: add `--protected-resource-metadata-url` to advertise RFC 9728 protected resource metadata in the `WWW-Authenticate` header of API 401 responses (@jbunting)
+
 # V7.15.6
 
 ## Release Highlights

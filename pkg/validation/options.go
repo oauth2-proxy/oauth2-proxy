@@ -29,6 +29,7 @@ func Validate(o *options.Options) error {
 	msgs = append(msgs, prefixValues("injectResponseHeaders: ", validateHeaders(o.InjectResponseHeaders)...)...)
 	msgs = append(msgs, validateProviders(o)...)
 	msgs = append(msgs, validateAPIRoutes(o)...)
+	msgs = append(msgs, validateProtectedResourceMetadataURL(o)...)
 	msgs = configureLogger(o.Logging, msgs)
 	msgs = parseSignatureKey(o, msgs)
 
@@ -188,4 +189,27 @@ func parseURL(toParse string, urltype string, msgs []string) (*url.URL, []string
 			"error parsing %s-url=%q %s", urltype, toParse, err))
 	}
 	return parsed, msgs
+}
+
+// validateProtectedResourceMetadataURL checks that the protected resource
+// metadata URL is either an absolute http(s) URL or a path beginning with "/".
+func validateProtectedResourceMetadataURL(o *options.Options) []string {
+	raw := o.ProtectedResourceMetadataURL
+	if raw == "" {
+		return nil
+	}
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return []string{fmt.Sprintf("error parsing protected-resource-metadata-url=%q %s", raw, err)}
+	}
+	if parsed.IsAbs() {
+		if (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" {
+			return []string{fmt.Sprintf("protected-resource-metadata-url=%q must be an http(s) URL with a host", raw)}
+		}
+		return nil
+	}
+	if parsed.Host != "" || !strings.HasPrefix(parsed.Path, "/") {
+		return []string{fmt.Sprintf("protected-resource-metadata-url=%q must be an absolute URL or a path beginning with \"/\"", raw)}
+	}
+	return nil
 }
