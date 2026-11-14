@@ -119,6 +119,8 @@ type OAuthProxy struct {
 	appDirector       redirect.AppDirector
 
 	encodeState bool
+
+	protectedResourceMetadataURL *url.URL
 }
 
 // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
@@ -201,6 +203,14 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		return nil, err
 	}
 
+	var protectedResourceMetadataURL *url.URL
+	if opts.ProtectedResourceMetadataURL != "" {
+		protectedResourceMetadataURL, err = url.Parse(opts.ProtectedResourceMetadataURL)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing protected resource metadata URL: %v", err)
+		}
+	}
+
 	apiRoutes, err := buildAPIRoutes(opts)
 	if err != nil {
 		return nil, err
@@ -254,6 +264,8 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		redirectValidator:  redirectValidator,
 		appDirector:        appDirector,
 		encodeState:        opts.EncodeState,
+
+		protectedResourceMetadataURL: protectedResourceMetadataURL,
 	}
 	p.buildServeMux(opts.ProxyPrefix)
 
@@ -1055,6 +1067,7 @@ func (p *OAuthProxy) enrichSessionState(ctx context.Context, s *sessionsapi.Sess
 func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
 	session, err := p.getAuthenticatedSession(rw, req)
 	if err != nil {
+		p.setProtectedResourceMetadataChallenge(rw, req)
 		http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
@@ -1094,6 +1107,7 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 		if p.forceJSONErrors || isAjax(req) || p.isAPIPath(req) {
 			logger.Printf("No valid authentication in request. Access Denied.")
 			// no point redirecting an AJAX request
+			p.setProtectedResourceMetadataChallenge(rw, req)
 			p.errorJSON(rw, http.StatusUnauthorized)
 			return
 		}
@@ -1385,6 +1399,30 @@ func isAjax(req *http.Request) bool {
 		}
 	}
 	return false
+}
+
+// setProtectedResourceMetadataChallenge sets a WWW-Authenticate header that
+// points the client at the protected resource metadata (RFC 9728 section 5.1),
+// when --protected-resource-metadata-url is configured. A path is resolved
+// against the request's scheme and host.
+func (p *OAuthProxy) setProtectedResourceMetadataChallenge(rw http.ResponseWriter, req *http.Request) {
+	if p.protectedResourceMetadataURL == nil {
+		return
+	}
+
+	metadataURL := *p.protectedResourceMetadataURL
+	if metadataURL.Host == "" {
+		metadataURL.Host = requestutil.GetRequestHost(req)
+		metadataURL.Scheme = requestutil.GetRequestProto(req)
+		if metadataURL.Scheme == "" {
+			metadataURL.Scheme = schemeHTTP
+			if req.TLS != nil {
+				metadataURL.Scheme = schemeHTTPS
+			}
+		}
+	}
+
+	rw.Header().Set("WWW-Authenticate", fmt.Sprintf(`Bearer resource_metadata="%s"`, metadataURL.String()))
 }
 
 // errorJSON returns the error code with an application/json mime type

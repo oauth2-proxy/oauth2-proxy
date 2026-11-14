@@ -126,6 +126,36 @@ func TestRedirectURL(t *testing.T) {
 	assert.Equal(t, expected, o.GetRedirectURL())
 }
 
+func TestProtectedResourceMetadataURL(t *testing.T) {
+	testCases := []struct {
+		name  string
+		value string
+		valid bool
+	}{
+		{name: "unset", value: "", valid: true},
+		{name: "absolute https URL", value: "https://api.example.com/.well-known/oauth-protected-resource", valid: true},
+		{name: "absolute http URL", value: "http://localhost:4180/.well-known/oauth-protected-resource", valid: true},
+		{name: "path", value: "/.well-known/oauth-protected-resource", valid: true},
+		{name: "relative path", value: ".well-known/oauth-protected-resource", valid: false},
+		{name: "scheme-relative URL", value: "//api.example.com/.well-known/oauth-protected-resource", valid: false},
+		{name: "non-http scheme", value: "ftp://api.example.com/metadata", valid: false},
+		{name: "absolute URL without host", value: "https:///metadata", valid: false},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			o := testOptions()
+			o.ProtectedResourceMetadataURL = tc.value
+			err := Validate(o)
+			if tc.valid {
+				assert.NoError(t, err)
+			} else {
+				assert.ErrorContains(t, err, "protected-resource-metadata-url")
+			}
+		})
+	}
+}
+
 func TestCookieRefreshMustBeLessThanCookieExpire(t *testing.T) {
 	o := testOptions()
 	assert.Equal(t, nil, Validate(o))

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto"
+	"crypto/tls"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -2038,6 +2039,118 @@ func TestAjaxForbiddendRequest(t *testing.T) {
 	assert.Equal(t, http.StatusForbidden, code)
 	mime := rh.Get("Content-Type")
 	assert.NotEqual(t, applicationJSON, mime)
+}
+
+func TestProtectedResourceMetadataChallenge(t *testing.T) {
+	const metadataPath = "/.well-known/oauth-protected-resource"
+
+	testCases := []struct {
+		name           string
+		metadataURL    string
+		reverseProxy   bool
+		apiRoutes      []string
+		path           string
+		header         http.Header
+		tls            bool
+		expectedCode   int
+		expectedHeader string
+	}{
+		{
+			name:           "unset adds no header",
+			path:           "/test",
+			header:         http.Header{"Accept": []string{applicationJSON}},
+			expectedCode:   http.StatusUnauthorized,
+			expectedHeader: "",
+		},
+		{
+			name:           "absolute URL is used as is",
+			metadataURL:    "https://metadata.example.com" + metadataPath,
+			path:           "/test",
+			header:         http.Header{"Accept": []string{applicationJSON}},
+			expectedCode:   http.StatusUnauthorized,
+			expectedHeader: `Bearer resource_metadata="https://metadata.example.com/.well-known/oauth-protected-resource"`,
+		},
+		{
+			name:           "path resolves against the request host",
+			metadataURL:    metadataPath,
+			path:           "/test",
+			header:         http.Header{"Accept": []string{applicationJSON}},
+			expectedCode:   http.StatusUnauthorized,
+			expectedHeader: `Bearer resource_metadata="http://api.example.com/.well-known/oauth-protected-resource"`,
+		},
+		{
+			name:           "path uses https for a TLS request",
+			metadataURL:    metadataPath,
+			path:           "/test",
+			header:         http.Header{"Accept": []string{applicationJSON}},
+			tls:            true,
+			expectedCode:   http.StatusUnauthorized,
+			expectedHeader: `Bearer resource_metadata="https://api.example.com/.well-known/oauth-protected-resource"`,
+		},
+		{
+			name:         "path uses forwarded headers behind a reverse proxy",
+			metadataURL:  metadataPath,
+			reverseProxy: true,
+			path:         "/test",
+			header: http.Header{
+				"Accept":            []string{applicationJSON},
+				"X-Forwarded-Proto": []string{"https"},
+				"X-Forwarded-Host":  []string{"public.example.com"},
+			},
+			expectedCode:   http.StatusUnauthorized,
+			expectedHeader: `Bearer resource_metadata="https://public.example.com/.well-known/oauth-protected-resource"`,
+		},
+		{
+			name:           "api route",
+			metadataURL:    metadataPath,
+			apiRoutes:      []string{"^/api"},
+			path:           "/api/items",
+			header:         http.Header{},
+			expectedCode:   http.StatusUnauthorized,
+			expectedHeader: `Bearer resource_metadata="http://api.example.com/.well-known/oauth-protected-resource"`,
+		},
+		{
+			name:           "auth only endpoint",
+			metadataURL:    metadataPath,
+			path:           "/oauth2/auth",
+			header:         http.Header{},
+			expectedCode:   http.StatusUnauthorized,
+			expectedHeader: `Bearer resource_metadata="http://api.example.com/.well-known/oauth-protected-resource"`,
+		},
+		{
+			name:           "sign in page has no header",
+			metadataURL:    metadataPath,
+			path:           "/test",
+			header:         http.Header{},
+			expectedCode:   http.StatusForbidden,
+			expectedHeader: "",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			opts := baseTestOptions()
+			opts.ProtectedResourceMetadataURL = tc.metadataURL
+			opts.ReverseProxy = tc.reverseProxy
+			opts.APIRoutes = tc.apiRoutes
+			require.NoError(t, validation.Validate(opts))
+
+			proxy, err := NewOAuthProxy(opts, func(string) bool { return true })
+			require.NoError(t, err)
+
+			rw := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodGet, tc.path, nil)
+			req.Host = "api.example.com"
+			req.Header = tc.header
+			if tc.tls {
+				req.TLS = &tls.ConnectionState{}
+			}
+			proxy.ServeHTTP(rw, req)
+
+			assert.Equal(t, tc.expectedCode, rw.Code)
+			assert.Equal(t, tc.expectedHeader, rw.Header().Get("WWW-Authenticate"))
+		})
+	}
 }
 
 func TestClearSplitCookie(t *testing.T) {

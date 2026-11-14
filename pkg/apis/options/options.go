@@ -66,6 +66,8 @@ type Options struct {
 	EncodeState              bool     `flag:"encode-state" cfg:"encode_state"`
 	AllowQuerySemicolons     bool     `flag:"allow-query-semicolons" cfg:"allow_query_semicolons"`
 
+	ProtectedResourceMetadataURL string `flag:"protected-resource-metadata-url" cfg:"protected_resource_metadata_url"`
+
 	SignatureKey    string `flag:"signature-key" cfg:"signature_key"`
 	GCPHealthChecks bool   `flag:"gcp-healthchecks" cfg:"gcp_healthchecks"`
 
@@ -128,6 +130,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.StringSlice("skip-auth-regex", []string{}, "(DEPRECATED for --skip-auth-route) bypass authentication for requests path's that match (may be given multiple times)")
 	flagSet.StringSlice("skip-auth-route", []string{}, "bypass authentication for requests that match the method & path. Format: method=path_regex OR method!=path_regex. For all methods: path_regex OR !=path_regex")
 	flagSet.StringSlice("api-route", []string{}, "return HTTP 401 instead of redirecting to authentication server if token is not valid. Format: path_regex")
+	flagSet.String("protected-resource-metadata-url", "", "URL of the OAuth 2.0 Protected Resource Metadata (RFC 9728) to advertise in the WWW-Authenticate header of 401 responses. An absolute URL, or a path resolved against the request's scheme and host")
 	flagSet.Bool("skip-provider-button", false, "will skip sign-in-page to directly reach the next step: oauth/start")
 	flagSet.Bool("skip-auth-preflight", false, "will skip authentication for OPTIONS requests")
 	flagSet.Bool("ssl-insecure-skip-verify", false, "skip validation of certificates presented when using HTTPS providers")
