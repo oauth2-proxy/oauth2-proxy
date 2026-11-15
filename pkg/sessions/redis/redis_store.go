@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -163,7 +164,7 @@ func buildClusterClient(opts options.RedisStoreOptions) (Client, error) {
 // buildStandaloneClient makes a redis.Client that connects to a simple
 // Redis node
 func buildStandaloneClient(opts options.RedisStoreOptions) (Client, error) {
-	opt, err := redis.ParseURL(opts.ConnectionURL)
+	opt, err := parseRedisURL(opts.ConnectionURL)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse redis url: %s", err)
 	}
@@ -235,7 +236,7 @@ func parseRedisURLs(urls []string) ([]string, *redis.Options, error) {
 	addrs := []string{}
 	var redisOptions *redis.Options
 	for _, u := range urls {
-		parsedURL, err := redis.ParseURL(u)
+		parsedURL, err := parseRedisURL(u)
 		if err != nil {
 			return nil, nil, fmt.Errorf("unable to parse redis url: %v", err)
 		}
@@ -243,6 +244,40 @@ func parseRedisURLs(urls []string) ([]string, *redis.Options, error) {
 		redisOptions = parsedURL
 	}
 	return addrs, redisOptions, nil
+}
+
+// redisSchemeFor returns the wire-compatible Redis scheme for a Valkey URL
+// scheme, or "" if the scheme is not a Valkey one.
+func redisSchemeFor(scheme string) string {
+	switch strings.ToLower(scheme) {
+	case "valkey":
+		return "redis"
+	case "valkeys":
+		return "rediss"
+	default:
+		return ""
+	}
+}
+
+// parseRedisURL wraps redis.ParseURL, additionally accepting valkey:// and
+// valkeys:// URLs. Only the scheme is rewritten so the remainder of the URL
+// (credentials, query options) reaches go-redis untouched.
+func parseRedisURL(rawURL string) (*redis.Options, error) {
+	scheme, rest, hasScheme := strings.Cut(rawURL, "://")
+	if !hasScheme {
+		return redis.ParseURL(rawURL)
+	}
+	mapped := redisSchemeFor(scheme)
+	if mapped == "" {
+		return redis.ParseURL(rawURL)
+	}
+
+	opts, err := redis.ParseURL(mapped + "://" + rest)
+	if err != nil {
+		// go-redis only ever sees the rewritten URL, so name the scheme the user actually wrote.
+		return nil, fmt.Errorf("%s:// url (handled as %s://): %w", scheme, mapped, err)
+	}
+	return opts, nil
 }
 
 var _ persistence.Store = (*SessionStore)(nil)

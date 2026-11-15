@@ -313,6 +313,51 @@ var _ = Describe("Redis SessionStore Tests", func() {
 			Expect(opts).To(BeNil())
 		})
 
+		DescribeTable("should parse redis and valkey URL schemes alike",
+			func(rawURL string, expectTLS bool) {
+				opts, err := parseRedisURL(rawURL)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(opts.Addr).To(Equal("localhost:6379"))
+				Expect(opts.Username).To(Equal("user"))
+				Expect(opts.Password).To(Equal("p@ss/word"))
+				Expect(opts.DB).To(Equal(2))
+				Expect(opts.ConnMaxIdleTime).To(Equal(30 * time.Second))
+				Expect(opts.TLSConfig != nil).To(Equal(expectTLS))
+			},
+			Entry("redis", "redis://user:p%40ss%2Fword@localhost:6379/2?conn_max_idle_time=30", false),
+			Entry("rediss", "rediss://user:p%40ss%2Fword@localhost:6379/2?conn_max_idle_time=30", true),
+			Entry("valkey", "valkey://user:p%40ss%2Fword@localhost:6379/2?conn_max_idle_time=30", false),
+			Entry("valkeys", "valkeys://user:p%40ss%2Fword@localhost:6379/2?conn_max_idle_time=30", true),
+			Entry("uppercase VALKEYS", "VALKEYS://user:p%40ss%2Fword@localhost:6379/2?conn_max_idle_time=30", true),
+		)
+
+		DescribeTable("should parse valkey URL lists for cluster and sentinel",
+			func(urls []string, expectTLS bool) {
+				addrs, opts, err := parseRedisURLs(urls)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(addrs).To(Equal([]string{"node-a:6379", "node-b:6380"}))
+				Expect(opts).ToNot(BeNil())
+				Expect(opts.TLSConfig != nil).To(Equal(expectTLS))
+			},
+			Entry("valkey", []string{"valkey://node-a:6379", "valkey://node-b:6380"}, false),
+			Entry("valkeys", []string{"valkeys://node-a:6379", "valkeys://node-b:6380"}, true),
+		)
+
+		It("should name the original valkey scheme in parse errors", func() {
+			_, err := parseRedisURL("valkeys://localhost:abc")
+			Expect(err).To(MatchError(HavePrefix("valkeys:// url (handled as rediss://): ")))
+		})
+
+		It("should still reject unknown schemes", func() {
+			_, err := parseRedisURL("valkeyx://localhost:6379")
+			Expect(err).To(MatchError(ContainSubstring("invalid URL scheme")))
+		})
+
+		It("should not treat a bare valkey string as a URL", func() {
+			_, err := parseRedisURL("valkey")
+			Expect(err).To(HaveOccurred())
+		})
+
 		It("should return error when no URLs provided", func() {
 			addrs, opts, err := parseRedisURLs([]string{})
 			Expect(err).To(HaveOccurred())

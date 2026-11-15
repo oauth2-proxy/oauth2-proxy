@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.6
 
+- [#3608](https://github.com/oauth2-proxy/oauth2-proxy/pull/3608) feat: support `valkey://` and `valkeys://` URL schemes for the redis session store connection URLs (@parogat)
+
 # V7.15.6
 
 ## Release Highlights
