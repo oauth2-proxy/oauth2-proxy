@@ -85,6 +85,10 @@ Recommended settings:
 When using the redis store, specify `--session-store-type=redis` as well as the Redis connection URL, via
 `--redis-connection-url=redis://host[:port][/db-number]`.
 
+[Valkey](https://valkey.io) is supported as a drop-in replacement for Redis. All connection URL flags
+(standalone, sentinel and cluster) accept the `valkey://` and `valkeys://` schemes, which behave exactly
+like `redis://` and `rediss://` (TLS) respectively.
+
 You may also configure the store for Redis Sentinel. In this case, you will want to use the
 `--redis-use-sentinel=true` flag, as well as configure the flags `--redis-sentinel-master-name`
 and `--redis-sentinel-connection-urls` appropriately.

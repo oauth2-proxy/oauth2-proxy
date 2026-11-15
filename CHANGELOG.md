@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.6
 
+- feat: support `valkey://` and `valkeys://` URL schemes for the redis session store connection URLs (@parogat)
+
 # V7.15.6
 
 ## Release Highlights

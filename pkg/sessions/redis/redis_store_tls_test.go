@@ -1,6 +1,7 @@
 package redis
 
 import (
+	"context"
 	"crypto/tls"
 	"time"
 
@@ -40,7 +41,34 @@ var _ = Describe("Redis SessionStore Tests", func() {
 				Expect(redisManager.Store.(*SessionStore).Client.(closer).Close()).To(Succeed())
 			}
 		}
+		// Forget the closed store so a later spec that doesn't set ss won't close it twice
+		ss = nil
 	})
+
+	// valkeys:// is rewritten to rediss:// before go-redis sees it, so a single
+	// round trip per client type proves the TLS path end-to-end without
+	// re-running the full session store suites.
+	DescribeTable("with TLS connection using the valkeys:// scheme",
+		func(setURL func(*options.RedisStoreOptions, string)) {
+			opts := options.RedisStoreOptions{CAPath: caPath}
+			setURL(&opts, "valkeys://"+mr.Addr())
+
+			client, err := NewRedisClient(opts)
+			Expect(err).ToNot(HaveOccurred())
+			defer func() { Expect(client.(closer).Close()).To(Succeed()) }()
+
+			ctx := context.Background()
+			Expect(client.Set(ctx, "valkey-key", []byte("valkey-value"), time.Minute)).To(Succeed())
+			Expect(client.Get(ctx, "valkey-key")).To(Equal([]byte("valkey-value")))
+		},
+		Entry("standalone", func(o *options.RedisStoreOptions, url string) {
+			o.ConnectionURL = url
+		}),
+		Entry("cluster", func(o *options.RedisStoreOptions, url string) {
+			o.UseCluster = true
+			o.ClusterConnectionURLs = []string{url}
+		}),
+	)
 
 	const redissProtocol = "rediss://"
 	Context("with TLS connection", func() {
@@ -53,7 +81,8 @@ var _ = Describe("Redis SessionStore Tests", func() {
 					opts.Redis.CAPath = caPath
 
 					// Capture the session store so that we can close the client
-					ss, err := NewRedisSessionStore(opts, cookieOpts)
+					var err error
+					ss, err = NewRedisSessionStore(opts, cookieOpts)
 					return ss, err
 				},
 				func(d time.Duration) error {
@@ -95,7 +124,8 @@ var _ = Describe("Redis SessionStore Tests", func() {
 					opts.Redis.InsecureSkipTLSVerify = true
 
 					// Capture the session store so that we can close the client
-					ss, err := NewRedisSessionStore(opts, cookieOpts)
+					var err error
+					ss, err = NewRedisSessionStore(opts, cookieOpts)
 					return ss, err
 				},
 				func(d time.Duration) error {
