@@ -222,6 +222,21 @@ func setupTLSConfig(opts options.RedisStoreOptions, opt *redis.Options) error {
 
 		opt.TLSConfig.RootCAs = rootCAs
 	}
+
+	if opts.ClientCertPath != "" || opts.ClientKeyPath != "" {
+		if opts.ClientCertPath == "" || opts.ClientKeyPath == "" {
+			return fmt.Errorf("redis client TLS: client certificate path and client private key path must both be set")
+		}
+		clientCert, err := tls.LoadX509KeyPair(opts.ClientCertPath, opts.ClientKeyPath)
+		if err != nil {
+			return fmt.Errorf("failed to load redis client certificate/key pair: %w", err)
+		}
+		if opt.TLSConfig == nil {
+			/* #nosec */
+			opt.TLSConfig = &tls.Config{}
+		}
+		opt.TLSConfig.Certificates = []tls.Certificate{clientCert}
+	}
 	return nil
 }
 

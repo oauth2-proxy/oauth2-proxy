@@ -32,6 +32,8 @@ type RedisStoreOptions struct {
 	UseCluster             bool     `flag:"redis-use-cluster" cfg:"redis_use_cluster"`
 	ClusterConnectionURLs  []string `flag:"redis-cluster-connection-urls" cfg:"redis_cluster_connection_urls"`
 	CAPath                 string   `flag:"redis-ca-path" cfg:"redis_ca_path"`
+	ClientCertPath         string   `flag:"redis-client-cert-path" cfg:"redis_client_cert_path"`
+	ClientKeyPath          string   `flag:"redis-client-key-path" cfg:"redis_client_key_path"`
 	InsecureSkipTLSVerify  bool     `flag:"redis-insecure-skip-tls-verify" cfg:"redis_insecure_skip_tls_verify"`
 	IdleTimeout            int      `flag:"redis-connection-idle-timeout" cfg:"redis_connection_idle_timeout"`
 }
