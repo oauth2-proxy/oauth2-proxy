@@ -191,6 +191,19 @@ This minimal configuration works for standard authentication flows. Lua/cookie h
 
 It is recommended to use `--session-store-type=redis` when expecting large sessions/OIDC tokens (_e.g._ with MS Azure).
 
+### Passing identity headers to the backend in Kubernetes
+
+By default, NGINX Ingress does not pass the identity headers from OAuth2-Proxy to your backend application. To pass them, ensure your OAuth2-Proxy is configured with `--set-xauthrequest=true`, and add the `auth-response-headers` annotation to your Ingress:
+
+```yaml
+nginx.ingress.kubernetes.io/auth-response-headers: "X-Auth-Request-User, X-Auth-Request-Email"
+```
+
+:::warning pass-user-headers has no effect in auth-url mode
+The `--pass-user-headers` flag has no effect when using `auth-url` (Forward Auth). That flag is designed to inject `X-Forwarded-*` headers into the proxied HTTP **Request** when OAuth2-Proxy acts as a traditional reverse proxy. In `auth-url` mode, you must use `--set-xauthrequest=true` to inject headers into the HTTP **Response** so that NGINX can extract them.
+:::
+
+
 :::tip Kubernetes Dashboard with Azure Entra ID
 For a complete example of integrating oauth2-proxy with Kubernetes Dashboard on AKS using Azure Entra ID, including RBAC configuration and troubleshooting, see the [Kubernetes Dashboard on AKS](../providers/ms_entra_id.md#kubernetes-dashboard-on-aks) section in the Microsoft Entra ID provider documentation.
 :::
