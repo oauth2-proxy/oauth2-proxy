@@ -335,6 +335,30 @@ var _ = Describe("HTTP Upstream Suite", func() {
 		}),
 	)
 
+	It("should configure transport buffer sizes when set", func() {
+		u, err := url.Parse("http://upstream:1234")
+		Expect(err).ToNot(HaveOccurred())
+
+		upstream := options.Upstream{
+			ID:                    "bufferSizeTest",
+			FlushInterval:         &defaultFlushInterval,
+			InsecureSkipTLSVerify: ptr.To(false),
+			ProxyWebSockets:       ptr.To(false),
+			Timeout:               &defaultTimeout,
+			WriteBufferSize:       ptr.To(65536),
+			ReadBufferSize:        ptr.To(32768),
+		}
+
+		handler := newReverseProxy(u, upstream, nil)
+		proxy, ok := handler.(*httputil.ReverseProxy)
+		Expect(ok).To(BeTrue())
+
+		transport, ok := proxy.Transport.(*http.Transport)
+		Expect(ok).To(BeTrue())
+		Expect(transport.WriteBufferSize).To(Equal(65536))
+		Expect(transport.ReadBufferSize).To(Equal(32768))
+	})
+
 	It("ServeHTTP, when not passing a host header", func() {
 		req := httptest.NewRequest("", "http://example.localhost/foo", nil)
 		req = middlewareapi.AddRequestScope(req, &middlewareapi.RequestScope{})
