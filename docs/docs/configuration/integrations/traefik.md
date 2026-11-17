@@ -72,7 +72,6 @@ http:
     oauth-auth:
       forwardAuth:
         address: https://oauth.example.com/oauth2/auth
-        trustForwardHeader: true
     oauth-errors:
       errors:
         status:
@@ -174,14 +173,12 @@ http:
     oauth-auth-redirect:
       forwardAuth:
         address: https://oauth.example.com/
-        trustForwardHeader: true
         authResponseHeaders:
           - X-Auth-Request-Access-Token
           - Authorization
     oauth-auth-wo-redirect:
       forwardAuth:
         address: https://oauth.example.com/oauth2/auth
-        trustForwardHeader: true
         authResponseHeaders:
           - X-Auth-Request-Access-Token
           - Authorization
