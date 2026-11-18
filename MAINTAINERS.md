@@ -3,7 +3,7 @@
 The table below lists all current maintainers for the oauth2-proxy as defined
 by our [project governance](GOVERNANCE.md).
 
-| Name             | GitHub Handle                                          | Domains of reponsibility | Email Alias                | Affiliation |
+| Name             | GitHub Handle                                          | Domains of responsibility | Email Alias                | Affiliation |
 | ---------------- | ------------------------------------------------------ | ------------------------ | -------------------------- | ----------- |
 | Joel Speed       | [@JoelSpeed](https://github.com/joelspeed)             | Governance, Core         | joel@oauth2-proxy.dev      | Red Hat     |
 | Jan Larwig       | [@tuunit](https://github.com/tuunit)                   | Governance, Core         | jan@oauth2-proxy.dev       | STACKIT     |

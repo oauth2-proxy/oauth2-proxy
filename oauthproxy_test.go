@@ -704,7 +704,7 @@ func TestOAuthCallbackSessionErrorStatus(t *testing.T) {
 	}
 }
 
-// getEndpointWithCookie makes a requests againt the oauthproxy with passed requestPath
+// getEndpointWithCookie makes a request against the oauthproxy with passed requestPath
 // and cookie and returns body and status code.
 func (patTest *PassAccessTokenTest) getEndpointWithCookie(cookie string, endpoint string) (httpCode int, accessToken string) {
 	cookieName := patTest.proxy.CookieOptions.Name
