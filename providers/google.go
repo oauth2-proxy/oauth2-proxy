@@ -185,7 +185,7 @@ func claimsFromIDToken(idToken string) (*claims, error) {
 		return nil, errors.New("missing email")
 	}
 	if !c.EmailVerified {
-		return nil, fmt.Errorf("email %s not listed as verified", c.Email)
+		return nil, fmt.Errorf("%w: email %s not listed as verified", ErrEmailNotVerified, c.Email)
 	}
 	return c, nil
 }

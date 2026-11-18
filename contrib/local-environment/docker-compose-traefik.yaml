@@ -18,7 +18,7 @@ services:
 
   oauth2-proxy:
     container_name: oauth2-proxy
-    image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.5
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.6
     command: --config /oauth2-proxy.cfg
     ports: []
     hostname: oauth2-proxy
@@ -34,7 +34,7 @@ services:
 
   dex:
     container_name: dex
-    image: ghcr.io/dexidp/dex:v2.45.1
+    image: ghcr.io/dexidp/dex:v2.46.1
     command: dex serve /dex.yaml
     hostname: dex
     volumes:
@@ -53,7 +53,7 @@ services:
   # Reverse proxy
   gateway:
     container_name: traefik
-    image: traefik:v3.7.10
+    image: traefik:v3.7.17
     volumes:
       - "./traefik:/etc/traefik"
     ports:

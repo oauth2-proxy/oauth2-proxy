@@ -248,7 +248,7 @@ func (p *OIDCProvider) createSession(ctx context.Context, token *oauth2.Token, r
 				return nil, errors.New("token response did not contain an id_token")
 			}
 		default:
-			return nil, fmt.Errorf("could not verify id_token: %v", err)
+			return nil, fmt.Errorf("could not verify id_token: %w", err)
 		}
 	}
 
