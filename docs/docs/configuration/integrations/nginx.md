@@ -29,6 +29,22 @@ default cannot provide this protection.
 The [Nginx `auth_request` directive](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) allows Nginx to authenticate requests via the oauth2-proxy's `/auth` endpoint, which only returns a 202 Accepted response or a 401 Unauthorized response without proxying the request through. For example:
 
 ```nginx
+# http context, next to the server block. These maps are evaluated when
+# add_header uses them, which is after auth_request has run (see
+# "Multi-part session cookies" below).
+map $auth_cookie $auth_cookie_0 {
+  "~*^(?<first>[^,]+)" $first;
+  default "";
+}
+map $auth_cookie $auth_cookie_attrs {
+  "~*(?<attrs>; [^,]*)" $attrs;
+  default "";
+}
+map $auth_cookie_upstream_1 $auth_cookie_1 {
+  ""      "";
+  default "_oauth2_proxy_1=$auth_cookie_upstream_1$auth_cookie_attrs";
+}
+
 server {
   listen 443 ssl;
   server_name ...;
@@ -69,26 +85,17 @@ server {
 
     # if you enabled --cookie-refresh, this is needed for it to work with auth_request
     auth_request_set $auth_cookie $upstream_http_set_cookie;
-    add_header Set-Cookie $auth_cookie;
+    add_header Set-Cookie $auth_cookie_0;
 
     # Large OIDC tokens can make the session cookie exceed the 4KB limit,
     # causing OAuth2 Proxy to split the cookie into multiple parts.
-    # Nginx normally only copies the first `Set-Cookie` header from the auth_request to the response,
-    # so extract the second part when using the default cookie name, `_oauth2_proxy`.
+    # $upstream_http_set_cookie holds only the first `Set-Cookie` header before nginx 1.23.0
+    # and all of them joined by commas since, so read the second part
+    # separately when using the default cookie name, `_oauth2_proxy`.
+    # The maps above rebuild its `Set-Cookie` header from the first header's attributes
+    # ($upstream_cookie_* variables only contain the raw cookie content).
     auth_request_set $auth_cookie_upstream_1 $upstream_cookie__oauth2_proxy_1;
-
-    # Extract the Cookie attributes from the first Set-Cookie header and append them
-    # to the second part ($upstream_cookie_* variables only contain the raw cookie content)
-    if ($auth_cookie ~* "(; .*)") {
-        set $auth_cookie_0 $auth_cookie;
-        set $auth_cookie_1 "_oauth2_proxy_1=$auth_cookie_upstream_1$1";
-    }
-
-    # Send both Set-Cookie headers now if there was a second part
-    if ($auth_cookie_upstream_1) {
-        add_header Set-Cookie $auth_cookie_0;
-        add_header Set-Cookie $auth_cookie_1;
-    }
+    add_header Set-Cookie $auth_cookie_1;
 
     proxy_pass http://backend/;
     # or "root /path/to/site;" or "fastcgi_pass ..." etc
@@ -114,11 +121,19 @@ The example above is ready to use with the default `--cookie-name=_oauth2_proxy`
 For example, with `--cookie-name=my_cookie`, change the relevant lines to:
 
 ```nginx
+# in the location block
 auth_request_set $auth_cookie_upstream_1 $upstream_cookie_my_cookie_1;
-set $auth_cookie_1 "my_cookie_1=$auth_cookie_upstream_1$1";
+
+# in the map block
+map $auth_cookie_upstream_1 $auth_cookie_1 {
+  ""      "";
+  default "my_cookie_1=$auth_cookie_upstream_1$auth_cookie_attrs";
+}
 ```
 
-If a session is split into more than two cookies, repeat the extraction for each additional numeric suffix. For consistently large sessions, prefer `--session-store-type=redis` so only a small session ticket is stored in the browser cookie.
+The headers are built with `map` instead of `if` and `set` on purpose. `if` and `set` run before `auth_request`, so they never see the variables that `auth_request_set` fills in. A `map` variable is only evaluated when `add_header` uses it, after the authentication subrequest has finished. The `map` blocks split the headers on commas, which is safe because OAuth2 Proxy sets cookie lifetimes with `Max-Age` and never writes a comma into the cookie attributes.
+
+If a session is split into more than two cookies, repeat the `auth_request_set`, `map` and `add_header` lines for each additional numeric suffix. For consistently large sessions, prefer `--session-store-type=redis` so only a small session ticket is stored in the browser cookie.
 
 ### Understanding the `error_page` redirect pattern
 
