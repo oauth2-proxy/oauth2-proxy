@@ -183,12 +183,42 @@ var _ = Describe("Verify", func() {
 		Expect(result.Issuer).To(Equal("https://foo"))
 		Expect(result.Audience).To(Equal([]string{"1226737"}))
 	})
+
+	It("Fails instead of panicking if the audience claim is not a string or a list", func() {
+		result, err := verify(ctx, IDTokenVerificationOptions{
+			AudienceClaims: []string{"client_id"},
+			ClientID:       "1226737",
+			ExtraAudiences: []string{},
+		}, payload{
+			Iss:      "https://foo",
+			ClientID: 1226737,
+		})
+
+		Expect(err).To(MatchError(ErrInvalidAudience))
+		Expect(err).To(MatchError(ContainSubstring("audience claim client_id holds unsupported type float64")))
+		Expect(result).To(BeNil())
+	})
+
+	It("Fails instead of panicking if the audience claim list holds a non-string value", func() {
+		result, err := verify(ctx, IDTokenVerificationOptions{
+			AudienceClaims: []string{"client_id"},
+			ClientID:       "1226737",
+			ExtraAudiences: []string{},
+		}, payload{
+			Iss:      "https://foo",
+			ClientID: []interface{}{"1226737", 42},
+		})
+
+		Expect(err).To(MatchError(ErrInvalidAudience))
+		Expect(err).To(MatchError(ContainSubstring("audience claim client_id holds a list with unsupported element type float64")))
+		Expect(result).To(BeNil())
+	})
 })
 
 type payload struct {
 	Iss      string      `json:"iss,omitempty"`
 	Aud      interface{} `json:"aud,omitempty"`
-	ClientID string      `json:"client_id,omitempty"`
+	ClientID interface{} `json:"client_id,omitempty"`
 }
 
 type jwtToken struct {

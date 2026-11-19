@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.6
 
+- [#3613](https://github.com/oauth2-proxy/oauth2-proxy/pull/3613) fix: reject unsupported audience claim types instead of panicking (@BahaaMattar)
+
 # V7.15.6
 
 ## Release Highlights
