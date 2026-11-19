@@ -145,18 +145,18 @@ func loadYamlOptions(yamlConfig, config string, extraFlags *pflag.FlagSet, args 
 // This means that none of the options that have been converted to alpha config
 // will be loaded using this method.
 func loadOptions(config string, extraFlags *pflag.FlagSet, args []string) (*options.Options, error) {
-	optionsFlagSet := options.NewFlagSet()
+	optionsFlagSet := options.NewLegacyFlagSet()
 	optionsFlagSet.AddFlagSet(extraFlags)
 	if err := optionsFlagSet.Parse(args); err != nil {
 		return nil, fmt.Errorf("failed to parse flags: %v", err)
 	}
 
-	opts := options.NewOptions()
+	opts := options.NewLegacyOptions()
 	if err := options.Load(config, optionsFlagSet, opts); err != nil {
 		return nil, fmt.Errorf("failed to load config: %v", err)
 	}
 
-	return opts, nil
+	return opts.ToOptions()
 }
 
 // printConvertedConfig extracts alpha options from the loaded configuration
