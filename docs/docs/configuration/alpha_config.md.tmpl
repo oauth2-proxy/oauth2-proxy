@@ -82,8 +82,9 @@ described in the [reference](#configuration-reference) below.
 Provide the path to this file using the `--alpha-config` flag.
 
 :::note
-When using the `--alpha-config` flag, some options are no longer available.
-See [removed options](#removed-options) below for more information.
+Legacy configuration remains available when using `--alpha-config`. See
+[legacy options in alpha configuration](#legacy-options-in-alpha-configuration)
+for how the configurations are combined.
 :::
 
 ### Converting configuration to the new structure
@@ -98,9 +99,9 @@ oauth2-proxy --convert-config-to-alpha --config ./path/to/existing/config.cfg
 This will convert any options supported by the new format to YAML and print the
 new configuration to `STDOUT`.
 
-Copy this to a new file, remove any options from your existing configuration
-noted in [removed options](#removed-options) and then start OAuth2 Proxy using
-the new config.
+Copy this to a new file, then start OAuth2 Proxy using the new config. You can
+keep the legacy options in your existing configuration or remove them as you
+migrate them to YAML.
 
 ```bash
 oauth2-proxy --alpha-config ./path/to/new/config.yaml --config ./path/to/existing/config.cfg
@@ -180,7 +181,9 @@ comma-joined string, so consumers should retrieve and parse each header value se
 
 **Request option:** `preserveRequestValue: true` retains existing header values
 
-**Incompatibility:** Remove legacy flags `pass-user-headers`, `set-xauthrequest`
+If you also use legacy header options such as `pass-user-headers` or
+`set-xauthrequest`, check the resulting header lists as described in
+[legacy options in alpha configuration](#legacy-options-in-alpha-configuration).
 
 ### How to utilize arbitrary claims provided by your Identity Provider
 
@@ -234,10 +237,22 @@ This is useful when your IdP exposes application-specific attributes such as dep
 tenant, employee ID, entitlement, or other custom claims that are not part of the default
 OAuth2 Proxy session fields.
 
-## Removed options
+## Legacy options in alpha configuration
 
-The following flags/options and their respective environment variables are no
-longer available when using alpha configuration:
+OAuth2 Proxy loads legacy TOML options, environment variables, and flags first,
+then applies the alpha YAML configuration. Values omitted from YAML retain their
+converted legacy values, while values specified in YAML take precedence.
+Legacy configuration must still parse and convert successfully even when YAML
+overrides it.
+
+Lists require particular care. YAML list entries merge with legacy entries by
+position, not by ID or name. A YAML list also sets the resulting list length,
+so a shorter list removes remaining legacy entries. Check the resulting
+configuration when mixing legacy and YAML providers, upstreams, or headers.
+Use `--config-test` to check for validation errors.
+
+The following legacy flags/options and their respective environment variables
+include settings represented in alpha configuration:
 
 <!-- Legacy Upstream FlagSet -->
 - `flush-interval`/`flush_interval`
@@ -280,13 +295,7 @@ longer available when using alpha configuration:
 - `jwt-key-file`/`jwt_key_file`
 - `pubjwk-url`/`pubjwk_url`
 
-and all provider-specific options, i.e. any option whose name includes `oidc`,
-`azure`, `bitbucket`, `github`, `gitlab`, `google` or `keycloak`.  Attempting to
-use any of these options via flags or via config when `--alpha-config` is
-set will result in an error.
-
-:::important
-You must remove these options before starting OAuth2 Proxy with `--alpha-config`
-:::
+This also includes provider-specific options, such as options whose names include
+`oidc`, `azure`, `bitbucket`, `github`, `gitlab`, `google` or `keycloak`.
 
 ## Configuration Reference
