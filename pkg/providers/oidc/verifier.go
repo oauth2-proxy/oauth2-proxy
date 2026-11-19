@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"reflect"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 )
@@ -69,13 +68,18 @@ func (v *idTokenVerifier) verifyAudience(token *oidc.IDToken, claims map[string]
 	for _, audienceClaim := range v.verificationOptions.AudienceClaims {
 		if audienceClaimValue, audienceClaimExists := claims[audienceClaim]; audienceClaimExists {
 
-			// audience claim value can be either interface{} or []interface{},
-			// as per spec `aud` can be either a string or a list of strings
+			// audience claim value can be either a string or a []interface{},
+			// as per spec `aud` can be either a string or a list of strings.
+			// Anything else is rejected instead of panicking on a type assertion.
 			switch audienceClaimValueType := audienceClaimValue.(type) {
 			case []interface{}:
-				token.Audience = v.interfaceSliceToString(audienceClaimValue)
-			case interface{}:
-				token.Audience = []string{audienceClaimValue.(string)}
+				audience, err := v.interfaceSliceToString(audienceClaimValueType)
+				if err != nil {
+					return false, fmt.Errorf("audience claim %s holds a list with %w", audienceClaim, err)
+				}
+				token.Audience = audience
+			case string:
+				token.Audience = []string{audienceClaimValueType}
 			default:
 				return false, fmt.Errorf("audience claim %s holds unsupported type %T",
 					audienceClaim, audienceClaimValueType)
@@ -101,14 +105,14 @@ func (v *idTokenVerifier) isValidAudience(claim string, audience []string, allow
 		claim, audience, allowedAudiences)
 }
 
-func (v *idTokenVerifier) interfaceSliceToString(slice interface{}) []string {
-	s := reflect.ValueOf(slice)
-	if s.Kind() != reflect.Slice {
-		panic(fmt.Sprintf("given a non-slice type %s", s.Kind()))
+func (v *idTokenVerifier) interfaceSliceToString(slice []interface{}) ([]string, error) {
+	strings := make([]string, 0, len(slice))
+	for _, item := range slice {
+		s, ok := item.(string)
+		if !ok {
+			return nil, fmt.Errorf("unsupported element type %T", item)
+		}
+		strings = append(strings, s)
 	}
-	var strings []string
-	for i := 0; i < s.Len(); i++ {
-		strings = append(strings, s.Index(i).Interface().(string))
-	}
-	return strings
+	return strings, nil
 }
