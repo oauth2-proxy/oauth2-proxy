@@ -89,6 +89,24 @@ func TestEncryptAndDecrypt(t *testing.T) {
 	}
 }
 
+func TestDecryptShortCiphertextReturnsError(t *testing.T) {
+	// A ciphertext shorter than the cipher's IV/nonce prefix must yield an
+	// error, not a slice-bounds panic. CFB already guarded this; GCM must too.
+	cipherInits := map[string]func([]byte) (Cipher, error){
+		"CFB": NewCFBCipher,
+		"GCM": NewGCMCipher,
+	}
+	for name, initCipher := range cipherInits {
+		t.Run(name, func(t *testing.T) {
+			c, err := initCipher([]byte("0123456789abcdef"))
+			assert.NoError(t, err)
+
+			_, err = c.Decrypt([]byte{1, 2, 3, 4, 5})
+			assert.Error(t, err)
+		})
+	}
+}
+
 func runEncryptAndDecrypt(t *testing.T, c Cipher, dataSize int) {
 	data := make([]byte, dataSize)
 	_, err := io.ReadFull(rand.Reader, data)

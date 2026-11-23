@@ -5,3 +5,5 @@ log:
 providers:
   file:
     filename: /etc/traefik/dynamic.yaml
+    # Routes are static for this example; disabling watch avoids host inotify limits.
+    watch: false

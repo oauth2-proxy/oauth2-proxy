@@ -86,7 +86,7 @@ const sidebars = {
       label: 'Community',
       link: {
         type: 'doc',
-        id: 'community/security',
+        id: 'community/contribution',
       },
       collapsed: false,
       items: ['community/contribution', 'community/security'],

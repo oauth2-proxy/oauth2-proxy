@@ -49,8 +49,8 @@ kubernetes-down:
 
 .PHONY: traefik-up
 traefik-up:
-	docker compose -f docker-compose.yaml -f docker-compose-traefik.yaml up -d
+	docker compose -f docker-compose-traefik.yaml up -d
 
 .PHONY: traefik-%
 traefik-%:
-	docker compose -f docker-compose.yaml -f docker-compose-traefik.yaml $*
+	docker compose -f docker-compose-traefik.yaml $*

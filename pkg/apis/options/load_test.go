@@ -282,7 +282,7 @@ var _ = Describe("Load", func() {
 			Entry("with an invalid config file", &testOptionsTableInput{
 				configFile:     []byte(`slice_option = foo`),
 				flagSet:        func() *pflag.FlagSet { return testOptionsFlagSet },
-				expectedErr:    fmt.Errorf("unable to load config file: While parsing config: toml: expected 'false'"),
+				expectedErr:    fmt.Errorf("unable to load config file: While parsing config: toml: expected keyword \"false\""),
 				expectedOutput: &TestOptions{},
 			}),
 			Entry("with an invalid flagset", &testOptionsTableInput{
@@ -445,7 +445,7 @@ sub:
 				configFile:     []byte("\tfoo: bar"),
 				input:          &TestOptions{},
 				expectedOutput: &TestOptions{},
-				expectedErr:    errors.New("error unmarshalling config: yaml: found character that cannot start any token"),
+				expectedErr:    errors.New("error unmarshalling config: yaml: line 1: found character that cannot start any token"),
 			}),
 			Entry("with extra fields in the YAML", loadYAMLTableInput{
 				configFile: append(testOptionsConfigBytesFull, []byte("foo: bar\n")...),

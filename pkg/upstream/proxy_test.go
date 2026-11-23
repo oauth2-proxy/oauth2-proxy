@@ -295,6 +295,17 @@ var _ = Describe("Proxy Suite", func() {
 					raw: "<a href=\"http://example.localhost/http/\">Moved Permanently</a>.\n\n",
 				},
 			}),
+			Entry("with a request to a path with a query, missing the trailing slash", &proxyTableInput{
+				target: "http://example.localhost/http?param=1",
+				response: testHTTPResponse{
+					code: 301,
+					header: map[string][]string{
+						contentType: {textHTMLUTF8},
+						"Location":  {"http://example.localhost/http/?param=1"},
+					},
+					raw: "<a href=\"http://example.localhost/http/?param=1\">Moved Permanently</a>.\n\n",
+				},
+			}),
 			Entry("with a request to a path, missing the trailing slash, but registered separately", &proxyTableInput{
 				target: "http://example.localhost/static",
 				response: testHTTPResponse{

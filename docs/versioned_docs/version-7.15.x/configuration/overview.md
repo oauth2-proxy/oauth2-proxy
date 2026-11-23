@@ -194,8 +194,39 @@ Provider specific options can be found on their respective subpages.
 ### Proxy Options
 
 :::warning
-When `--reverse-proxy` is enabled, configure `--trusted-proxy-ip` to the IPs or CIDR ranges of the reverse proxies that are allowed to send `X-Forwarded-*` headers. If you leave it unset, OAuth2 Proxy currently trusts all source IPs for backwards compatibility, which means a client that can reach OAuth2 Proxy directly may be able to spoof forwarded headers.
+When `--reverse-proxy` is enabled, configure `--trusted-proxy-ip` to the IPs or CIDR ranges of the reverse proxies that are allowed to send `X-Forwarded-*` headers. Include the direct peer and every trusted proxy hop that can appear in `X-Forwarded-For`. If you leave it unset, OAuth2 Proxy currently trusts all source IPs for backwards compatibility, which means a client that can reach OAuth2 Proxy directly may be able to spoof forwarded headers.
 :::
+
+### Trusted client IPs behind a reverse proxy
+
+`--trusted-ip` is an authentication bypass, not a list of trusted reverse
+proxies. When combining it with `--reverse-proxy`, always configure
+`--trusted-proxy-ip` with the direct proxy and every trusted intermediate proxy
+that can appear in XFF, and prevent clients from reaching OAuth2 Proxy directly.
+
+OAuth2 Proxy accepts `--real-client-ip-header` only from those trusted peers.
+For `X-Forwarded-For`, it combines repeated header fields in their received order,
+then walks the chain from right to left and skips addresses covered by
+`--trusted-proxy-ip`. The first untrusted address is treated as the client;
+entries to its left are not used. This also applies to client-IP logging and
+callback diagnostics. For example, if a trusted proxy appends the actual client
+to `10.0.0.5, 198.51.100.23`, the client is `198.51.100.23`, not the potentially
+forged `10.0.0.5`. For single-value headers such as `X-Real-IP`, configure the
+edge proxy to overwrite any value supplied by the client.
+
+If every address in the chain is in a trusted proxy range, the leftmost address
+is used for compatibility. Leaving `--trusted-proxy-ip` unset trusts all IPv4 and
+IPv6 addresses, so it retains this leftmost behavior and does **not** protect
+against forged XFF entries. Explicit, narrowly scoped proxy ranges are required.
+
+For a trusted proxy, a missing client-IP header or malformed address encountered
+before reaching the client does not grant a trusted-IP exemption, even if the
+proxy's transport IP is in `--trusted-ip`. Logging falls back to the transport IP in these cases;
+callback diagnostics retain the `transport IP (client IP)` format when both are
+available. When reverse-proxy mode is disabled or the peer is not trusted, only
+the transport IP is evaluated. Unix socket connections have no transport IP to
+exempt; in reverse-proxy mode they retain the existing behavior of accepting
+client-IP headers, with the same XFF chain resolution.
 
 | Flag / Config Field                                                           | Type           | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Default     |
 | ----------------------------------------------------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
@@ -211,19 +242,19 @@ When `--reverse-proxy` is enabled, configure `--trusted-proxy-ip` to the IPs or 
 | flag: `--htpasswd-file`<br/>toml: `htpasswd_file`                             | string         | additionally authenticate against a htpasswd file. Entries must be created with `htpasswd -B` for bcrypt encryption                                                                                                                                                                                                                                                                                                                                                                                                   |             |
 | flag: `--htpasswd-user-group`<br/>toml: `htpasswd_user_groups`                | string \| list | the groups to be set on sessions for htpasswd users                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |             |
 | flag: `--proxy-prefix`<br/>toml: `proxy_prefix`                               | string         | the url root path that this proxy should be nested under (e.g. /`<oauth2>/sign_in`)                                                                                                                                                                                                                                                                                                                                                                                                                                   | `"/oauth2"` |
-| flag: `--real-client-ip-header`<br/>toml: `real_client_ip_header`             | string         | Header used to determine the real IP of the client, requires `--reverse-proxy` to be set (one of: X-Forwarded-For, X-Real-IP, X-ProxyUser-IP, X-Envoy-External-Address, or CF-Connecting-IP)                                                                                                                                                                                                                                                                                                                          | X-Real-IP   |
+| flag: `--real-client-ip-header`<br/>toml: `real_client_ip_header`             | string         | Header used to determine the real IP of the client when the direct caller matches `--trusted-proxy-ip`; requires `--reverse-proxy` (one of: X-Forwarded-For, X-Real-IP, X-ProxyUser-IP, X-Envoy-External-Address, or CF-Connecting-IP)                                                                                                                                                                                                                                                                                  | X-Real-IP   |
 | flag: `--redirect-url`<br/>toml: `redirect_url`                               | string         | the OAuth Redirect URL, e.g. `"https://internalapp.yourcompany.com/oauth2/callback"`                                                                                                                                                                                                                                                                                                                                                                                                                                  |             |
 | flag: `--relative-redirect-url`<br/>toml: `relative_redirect_url`             | bool           | allow relative OAuth Redirect URL.`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | false       |
 | flag: `--reverse-proxy`<br/>toml: `reverse_proxy`                             | bool           | are we running behind a reverse proxy, controls whether headers like X-Real-IP are accepted and allows X-Forwarded-\{Proto,Host,Uri\} headers to be used on redirect selection                                                                                                                                                                                                                                                                                                                                        | false       |
-| flag: `--trusted-proxy-ip`<br/>toml: `trusted_proxy_ips`                      | string \| list | list of IPs or CIDR ranges allowed to supply `X-Forwarded-*` headers when `--reverse-proxy` is enabled. If not set, OAuth2 Proxy preserves backwards compatibility by trusting all source IPs (`0.0.0.0/0`, `::/0`) and logs a warning at startup. Configure this to your reverse proxy addresses to prevent forwarded header spoofing.                                                                                                                                                              | `"0.0.0.0/0", "::/0"` |
+| flag: `--trusted-proxy-ip`<br/>toml: `trusted_proxy_ips`                      | string \| list | list of direct proxy IPs or CIDR ranges allowed to supply `X-Forwarded-*` headers when `--reverse-proxy` is enabled. Include every trusted proxy hop that can appear in XFF. If not set, OAuth2 Proxy preserves backwards compatibility by trusting all source IPs (`0.0.0.0/0`, `::/0`) and logs a warning at startup.                                                                                                                                                                             | `"0.0.0.0/0", "::/0"` |
 | flag: `--signature-key`<br/>toml: `signature_key`                             | string         | GAP-Signature request signature key (algorithm:secretkey)                                                                                                                                                                                                                                                                                                                                                                                                                                                             |             |
 | flag: `--skip-auth-preflight`<br/>toml: `skip_auth_preflight`                 | bool           | will skip authentication for OPTIONS requests                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | false       |
-| flag: `--skip-auth-regex`<br/>toml: `skip_auth_regex`                         | string \| list | (DEPRECATED for `--skip-auth-route`) bypass authentication for requests paths that match (may be given multiple times)                                                                                                                                                                                                                                                                                                                                                                                                |             |
-| flag: `--skip-auth-route`<br/>toml: `skip_auth_routes`                        | string \| list | bypass authentication for requests that match the method & path. Format: method=path_regex OR method!=path_regex. For all methods: path_regex OR !=path_regex                                                                                                                                                                                                                                                                                                                                                         |             |
+| flag: `--skip-auth-regex`<br/>toml: `skip_auth_regex`                         | string \| list | (DEPRECATED for `--skip-auth-route`) bypass authentication for requests whose paths match (may be given multiple times). Matching uses the decoded path without query parameters; invalid or ambiguous paths cannot grant a path exemption. See [Skip-auth path matching](#skip-auth-path-matching). |             |
+| flag: `--skip-auth-route`<br/>toml: `skip_auth_routes`                        | string \| list | bypass authentication for requests that match the method & path. Format: method=path_regex OR method!=path_regex. For all methods: path_regex OR !=path_regex. Matching uses the decoded path without query parameters; invalid or ambiguous paths cannot grant a path exemption, including with negated rules. See [Skip-auth path matching](#skip-auth-path-matching). |             |
 | flag: `--skip-jwt-bearer-tokens`<br/>toml: `skip_jwt_bearer_tokens`           | bool           | will skip requests that have verified JWT bearer tokens (the token must have [`aud`](https://en.wikipedia.org/wiki/JSON_Web_Token#Standard_fields) that matches this client id or one of the extras from `extra-jwt-issuers`)                                                                                                                                                                                                                                                                                         | false       |
 | flag: `--skip-provider-button`<br/>toml: `skip_provider_button`               | bool           | will skip sign-in-page to directly reach the next step: oauth/start                                                                                                                                                                                                                                                                                                                                                                                                                                                   | false       |
 | flag: `--ssl-insecure-skip-verify`<br/>toml: `ssl_insecure_skip_verify`       | bool           | skip validation of certificates presented when using HTTPS providers                                                                                                                                                                                                                                                                                                                                                                                                                                                  | false       |
-| flag: `--trusted-ip`<br/>toml: `trusted_ips`                                  | string \| list | list of IPs or CIDR ranges to allow to bypass authentication (may be given multiple times). When combined with `--reverse-proxy` and optionally `--real-client-ip-header` this will evaluate the trust of the IP stored in an HTTP header by a reverse proxy rather than the layer-3/4 remote address. WARNING: trusting IPs has inherent security flaws, especially when obtaining the IP address from an HTTP header (reverse-proxy mode). Use this option only if you understand the risks and how to manage them. |             |
+| flag: `--trusted-ip`<br/>toml: `trusted_ips`                                  | string \| list | list of client IPs or CIDR ranges allowed to bypass authentication (may be given multiple times). With `--reverse-proxy`, the selected real-client-IP header is accepted only from direct callers matching `--trusted-proxy-ip`; otherwise the transport peer address is used. WARNING: this option bypasses authentication. Configure explicit trusted proxy ranges and ensure the proxy sanitizes client-IP headers.                                                                                                      |             |
 | flag: `--whitelist-domain`<br/>toml: `whitelist_domains`                      | string \| list | allowed domains for redirection after authentication. Prefix domain with a `.` or a `*.` to allow subdomains (e.g. `.example.com`, `*.example.com`)&nbsp;[^2]                                                                                                                                                                                                                                                                                                                                                         |             |
 
 [^2]: When using the `whitelist-domain` option, any domain prefixed with a `.` or a `*.` will allow any subdomain of the specified domain as a valid redirect URL. By default, only empty ports are allowed. This translates to allowing the default port of the URL's protocol (80 for HTTP, 443 for HTTPS, etc.) since browsers omit them. To allow only a specific port, add it to the whitelisted domain: `example.com:8080`. To allow any port, use `*`: `example.com:*`.
@@ -272,6 +303,34 @@ When `--reverse-proxy` is enabled, configure `--trusted-proxy-ip` to the IPs or 
 | flag: `--disable-keep-alives`<br/>toml: `disable_keep_alives`                             | bool           | disable HTTP keep-alive connections to the upstream server                                                                                             | false   |
 | flag: `--upstream-timeout`<br/>toml: `upstream_timeout`                                   | duration       | maximum amount of time the server will wait for a response from the upstream                                                                           | 30s     |
 | flag: `--upstream`<br/>toml: `upstreams`                                                  | string \| list | the http url(s) of the upstream endpoint, file:// paths for static files or `static://<status_code>` for static response. Routing is based on the path |         |
+
+### Skip-auth path matching
+
+Both `--skip-auth-route` and the deprecated `--skip-auth-regex` match the
+percent-decoded path, excluding query parameters. In reverse-proxy mode,
+`X-Forwarded-Uri` is used only when the existing forwarded-header trust checks
+permit it. Original-URI metadata must use origin form (`/path?query`), not an
+absolute URL, authority, or relative path.
+
+Invalid or ambiguous targets do not grant a path-based authentication exemption.
+This check happens before any regular expression or its negation is evaluated.
+In particular, exemptions are declined for malformed path escapes, `.` or `..`
+path segments, repeated slashes (including leading `//`), semicolons, backslashes,
+fragment-like `#` content, decoded `?` characters, and control characters.
+Encoded forms are checked after a single decoding pass; paths are not recursively
+decoded.
+
+This intentionally also requires normal authentication for valid semicolon paths
+such as `/public/file;version=1` and repeated-slash paths such as `/public//file`.
+Fragments are no longer silently stripped. Ordinary query strings do not affect
+matching. Unambiguous escaped characters remain supported, and trailing slashes
+remain significant: `/public` and `/public/` are distinct matching paths.
+
+These checks do not normalize or rewrite the upstream request target. A declined
+path exemption follows normal authentication and authorization; it is not an
+unconditional rejection of authenticated requests using unusual paths. Existing
+router redirects and separately configured exemptions, such as trusted client
+IPs or skipped preflight requests, are unchanged.
 
 ## Configuration Validation
 
@@ -361,7 +420,7 @@ Logging of requests to the `/ping` endpoint (or using `--ping-user-agent`) and t
 
 ## Auth Log Format
 
-Authentication logs are logs which are guaranteed to contain a username or email address of a user attempting to authenticate. These logs are output by default in the below format:
+Authentication logs describe authentication attempts. They include the user's username or email address when known, or `-` otherwise. OAuth callback diagnostics for missing or invalid CSRF cookies are authentication logs, controlled by `--auth-logging`, and include cookie names but not cookie values. These logs are output by default in the below format:
 
 ```
 <REMOTE_ADDRESS> - <REQUEST ID> - <user@domain.com> [2015/03/19 17:20:19] [<STATUS>] <MESSAGE>
@@ -392,7 +451,7 @@ Available variables for auth logging:
 | RequestMethod | GET                                  | The request method.                                                                                      |
 | Timestamp     | 2015/03/19 17:20:19                  | The date and time of the logging event.                                                                  |
 | UserAgent     | -                                    | The full user agent as reported by the requesting client.                                                |
-| Username      | username@email.com                   | The email or username of the auth request.                                                               |
+| Username      | username@email.com                   | The email or username of the auth request, or `-` if not yet known.                                       |
 | Status        | AuthSuccess                          | The status of the auth request. See above for details.                                                   |
 
 ## Request Log Format

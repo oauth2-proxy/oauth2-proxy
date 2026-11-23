@@ -303,7 +303,7 @@ func (p *ProviderData) buildSessionFromClaims(rawIDToken, accessToken string) (*
 		}
 
 		if exists && !verified {
-			return nil, fmt.Errorf("email in id_token (%s) isn't verified", ss.Email)
+			return nil, fmt.Errorf("%w: email in id_token (%s) isn't verified", ErrEmailNotVerified, ss.Email)
 		}
 	}
 

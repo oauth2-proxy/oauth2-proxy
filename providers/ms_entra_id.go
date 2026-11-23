@@ -196,6 +196,7 @@ func (p *MicrosoftEntraIDProvider) redeemRefreshTokenWithFederatedToken(ctx cont
 		s.User = newSession.User
 		s.Groups = newSession.Groups
 		s.PreferredUsername = newSession.PreferredUsername
+		s.AdditionalClaims = newSession.AdditionalClaims
 	}
 
 	s.AccessToken = newSession.AccessToken
@@ -247,8 +248,7 @@ func (p *MicrosoftEntraIDProvider) addGraphGroupsToSession(ctx context.Context, 
 			UnmarshalSimpleJSON()
 
 		if err != nil {
-			logger.Errorf("invalid response from microsoft graph, no groups added to session: %v", err)
-			return nil
+			return fmt.Errorf("invalid response from microsoft graph: %w", err)
 		}
 		reqGroups := response.Get("value").MustArray()
 
@@ -275,8 +275,17 @@ func (p *MicrosoftEntraIDProvider) getTenantFromToken(session *sessions.SessionS
 		return "", fmt.Errorf("unable to get claim extractor: %v", err)
 	}
 
-	value, exists, err := extractor.GetClaim("iss")
+	// The tid (tenant ID) claim is set in every Entra ID token, regardless of the cloud the token
+	// was issued in (login.microsoftonline.com, login.microsoftonline.us, login.chinacloudapi.cn).
+	// https://learn.microsoft.com/en-us/entra/identity-platform/id-token-claims-reference
+	if tid, exists, err := extractor.GetClaim("tid"); exists && err == nil {
+		if tenant, ok := tid.(string); ok && tenant != "" {
+			return tenant, nil
+		}
+	}
 
+	// Fall back to parsing the tenant ID from the issuer URL
+	value, exists, err := extractor.GetClaim("iss")
 	if !exists || err != nil {
 		return "", fmt.Errorf("iss claim does not exist in the token")
 	}

@@ -1,6 +1,9 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   semanticCommits: "enabled",
+  labels: [
+    "kind/dependencies",
+  ],
   schedule: [
     "after 8am on sunday"
   ],
@@ -45,6 +48,15 @@
       ],
       depNameTemplate: "alpine",
       datasourceTemplate: "docker",
+    },
+    {
+      customType: "regex",
+      fileMatch: [
+        "^Makefile",
+      ],
+      matchStrings: [
+        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\s+?GOLANGCILINT_VERSION \\?= (?<currentValue>.*)\\s",
+      ],
     },
     {
       customType: "regex",

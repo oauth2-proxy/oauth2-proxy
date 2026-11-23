@@ -1,22 +1,25 @@
 http:
   routers:
     oauth2-proxy-route:
-      rule: "Host(`oauth2-proxy.oauth2-proxy.localhost`)"
+      rule: "Host(`oauth2-proxy.localtest.me`)"
       middlewares:
         - auth-headers
       service: oauth-backend
+    dex-route:
+      rule: "Host(`dex.localtest.me`)"
+      service: dex-service
     httpbin-route:
-      rule: "Host(`httpbin.oauth2-proxy.localhost`)"
+      rule: "Host(`httpbin.localtest.me`)"
       service: httpbin-service
       middlewares:
         - oauth-auth-redirect # redirects all unauthenticated to oauth2 signin    
     httpbin-route-2:
-      rule: "Host(`httpbin.oauth2-proxy.localhost`) && PathPrefix(`/no-auto-redirect`)"
+      rule: "Host(`httpbin.localtest.me`) && PathPrefix(`/no-auto-redirect`)"
       service: httpbin-service
       middlewares:
         - oauth-auth-wo-redirect # unauthenticated session will return a 401
     services-oauth2-route:
-      rule: "Host(`httpbin.oauth2-proxy.localhost`) && PathPrefix(`/oauth2/`)"
+      rule: "Host(`httpbin.localtest.me`) && PathPrefix(`/oauth2/`)"
       middlewares:
         - auth-headers
       service: oauth-backend
@@ -30,6 +33,10 @@ http:
       loadBalancer:
         servers:
           - url: http://oauth2-proxy:4180
+    dex-service:
+      loadBalancer:
+        servers:
+          - url: http://dex:5556
 
   middlewares:
     auth-headers:

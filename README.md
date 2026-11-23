@@ -51,7 +51,7 @@ Microsoft Azure credits for open source projects
 ## Getting Involved
 [![Slack](https://img.shields.io/badge/slack-CNCF_%23oauth2--proxy-blue?logo=slack)](https://cloud-native.slack.com/archives/C098Y5URZ2N)
 
-Join the #oauth2-proxy [Slack channel](https://cloud-native.slack.com/archives/C098Y5URZ2N) to chat with other users of OAuth2 Proxy or reach out to the maintainers directly. Use the [public invite link](https://communityinviter.com/apps/cloud-native/cncf) to get an invite for the Gopher Slack space.
+Join the #oauth2-proxy [Slack channel](https://cloud-native.slack.com/archives/C098Y5URZ2N) to chat with other users of OAuth2 Proxy or reach out to the maintainers directly. Use the [public invite link](https://slack.cncf.io/) to get an invite for the CNCF space.
 
 OAuth2 Proxy is a community-driven project. We rely on the contribut️ions of our users to continually improve it. While review times can vary, we appreciate your patience and understanding. As a volunteer-driven project, we strive to keep this project stable and might take longer to merge changes.
 

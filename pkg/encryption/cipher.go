@@ -122,6 +122,9 @@ func (c *gcmCipher) Decrypt(ciphertext []byte) ([]byte, error) {
 	}
 
 	nonceSize := gcm.NonceSize()
+	if len(ciphertext) < nonceSize {
+		return nil, fmt.Errorf("encrypted value should be at least %d bytes, but is only %d bytes", nonceSize, len(ciphertext))
+	}
 	nonce, ciphertext := ciphertext[:nonceSize], ciphertext[nonceSize:]
 
 	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)

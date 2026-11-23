@@ -19,7 +19,6 @@ import (
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	k8serrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
 type noOpKeySet struct {
@@ -109,7 +108,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				rw := httptest.NewRecorder()
 
 				sessionLoaders := []middlewareapi.TokenToSessionFunc{
-					middlewareapi.CreateTokenToSessionFunc(verifier),
+					middlewareapi.CreateTokenToSessionFunc(verifier, middlewareapi.SessionClaimMapping{}),
 				}
 
 				// Create the handler with a next handler that will capture the session
@@ -179,7 +178,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				rw := httptest.NewRecorder()
 
 				sessionLoaders := []middlewareapi.TokenToSessionFunc{
-					middlewareapi.CreateTokenToSessionFunc(verifier),
+					middlewareapi.CreateTokenToSessionFunc(verifier, middlewareapi.SessionClaimMapping{}),
 				}
 
 				// Create the handler with a next handler that will capture the session
@@ -261,7 +260,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 			j = &jwtSessionLoader{
 				jwtRegex: regexp.MustCompile(jwtRegexFormat),
 				sessionLoaders: []middlewareapi.TokenToSessionFunc{
-					middlewareapi.CreateTokenToSessionFunc(verifier),
+					middlewareapi.CreateTokenToSessionFunc(verifier, middlewareapi.SessionClaimMapping{}),
 				},
 			}
 		})
@@ -302,10 +301,10 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 			}),
 			Entry("Bearer <nonVerifiedToken>", getJWTSessionTableInput{
 				authorizationHeader: fmt.Sprintf("Bearer %s", nonVerifiedToken),
-				expectedErr: k8serrors.NewAggregate([]error{
+				expectedErr: errors.Join(
 					errors.New("unable to verify bearer token"),
 					errors.New("oidc: malformed jwt: illegal base64 data at input byte 8"),
-				}),
+				),
 				expectedSession: nil,
 			}),
 			Entry("Bearer <verifiedToken>", getJWTSessionTableInput{
@@ -315,10 +314,10 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 			}),
 			Entry("Basic Base64(<nonVerifiedToken>:) (No password)", getJWTSessionTableInput{
 				authorizationHeader: "Basic ZXlKZm9vYmFyLmV5SmZvb2Jhci4xMjM0NWFzZGY6",
-				expectedErr: k8serrors.NewAggregate([]error{
+				expectedErr: errors.Join(
 					errors.New("unable to verify bearer token"),
 					errors.New("oidc: malformed jwt: illegal base64 data at input byte 8"),
-				}),
+				),
 				expectedSession: nil,
 			}),
 			Entry("Basic Base64(<verifiedToken>:x-oauth-basic) (Sentinel password)", getJWTSessionTableInput{
@@ -483,17 +482,25 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 		notVerified := false
 
 		type idTokenClaims struct {
-			Email    string `json:"email,omitempty"`
-			Verified *bool  `json:"email_verified,omitempty"`
+			Email             string   `json:"email,omitempty"`
+			Verified          *bool    `json:"email_verified,omitempty"`
+			Groups            []string `json:"groups,omitempty"`
+			ADGroups          []string `json:"ADGroups,omitempty"`
+			SingleGroup       string   `json:"singleGroup,omitempty"`
+			InvalidGroups     any      `json:"invalidGroups,omitempty"`
+			PreferredUsername string   `json:"preferred_username,omitempty"`
 			jwt.RegisteredClaims
 		}
 
 		type tokenToSessionTableInput struct {
-			idToken         idTokenClaims
-			expectedErr     error
-			expectedUser    string
-			expectedEmail   string
-			expectedExpires *time.Time
+			idToken                   jwt.Claims
+			mapping                   middlewareapi.SessionClaimMapping
+			expectedErr               error
+			expectedUser              string
+			expectedEmail             string
+			expectedGroups            []string
+			expectedExpires           *time.Time
+			expectedPreferredUsername string
 		}
 
 		DescribeTable("when creating a session from an IDToken",
@@ -517,9 +524,9 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				rawIDToken, err := jwt.NewWithClaims(jwt.SigningMethodRS256, in.idToken).SignedString(key)
 				Expect(err).ToNot(HaveOccurred())
 
-				session, err := middlewareapi.CreateTokenToSessionFunc(verifier)(ctx, rawIDToken)
+				session, err := middlewareapi.CreateTokenToSessionFunc(verifier, in.mapping)(ctx, rawIDToken)
 				if in.expectedErr != nil {
-					Expect(err).To(MatchError(in.expectedErr))
+					Expect(err).To(MatchError(in.expectedErr.Error()))
 					Expect(session).To(BeNil())
 					return
 				}
@@ -529,9 +536,10 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				Expect(session.IDToken).To(Equal(rawIDToken))
 				Expect(session.User).To(Equal(in.expectedUser))
 				Expect(session.Email).To(Equal(in.expectedEmail))
+				Expect(session.Groups).To(Equal(in.expectedGroups))
 				Expect(session.ExpiresOn.Unix()).To(Equal(in.expectedExpires.Unix()))
 				Expect(session.RefreshToken).To(BeEmpty())
-				Expect(session.PreferredUsername).To(BeEmpty())
+				Expect(session.PreferredUsername).To(Equal(in.expectedPreferredUsername))
 			},
 			Entry("with no email", tokenToSessionTableInput{
 				idToken: idTokenClaims{
@@ -559,13 +567,15 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 						NotBefore: jwt.NewNumericDate(time.Time{}),
 						Subject:   "123456789",
 					},
-					Email:    "foo@example.com",
-					Verified: &verified,
+					Email:             "foo@example.com",
+					Verified:          &verified,
+					PreferredUsername: "foo",
 				},
-				expectedErr:     nil,
-				expectedUser:    "123456789",
-				expectedEmail:   "foo@example.com",
-				expectedExpires: &expiresFuture,
+				expectedErr:               nil,
+				expectedUser:              "123456789",
+				expectedEmail:             "foo@example.com",
+				expectedPreferredUsername: "foo",
+				expectedExpires:           &expiresFuture,
 			}),
 			Entry("with a non-verified email", tokenToSessionTableInput{
 				idToken: idTokenClaims{
@@ -581,6 +591,175 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 					Verified: &notVerified,
 				},
 				expectedErr: errors.New("email in id_token (foo@example.com) isn't verified"),
+			}),
+			Entry("with groups in the default claim", tokenToSessionTableInput{
+				idToken: idTokenClaims{
+					RegisteredClaims: jwt.RegisteredClaims{
+						Audience:  jwt.ClaimStrings{"asdf1234"},
+						ExpiresAt: jwt.NewNumericDate(expiresFuture),
+						IssuedAt:  jwt.NewNumericDate(time.Now()),
+						Issuer:    "https://issuer.example.com",
+						NotBefore: jwt.NewNumericDate(time.Time{}),
+						Subject:   "123456789",
+					},
+					Groups: []string{"foo", "bar"},
+				},
+				expectedErr:     nil,
+				expectedUser:    "123456789",
+				expectedEmail:   "123456789",
+				expectedGroups:  []string{"foo", "bar"},
+				expectedExpires: &expiresFuture,
+			}),
+			Entry("with groups in a custom claim", tokenToSessionTableInput{
+				idToken: idTokenClaims{
+					RegisteredClaims: jwt.RegisteredClaims{
+						Audience:  jwt.ClaimStrings{"asdf1234"},
+						ExpiresAt: jwt.NewNumericDate(expiresFuture),
+						IssuedAt:  jwt.NewNumericDate(time.Now()),
+						Issuer:    "https://issuer.example.com",
+						NotBefore: jwt.NewNumericDate(time.Time{}),
+						Subject:   "123456789",
+					},
+					ADGroups: []string{"foo", "bar"},
+				},
+				mapping:         middlewareapi.SessionClaimMapping{Groups: "ADGroups"},
+				expectedErr:     nil,
+				expectedUser:    "123456789",
+				expectedEmail:   "123456789",
+				expectedGroups:  []string{"foo", "bar"},
+				expectedExpires: &expiresFuture,
+			}),
+			Entry("with a groups claim that is a single string", tokenToSessionTableInput{
+				idToken: idTokenClaims{
+					RegisteredClaims: jwt.RegisteredClaims{
+						Audience:  jwt.ClaimStrings{"asdf1234"},
+						ExpiresAt: jwt.NewNumericDate(expiresFuture),
+						IssuedAt:  jwt.NewNumericDate(time.Now()),
+						Issuer:    "https://issuer.example.com",
+						NotBefore: jwt.NewNumericDate(time.Time{}),
+						Subject:   "123456789",
+					},
+					SingleGroup: "foo",
+				},
+				mapping:         middlewareapi.SessionClaimMapping{Groups: "singleGroup"},
+				expectedErr:     nil,
+				expectedUser:    "123456789",
+				expectedEmail:   "123456789",
+				expectedGroups:  []string{"foo"},
+				expectedExpires: &expiresFuture,
+			}),
+			Entry("with a groups claim that is an object", tokenToSessionTableInput{
+				idToken: idTokenClaims{
+					RegisteredClaims: jwt.RegisteredClaims{
+						Audience:  jwt.ClaimStrings{"asdf1234"},
+						ExpiresAt: jwt.NewNumericDate(expiresFuture),
+						IssuedAt:  jwt.NewNumericDate(time.Now()),
+						Issuer:    "https://issuer.example.com",
+						NotBefore: jwt.NewNumericDate(time.Time{}),
+						Subject:   "123456789",
+					},
+					InvalidGroups: map[string]any{"roles": []string{"foo"}},
+				},
+				mapping:     middlewareapi.SessionClaimMapping{Groups: "invalidGroups"},
+				expectedErr: errors.New("failed to parse groups claim \"invalidGroups\": expected a string or an array of strings"),
+			}),
+			Entry("with a groups claim that mixes strings and other types", tokenToSessionTableInput{
+				idToken: idTokenClaims{
+					RegisteredClaims: jwt.RegisteredClaims{
+						Audience:  jwt.ClaimStrings{"asdf1234"},
+						ExpiresAt: jwt.NewNumericDate(expiresFuture),
+						IssuedAt:  jwt.NewNumericDate(time.Now()),
+						Issuer:    "https://issuer.example.com",
+						NotBefore: jwt.NewNumericDate(time.Time{}),
+						Subject:   "123456789",
+					},
+					InvalidGroups: []any{"foo", 1},
+				},
+				mapping:     middlewareapi.SessionClaimMapping{Groups: "invalidGroups"},
+				expectedErr: errors.New("failed to parse groups claim \"invalidGroups\": expected a string or an array of strings"),
+			}),
+			Entry("with a custom claim configured but groups in the default claim", tokenToSessionTableInput{
+				idToken: idTokenClaims{
+					RegisteredClaims: jwt.RegisteredClaims{
+						Audience:  jwt.ClaimStrings{"asdf1234"},
+						ExpiresAt: jwt.NewNumericDate(expiresFuture),
+						IssuedAt:  jwt.NewNumericDate(time.Now()),
+						Issuer:    "https://issuer.example.com",
+						NotBefore: jwt.NewNumericDate(time.Time{}),
+						Subject:   "123456789",
+					},
+					Groups: []string{"foo", "bar"},
+				},
+				mapping:         middlewareapi.SessionClaimMapping{Groups: "ADGroups"},
+				expectedErr:     nil,
+				expectedUser:    "123456789",
+				expectedEmail:   "123456789",
+				expectedGroups:  nil,
+				expectedExpires: &expiresFuture,
+			}),
+			Entry("with custom identity claims", tokenToSessionTableInput{
+				idToken: jwt.MapClaims{
+					"iss":                "https://issuer.example.com",
+					"aud":                "asdf1234",
+					"exp":                expiresFuture.Unix(),
+					"sub":                "subject",
+					"email":              "default@example.com",
+					"preferred_username": "default",
+					"uid":                "custom-user",
+					"mail":               "custom@example.com",
+					"username":           "custom-name",
+				},
+				mapping: middlewareapi.SessionClaimMapping{
+					User:              "uid",
+					Email:             "mail",
+					PreferredUsername: "username",
+				},
+				expectedUser:              "custom-user",
+				expectedEmail:             "custom@example.com",
+				expectedPreferredUsername: "custom-name",
+				expectedExpires:           &expiresFuture,
+			}),
+			Entry("with a missing mapped email falling back to the mapped user", tokenToSessionTableInput{
+				idToken: jwt.MapClaims{
+					"iss":   "https://issuer.example.com",
+					"aud":   "asdf1234",
+					"exp":   expiresFuture.Unix(),
+					"sub":   "subject",
+					"email": "default@example.com",
+					"uid":   "custom-user",
+				},
+				mapping: middlewareapi.SessionClaimMapping{
+					User:              "uid",
+					Email:             "mail",
+					PreferredUsername: "uid",
+				},
+				expectedUser:              "custom-user",
+				expectedEmail:             "custom-user",
+				expectedPreferredUsername: "custom-user",
+				expectedExpires:           &expiresFuture,
+			}),
+			Entry("with a non-string mapped email", tokenToSessionTableInput{
+				idToken: jwt.MapClaims{
+					"iss":  "https://issuer.example.com",
+					"aud":  "asdf1234",
+					"exp":  expiresFuture.Unix(),
+					"sub":  "subject",
+					"mail": 123,
+				},
+				mapping:     middlewareapi.SessionClaimMapping{Email: "mail"},
+				expectedErr: errors.New("failed to parse bearer token claim \"mail\": json: cannot unmarshal number into Go value of type string"),
+			}),
+			Entry("with an unverified mapped email", tokenToSessionTableInput{
+				idToken: jwt.MapClaims{
+					"iss":            "https://issuer.example.com",
+					"aud":            "asdf1234",
+					"exp":            expiresFuture.Unix(),
+					"sub":            "subject",
+					"mail":           "custom@example.com",
+					"email_verified": false,
+				},
+				mapping:     middlewareapi.SessionClaimMapping{Email: "mail"},
+				expectedErr: errors.New("email in id_token (custom@example.com) isn't verified"),
 			}),
 		)
 	})

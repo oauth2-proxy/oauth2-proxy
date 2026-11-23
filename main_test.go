@@ -282,9 +282,9 @@ redirect_url="http://localhost:4180/oauth2/callback"
 		}),
 		Entry("with bad alpha configuration", loadConfigurationTableInput{
 			configContent:      testCoreConfig,
-			alphaConfigContent: testAlphaConfig + ":",
+			alphaConfigContent: testAlphaConfig + "invalid",
 			expectedOptions:    func() *options.Options { return nil },
-			expectedErr:        errors.New("failed to load alpha options: error unmarshalling config: yaml: line 1: did not find expected key"),
+			expectedErr:        errors.New("failed to load alpha options: error unmarshalling config: yaml: line 76: could not find expected ':'"),
 		}),
 		Entry("with alpha configuration and bad core configuration", loadConfigurationTableInput{
 			configContent:      testCoreConfig + "unknown_field=\"something\"",
