@@ -8,6 +8,8 @@
 
 ## Changes since v7.15.6
 
+- Fix nested `--oidc-groups-claim` paths for bearer tokens verified via extra JWT issuers (fixes [#3543](https://github.com/oauth2-proxy/oauth2-proxy/issues/3543)).
+
 # V7.15.6
 
 ## Release Highlights
