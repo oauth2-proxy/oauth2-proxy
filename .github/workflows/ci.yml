@@ -68,7 +68,7 @@ jobs:
 
     - name: Upload Coverage Report
       if: github.event_name == 'push'
-      uses: qltysh/qlty-action/coverage@c9b09987143d1e4ac955f4803c7bea742102feb5 # v2.4.0
+      uses: qltysh/qlty-action/coverage@56bee2d751c94b7bd8de22f64c9b5f398048e13f # v2.8.1
       with:
         oidc: true
         files: lcov.info
