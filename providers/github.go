@@ -172,7 +172,7 @@ func (p *GitHubProvider) hasOrg(s *sessions.SessionState) error {
 	}
 
 	logger.Printf("Missing Organization:%q in %v", p.Org, presentOrgs)
-	return errors.New("user is missing required organization")
+	return fmt.Errorf("%w: user is missing required organization", ErrNotAuthorized)
 }
 
 func (p *GitHubProvider) hasOrgAndTeam(s *sessions.SessionState) error {
@@ -214,11 +214,11 @@ func (p *GitHubProvider) hasOrgAndTeam(s *sessions.SessionState) error {
 
 	if hasOrg {
 		logger.Printf("Missing Team:%q from Org:%q in teams: %v", p.Team, p.Org, presentTeams)
-		return errors.New("user is missing required team")
+		return fmt.Errorf("%w: user is missing required team", ErrNotAuthorized)
 	}
 
 	logger.Printf("Missing Organization:%q in %#v", p.Org, maps.Keys(presentOrgs))
-	return errors.New("user is missing required organization")
+	return fmt.Errorf("%w: user is missing required organization", ErrNotAuthorized)
 }
 
 func (p *GitHubProvider) hasTeam(s *sessions.SessionState) error {
@@ -249,7 +249,7 @@ func (p *GitHubProvider) hasTeam(s *sessions.SessionState) error {
 	}
 
 	logger.Printf("Missing Team:%q in teams: %v", p.Team, presentTeams)
-	return errors.New("user is missing required team")
+	return fmt.Errorf("%w: user is missing required team", ErrNotAuthorized)
 }
 
 func (p *GitHubProvider) hasRepoAccess(ctx context.Context, accessToken string) error {
@@ -267,14 +267,18 @@ func (p *GitHubProvider) hasRepoAccess(ctx context.Context, accessToken string) 
 
 	endpoint := p.makeGitHubAPIEndpoint("/repos/"+p.Repo, nil)
 
-	var repo repository
-	err := requests.New(endpoint.String()).
+	result := requests.New(endpoint.String()).
 		WithContext(ctx).
 		WithHeaders(makeGitHubHeader(accessToken)).
-		Do().
-		UnmarshalInto(&repo)
+		Do()
 
-	if err != nil {
+	// GitHub answers 404 for a private repository the user can't see
+	if result.Error() == nil && result.StatusCode() == http.StatusNotFound {
+		return fmt.Errorf("%w: user can't see repository %q, or it doesn't exist", ErrNotAuthorized, p.Repo)
+	}
+
+	var repo repository
+	if err := result.UnmarshalInto(&repo); err != nil {
 		return err
 	}
 
@@ -284,7 +288,7 @@ func (p *GitHubProvider) hasRepoAccess(ctx context.Context, accessToken string) 
 		return nil
 	}
 
-	return errors.New("user doesn't have repository access")
+	return fmt.Errorf("%w: user doesn't have repository access", ErrNotAuthorized)
 }
 
 func (p *GitHubProvider) hasUser(ctx context.Context, accessToken string) (bool, error) {
@@ -324,7 +328,24 @@ func (p *GitHubProvider) isCollaborator(ctx context.Context, username, accessTok
 		return false, result.Error()
 	}
 
-	if result.StatusCode() != 204 {
+	// 404 also means the token lacks the push access this endpoint needs
+	if result.StatusCode() == http.StatusNotFound {
+		var repo struct {
+			Permissions struct {
+				Push bool `json:"push"`
+			} `json:"permissions"`
+		}
+		err := requests.New(p.makeGitHubAPIEndpoint("/repos/"+p.Repo, nil).String()).
+			WithContext(ctx).
+			WithHeaders(makeGitHubHeader(accessToken)).
+			Do().
+			UnmarshalInto(&repo)
+		if err == nil && repo.Permissions.Push {
+			return false, fmt.Errorf("%w: user is not a collaborator on %q", ErrNotAuthorized, p.Repo)
+		}
+	}
+
+	if result.StatusCode() != http.StatusNoContent {
 		return false, fmt.Errorf("got %d from %q %s",
 			result.StatusCode(), endpoint.String(), result.Body())
 	}
@@ -444,7 +465,7 @@ func (p *GitHubProvider) checkUserRestriction(ctx context.Context, s *sessions.S
 
 	// org and repository options are not configured
 	if !verifiedUser && p.Org == "" && p.Repo == "" {
-		return false, errors.New("missing github user")
+		return false, fmt.Errorf("%w: missing github user", ErrNotAuthorized)
 	}
 
 	return verifiedUser, nil

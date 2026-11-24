@@ -26,6 +26,10 @@ var (
 	// email address as not verified
 	ErrEmailNotVerified = errors.New("email not verified")
 
+	// ErrNotAuthorized is returned when the user signed in but the provider's
+	// access restrictions (organization, team, repository, ...) deny them
+	ErrNotAuthorized = errors.New("not authorized")
+
 	// ErrMissingIDToken is returned when an oidc.Token does not contain the
 	// extra `id_token` field for an IDToken.
 	ErrMissingIDToken = errors.New("missing id_token")

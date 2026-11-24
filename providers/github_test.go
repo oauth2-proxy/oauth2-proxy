@@ -208,7 +208,7 @@ func TestGitHubProvider_checkRestrictionsOrg(t *testing.T) {
 	)
 
 	err = p.checkRestrictions(context.Background(), session)
-	assert.Error(t, err)
+	assert.ErrorIs(t, err, ErrNotAuthorized)
 }
 
 func TestGitHubProvider_checkRestrictionsOrgTeam(t *testing.T) {
@@ -379,6 +379,22 @@ func TestGitHubProvider_checkRestrictionsWithNoAccessToPrivateRepo(t *testing.T)
 	assert.Empty(t, session.Email)
 }
 
+func TestGitHubProvider_checkRestrictionsWithHiddenPrivateRepo(t *testing.T) {
+	b := testGitHubBackend(map[string][]string{})
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testGitHubProvider(bURL.Host,
+		options.GitHubOptions{
+			Repo: "oauth2-proxy/oauth2-proxy",
+		},
+	)
+
+	session := CreateAuthorizedSession()
+	err := p.checkRestrictions(context.Background(), session)
+	assert.ErrorIs(t, err, ErrNotAuthorized)
+}
+
 func TestGitHubProvider_getEmailWithToken(t *testing.T) {
 	b := testGitHubBackend(map[string][]string{
 		"/user/emails": {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
@@ -484,6 +500,48 @@ func TestGitHubProvider_getUserWithRepoAndTokenWithoutPushAccess(t *testing.T) {
 	err := p.getUser(context.Background(), session)
 	assert.Error(t, err)
 	assert.Empty(t, session.User)
+}
+
+func TestGitHubProvider_getUserWithRepoAndTokenNotCollaborator(t *testing.T) {
+	b := testGitHubBackend(map[string][]string{
+		"/user":                            {`{"email": "michael.bland@gsa.gov", "login": "mbland"}`},
+		"/repos/oauth2-proxy/oauth2-proxy": {`{"permissions": {"push": true}}`},
+	})
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testGitHubProvider(bURL.Host,
+		options.GitHubOptions{
+			Repo:  "oauth2-proxy/oauth2-proxy",
+			Token: "token",
+		},
+	)
+
+	session := CreateAuthorizedSession()
+	err := p.getUser(context.Background(), session)
+	assert.ErrorIs(t, err, ErrNotAuthorized)
+	assert.Empty(t, session.User)
+}
+
+func TestGitHubProvider_getUserWithRepoAndTokenWithoutPushAccessToRepo(t *testing.T) {
+	b := testGitHubBackend(map[string][]string{
+		"/user":                            {`{"email": "michael.bland@gsa.gov", "login": "mbland"}`},
+		"/repos/oauth2-proxy/oauth2-proxy": {`{"permissions": {"pull": true}}`},
+	})
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testGitHubProvider(bURL.Host,
+		options.GitHubOptions{
+			Repo:  "oauth2-proxy/oauth2-proxy",
+			Token: "token",
+		},
+	)
+
+	session := CreateAuthorizedSession()
+	err := p.getUser(context.Background(), session)
+	assert.Error(t, err)
+	assert.NotErrorIs(t, err, ErrNotAuthorized)
 }
 
 func TestGitHubProvider_getEmailWithUsername(t *testing.T) {

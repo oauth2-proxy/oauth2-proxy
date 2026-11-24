@@ -1007,7 +1007,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 // callbackErrorStatus maps an error from redeeming or enriching a session
 // during the OAuth2 callback to the HTTP status returned to the user
 func callbackErrorStatus(err error) int {
-	if errors.Is(err, providers.ErrEmailNotVerified) {
+	if errors.Is(err, providers.ErrEmailNotVerified) || errors.Is(err, providers.ErrNotAuthorized) {
 		return http.StatusForbidden
 	}
 	return http.StatusInternalServerError
