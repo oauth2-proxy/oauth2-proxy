@@ -267,14 +267,18 @@ func (p *GitHubProvider) hasRepoAccess(ctx context.Context, accessToken string) 
 
 	endpoint := p.makeGitHubAPIEndpoint("/repos/"+p.Repo, nil)
 
-	var repo repository
-	err := requests.New(endpoint.String()).
+	result := requests.New(endpoint.String()).
 		WithContext(ctx).
 		WithHeaders(makeGitHubHeader(accessToken)).
-		Do().
-		UnmarshalInto(&repo)
+		Do()
 
-	if err != nil {
+	// GitHub answers 404 for a private repository the user can't see
+	if result.Error() == nil && result.StatusCode() == http.StatusNotFound {
+		return fmt.Errorf("%w: user can't see repository %q, or it doesn't exist", ErrNotAuthorized, p.Repo)
+	}
+
+	var repo repository
+	if err := result.UnmarshalInto(&repo); err != nil {
 		return err
 	}
 
@@ -324,7 +328,24 @@ func (p *GitHubProvider) isCollaborator(ctx context.Context, username, accessTok
 		return false, result.Error()
 	}
 
-	if result.StatusCode() != 204 {
+	// 404 also means the token lacks the push access this endpoint needs
+	if result.StatusCode() == http.StatusNotFound {
+		var repo struct {
+			Permissions struct {
+				Push bool `json:"push"`
+			} `json:"permissions"`
+		}
+		err := requests.New(p.makeGitHubAPIEndpoint("/repos/"+p.Repo, nil).String()).
+			WithContext(ctx).
+			WithHeaders(makeGitHubHeader(accessToken)).
+			Do().
+			UnmarshalInto(&repo)
+		if err == nil && repo.Permissions.Push {
+			return false, fmt.Errorf("%w: user is not a collaborator on %q", ErrNotAuthorized, p.Repo)
+		}
+	}
+
+	if result.StatusCode() != http.StatusNoContent {
 		return false, fmt.Errorf("got %d from %q %s",
 			result.StatusCode(), endpoint.String(), result.Body())
 	}
