@@ -6,8 +6,127 @@
 
 ## Breaking Changes
 
+## Changes since v7.15.6
+
+# V7.15.6
+
+## Release Highlights
+
+- Entra ID: Fixed tenant ID extraction for national / private cloud support
+- Fixed multiple return code and redirect issues
+- 🔵 Golang version upgrade to v1.26.10
+    - Upgrade of all dependencies to their latest versions
+- 🕵️‍♀️ Vulnerabilities have been addressed
+    - [CVE-2026-111943](https://nvd.nist.gov/vuln/detail/CVE-2026-111943)
+    - [CVE-2026-116585](https://nvd.nist.gov/vuln/detail/CVE-2026-116585)
+    - [CVE-2026-116586](https://nvd.nist.gov/vuln/detail/CVE-2026-116586)
+    - [CVE-2026-56857](https://nvd.nist.gov/vuln/detail/CVE-2026-56857)
+    - [CVE-2026-56866](https://nvd.nist.gov/vuln/detail/CVE-2026-56866)
+    - [CVE-2026-78659](https://nvd.nist.gov/vuln/detail/CVE-2026-78659)
+    - [CVE-2026-78660](https://nvd.nist.gov/vuln/detail/CVE-2026-78660)
+    - [CVE-2026-78661](https://nvd.nist.gov/vuln/detail/CVE-2026-78661)
+    - [CVE-2026-78663](https://nvd.nist.gov/vuln/detail/CVE-2026-78663)
+    - [CVE-2026-78667](https://nvd.nist.gov/vuln/detail/CVE-2026-78667)
+    - [CVE-2026-78669](https://nvd.nist.gov/vuln/detail/CVE-2026-78669)
+    - [CVE-2026-94439](https://nvd.nist.gov/vuln/detail/CVE-2026-94439)
+    - [CVE-2026-94440](https://nvd.nist.gov/vuln/detail/CVE-2026-94440)
+    - [CVE-2026-94448](https://nvd.nist.gov/vuln/detail/CVE-2026-94448)
+    - [CVE-2026-97030](https://nvd.nist.gov/vuln/detail/CVE-2026-97030)
+    - [CVE-2026-97031](https://nvd.nist.gov/vuln/detail/CVE-2026-97031)
+    - [CVE-2026-97032](https://nvd.nist.gov/vuln/detail/CVE-2026-97032)
+    - [CVE-2026-97045](https://nvd.nist.gov/vuln/detail/CVE-2026-97045)
+
+## Important Notes
+
+## Breaking Changes
+
+## Changes since v7.15.5
+
+- [#3587](https://github.com/oauth2-proxy/oauth2-proxy/pull/3587) fix: keep the query after the slash in the trailing slash redirect (@jayhemnani9910)
+- [#3584](https://github.com/oauth2-proxy/oauth2-proxy/pull/3584) fix: read the Entra ID tenant from the `tid` claim so session validation works in national clouds such as Azure US Government (fixes [#2939](https://github.com/oauth2-proxy/oauth2-proxy/issues/2939)) (@asifsid / @dantreiman)
+- [#3583](https://github.com/oauth2-proxy/oauth2-proxy/pull/3583) fix: return 403 instead of 500 when the ID token audience is invalid @marsluca
+- [#3573](https://github.com/oauth2-proxy/oauth2-proxy/pull/3573) fix: return 403 instead of 500 when a user with an unverified email completes the OAuth2 callback (fixes [#3234](https://github.com/oauth2-proxy/oauth2-proxy/issues/3234)) @amichelic
+- [#3540](https://github.com/oauth2-proxy/oauth2-proxy/pull/3540) fix: honor `--oidc-groups-claim` for tokens verified via `--extra-jwt-issuers` (@jaewak / @tuunit)
+- [#3219](https://github.com/oauth2-proxy/oauth2-proxy/pull/3219) fix: escape OAuth state redirect URLs to preserve query parameters (@CallumWayve)
+
+# V7.15.5
+
+## Release Highlights
+
+- 🔵 Golang version upgrade to v1.26.8
+    - Upgrade of all dependencies to their latest versions
+- 🕵️‍♀️ Vulnerabilities have been addressed
+    - [CVE-2026-56855](https://nvd.nist.gov/vuln/detail/CVE-2026-56855)
+    - [CVE-2026-78662](https://nvd.nist.gov/vuln/detail/CVE-2026-78662)
+    - [CVE-2026-84304](https://nvd.nist.gov/vuln/detail/CVE-2026-84304)
+    - [CVE-2026-84445](https://nvd.nist.gov/vuln/detail/CVE-2026-84445)
+
+## Important Notes
+The Bitbucket provider `--bitbucket-team` flag got deprecated and we added `--bitbucket-workspace` flag to restrict logins to members of a specific workspace instead of a team. The `--bitbucket-team` flag is still supported and will act like workspace but will be removed in a future release. Please update your configuration to use the new `--bitbucket-workspace` flag. For more information, refer to [Bitbucket teams API deprecation](https://developer.atlassian.com/cloud/bitbucket/bitbucket-api-teams-deprecation/). 
+
+Additionally refer to OAuth client configuration for Bitbucket provider in the [documentation](https://oauth2-proxy.github.io/oauth2-proxy/configuration/providers/bitbucket/). for changes in the scopes (Account>Read) is now required if you restrict by workspace.
+
+Security Advisories:
+
+- (Critical) [GHSA-63jm-59jj-478j](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-63jm-59jj-478j) Authentication bypass via inconsistent skip-auth path interpretation
+- (Critical) [GHSA-wr5q-7wxw-x568](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-wr5q-7wxw-x568) Authentication bypass via spoofed client-IP headers in OAuth2 Proxy
+- (Moderate) [GHSA-hhqp-vx7f-5c6m](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-hhqp-vx7f-5c6m) Credential disclosure through OAuth callback error logging
+
+Read more below
+
+## Critical Fixes
+
+For a small subset of deployments these fixes might be breaking change for the sake of fixing trust/security boundaries.
+
+### [GHSA-63jm-59jj-478j](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-63jm-59jj-478j) Authentication bypass via inconsistent skip-auth path interpretation
+**Skip-auth path matching is now stricter**: `--skip-auth-route` and
+`--skip-auth-regex` no longer grant exemptions for invalid or ambiguous paths,
+even when a positive or negated rule would otherwise match. This includes dot
+segments, repeated slashes (including leading `//`), semicolons, backslashes,
+fragment-like content, decoded question marks, and control characters, including
+encoded forms. For example, previously public `/public/file;version=1` and
+`/public//file` now follow normal authentication and authorization. `#` and `%23`
+are no longer silently stripped before matching.
+
+Trusted `X-Forwarded-Uri` metadata must use origin form (`/path?query`), not a full
+URL. Before upgrading, review public-route exemptions and external-auth header
+configuration. If unusual paths must remain public, expose them separately from
+the protected routing boundary rather than broadening skip-auth rules.
+
+Flag names and configuration syntax are unchanged. Ordinary query strings,
+trailing-slash distinctions, and unambiguous escaped characters retain their
+matching behavior. The fix does not rewrite upstream request targets or
+unconditionally reject authenticated requests; existing router behavior and
+separately configured exemptions remain unchanged.
+
+### [GHSA-wr5q-7wxw-x568](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-wr5q-7wxw-x568) Authentication bypass via spoofed client-IP headers in OAuth2 Proxy
+**Trusted client-IP resolution now enforces trusted proxy boundaries**: When
+`--reverse-proxy` is enabled, client-IP headers configured via
+`--real-client-ip-header` are accepted only from direct peers that match
+`--trusted-proxy-ip`. If the direct peer is not trusted, the transport peer
+address is evaluated instead.
+
+For `X-Forwarded-For`, the chain is traversed from right to left, skipping
+intermediate proxies in `--trusted-proxy-ip` and treating the first untrusted
+address as the client. Leftmost entries cannot be spoofed past the trusted proxy
+boundary. If `--trusted-proxy-ip` is left unset, OAuth2 Proxy preserves backwards
+compatibility by trusting all source addresses and retaining the leftmost
+behavior, which does not protect against spoofed XFF headers. To secure
+`--trusted-ip` exemptions behind a reverse proxy, configure explicit, narrowly
+scoped `--trusted-proxy-ip` CIDR ranges and ensure the proxy sanitizes client-IP
+headers. Missing or malformed client-IP headers from a trusted proxy will no
+longer fall back to granting exemptions based on the proxy's own IP.
+
+## Breaking Changes
+
 ## Changes since v7.15.4
 - [#3482](https://github.com/oauth2-proxy/oauth2-proxy/issues/3482) Make GitHub support auth without read:org scope
+
+- [#3546](https://github.com/oauth2-proxy/oauth2-proxy/pull/3546) fix: strip the port from the request host when matching cookie domains @kirilju
+- [#3547](https://github.com/oauth2-proxy/oauth2-proxy/pull/3547) fix: refresh additional claims for OIDC and MS Entra ID providers and properly populate additional claims during login (@Apollo3zehn)
+- [#3477](https://github.com/oauth2-proxy/oauth2-proxy/pull/3477) fix(bitbucket): auth failure due to Bitbucket OAuth 2.0 [changes on May 4th 2026](https://developer.atlassian.com/cloud/bitbucket/changelog/#CHANGE-3052) @mfouad
+- [#3535](https://github.com/oauth2-proxy/oauth2-proxy/pull/3535) fix: surface Microsoft Graph errors during Entra group overage instead of logging in with an incomplete group set @no-hup
+- [#3527](https://github.com/oauth2-proxy/oauth2-proxy/pull/3527) fix(encryption): return an error instead of panicking on a short GCM ciphertext @winklemad
 
 # V7.15.4
 

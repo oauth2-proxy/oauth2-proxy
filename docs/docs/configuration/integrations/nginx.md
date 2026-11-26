@@ -15,6 +15,17 @@ Configure OAuth2 Proxy with Nginx using the `auth_request` directive. Includes e
 
 **This option requires `--reverse-proxy` option to be set.**
 
+When Nginx connects from localhost as shown below, also configure OAuth2 Proxy
+with `--trusted-proxy-ip=127.0.0.1/32`. The example overwrites `X-Real-IP` with
+Nginx's transport peer address; do not pass through a client-supplied value,
+especially when `--trusted-ip` is enabled.
+
+If using `--real-client-ip-header=X-Forwarded-For` with an appending proxy
+configuration such as `$proxy_add_x_forwarded_for`, list every trusted proxy hop
+in `--trusted-proxy-ip`. OAuth2 Proxy selects the first untrusted address from
+the right, not a client-supplied leftmost entry. The trust-all compatibility
+default cannot provide this protection.
+
 The [Nginx `auth_request` directive](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) allows Nginx to authenticate requests via the oauth2-proxy's `/auth` endpoint, which only returns a 202 Accepted response or a 401 Unauthorized response without proxying the request through. For example:
 
 ```nginx
@@ -155,12 +166,11 @@ location @oauth2_signin {
 
 #### API / Machine routes (no redirect)
 
-For API endpoints where clients expect a 401/403 status code (not a redirect):
+For API endpoints where clients expect a 401/403 status code (not a redirect), reuse the same `auth_request` header forwarding configuration from the main example as needed for your backend:
 
 ```nginx
 location /api/ {
   auth_request /oauth2/auth;
-  error_page 401 =401;  # Pass through the 401 status
   proxy_pass http://backend/;
 }
 ```

@@ -105,9 +105,11 @@ comments:
 - `/help` adds the `help wanted` label.
 
 On pull requests only, project reviewers may also use `/lgtm` and
-`/lgtm cancel` to manage the review-readiness label. A new commit removes the
-`lgtm` label. The label does not merge a pull request or replace GitHub
-approval requirements.
+`/lgtm cancel` to manage the review-readiness label.
+Use the command rather than manually applying the label.
+The label does not merge a pull request or replace GitHub approval requirements.
+
+Issues and pull requests require a `kind/*` label. Use `/kind <value>` to add one.
 
 ## AI use
 

@@ -5,6 +5,7 @@ title: Behaviour
 
 1. Authentication Requirement: All requests passing through the proxy to upstream applications require authentication, excluding default proxy endpoints.
     - Exception: If the request matches a skipped route (configured via `--skip-auth-route`):
+        - Invalid or ambiguous paths cannot grant this exemption, even with a negated rule. See [Skip-auth path matching](configuration/overview.md#skip-auth-path-matching).
         - Authentication is not enforced, but the proxy will opportunistically attempt to validate a session cookie (`--cookie-name`) or JWT (`--skip-jwt-bearer-tokens`) if present in the request.
         - Configured user info and authentication headers (e.g., `--pass-access-token`) are injected to upstream routes when validation succeeds.
 

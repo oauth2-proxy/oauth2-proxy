@@ -143,6 +143,93 @@ var _ = Describe("Util Suite", func() {
 	})
 
 	Context("GetRequestPath", func() {
+		DescribeTable("preserves unambiguous paths without changing the request",
+			func(target, expected string) {
+				for _, forwarded := range []bool{false, true} {
+					req = httptest.NewRequest(http.MethodGet, target, nil)
+					if forwarded {
+						req = httptest.NewRequest(http.MethodGet, "/oauth2/auth", nil)
+						req.RemoteAddr = "127.0.0.1:4180"
+						req = middleware.AddRequestScope(req, &middleware.RequestScope{
+							ReverseProxy: true, TrustedProxies: trustedProxies,
+						})
+						req.Header.Set("X-Forwarded-Uri", target)
+					}
+					originalURL, originalTarget := *req.URL, req.RequestURI
+					requestPath, err := util.GetRequestPath(req)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(requestPath).To(Equal(expected))
+					Expect(*req.URL).To(Equal(originalURL))
+					Expect(req.RequestURI).To(Equal(originalTarget))
+				}
+			},
+			Entry("root", "/", "/"),
+			Entry("public path", "/public/file", "/public/file"),
+			Entry("protected path", "/protected/file", "/protected/file"),
+			Entry("trailing slash", "/public/", "/public/"),
+			Entry("query ignored", "/public/file?next=/../protected;v=1&tag=%23", "/public/file"),
+			Entry("invalid query escape does not affect the path", "/public/file?q=%zz", "/public/file"),
+			Entry("escaped space", "/public/a%20b", "/public/a b"),
+			Entry("escaped letter", "/public/%66ile", "/public/file"),
+			Entry("escaped Unicode", "/public/caf%C3%A9", "/public/caf\u00e9"),
+			Entry("escaped slash", "/public%2ffile", "/public/file"),
+			Entry("literal plus", "/public/a+b", "/public/a+b"),
+			Entry("escaped plus", "/public/a%2bb", "/public/a+b"),
+			Entry("escaped percent", "/public/100%25", "/public/100%"),
+			Entry("dot within a segment", "/public/file.txt", "/public/file.txt"),
+			Entry("multiple dots are not a parent segment", "/public/...", "/public/..."),
+		)
+
+		DescribeTable("declines ambiguous or invalid original request targets",
+			func(target string) {
+				req.RemoteAddr = "127.0.0.1:4180"
+				req = middleware.AddRequestScope(req, &middleware.RequestScope{
+					ReverseProxy: true, TrustedProxies: trustedProxies,
+				})
+				req.Header.Set("X-Forwarded-Uri", target)
+				requestPath, err := util.GetRequestPath(req)
+				Expect(err).To(HaveOccurred())
+				Expect(requestPath).To(BeEmpty())
+				Expect(err.Error()).NotTo(ContainSubstring("sensitive-value"))
+			},
+			Entry("literal parent segment", "/public/../protected?token=sensitive-value"),
+			Entry("encoded parent segment", "/public/%2e%2E/protected"),
+			Entry("encoded slash exposes parent segment", "/public%2f..%2fprotected"),
+			Entry("current segment", "/public/./file"),
+			Entry("terminal parent segment", "/public/.."),
+			Entry("terminal current segment", "/public/."),
+			Entry("leading double slash", "//protected/public"),
+			Entry("repeated slash", "/public//file"),
+			Entry("encoded repeated slash", "/public/%2ffile"),
+			Entry("matrix parent segment", "/public/..;/protected"),
+			Entry("encoded matrix parent segment", "/public/%2e%2e%3b/protected"),
+			Entry("valid matrix parameter", "/public/file;version=1"),
+			Entry("matrix parameter containing a slash", "/protected;/public"),
+			Entry("invalid escape", "/public/%zz?token=sensitive-value"),
+			Entry("incomplete escape", "/public/%"),
+			Entry("relative target", "public/file"),
+			Entry("absolute target", "https://example.com/public/file"),
+			Entry("authority target", "example.com:443"),
+			Entry("asterisk target", "*"),
+			Entry("literal fragment", "/public#sensitive-value"),
+			Entry("encoded fragment", "/public%23sensitive-value"),
+			Entry("encoded question mark", "/public%3fsensitive-value"),
+			Entry("backslash", "/public\\..\\protected"),
+			Entry("encoded backslash", "/public%5c..%5cprotected"),
+			Entry("encoded control character", "/public/%00"),
+			Entry("encoded delete character", "/public/%7f"),
+			Entry("unescaped space", "/public/a b"),
+		)
+
+		It("ignores a forged forwarded URI from an untrusted peer", func() {
+			req.RemoteAddr = "192.0.2.10:4180"
+			req = middleware.AddRequestScope(req, &middleware.RequestScope{
+				ReverseProxy: true, TrustedProxies: trustedProxies,
+			})
+			req.Header.Set("X-Forwarded-Uri", "/public")
+			Expect(util.GetRequestPath(req)).To(Equal(uriNoQueryParams))
+		})
+
 		Context("trusted forwarded headers are disabled", func() {
 			BeforeEach(func() {
 				req = middleware.AddRequestScope(req, &middleware.RequestScope{})
@@ -152,21 +239,25 @@ var _ = Describe("Util Suite", func() {
 				Expect(util.GetRequestPath(req)).To(Equal(uriNoQueryParams))
 			})
 
-			It("drops fragment content from a parsed request path", func() {
+			It("declines fragment content in a parsed request path", func() {
 				// Simulate net/http ParseRequestURI preserving '#' in URL.Path.
 				req.URL.Path = "/foo/secret#/bar"
 				req.URL.RawPath = "/foo/secret%23/bar"
-				Expect(util.GetRequestPath(req)).To(Equal("/foo/secret"))
+				requestPath, err := util.GetRequestPath(req)
+				Expect(err).To(HaveOccurred())
+				Expect(requestPath).To(BeEmpty())
 			})
 
-			It("drops fragment-like suffixes from encoded number signs", func() {
+			It("declines encoded number signs", func() {
 				req = httptest.NewRequest(
 					http.MethodGet,
 					fmt.Sprintf("%s://%s/foo/secret%%23/bar?query=param", proto, host),
 					nil,
 				)
 				req = middleware.AddRequestScope(req, &middleware.RequestScope{})
-				Expect(util.GetRequestPath(req)).To(Equal("/foo/secret"))
+				requestPath, err := util.GetRequestPath(req)
+				Expect(err).To(HaveOccurred())
+				Expect(requestPath).To(BeEmpty())
 			})
 
 			It("ignores X-Forwarded-Uri and returns the URI (without query params)", func() {
@@ -193,9 +284,11 @@ var _ = Describe("Util Suite", func() {
 				Expect(util.GetRequestPath(req)).To(Equal("/some/other/path"))
 			})
 
-			It("drops fragment-like suffixes from the X-Forwarded-Uri", func() {
+			It("declines fragment-like suffixes from the X-Forwarded-Uri", func() {
 				req.Header.Add("X-Forwarded-Uri", "/foo/secret%23/bar?query=param")
-				Expect(util.GetRequestPath(req)).To(Equal("/foo/secret"))
+				requestPath, err := util.GetRequestPath(req)
+				Expect(err).To(HaveOccurred())
+				Expect(requestPath).To(BeEmpty())
 			})
 		})
 	})

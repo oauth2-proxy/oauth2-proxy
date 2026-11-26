@@ -147,6 +147,29 @@ func TestOIDCProviderRedeem_custom_userid(t *testing.T) {
 	assert.Equal(t, defaultIDToken.Phone, session.Email)
 }
 
+func TestOIDCProviderRedeem_invalid_audience(t *testing.T) {
+	idToken, _ := newSignedTestIDToken(defaultIDToken)
+	body, _ := json.Marshal(redeemTokenResponse{
+		AccessToken: accessToken,
+		ExpiresIn:   10,
+		TokenType:   "Bearer",
+		IDToken:     idToken,
+	})
+
+	server, provider := newTestOIDCSetup(body)
+	provider.Verifier = internaloidc.NewVerifier(
+		oidc.NewVerifier(oidcIssuer, mockJWKS{}, &oidc.Config{SkipClientIDCheck: true}),
+		internaloidc.IDTokenVerificationOptions{
+			AudienceClaims: []string{"aud"},
+			ClientID:       "https://other.myapp.com",
+		},
+	)
+	defer server.Close()
+
+	_, err := provider.Redeem(context.Background(), provider.RedeemURL.String(), "code1234", "")
+	assert.ErrorIs(t, err, internaloidc.ErrInvalidAudience)
+}
+
 func TestOIDCProviderRefreshSessionIfNeededWithoutIdToken(t *testing.T) {
 
 	idToken, _ := newSignedTestIDToken(defaultIDToken)
@@ -211,6 +234,35 @@ func TestOIDCProviderRefreshSessionIfNeededWithIdToken(t *testing.T) {
 	assert.Equal(t, accessToken, existingSession.AccessToken)
 	assert.Equal(t, idToken, existingSession.IDToken)
 	assert.Equal(t, refreshToken, existingSession.RefreshToken)
+}
+
+func TestOIDCProviderRefreshSessionIfNeededWithIdTokenUpdatesAdditionalClaims(t *testing.T) {
+	idToken, _ := newSignedTestIDToken(defaultIDToken)
+	body, _ := json.Marshal(redeemTokenResponse{
+		AccessToken:  accessToken,
+		ExpiresIn:    10,
+		TokenType:    "Bearer",
+		RefreshToken: refreshToken,
+		IDToken:      idToken,
+	})
+
+	server, provider := newTestOIDCSetup(body)
+	provider.AdditionalClaims = []string{"phone_number"}
+	defer server.Close()
+
+	existingSession := &sessions.SessionState{
+		AccessToken:  "changeit",
+		IDToken:      "changeit",
+		RefreshToken: refreshToken,
+		AdditionalClaims: map[string]interface{}{
+			"phone_number": "stale",
+		},
+	}
+
+	refreshed, err := provider.RefreshSession(context.Background(), existingSession)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, refreshed, true)
+	assert.Equal(t, defaultIDToken.Phone, existingSession.AdditionalClaims["phone_number"])
 }
 
 func TestOIDCProviderCreateSessionFromToken(t *testing.T) {

@@ -68,7 +68,7 @@ jobs:
 
     - name: Upload Coverage Report
       if: github.event_name == 'push'
-      uses: qltysh/qlty-action/coverage@08a0a862c159eae9b9003081da6663d96efef637 # v2.3.0
+      uses: qltysh/qlty-action/coverage@c9b09987143d1e4ac955f4803c7bea742102feb5 # v2.4.0
       with:
         oidc: true
         files: lcov.info
@@ -87,7 +87,7 @@ jobs:
 
     - name: Upload Trivy scan results
       if: (!startsWith(github.head_ref, 'release'))
-      uses: github/codeql-action/upload-sarif@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v4.37.7
+      uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
       with:
         sarif_file: 'trivy-results.sarif'
 
@@ -100,11 +100,11 @@ jobs:
         fetch-depth: 0
 
     - name: Set up QEMU
-      uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
+      uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
     
     - name: Set up Docker Buildx
       id: buildx
-      uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+      uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
     - name: Docker Build
       if: (!startsWith(github.head_ref, 'release'))
