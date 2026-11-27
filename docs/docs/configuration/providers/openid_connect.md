@@ -8,6 +8,14 @@ OpenID Connect is a spec for OAUTH 2.0 + identity that is implemented by many ma
 This provider was originally built against CoreOS Dex, and we will use it as an example.
 The OpenID Connect Provider (OIDC) can also be used to connect to other Identity Providers such as Okta, an example can be found below.
 
+:::warning Nonce and PKCE are off by default
+By default (`--insecure-oidc-skip-nonce` is `true`), OAuth2 Proxy neither sends a `nonce` in the authorization request nor checks the ID Token's `nonce` claim. PKCE is also not used unless `--code-challenge-method` is set.
+
+If your identity provider supports them, set `--insecure-oidc-skip-nonce=false` (toml: `insecure_oidc_skip_nonce = false`) and `--code-challenge-method=S256` (toml: `code_challenge_method = "S256"`). With nonce checking enabled, the provider must return the `nonce` claim in the ID Token.
+
+OAuth2 Proxy only logs a warning about unused PKCE when the provider's discovery document advertises PKCE support.
+:::
+
 #### Dex
 
 To configure the OIDC provider for Dex, perform the following steps:
