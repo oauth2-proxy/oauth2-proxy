@@ -629,7 +629,7 @@ complete**](https://github.com/oauth2-proxy/oauth2-proxy/issues/926).
 
 ### SecretSource
 
-(**Appears on:** [ClaimSource](#claimsource), [HeaderValue](#headervalue), [TLS](#tls))
+(**Appears on:** [ClaimSource](#claimsource), [HeaderValue](#headervalue), [TLS](#tls), [Upstream](#upstream))
 
 SecretSource references an individual secret value.
 Only one source within the struct should be defined at any time.
@@ -694,6 +694,9 @@ Requests will be proxied to this upstream if the path matches the request path.
 | `rewriteTarget` | _string_ | RewriteTarget allows users to rewrite the request path before it is sent to<br/>the upstream server (for an HTTP/HTTPS upstream) or mapped to the filesystem<br/>(for a `file:` upstream).<br/>Use the Path to capture segments for reuse within the rewrite target.<br/>Eg: With a Path of `^/baz/(.*)`, a RewriteTarget of `/foo/$1` would rewrite<br/>the request `/baz/abc/123` to `/foo/abc/123` before proxying to the<br/>upstream server.  Or if the upstream were `file:///app`, a request for<br/>`/baz/info.html` would return the contents of the file `/app/foo/info.html`. |
 | `uri` | _string_ | The URI of the upstream server. This may be an HTTP(S) server of a File<br/>based URL. It may include a path, in which case all requests will be served<br/>under that path.<br/>Eg:<br/>- http://localhost:8080<br/>- https://service.localhost<br/>- https://service.localhost/path<br/>- file://host/path<br/>If the URI's path is "/base" and the incoming request was for "/dir",<br/>the upstream request will be for "/base/dir". |
 | `insecureSkipTLSVerify` | _bool_ | InsecureSkipTLSVerify will skip TLS verification of upstream HTTPS hosts.<br/>This option is insecure and will allow potential Man-In-The-Middle attacks<br/>between OAuth2 Proxy and the upstream server.<br/>Defaults to false. |
+| `rootCA` | _[SecretSource](#secretsource)_ | RootCA supplies PEM-encoded CA certificates for this HTTPS upstream, replacing system roots. |
+| `clientCert` | _[SecretSource](#secretsource)_ | ClientCert and ClientKey configure an optional client certificate for this HTTPS upstream. |
+| `clientKey` | _[SecretSource](#secretsource)_ |  |
 | `static` | _bool_ | Static will make all requests to this upstream have a static response.<br/>The response will have a body of "Authenticated" and a response code<br/>matching StaticCode.<br/>If StaticCode is not set, the response will return a 200 response. |
 | `staticCode` | _int_ | StaticCode determines the response code for the Static response.<br/>This option can only be used with Static enabled. |
 | `flushInterval` | _duration_ | FlushInterval is the period between flushing the response buffer when<br/>streaming response from the upstream.<br/>Defaults to 1 second. |
