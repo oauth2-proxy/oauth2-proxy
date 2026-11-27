@@ -358,6 +358,20 @@ ClaimSource allows loading a header value from a claim within the session
 | `prefix` | _string_ | Prefix is an optional prefix that will be prepended to the value of the<br/>claim if it is non-empty. |
 | `basicAuthPassword` | _[SecretSource](#secretsource)_ | BasicAuthPassword converts this claim into a basic auth header.<br/>Note the value of claim will become the basic auth username and the<br/>basicAuthPassword will be used as the password value. |
 
+### ClientIdentity
+
+(**Appears on:** [TLS](#tls))
+
+ClientIdentity is the identity granted to one exact client certificate.
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `fingerprint` | _string_ | Fingerprint is the lowercase hexadecimal SHA-256 fingerprint of the<br/>leaf certificate, with optional colon separators. |
+| `user` | _string_ | User is the user identity emitted for the authenticated request. |
+| `email` | _string_ | Email is an optional email identity used by the normal authorization checks. |
+| `groups` | _[]string_ | Groups are optional explicitly configured groups. |
+| `preferredUsername` | _string_ | PreferredUsername is an optional preferred username identity. |
+
 ### GitHubOptions
 
 (**Appears on:** [Provider](#provider))
@@ -663,6 +677,8 @@ as well as an optional minimal TLS version that is acceptable.
 | ----- | ---- | ----------- |
 | `key` | _[SecretSource](#secretsource)_ | Key is the TLS key data to use.<br/>Typically this will come from a file. |
 | `cert` | _[SecretSource](#secretsource)_ | Cert is the TLS certificate data to use.<br/>Typically this will come from a file. |
+| `clientCA` | _[SecretSource](#secretsource)_ | ClientCA contains the trusted client CA certificates in PEM format.<br/>When set, the HTTPS listener verifies client certificates. Without<br/>ClientIdentities every client must present a certificate; with mappings,<br/>mapped certificates authenticate directly and other clients use OIDC.<br/>The HTTP listener must be disabled. |
+| `clientIdentities` | _[[]ClientIdentity](#clientidentity)_ | ClientIdentities maps SHA-256 leaf-certificate fingerprints to users.<br/>When configured, a verified client certificate may authenticate without OIDC. |
 | `minVersion` | _string_ | MinVersion is the minimal TLS version that is acceptable.<br/>E.g. Set to "TLS1.3" to select TLS version 1.3 |
 | `cipherSuites` | _[]string_ | CipherSuites is a list of TLS cipher suites that are allowed.<br/>E.g.:<br/>- TLS_RSA_WITH_RC4_128_SHA<br/>- TLS_RSA_WITH_AES_256_GCM_SHA384<br/>If not specified, the default Go safe cipher list is used.<br/>List of valid cipher suites can be found in the [crypto/tls documentation](https://pkg.go.dev/crypto/tls#pkg-constants). |
 
