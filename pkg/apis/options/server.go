@@ -61,9 +61,19 @@ type TLS struct {
 
 // ClientIdentity is the identity granted to one exact client certificate.
 type ClientIdentity struct {
-	Fingerprint       string   `yaml:"fingerprint"`
-	User              string   `yaml:"user"`
-	Email             string   `yaml:"email,omitempty"`
-	Groups            []string `yaml:"groups,omitempty"`
-	PreferredUsername string   `yaml:"preferredUsername,omitempty"`
+	// Fingerprint is the lowercase hexadecimal SHA-256 fingerprint of the
+	// leaf certificate, with optional colon separators.
+	Fingerprint string `yaml:"fingerprint"`
+
+	// User is the user identity emitted for the authenticated request.
+	User string `yaml:"user"`
+
+	// Email is an optional email identity used by the normal authorization checks.
+	Email string `yaml:"email,omitempty"`
+
+	// Groups are optional explicitly configured groups.
+	Groups []string `yaml:"groups,omitempty"`
+
+	// PreferredUsername is an optional preferred username identity.
+	PreferredUsername string `yaml:"preferredUsername,omitempty"`
 }
